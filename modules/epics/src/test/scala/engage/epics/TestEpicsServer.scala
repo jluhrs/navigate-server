@@ -76,7 +76,9 @@ object TestEpicsServer {
                     jcaLibrary.createServerContext(JCALibrary.CHANNEL_ACCESS_SERVER_JAVA, server)
                   )
                 } { x =>
-                  IO.delay(x.destroy())
+                  IO.delay(
+                    x.dispose()
+                  )
                 }
       _      <- createPV[IO, JInteger](server, top ++ "intVal", Array(0))
       _      <- createPV[IO, JDouble](server, top ++ "doubleVal", Array(0.0))

@@ -96,7 +96,7 @@ class CaWrapperSpec extends CatsEffectSuite {
           _   <- Resource.eval(ch.connect)
           s   <- ch.valueStream(dsp)
         } yield s
-      ).use(_.take(5).compile.toList)
+      ).use(_.drop(2).take(5).compile.toList)
         .map(l => l.map(_ - l.head))
         .timeout(FiniteDuration(5, TimeUnit.SECONDS)),
       List.range(0, 5)

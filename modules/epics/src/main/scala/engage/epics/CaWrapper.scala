@@ -9,7 +9,7 @@ import cats.implicits._
 import cats.effect.implicits._
 import org.epics.ca.impl.ProtocolConfiguration.PropertyNames._
 import fs2.Stream
-import org.epics.ca.{ Channel => CaChannel, Context, Status }
+import org.epics.ca.{ AccessRights, Channel => CaChannel, ConnectionState, Context, Status }
 import lucuma.core.util.Enumerated
 
 import java.net.Inet4Address
@@ -17,6 +17,7 @@ import java.util.Properties
 import java.lang.{ Integer => JInteger }
 import java.lang.{ Double => JDouble }
 import java.lang.{ Float => JFloat }
+import java.lang.{ Boolean => JBoolean }
 import scala.concurrent.duration.FiniteDuration
 
 object CaWrapper {
@@ -126,13 +127,21 @@ object CaWrapper {
       .delay(ctx.createChannel[JInteger](name, classOf[JInteger]))
       .map(ChannelEnumImpl[F, T](_))
 
-  sealed trait Channel[F[_], T] {
+  sealed trait ConnectChannel[F[_]] {
     val connect: F[Unit]
-    def connect(timeout:                 FiniteDuration): F[Unit]
+    def connect(timeout: FiniteDuration): F[Unit]
+    val disconnect: F[Unit]
+    def getName: F[String]
+    def getConnectionState: F[ConnectionState]
+    def getAccessRights: F[AccessRights]
+  }
+
+  sealed trait Channel[F[_], T] extends ConnectChannel[F] {
     val get: F[T]
-    def get(timeout:                     FiniteDuration): F[T]
-    def put(v:                           T): F[Status]
-    def valueStream(implicit dispatcher: Dispatcher[F]): Resource[F, Stream[F, T]]
+    def get(timeout:                          FiniteDuration): F[T]
+    def put(v:                                T): F[Status]
+    def valueStream(implicit dispatcher:      Dispatcher[F]): Resource[F, Stream[F, T]]
+    def connectionStream(implicit dispatcher: Dispatcher[F]): Resource[F, Stream[F, Boolean]]
   }
 
   abstract class ChannelConnectImpl[F[_]: Async, T, J](caChannel: CaChannel[J])
@@ -140,6 +149,11 @@ object CaWrapper {
     override val connect: F[Unit]                          =
       Async[F].fromCompletableFuture(Async[F].delay(caChannel.connectAsync())).void
     override def connect(timeout: FiniteDuration): F[Unit] = connect.timeout(timeout)
+    override val disconnect: F[Unit]                       = Async[F].delay(caChannel.close())
+    override def getName: F[String]                        = Async[F].delay(caChannel.getName)
+    override def getConnectionState: F[ConnectionState]    =
+      Async[F].delay(caChannel.getConnectionState)
+    override def getAccessRights: F[AccessRights]          = Async[F].delay(caChannel.getAccessRights)
   }
 
   final case class ChannelImpl[F[_]: Async, T, J](caChannel: CaChannel[J])(implicit
@@ -162,6 +176,21 @@ object CaWrapper {
            }(x => Async[F].delay(x.close()))
       s <- Resource.pure(Stream.fromQueueUnterminated(q))
     } yield s
+
+    override def connectionStream(implicit
+      dispatcher: Dispatcher[F]
+    ): Resource[F, Stream[F, Boolean]] = for {
+      q <- Resource.eval(Queue.unbounded[F, Boolean])
+      _ <- Resource.make {
+             Async[F].delay(
+               caChannel.addConnectionListener((_: CaChannel[J], c: JBoolean) =>
+                 dispatcher.unsafeRunAndForget(q.offer(c))
+               )
+             )
+           }(x => Async[F].delay(x.close()))
+      s <- Resource.pure(Stream.fromQueueUnterminated(q))
+    } yield s
+
   }
 
   final case class ChannelEnumImpl[F[_]: Async, T: Enumerated](caChannel: CaChannel[JInteger])(
@@ -200,6 +229,21 @@ object CaWrapper {
            }(x => Async[F].delay(x.close()))
       s <- Resource.pure(Stream.fromQueueUnterminated(q))
     } yield s
+
+    override def connectionStream(implicit
+      dispatcher: Dispatcher[F]
+    ): Resource[F, Stream[F, Boolean]] = for {
+      q <- Resource.eval(Queue.unbounded[F, Boolean])
+      _ <- Resource.make {
+             Async[F].delay(
+               caChannel.addConnectionListener((_: CaChannel[JInteger], c: JBoolean) =>
+                 dispatcher.unsafeRunAndForget(q.offer(c))
+               )
+             )
+           }(x => Async[F].delay(x.close()))
+      s <- Resource.pure(Stream.fromQueueUnterminated(q))
+    } yield s
+
   }
 
 }

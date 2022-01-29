@@ -34,9 +34,11 @@ lazy val epics = project
     libraryDependencies ++= Seq(
       Libraries.Cats.value,
       Libraries.CatsEffect.value,
+      Libraries.Mouse.value,
       Libraries.Fs2,
       Libraries.EpicsCA,
       Libraries.EpicsJCA % Test,
       Libraries.LucumaCore.value
-    ) ++ Libraries.MUnit.value
+    ) ++ Libraries.MUnit.value,
+    Test / parallelExecution := false
   )
