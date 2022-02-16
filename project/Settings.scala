@@ -27,21 +27,23 @@ object Settings {
     val catsEffect   = "3.3.0"
     val cats         = "2.7.0"
     val mouse        = "1.0.7"
-    val fs2          = "3.2.2"
+    val fs2          = "3.2.4"
     val shapeless    = "2.3.7"
     val scalaParsers = "1.1.2"
     val scalaXml     = "1.2.0"
     val catsTime     = "0.4.0"
+
+    //Logging
+    val log4Cats          = "2.2.0"
+    val log4CatsLogLevel  = "0.3.0"
 
     val http4s        = "1.0.0-M27"
     val squants       = "1.8.2"
     val commonsHttp   = "2.0.2"
     val unboundId     = "3.2.1"
     val jwt           = "5.0.0"
-    val slf4j         = "1.7.32"
+    val slf4j         = "1.7.35"
     val log4s         = "1.10.0"
-    val log4cats      = "2.1.1"
-    val log4catsLevel = "0.3.0"
     val logback       = "1.2.7"
     val janino        = "3.1.6"
     val logstash      = "7.0"
@@ -54,7 +56,7 @@ object Settings {
     // test libraries
     val xmlUnit        = "1.6"
     val jUnitInterface = "0.13.2"
-    val scalaMock      = "5.1.0"
+    val scalaMock      = "5.2.0"
     lazy val munitVersion           = "0.7.29"
     lazy val munitDisciplineVersion = "1.0.9"
     lazy val munitCatsEffectVersion = "1.0.6"
@@ -126,19 +128,16 @@ object Settings {
     val Slf4j     = "org.slf4j" % "slf4j-api" % LibraryVersions.slf4j
     val JuliSlf4j = "org.slf4j" % "jul-to-slf4j" % LibraryVersions.slf4j
     val NopSlf4j  = "org.slf4j" % "slf4j-nop" % LibraryVersions.slf4j
-    val Log4Cats  = Def.setting("io.chrisdavenport" %%% "log4cats-slf4j" % LibraryVersions.log4cats)
-    val Log4CatsNoop =
-      Def.setting("io.chrisdavenport" %%% "log4cats-noop" % LibraryVersions.log4cats % "test")
-    val Logback = Seq(
-      "ch.qos.logback" % "logback-core" % LibraryVersions.logback,
-      "ch.qos.logback" % "logback-classic" % LibraryVersions.logback,
-      "org.codehaus.janino" % "janino" % LibraryVersions.janino,
-      "net.logstash.logback" % "logstash-logback-encoder" % LibraryVersions.logstash
+    val Log4Cats = Def.setting(
+      Seq(
+        "org.typelevel" %%% "log4cats-core"     % LibraryVersions.log4Cats,
+        "com.rpiaggio"  %%% "log4cats-loglevel" % LibraryVersions.log4CatsLogLevel
+      )
     )
-    val Log4s = Def.setting("org.log4s" %%% "log4s" % LibraryVersions.log4s)
+    val Log4CatsNoop =
+      Def.setting("org.typelevel" %%% "log4cats-noop" % LibraryVersions.log4Cats % "test")
     val PrometheusClient =
       "io.prometheus" % "simpleclient_common" % LibraryVersions.prometheusClient
-    val Logging = Def.setting(Seq(JuliSlf4j, Log4s.value) ++ Logback)
     val PureConfig = Seq(
       "com.github.pureconfig" %% "pureconfig" % LibraryVersions.pureConfig,
       "com.github.pureconfig" %% "pureconfig-cats" % LibraryVersions.pureConfig,
