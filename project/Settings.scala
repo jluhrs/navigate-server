@@ -10,11 +10,11 @@ object Settings {
   /** Library versions */
   object LibraryVersions {
     // ScalaJS libraries
-    val scalaDom                = "1.2.0"
-    val scalajsReact            = "2.0.0"
+    val scalaDom                = "2.1.0"
+    val scalajsReact            = "2.0.1"
     val booPickle               = "1.4.0"
-    val diode                   = "1.2.0-RC3"
-    val diodeReact              = "1.2.0-RC3"
+    val diode                   = "1.2.0-RC4"
+    val diodeReact              = "1.2.0-RC4"
     val javaTimeJS              = "2.3.0"
     val scalaJSReactCommon      = "0.14.7"
     val scalaJSSemanticUI       = "0.13.1"
@@ -24,14 +24,14 @@ object Settings {
     val scalaJSReactSortable    = "0.5.2"
 
     // Scala libraries
-    val catsEffect   = "3.3.0"
+    val catsEffect   = "3.3.5"
     val cats         = "2.7.0"
     val mouse        = "1.0.7"
     val fs2          = "3.2.4"
     val shapeless    = "2.3.7"
     val scalaParsers = "1.1.2"
     val scalaXml     = "1.2.0"
-    val catsTime     = "0.4.0"
+    val catsTime     = "0.5.0"
 
     //Logging
     val log4Cats          = "2.2.0"
@@ -75,7 +75,7 @@ object Settings {
     val gmpStatusDatabase   = "0.3.7"
     val gmpCmdClientBridge  = "0.6.7"
     val guava               = "31.0.1-jre"
-    val prometheusClient    = "0.12.0"
+    val prometheusClient    = "0.14.1"
     val geminiLocales       = "0.7.0"
     val pprint              = "0.6.6"
     val jaxb                = "3.0.1"
@@ -90,7 +90,17 @@ object Settings {
     val gppUI   = "0.0.3"
 
     //Lucuma
-    val LucumaCore = "0.14.3"
+    val lucumaCore = "0.24.0"
+    val lucumaUI   = "0.25.0"
+    val lucumaSchemas = "0.11.0"
+
+    val clue = "0.20.2"
+
+    val sttp = "3.5.1"
+
+    // Pure JS libraries
+    val fomanticUI = "2.8.7"
+
   }
 
   /**
@@ -99,7 +109,7 @@ object Settings {
   object Libraries {
     // Test Libraries
     val TestLibs = Def.setting(
-      "edu.gemini" %%% "gsp-math-testkit" % LibraryVersions.gspMath % "test"
+      "org.typelevel" %%% "cats-testkit-scalatest" % "2.1.5" % "test"
     )
     val MUnit          = Def.setting(
       Seq(
@@ -128,7 +138,10 @@ object Settings {
     val Slf4j     = "org.slf4j" % "slf4j-api" % LibraryVersions.slf4j
     val JuliSlf4j = "org.slf4j" % "jul-to-slf4j" % LibraryVersions.slf4j
     val NopSlf4j  = "org.slf4j" % "slf4j-nop" % LibraryVersions.slf4j
-    val Log4Cats = Def.setting(
+    val CatsTime  = Def.setting("org.typelevel" %%% "cats-time" % LibraryVersions.catsTime % "compile->compile;test->test")
+    val Log4s     = Def.setting("org.log4s" %%% "log4s" % LibraryVersions.log4s)
+    val Log4Cats         = Def.setting("org.typelevel" %%% "log4cats-slf4j" % LibraryVersions.log4Cats)
+    val Log4CatsLogLevel  = Def.setting(
       Seq(
         "org.typelevel" %%% "log4cats-core"     % LibraryVersions.log4Cats,
         "com.rpiaggio"  %%% "log4cats-loglevel" % LibraryVersions.log4CatsLogLevel
@@ -136,8 +149,14 @@ object Settings {
     )
     val Log4CatsNoop =
       Def.setting("org.typelevel" %%% "log4cats-noop" % LibraryVersions.log4Cats % "test")
+    val Logback          = Seq(
+      "ch.qos.logback"      % "logback-core"    % LibraryVersions.logback,
+      "ch.qos.logback"      % "logback-classic" % LibraryVersions.logback,
+      "org.codehaus.janino" % "janino"          % LibraryVersions.janino
+    )
     val PrometheusClient =
       "io.prometheus" % "simpleclient_common" % LibraryVersions.prometheusClient
+    val Logging          = Def.setting(Seq(JuliSlf4j, Log4s.value) ++ Logback)
     val PureConfig = Seq(
       "com.github.pureconfig" %% "pureconfig" % LibraryVersions.pureConfig,
       "com.github.pureconfig" %% "pureconfig-cats" % LibraryVersions.pureConfig,
@@ -162,9 +181,10 @@ object Settings {
       "org.http4s" %% "http4s-prometheus-metrics" % LibraryVersions.http4s
     val Monocle = Def.setting(
       Seq(
-        "com.github.julien-truffaut" %%% "monocle-core" % LibraryVersions.monocle,
-        "com.github.julien-truffaut" %%% "monocle-macro" % LibraryVersions.monocle,
-        "com.github.julien-truffaut" %%% "monocle-unsafe" % LibraryVersions.monocle
+        "dev.optics" %%% "monocle-core"   % LibraryVersions.monocle,
+        "dev.optics" %%% "monocle-macro"  % LibraryVersions.monocle,
+        "dev.optics" %%% "monocle-unsafe" % LibraryVersions.monocle,
+        "dev.optics" %%% "monocle-law"    % LibraryVersions.monocle
       )
     )
     val Circe = Def.setting(
@@ -179,10 +199,10 @@ object Settings {
     // Client Side JS libraries
     val ReactScalaJS = Def.setting(
       Seq(
-        "com.github.japgolly.scalajs-react" %%% "core" % LibraryVersions.scalajsReact,
-        "com.github.japgolly.scalajs-react" %%% "extra" % LibraryVersions.scalajsReact,
-        "com.github.japgolly.scalajs-react" %%% "ext-monocle-cats" % LibraryVersions.scalajsReact,
-        "com.github.japgolly.scalajs-react" %%% "ext-cats" % LibraryVersions.scalajsReact
+        "com.github.japgolly.scalajs-react" %%% "core"               % LibraryVersions.scalajsReact,
+        "com.github.japgolly.scalajs-react" %%% "extra"              % LibraryVersions.scalajsReact,
+        "com.github.japgolly.scalajs-react" %%% "extra-ext-monocle3" % LibraryVersions.scalajsReact,
+        "com.github.japgolly.scalajs-react" %%% "core-ext-cats"      % LibraryVersions.scalajsReact
       )
     )
     val Diode = Def.setting(
@@ -247,17 +267,36 @@ object Settings {
     val EpicsCA = "org.epics" % "ca" % LibraryVersions.ca
 
     // Gemini Libraries
-    val GspMath = Def.setting("edu.gemini" %%% "gsp-math" % LibraryVersions.gspMath)
-    val GspMathTestkit =
-      Def.setting("edu.gemini" %%% "gsp-math-testkit" % LibraryVersions.gspMath % "test")
-    val GspCoreModel = Def.setting("edu.gemini" %%% "gsp-core-model" % LibraryVersions.gspCore)
-    val GspCoreTestkit =
-      Def.setting("edu.gemini" %%% "gsp-core-testkit" % LibraryVersions.gspCore % "test")
-    val GspCoreOcs2Api = Def.setting("edu.gemini" %%% "gsp-core-ocs2-api" % LibraryVersions.gspCore)
-    val GppUI          = Def.setting("edu.gemini" %%% "gpp-ui" % LibraryVersions.gppUI)
+//    val GspMath = Def.setting("edu.gemini" %%% "gsp-math" % LibraryVersions.gspMath)
+//    val GspMathTestkit =
+//      Def.setting("edu.gemini" %%% "gsp-math-testkit" % LibraryVersions.gspMath % "test")
+//    val GspCoreModel = Def.setting("edu.gemini" %%% "gsp-core-model" % LibraryVersions.gspCore)
+//    val GspCoreTestkit =
+//      Def.setting("edu.gemini" %%% "gsp-core-testkit" % LibraryVersions.gspCore % "test")
+//    val GspCoreOcs2Api = Def.setting("edu.gemini" %%% "gsp-core-ocs2-api" % LibraryVersions.gspCore)
+//    val GppUI          = Def.setting("edu.gemini" %%% "gpp-ui" % LibraryVersions.gppUI)
 
     // Lucuma libraries
-    val LucumaCore = Def.setting("edu.gemini" %%% "lucuma-core" % LibraryVersions.LucumaCore)
+    val LucumaCore    = Def.setting(
+      Seq(
+        "edu.gemini" %%% "lucuma-core"         % LibraryVersions.lucumaCore,
+        "edu.gemini" %%% "lucuma-core-testkit" % LibraryVersions.lucumaCore
+      )
+    )
+    val LucumaUI      = Def.setting("edu.gemini" %%% "lucuma-ui" % LibraryVersions.lucumaUI)
+    val LucumaSchemas = "edu.gemini" %% "lucuma-schemas" % LibraryVersions.lucumaSchemas
+
+    val Clue          = "edu.gemini" %% "clue-core"              % LibraryVersions.clue
+    val ClueHttp4s    = "edu.gemini" %% "clue-http4s-jdk-client" % LibraryVersions.clue
+    val ClueGenerator = "edu.gemini" %% "clue-generator"         % LibraryVersions.clue
+
+    val Sttp = Def.setting(
+      Seq(
+        "com.softwaremill.sttp.client3" %%% "core"  % LibraryVersions.sttp,
+        "com.softwaremill.sttp.client3" %%% "circe" % LibraryVersions.sttp,
+        "com.softwaremill.sttp.client3" %%% "cats"  % LibraryVersions.sttp
+      )
+    )
   }
 
   object PluginVersions {
