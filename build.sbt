@@ -222,7 +222,7 @@ lazy val engage_web_client = project
       LucumaUI.value,
       PPrint.value,
       TestLibs.value
-    ) ++ MUnit.value ++ ReactScalaJS.value ++ Diode.value ++ Log4CatsLogLevel.value ++ Circe.value
+    ) ++ MUnit.value ++ ReactScalaJS.value ++ Log4CatsLogLevel.value ++ Circe.value
   )
   .settings(
     buildInfoUsePackageAsPath := true,

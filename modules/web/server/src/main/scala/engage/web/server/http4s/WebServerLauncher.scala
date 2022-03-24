@@ -135,7 +135,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
 
   }
 
-  def redirectWebServer[F[_]: Logger: Async](conf: WebServerConfiguration): Resource[F, Server] = {
+  def redirectWebServer[F[_]: Async](conf: WebServerConfiguration): Resource[F, Server] = {
     val router = Router[F](
       "/" -> new RedirectToHttpsRoutes[F](443, conf.externalBaseUrl).service
     )

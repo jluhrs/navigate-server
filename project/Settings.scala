@@ -13,8 +13,6 @@ object Settings {
     val scalaDom                = "2.1.0"
     val scalajsReact            = "2.0.1"
     val booPickle               = "1.4.0"
-    val diode                   = "1.2.0-RC4"
-    val diodeReact              = "1.2.0-RC4"
     val javaTimeJS              = "2.3.0"
     val scalaJSReactCommon      = "0.14.7"
     val scalaJSSemanticUI       = "0.13.1"
@@ -203,12 +201,6 @@ object Settings {
         "com.github.japgolly.scalajs-react" %%% "extra"              % LibraryVersions.scalajsReact,
         "com.github.japgolly.scalajs-react" %%% "extra-ext-monocle3" % LibraryVersions.scalajsReact,
         "com.github.japgolly.scalajs-react" %%% "core-ext-cats"      % LibraryVersions.scalajsReact
-      )
-    )
-    val Diode = Def.setting(
-      Seq(
-        "io.suzaku" %%% "diode" % LibraryVersions.diode,
-        "io.suzaku" %%% "diode-react" % LibraryVersions.diodeReact
       )
     )
     val ScalaJSDom = Def.setting("org.scala-js" %%% "scalajs-dom" % LibraryVersions.scalaDom)
