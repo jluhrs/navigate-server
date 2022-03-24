@@ -76,4 +76,4 @@ node_modules/
 package-lock.json
 
 # Project specific
-modules/edu.gemini.observe.web/edu.gemini.observe.web.server/log/
+modules/edu.gemini.engage.web/edu.gemini.engage.web.server/log/
