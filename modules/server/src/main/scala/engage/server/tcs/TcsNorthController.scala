@@ -3,4 +3,4 @@
 
 package engage.server.tcs
 
-class TcsNorthController[F[_]] {}
+trait TcsNorthController[F[_]] extends TcsBaseController[F]

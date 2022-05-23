@@ -5,39 +5,46 @@ package engage.epics
 
 import cats.Parallel
 import cats.effect.Async
-import cats.implicits._
+import cats.syntax.all._
+import engage.epics.EpicsSystem.TelltaleChannel
 import mouse.all._
 import org.epics.ca.ConnectionState
-import fs2.Stream
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
 
+import RemoteChannel._
+
 case class EpicsSystem[F[_]: Async: Parallel](
-  telltale:          CaWrapper.ConnectChannel[F],
-  channelList:       List[CaWrapper.ConnectChannel[F]],
-  connectionTimeout: FiniteDuration = FiniteDuration(5, TimeUnit.SECONDS)
+  telltale:    TelltaleChannel,
+  channelList: Set[RemoteChannel]
 ) {
-  def isConnected: F[Boolean] = telltale.getConnectionState.map(_.equals(ConnectionState.CONNECTED))
+  def isConnected: F[Boolean] =
+    telltale.channel.getConnectionState.map(_.equals(ConnectionState.CONNECTED))
 
   def isAllConnected: F[Boolean] = isConnected.flatMap(
     _.fold(
       channelList
-        .map(_.getConnectionState.map(_.equals(ConnectionState.CONNECTED)))
+        .map(_.getConnectionState)
+        .toList
         .parSequence
-        .map(_.forall(x => x)),
+        .map(_.forall(_.equals(ConnectionState.CONNECTED))),
       false.pure[F]
     )
   )
 
-  def telltaleConnectionCheck: F[Boolean] = isConnected.flatMap(
+  def telltaleConnectionCheck(
+    connectionTimeout: FiniteDuration = FiniteDuration(5, TimeUnit.SECONDS)
+  ): F[Boolean] = isConnected.flatMap(
     _.fold(
       true.pure[F],
-      telltale.connect(connectionTimeout).attempt.map(_.isRight)
+      telltale.channel.connect(connectionTimeout).attempt.map(_.isRight)
     )
   )
 
-  def connectionCheck: F[Boolean] = telltaleConnectionCheck
+  def connectionCheck(
+    connectionTimeout: FiniteDuration = FiniteDuration(5, TimeUnit.SECONDS)
+  ): F[Boolean] = telltaleConnectionCheck(connectionTimeout)
     .flatMap(
       _.fold(
         channelList
@@ -50,24 +57,15 @@ case class EpicsSystem[F[_]: Async: Parallel](
                 )
             )
           )
+          .toList
           .parSequence
           .map(_.forall(x => x)),
         false.pure[F]
       )
     )
-
 }
 
 object EpicsSystem {
-  def checkLoop[F[_]: Async: Parallel](
-    l:      List[EpicsSystem[F]],
-    period: FiniteDuration
-  ): Stream[F, Nothing] = Stream
-    .awakeEvery(period)
-    .flatMap { _ =>
-      Stream.eval(
-        l.map(_.connectionCheck).parSequence
-      )
-    }
-    .drain
+  case class TelltaleChannel(sysName: String, channel: RemoteChannel)
+
 }
