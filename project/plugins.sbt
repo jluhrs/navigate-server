@@ -9,7 +9,7 @@ addSbtPlugin("io.spray"           % "sbt-revolver"             % "0.9.1")
 addSbtPlugin("com.timushev.sbt"   % "sbt-updates"              % "0.5.1")
 addSbtPlugin("ch.epfl.scala"      % "sbt-scalajs-bundler"      % "0.20.0")
 // Support making distributions
-addSbtPlugin("com.typesafe.sbt"   % "sbt-native-packager"      % "1.7.3")
+addSbtPlugin("com.typesafe.sbt"   % "sbt-native-packager"      % "1.7.6")
 
 addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.4.2")
 
