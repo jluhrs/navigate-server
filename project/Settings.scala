@@ -13,12 +13,12 @@ object Settings {
     val scalaDom                = "2.1.0"
     val scalajsReact            = "2.0.1"
     val booPickle               = "1.4.0"
-    val javaTimeJS              = "2.3.0"
+    val javaTimeJS              = "2.4.0"
     val scalaJSReactCommon      = "0.14.7"
     val scalaJSSemanticUI       = "0.13.1"
     val scalaJSReactVirtualized = "0.13.1"
     val scalaJSReactClipboard   = "1.5.1"
-    val scalaJSReactDraggable   = "0.14.1"
+    val scalaJSReactDraggable   = "0.14.3"
     val scalaJSReactSortable    = "0.5.2"
 
     // Scala libraries
@@ -47,7 +47,7 @@ object Settings {
     val logstash    = "7.0"
     val pureConfig  = "0.17.1"
     val monocle     = "3.1.0"
-    val circe       = "0.14.1"
+    val circe       = "0.14.2"
     val doobie      = "0.6.0"
     val flyway      = "6.0.4"
 
