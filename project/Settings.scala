@@ -25,7 +25,7 @@ object Settings {
     val catsEffect   = "3.3.5"
     val cats         = "2.7.0"
     val mouse        = "1.0.7"
-    val fs2          = "3.2.4"
+    val fs2          = "3.2.8"
     val shapeless    = "2.3.7"
     val scalaParsers = "1.1.2"
     val scalaXml     = "1.2.0"
