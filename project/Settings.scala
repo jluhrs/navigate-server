@@ -33,7 +33,7 @@ object Settings {
 
     // Logging
     val log4Cats         = "2.2.0"
-    val log4CatsLogLevel = "0.3.0"
+    val log4CatsLogLevel = "0.3.1"
 
     val http4s      = "1.0.0-M27"
     val squants     = "1.8.2"
