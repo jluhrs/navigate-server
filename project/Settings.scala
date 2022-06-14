@@ -94,7 +94,7 @@ object Settings {
 
     val clue = "0.20.3"
 
-    val sttp = "3.5.2"
+    val sttp = "3.6.2"
 
     // Pure JS libraries
     val fomanticUI = "2.8.7"
