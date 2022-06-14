@@ -57,7 +57,7 @@ object Settings {
     val scalaMock                   = "5.2.0"
     lazy val munitVersion           = "0.7.29"
     lazy val munitDisciplineVersion = "1.0.9"
-    lazy val munitCatsEffectVersion = "1.0.6"
+    lazy val munitCatsEffectVersion = "1.0.7"
 
     val apacheXMLRPC        = "3.1.3"
     val opencsv             = "2.3"
