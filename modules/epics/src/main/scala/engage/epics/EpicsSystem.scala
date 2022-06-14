@@ -43,7 +43,7 @@ case class EpicsSystem[F[_]: Async: Parallel](
         channelList
           .map(ch =>
             ch.getConnectionState.flatMap(x =>
-              (x.equals(ConnectionState.CONNECTED))
+              x.equals(ConnectionState.CONNECTED)
                 .fold(
                   true.pure[F],
                   ch.connect(connectionTimeout).attempt.map(_.isRight)
