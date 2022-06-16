@@ -105,6 +105,18 @@ lazy val epics = project
     Test / parallelExecution := false
   )
 
+lazy val statestream = project
+  .in(file("modules/statestream"))
+  .settings(
+    name := "statestream",
+    libraryDependencies ++= Seq(
+      Libraries.Cats.value,
+      Libraries.CatsEffect.value,
+      Libraries.Mouse.value,
+      Libraries.Fs2,
+    ) ++ Libraries.MUnit.value
+  )
+
 lazy val engage_web_server = project
   .in(file("modules/web/server"))
   .enablePlugins(BuildInfoPlugin)
