@@ -1,14 +1,14 @@
 package engage.server.tcs
 
-import cats.{Applicative, Monad, Parallel}
+import cats.{ Applicative, Monad, Parallel }
 import cats.effect.std.Dispatcher
-import cats.effect.{Resource, Temporal}
+import cats.effect.{ Resource, Temporal }
 import engage.epics.EpicsSystem.TelltaleChannel
-import engage.epics.{Channel, EpicsService}
+import engage.epics.{ Channel, EpicsService }
 import engage.epics.VerifiedEpics._
 import engage.server.ApplyCommandResult
 import engage.server.acm.ParameterList._
-import engage.server.acm.{CadDirective, GeminiApplyCommand}
+import engage.server.acm.{ CadDirective, GeminiApplyCommand }
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -22,7 +22,7 @@ trait TcsEpics[F[_]] {
 
   val mountParkCmd: ParameterlessCommandChannel[F]
 
-/*  val m1GuideCmd: M1GuideCmd[F]
+  /*  val m1GuideCmd: M1GuideCmd[F]
 
   val m2GuideCmd: M2GuideCmd[F]
 
@@ -421,56 +421,78 @@ trait TcsEpics[F[_]] {
     case G3 => g3GuideConfig
     case G4 => g4GuideConfig
   }
-*/
+   */
 }
 
 object TcsEpics {
 
   val sysName: String = "TCS"
 
-  val className: String      = getClass.getName
+  val className: String = getClass.getName
 
-  def build[F[_]: Dispatcher: Temporal: Parallel](service: EpicsService[F], tops: Map[String, String]): Resource[F, TcsEpics[F]] = {
+  def build[F[_]: Dispatcher: Temporal: Parallel](
+    service: EpicsService[F],
+    tops:    Map[String, String]
+  ): Resource[F, TcsEpics[F]] = {
     val top = tops.getOrElse("tcs", "tcs:")
-    for{
-        channels <- buildChannels(service, top)
-        applyCmd <- GeminiApplyCommand.build(service, channels.telltale, top + "apply", top + "applyC")
-      } yield new TcsEpicsImpl[F](applyCmd, channels)
+    for {
+      channels <- buildChannels(service, top)
+      applyCmd <-
+        GeminiApplyCommand.build(service, channels.telltale, top + "apply", top + "applyC")
+    } yield new TcsEpicsImpl[F](applyCmd, channels)
   }
 
   val CadDirName: String = ".DIR"
 
   case class TcsChannels[F[_]](
-    telltale: TelltaleChannel,
+    telltale:         TelltaleChannel,
     telescopeParkDir: Channel[F, CadDirective]
-                              )
-
-  def buildChannels[F[_]](service: EpicsService[F], top: String): Resource[F, TcsChannels[F]] = for{
-    tt  <- service.getChannel[String](top + "sad:health.VAL").map(TelltaleChannel(sysName, _))
-    tpd <- service.getChannel[CadDirective](top + "telpark" + CadDirName)
-  } yield TcsChannels[F](
-    tt,
-    tpd
   )
 
-  case class TcsCommandImpl[F[_]: Monad: Parallel](tcsEpics: TcsEpics[F], timeout: FiniteDuration, params: ParameterList[F]) extends TcsCommand[F] {
-    override def post: VerifiedEpics[F, ApplyCommandResult] = params.compile *> tcsEpics.post(timeout)
+  def buildChannels[F[_]](service: EpicsService[F], top: String): Resource[F, TcsChannels[F]] =
+    for {
+      tt  <- service.getChannel[String](top + "sad:health.VAL").map(TelltaleChannel(sysName, _))
+      tpd <- service.getChannel[CadDirective](top + "telpark" + CadDirName)
+    } yield TcsChannels[F](
+      tt,
+      tpd
+    )
 
-    override val mcsParkCmd: ParameterlessCommand[F, TcsCommand[F]] = new ParameterlessCommand[F, TcsCommand[F]] {
-      override def mark: TcsCommand[F] = TcsCommandImpl(tcsEpics, timeout, params :+ tcsEpics.mountParkCmd.mark)
-    }
+  case class TcsCommandImpl[F[_]: Monad: Parallel](
+    tcsEpics: TcsEpics[F],
+    timeout:  FiniteDuration,
+    params:   ParameterList[F]
+  ) extends TcsCommand[F] {
+    override def post: VerifiedEpics[F, ApplyCommandResult] =
+      params.compile *> tcsEpics.post(timeout)
+
+    override val mcsParkCmd: ParameterlessCommand[F, TcsCommand[F]] =
+      new ParameterlessCommand[F, TcsCommand[F]] {
+        override def mark: TcsCommand[F] =
+          TcsCommandImpl(tcsEpics, timeout, params :+ tcsEpics.mountParkCmd.mark)
+      }
   }
 
-  class TcsEpicsImpl[F[_]: Monad: Parallel](applyCmd: GeminiApplyCommand[F], channels: TcsChannels[F]) extends TcsEpics[F] {
-    override def post(timeout: FiniteDuration): VerifiedEpics[F, ApplyCommandResult] = applyCmd.post(timeout)
+  class TcsEpicsImpl[F[_]: Monad: Parallel](
+    applyCmd: GeminiApplyCommand[F],
+    channels: TcsChannels[F]
+  ) extends TcsEpics[F] {
+    override def post(timeout: FiniteDuration): VerifiedEpics[F, ApplyCommandResult] =
+      applyCmd.post(timeout)
 
-    override val mountParkCmd: ParameterlessCommandChannel[F] = ParameterlessCommandChannel(channels.telltale, channels.telescopeParkDir)
+    override val mountParkCmd: ParameterlessCommandChannel[F] =
+      ParameterlessCommandChannel(channels.telltale, channels.telescopeParkDir)
 
-    override def startCommand(timeout: FiniteDuration): TcsCommand[F] = TcsCommandImpl(this, timeout, List.empty)
+    override def startCommand(timeout: FiniteDuration): TcsCommand[F] =
+      TcsCommandImpl(this, timeout, List.empty)
   }
 
-  case class ParameterlessCommandChannel[F[_]: Monad](tt: TelltaleChannel, dirChannel: Channel[F, CadDirective]) {
-    val mark: VerifiedEpics[F, Unit] = writeChannel[F, CadDirective](tt, dirChannel)(Applicative[F].pure(CadDirective.MARK))
+  case class ParameterlessCommandChannel[F[_]: Monad](
+    tt:         TelltaleChannel,
+    dirChannel: Channel[F, CadDirective]
+  ) {
+    val mark: VerifiedEpics[F, Unit] =
+      writeChannel[F, CadDirective](tt, dirChannel)(Applicative[F].pure(CadDirective.MARK))
   }
 
   trait ParameterlessCommand[F[_], S] {
@@ -482,7 +504,7 @@ object TcsEpics {
 
     val mcsParkCmd: ParameterlessCommand[F, TcsCommand[F]]
   }
-/*
+  /*
   trait ProbeGuideCmd[F[_]] extends EpicsCommand[F] {
     def setNodachopa(v: String): F[Unit]
     def setNodachopb(v: String): F[Unit]
@@ -716,5 +738,5 @@ object TcsEpics {
     def setGrabRadius(v:   Double): VerifiedEpics[F, Unit]
     def setShortCircuit(v: String): VerifiedEpics[F, Unit]
   }
- */
+   */
 }

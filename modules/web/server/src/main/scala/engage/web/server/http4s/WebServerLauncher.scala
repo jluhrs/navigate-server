@@ -3,8 +3,10 @@
 
 package engage.web.server.http4s
 
+import cats.Parallel
+
 import java.nio.file.{ Path => FilePath }
-import cats.effect.std.{ Dispatcher, Queue }
+import cats.effect.std.Dispatcher
 import cats.effect._
 
 import scala.concurrent.duration._
@@ -27,7 +29,7 @@ import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import pureconfig.{ ConfigObjectSource, ConfigSource }
 import engage.model.config._
-import engage.server.{ EngageEngine, EngageFailure, Systems }
+import engage.server.{ CaServiceInit, EngageEngine, EngageFailure, Systems }
 import engage.web.server.OcsBuildInfo
 import engage.web.server.logging._
 import engage.web.server.config._
@@ -36,7 +38,6 @@ import engage.web.server.security.AuthenticationService
 import java.io.FileInputStream
 import java.security.{ KeyStore, Security }
 import javax.net.ssl.{ KeyManagerFactory, SSLContext, TrustManagerFactory }
-import scala.annotation.nowarn
 import scala.concurrent.ExecutionContext.global
 import scala.concurrent.duration.FiniteDuration
 
@@ -97,12 +98,11 @@ object WebServerLauncher extends IOApp with LogInitialization {
 
   /** Resource that yields the running web server */
   def webServer[F[_]: Logger: Async, I](
-    conf:           EngageConfiguration,
-    as:             AuthenticationService[F],
-    @nowarn inputs: Queue[F, I],
-    outputs:        Topic[F, EngageEvent],
-    se:             EngageEngine[F, I],
-    clientsDb:      ClientsSetDb[F]
+    conf:      EngageConfiguration,
+    as:        AuthenticationService[F],
+    outputs:   Topic[F, EngageEvent],
+    se:        EngageEngine[F],
+    clientsDb: ClientsSetDb[F]
   ): Resource[F, Server] = {
 
     val ssl: F[Option[SSLContext]] = conf.webServer.tls.map(makeContext[F]).sequence
@@ -213,24 +213,27 @@ object WebServerLauncher extends IOApp with LogInitialization {
     def engineIO(
       conf:       EngageConfiguration,
       httpClient: Client[IO]
-    ): Resource[IO, EngageEngine[IO, I]] =
+    ): Resource[IO, EngageEngine[IO]] =
       for {
-        sys  <- Resource.eval(Systems.build[IO](conf.site, httpClient, conf.engageEngine))
-        seqE <- Resource.eval[IO, EngageEngine[IO, I]](
-                  EngageEngine.build(conf.site, sys, conf.engageEngine)
+        dspt <- Dispatcher[IO]
+        cas  <- CaServiceInit.caInit[IO](conf.engageEngine)
+        sys  <-
+          Systems
+            .build[IO](conf.site, httpClient, conf.engageEngine, cas)(Async[IO], dspt, Parallel[IO])
+        seqE <- Resource.eval[IO, EngageEngine[IO]](
+                  EngageEngine.build[IO](conf.site, sys, conf.engageEngine)
                 )
       } yield seqE
 
     def webServerIO(
       conf: EngageConfiguration,
-      in:   Queue[IO, I],
       out:  Topic[IO, EngageEvent],
-      en:   EngageEngine[IO, I],
+      en:   EngageEngine[IO],
       cs:   ClientsSetDb[IO]
     ): Resource[IO, Unit] =
       for {
         as <- Resource.eval(authService[IO](conf.mode, conf.authentication))
-        _  <- webServer[IO, I](conf, as, in, out, en, cs)
+        _  <- webServer[IO, I](conf, as, out, en, cs)
       } yield ()
 
     def publishStats[F[_]: Temporal](cs: ClientsSetDb[F]): Stream[F, Unit] =
@@ -242,7 +245,6 @@ object WebServerLauncher extends IOApp with LogInitialization {
         conf   <- Resource.eval(config[IO].flatMap(loadConfiguration[IO]))
         _      <- Resource.eval(printBanner(conf))
         cli    <- AsyncHttpClient.resource[IO](clientConfig(10.seconds))
-        inq    <- Resource.eval(Queue.bounded[IO, I](10))
         out    <- Resource.eval(Topic[IO, EngageEvent])
         dsp    <- Dispatcher[IO]
         _      <- Resource.eval(logToClients(out, dsp))
@@ -251,12 +253,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
                   )
         _      <- Resource.eval(publishStats(cs).compile.drain.start)
         engine <- engineIO(conf, cli)
-        _      <- webServerIO(conf, inq, out, engine, cs)
-        _      <- Resource.eval(
-                    inq.size
-                      .map(l => Logger[IO].debug(s"Queue length: $l").whenA(l > 1))
-                      .start
-                  )
+        _      <- webServerIO(conf, out, engine, cs)
         _      <- Resource.eval(
                     out.subscribers
                       .evalMap(l => Logger[IO].debug(s"Subscribers amount: $l").whenA(l > 1))
@@ -265,7 +262,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
                       .start
                   )
         f      <- Resource.eval(
-                    engine.eventStream(inq).through(out.publish).compile.drain.onError(logError).start
+                    engine.eventStream.through(out.publish).compile.drain.onError(logError).start
                   )
         _      <- Resource.eval(f.join)        // We need to join to catch uncaught errors
       } yield ExitCode.Success

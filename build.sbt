@@ -105,10 +105,10 @@ lazy val epics = project
     Test / parallelExecution := false
   )
 
-lazy val statestream = project
-  .in(file("modules/statestream"))
+lazy val stateengine = project
+  .in(file("modules/stateengine"))
   .settings(
-    name := "statestream",
+    name := "stateengine",
     libraryDependencies ++= Seq(
       Libraries.Cats.value,
       Libraries.CatsEffect.value,
@@ -135,9 +135,8 @@ lazy val engage_web_server = project
                                 Log4Cats.value,
                                 BooPickle.value,
                                 Http4sBoopickle,
-                                Log4Cats.value
     ) ++
-      Http4sClient ++ Http4s ++ PureConfig,
+      Http4sClient ++ Http4s ++ PureConfig ++ Logging.value,
     // Supports launching the server in the background
     reStart / mainClass  := Some("engage.web.server.http4s.WebServerLauncher"),
     Compile / bspEnabled := false
@@ -283,6 +282,7 @@ lazy val engage_server = project
   )
   .dependsOn(engage_model.jvm % "compile->compile;test->test")
   .dependsOn(epics)
+  .dependsOn(stateengine)
 
 /**
  * Project for the engage server app for development

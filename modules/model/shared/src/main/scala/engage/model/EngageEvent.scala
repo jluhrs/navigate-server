@@ -39,11 +39,16 @@ object EngageEvent {
       Eq.by(x => (x.userDetails, x.clientId, x.serverVersion))
   }
 
+  case object McsParkStart extends EngageEvent
+  case object McsParkEnd   extends EngageEvent
+
   implicit val equal: Eq[EngageEvent] =
     Eq.instance {
       case (a: ServerLogMessage, b: ServerLogMessage)       => a === b
       case (a: ConnectionOpenEvent, b: ConnectionOpenEvent) => a === b
       case (_: NullEvent.type, _: NullEvent.type)           => true
+      case (_: McsParkStart.type, _: McsParkStart.type)     => true
+      case (_: McsParkEnd.type, _: McsParkEnd.type)         => true
       case _                                                => false
     }
 

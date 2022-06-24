@@ -81,9 +81,14 @@ object VerifiedEpics {
     override val run: F[B]                                         = fa.run.flatMap(fb.run)
   }
 
-  case class IfF[F[_]: FlatMap, A](cond: F[Boolean], trueVal: VerifiedEpics[F, A], falseVal: VerifiedEpics[F, A]) extends VerifiedEpics[F, A] {
-    override val systems: Map[TelltaleChannel, Set[RemoteChannel]] = merge(trueVal.systems, falseVal.systems)
-    override val run: F[A] = cond.flatMap(_.fold(trueVal.run, falseVal.run))
+  case class IfF[F[_]: FlatMap, A](
+    cond:     F[Boolean],
+    trueVal:  VerifiedEpics[F, A],
+    falseVal: VerifiedEpics[F, A]
+  ) extends VerifiedEpics[F, A] {
+    override val systems: Map[TelltaleChannel, Set[RemoteChannel]] =
+      merge(trueVal.systems, falseVal.systems)
+    override val run: F[A]                                         = cond.flatMap(_.fold(trueVal.run, falseVal.run))
   }
 
   case class Get[F[_], A](tt: TelltaleChannel, ch: Channel[F, A]) extends VerifiedEpics[F, A] {
@@ -114,7 +119,9 @@ object VerifiedEpics {
     tt: TelltaleChannel,
     ch: Channel[F, A]
   ): VerifiedEpics[Resource[F, *], Stream[F, StreamEvent[A]]] = EventStream(tt, ch)
-  def ifF[F[_]: FlatMap, A](cond: F[Boolean])(trueVal: => VerifiedEpics[F, A])(falseVal: => VerifiedEpics[F, A]): VerifiedEpics[F, A] = IfF(cond, trueVal, falseVal)
+  def ifF[F[_]: FlatMap, A](cond: F[Boolean])(trueVal: => VerifiedEpics[F, A])(
+    falseVal:                     => VerifiedEpics[F, A]
+  ): VerifiedEpics[F, A] = IfF(cond, trueVal, falseVal)
 
   implicit class OpsF[F[_]: Monad, A](v: VerifiedEpics[F, A]) {
     def ap[B](ff: VerifiedEpics[F, A => B]): VerifiedEpics[F, B] = ApplyF[F, A, B](v, ff)

@@ -4,6 +4,7 @@
 package engage.web.server.http4s
 
 import cats.effect.Async
+import cats.syntax.all._
 import engage.model.security.UserDetails
 import engage.server.EngageEngine
 import engage.web.server.security.{ AuthenticationService, Http4sAuthentication, TokenRefresher }
@@ -12,11 +13,9 @@ import org.http4s.dsl.Http4sDsl
 import org.http4s.server.middleware.GZip
 import lucuma.core.model.Observation.{ Id => ObsId }
 
-import scala.annotation.nowarn
-
-class EngageCommandRoutes[F[_]: Async, I](
-  auth:        AuthenticationService[F],
-  @nowarn eng: EngageEngine[F, I]
+class EngageCommandRoutes[F[_]: Async](
+  auth: AuthenticationService[F],
+  eng:  EngageEngine[F]
 ) extends Http4sDsl[F] {
   // Handles authentication
   private val httpAuthentication = new Http4sAuthentication(auth)
@@ -24,6 +23,10 @@ class EngageCommandRoutes[F[_]: Async, I](
   private val commandServices: AuthedRoutes[UserDetails, F] = AuthedRoutes.of {
     case POST -> Root / "load" / ObsId(obsId) / ClientIDVar(_) as _ =>
       Ok(s"Set selected observation $obsId")
+
+    case POST -> Root / "mcsPark" / ClientIDVar(_) as _ =>
+      eng.mcsPark *>
+        Ok(s"Park MCS")
 
   }
 

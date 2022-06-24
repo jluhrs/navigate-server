@@ -41,7 +41,7 @@ object EpicsService {
     serverPort:        Option[Int],
     maxArrayBytes:     Option[Int]
   ) {
-    def withAddressList(l: List[InetAddress]): Builder         = this.copy(addrList = l.some)
+    def withAddressList(l: List[InetAddress]): Builder          = this.copy(addrList = l.some)
     def withAutoAddrList(enabled: Boolean): Builder             = this.copy(autoAddrList = enabled.some)
     def withConnectionTimeout(timeout: FiniteDuration): Builder =
       this.copy(connectionTimeout = timeout.some)

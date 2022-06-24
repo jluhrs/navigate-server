@@ -1,14 +1,14 @@
 package engage.server.acm
 
-import cats.{Applicative, Monad}
-import cats.effect.{Resource, Temporal}
+import cats.{ Applicative, Monad }
+import cats.effect.{ Resource, Temporal }
 import cats.effect.std.Dispatcher
 import cats.effect.syntax.temporal._
 import cats.syntax.all._
 import engage.epics.Channel.StreamEvent
 import engage.epics.VerifiedEpics._
 import engage.server.ApplyCommandResult
-import engage.epics.{Channel, EpicsService, VerifiedEpics}
+import engage.epics.{ Channel, EpicsService, VerifiedEpics }
 import engage.epics.EpicsSystem.TelltaleChannel
 import fs2.Stream
 import fs2.RaiseThrowable._
@@ -38,36 +38,39 @@ object GeminiApplyCommand {
 
   final class GeminiApplyCommandImpl[F[_]: Dispatcher: Temporal](
     telltaleChannel: TelltaleChannel,
-    apply: ApplyRecord[F],
-    car:   CarRecord[F]
+    apply:           ApplyRecord[F],
+    car:             CarRecord[F]
   ) extends GeminiApplyCommand[F] {
     override def post(timeout: FiniteDuration): VerifiedEpics[F, ApplyCommandResult] = {
       val streamsV = for {
-        avrs <- eventStream(telltaleChannel, apply.oval)
-        cvrs <- eventStream(telltaleChannel, car.oval)
-        dwr  <- writeChannel(telltaleChannel, apply.dir)(Applicative[F].pure(CadDirective.START)).map(Resource.pure[F, F[Unit]])
-        msrr <- readChannel(telltaleChannel, apply.mess).map(Resource.pure[F, F[String]])
-        omsrr <- readChannel(telltaleChannel, car.omss).map(Resource.pure[F, F[String]])
+        avrs   <- eventStream(telltaleChannel, apply.oval)
+        cvrs   <- eventStream(telltaleChannel, car.oval)
+        dwr    <- writeChannel(telltaleChannel, apply.dir)(Applicative[F].pure(CadDirective.START))
+                    .map(Resource.pure[F, F[Unit]])
+        msrr   <- readChannel(telltaleChannel, apply.mess).map(Resource.pure[F, F[String]])
+        omsrr  <- readChannel(telltaleChannel, car.omss).map(Resource.pure[F, F[String]])
         clidrr <- readChannel(telltaleChannel, car.clid).map(Resource.pure[F, F[Int]])
       } yield for {
-        avs <- avrs
-        cvs <- cvrs
-        dw <- dwr
-        msr <- msrr
-        omsr <- omsrr
+        avs   <- avrs
+        cvs   <- cvrs
+        dw    <- dwr
+        msr   <- msrr
+        omsr  <- omsrr
         clidr <- clidrr
       } yield (avs, cvs, dw, msr, omsr, clidr)
 
-      streamsV.map(_.use { case (avs, cvs, dw, msr, omsr, clidr) => processCommand(avs, cvs, dw, msr, omsr, clidr).timeout(timeout) })
+      streamsV.map(_.use { case (avs, cvs, dw, msr, omsr, clidr) =>
+        processCommand(avs, cvs, dw, msr, omsr, clidr).timeout(timeout)
+      })
 
     }
 
     private def processCommand(
-      avs: Stream[F, StreamEvent[Int]],
-      cvs: Stream[F, StreamEvent[CarState]],
-      dw: F[Unit],
-      msr: F[String],
-      omsr: F[String],
+      avs:   Stream[F, StreamEvent[Int]],
+      cvs:   Stream[F, StreamEvent[CarState]],
+      dw:    F[Unit],
+      msr:   F[String],
+      omsr:  F[String],
       clidr: F[Int]
     ): F[ApplyCommandResult] =
       Stream[F, Stream[F, Event]](
@@ -115,11 +118,11 @@ object GeminiApplyCommand {
               (Processing(None, WaitingBusy), none[ApplyCommandResult].pure[F])
             case (Processing(Some(v), WaitingIdle), CarValChange(CarState.Idle)) =>
               (Processing(Some(v), WaitingBusy),
-                clidr.map(c => (c >= v).option(ApplyCommandResult.Completed))
+               clidr.map(c => (c >= v).option(ApplyCommandResult.Completed))
               )
             case (Processing(Some(v), _), CarValChange(CarState.Paused))         =>
               (Processing(Some(v), WaitingBusy),
-                clidr.map(c => (c >= v).option(ApplyCommandResult.Paused))
+               clidr.map(c => (c >= v).option(ApplyCommandResult.Paused))
               )
             case _                                                               =>
               (WaitingStart, none[ApplyCommandResult].pure[F])
@@ -134,16 +137,21 @@ object GeminiApplyCommand {
   }
 
   def build[F[_]: Dispatcher: Temporal](
-    srv:       EpicsService[F],
+    srv:             EpicsService[F],
     telltaleChannel: TelltaleChannel,
-    applyName: String,
-    carName:   String
+    applyName:       String,
+    carName:         String
   ): Resource[F, GeminiApplyCommand[F]] = for {
     apply <- ApplyRecord.build(srv, applyName)
     car   <- CarRecord.build(srv, carName)
   } yield new GeminiApplyCommandImpl[F](telltaleChannel, apply, car)
 
-  def smartSetParam[F[_]: Monad, A, B](tt: TelltaleChannel, st: Channel[F, A], pr: Channel[F, B], cmp: (A, B) => Boolean)(value: B): VerifiedEpics[F, Unit] = {
+  def smartSetParam[F[_]: Monad, A, B](
+    tt:    TelltaleChannel,
+    st:    Channel[F, A],
+    pr:    Channel[F, B],
+    cmp:   (A, B) => Boolean
+  )(value: B): VerifiedEpics[F, Unit] = {
     val statusRead = readChannel(tt, st)
     val paramWrite = writeChannel(tt, pr)(value.pure[F])
 

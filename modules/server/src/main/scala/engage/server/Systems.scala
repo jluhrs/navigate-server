@@ -4,11 +4,11 @@
 package engage.server
 
 import cats.effect.std.Dispatcher
-import cats.effect.{Async, Resource}
+import cats.effect.{ Async, Resource }
 import cats.Parallel
 import cats.syntax.all._
 import engage.epics.EpicsService
-import engage.model.config.{ControlStrategy, EngageEngineConfiguration}
+import engage.model.config.{ ControlStrategy, EngageEngineConfiguration }
 import org.http4s.client.Client
 import engage.server.tcs._
 import lucuma.core.`enum`.Site
@@ -23,24 +23,24 @@ final case class Systems[F[_]](
 
 object Systems {
   def build[F[_]: Async: Dispatcher: Parallel](
-    @nowarn site:         Site,
-    @nowarn client:       Client[F],
-    conf: EngageEngineConfiguration,
-    epicsSrv: EpicsService[F]
+    @nowarn site:   Site,
+    @nowarn client: Client[F],
+    conf:           EngageEngineConfiguration,
+    epicsSrv:       EpicsService[F]
   ): Resource[F, Systems[F]] = {
-    val tops =decodeTops(conf.tops)
+    val tops = decodeTops(conf.tops)
 
     // These are placeholders.
     def buildOdbProxy: Resource[F, OdbProxy[F]] = Resource.eval(OdbProxy.build)
 
     def buildTcsSouthController: Resource[F, TcsSouthController[F]] =
-      if(conf.systemControl.tcs === ControlStrategy.FullControl)
+      if (conf.systemControl.tcs === ControlStrategy.FullControl)
         TcsEpics.build(epicsSrv, tops).map(new TcsSouthControllerEpics(_, conf.ioTimeout))
       else
         Resource.pure(new TcsSouthControllerSim)
 
     def buildTcsNorthController: Resource[F, TcsNorthController[F]] =
-      if(conf.systemControl.tcs === ControlStrategy.FullControl)
+      if (conf.systemControl.tcs === ControlStrategy.FullControl)
         TcsEpics.build(epicsSrv, tops).map(new TcsNorthControllerEpics(_, conf.ioTimeout))
       else
         Resource.pure(new TcsNorthControllerSim)

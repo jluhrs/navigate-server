@@ -3,7 +3,7 @@
 
 package engage.server
 
-import cats.effect.{Resource, Async}
+import cats.effect.{ Async, Resource }
 import cats.syntax.all._
 import engage.epics.EpicsService
 import engage.model.config.EngageEngineConfiguration
@@ -16,20 +16,26 @@ object CaServiceInit {
   // the configuration file or from the environment
   def caInit[F[_]: Async](
     conf:       EngageEngineConfiguration
-  )(L: Logger[F]): Resource[F, EpicsService[F]] = {
-    val addressList = conf.epicsCaAddrList.map(_.pure[F]).getOrElse {
-      Async[F].delay(Option(System.getenv("EPICS_CA_ADDR_LIST"))).flatMap {
-        case Some(a) => a.pure[F]
-        case _ => Async[F].raiseError[String](new RuntimeException("Cannot initialize EPICS subsystem"))
+  )(implicit L: Logger[F]): Resource[F, EpicsService[F]] = {
+    val addressList = conf.epicsCaAddrList
+      .map(_.pure[F])
+      .getOrElse {
+        Async[F].delay(Option(System.getenv("EPICS_CA_ADDR_LIST"))).flatMap {
+          case Some(a) => a.pure[F]
+          case _       =>
+            Async[F].raiseError[String](new RuntimeException("Cannot initialize EPICS subsystem"))
+        }
       }
-    }.map(_.split(Array(',', ' ')).toList.map(InetAddress.getByName))
+      .map(_.split(Array(',', ' ')).toList.map(InetAddress.getByName))
 
-    for{
+    for {
       addrl <- Resource.eval(
-        L.info("Init EPICS but all subsystems in simulation").unlessA(conf.systemControl.connectEpics) *>
-          addressList
-      )
-      srv <- EpicsService.getBuilder.withConnectionTimeout(conf.ioTimeout).withAddressList(addrl).build
+                 L.info("Init EPICS but all subsystems in simulation")
+                   .unlessA(conf.systemControl.connectEpics) *>
+                   addressList
+               )
+      srv   <-
+        EpicsService.getBuilder.withConnectionTimeout(conf.ioTimeout).withAddressList(addrl).build
     } yield srv
   }
 }
