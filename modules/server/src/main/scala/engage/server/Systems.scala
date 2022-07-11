@@ -35,13 +35,13 @@ object Systems {
 
     def buildTcsSouthController: Resource[F, TcsSouthController[F]] =
       if (conf.systemControl.tcs === ControlStrategy.FullControl)
-        TcsEpics.build(epicsSrv, tops).map(new TcsSouthControllerEpics(_, conf.ioTimeout))
+        TcsEpicsSystem.build(epicsSrv, tops).map(new TcsSouthControllerEpics(_, conf.ioTimeout))
       else
         Resource.pure(new TcsSouthControllerSim)
 
     def buildTcsNorthController: Resource[F, TcsNorthController[F]] =
       if (conf.systemControl.tcs === ControlStrategy.FullControl)
-        TcsEpics.build(epicsSrv, tops).map(new TcsNorthControllerEpics(_, conf.ioTimeout))
+        TcsEpicsSystem.build(epicsSrv, tops).map(new TcsNorthControllerEpics(_, conf.ioTimeout))
       else
         Resource.pure(new TcsNorthControllerSim)
 

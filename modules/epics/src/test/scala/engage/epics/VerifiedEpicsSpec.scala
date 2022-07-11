@@ -1,6 +1,9 @@
+// Copyright (c) 2016-2021 Association of Universities for Research in Astronomy, Inc. (AURA)
+// For license information see LICENSE or https://opensource.org/licenses/BSD-3-Clause
+
 package engage.epics
 
-import cats.effect.{ Concurrent, IO }
+import cats.effect.IO
 import cats.effect.std.Dispatcher
 import engage.epics.Channel.StreamEvent
 import engage.epics.EpicsSystem.TelltaleChannel
@@ -48,7 +51,7 @@ class VerifiedEpicsSpec extends CatsEffectSuite {
   }
 
   epicsService.test("Makes sure channels are connected before reading a stream") { service =>
-    val valueCount = 5
+    val valueCount: Long = 5
     (for {
       tt  <- service.getChannel[Int]("test:stringVal").map(c => TelltaleChannel("foo", c))
       ch1 <- service.getChannel[Int]("test:heartbeat")

@@ -3,16 +3,19 @@
 
 package engage.server
 
+import cats.ApplicativeError
 import cats.effect.{ Async, Concurrent, Ref, Temporal }
 import cats.effect.kernel.Sync
 import cats.syntax.all._
-import engage.model.EngageEvent
-import engage.model.EngageEvent.{ McsParkEnd, McsParkStart }
+import engage.model.EngageCommand.McsPark
+import engage.model.{ EngageCommand, EngageEvent }
+import engage.model.EngageEvent.{ CommandFailure, CommandPaused, CommandStart, CommandSuccess }
 import engage.model.config.EngageEngineConfiguration
 import engage.stateengine.StateEngine
-import engage.stateengine.StateEngine._
 import fs2.{ Pipe, Stream }
 import lucuma.core.enum.Site
+import monocle.Lens
+import monocle.macros.Lenses
 
 import scala.concurrent.duration.{ DurationInt, FiniteDuration }
 
@@ -55,29 +58,13 @@ object EngageEngine {
     site:    Site,
     systems: Systems[F],
     conf:    EngageEngineConfiguration,
-    engine:  StateEngine[F, State, Stream[F, EngageEvent]]
+    engine:  StateEngine[F, State, EngageEvent]
   ) extends EngageEngine[F] {
     override def eventStream: Stream[F, EngageEvent] =
-      engine.process(startState).parJoinUnbounded
+      engine.process(startState)
 
-    def mcsPark: F[Unit] = engine.offer(
-      engine
-        .modifyState { st =>
-          (
-            st.copy(tcsActionInProgress = true, mcsParkInProgress = true),
-            Stream.emit[F, EngageEvent](McsParkStart).pure[F]
-          )
-        }
-        .andThen(
-          engine.modifyState { st =>
-            (
-              st.copy(tcsActionInProgress = false, mcsParkInProgress = false),
-              Stream.emit[F, EngageEvent](McsParkEnd).pure[F]
-            )
-          }
-        )
-    )
-
+    def mcsPark: F[Unit] =
+      command(engine, McsPark, systems.tcsSouth.mcsPark, State.mcsParkInProgress)
   }
 
   def build[F[_]: Concurrent](
@@ -85,13 +72,38 @@ object EngageEngine {
     systems: Systems[F],
     conf:    EngageEngineConfiguration
   ): F[EngageEngine[F]] = StateEngine
-    .build[F, State, Stream[F, EngageEvent]]
+    .build[F, State, EngageEvent]
     .map(EngageEngineImpl[F](site, systems, conf, _))
 
+  @Lenses
   case class State(
-    tcsActionInProgress: Boolean,
-    mcsParkInProgress:   Boolean
+    mcsParkInProgress: Boolean
+  ) {
+    lazy val tcsActionInProgress: Boolean = mcsParkInProgress
+  }
+
+  val startState: State = State(false)
+
+  private def command[F[_]: ApplicativeError[*[_], Throwable]](
+    engine:  StateEngine[F, State, EngageEvent],
+    cmdType: EngageCommand,
+    cmd:     F[ApplyCommandResult],
+    f:       Lens[State, Boolean]
+  ): F[Unit] = engine.offer(
+    engine.getState.flatMap { st =>
+      if (!st.tcsActionInProgress && !st.mcsParkInProgress) {
+        engine
+          .modifyState(f.replace(true))
+          .as(CommandStart(cmdType)) *>
+          engine.lift(cmd.attempt.map {
+            case Right(ApplyCommandResult.Paused)    => CommandPaused(cmdType)
+            case Right(ApplyCommandResult.Completed) => CommandSuccess(cmdType)
+            case Left(e)                             =>
+              CommandFailure(cmdType, s"${cmdType.name} command failed with error: ${e.getMessage}")
+          }) <*
+          engine.modifyState(f.replace(false))
+      } else engine.void
+    }
   )
 
-  val startState: State = State(false, false)
 }

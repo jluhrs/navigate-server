@@ -7,6 +7,7 @@ import cats.effect.IO
 import cats.effect.std.Semaphore
 import cats.syntax.all._
 import munit.CatsEffectSuite
+import Handler._
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
@@ -19,14 +20,15 @@ class StateEngineSpec extends CatsEffectSuite {
         eng <- StateEngine.build[IO, Int, String]
         _   <- eng.offer(
                  eng
-                   .modifyState(x => (x + 1, x.toString.pure[IO]))
-                   .andThen(eng.getState(x => x.toString.pure[IO]))
-                   .andThen(eng.setState((5, "X".pure[IO])))
-                   .andThen(eng.getState(x => x.toString.pure[IO]))
+                   .modifyState(x => x + 1)
+                   .flatMap(_ => eng.lift(0.toString.pure[IO])) *>
+                   eng.getState.flatMap(x => eng.lift(x.toString.pure[IO])) *>
+                   eng.setState(5) *>
+                   eng.getState.flatMap(x => eng.lift(x.toString.pure[IO]))
                )
-        out <- eng.process(0).take(4).compile.toList
+        out <- eng.process(0).take(3).compile.toList
       } yield out,
-      List("0", "1", "X", "5")
+      List("0", "1", "5")
     )
   }
 

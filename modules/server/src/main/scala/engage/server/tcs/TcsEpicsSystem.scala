@@ -1,3 +1,6 @@
+// Copyright (c) 2016-2021 Association of Universities for Research in Astronomy, Inc. (AURA)
+// For license information see LICENSE or https://opensource.org/licenses/BSD-3-Clause
+
 package engage.server.tcs
 
 import cats.{ Applicative, Monad, Parallel }
@@ -6,23 +9,25 @@ import cats.effect.{ Resource, Temporal }
 import engage.epics.EpicsSystem.TelltaleChannel
 import engage.epics.{ Channel, EpicsService }
 import engage.epics.VerifiedEpics._
-import engage.server.ApplyCommandResult
+import engage.server.{ ApplyCommandResult, tcs }
 import engage.server.acm.ParameterList._
 import engage.server.acm.{ CadDirective, GeminiApplyCommand }
 
 import scala.concurrent.duration.FiniteDuration
 
-trait TcsEpics[F[_]] {
+trait TcsEpicsSystem[F[_]] {
+  def startCommand(timeout: FiniteDuration): tcs.TcsEpicsSystem.TcsCommands[F]
+}
 
-  import TcsEpics._
+object TcsEpicsSystem {
 
-  def startCommand(timeout: FiniteDuration): TcsCommand[F]
+  trait TcsEpics[F[_]] extends {
 
-  def post(timeout: FiniteDuration): VerifiedEpics[F, ApplyCommandResult]
+    def post(timeout: FiniteDuration): VerifiedEpics[F, ApplyCommandResult]
 
-  val mountParkCmd: ParameterlessCommandChannel[F]
+    val mountParkCmd: ParameterlessCommandChannel[F]
 
-  /*  val m1GuideCmd: M1GuideCmd[F]
+    /*  val m1GuideCmd: M1GuideCmd[F]
 
   val m2GuideCmd: M2GuideCmd[F]
 
@@ -185,8 +190,8 @@ trait TcsEpics[F[_]] {
 
   // `waitAGInPosition` works like `waitInPosition`, but for the AG in-position flag.
   /* TODO: AG inposition can take up to 1[s] to react to a TCS command. If the value is read before that, it may induce
-   * an error. A better solution is to detect the edge, from not in position to in-position.
-   */
+     * an error. A better solution is to detect the edge, from not in position to in-position.
+     */
   def waitAGInPosition(timeout: FiniteDuration)(implicit T: Timer[F]): F[Unit]
 
   def hourAngle: F[String]
@@ -421,10 +426,8 @@ trait TcsEpics[F[_]] {
     case G3 => g3GuideConfig
     case G4 => g4GuideConfig
   }
-   */
-}
-
-object TcsEpics {
+     */
+  }
 
   val sysName: String = "TCS"
 
@@ -433,13 +436,13 @@ object TcsEpics {
   def build[F[_]: Dispatcher: Temporal: Parallel](
     service: EpicsService[F],
     tops:    Map[String, String]
-  ): Resource[F, TcsEpics[F]] = {
+  ): Resource[F, TcsEpicsSystem[F]] = {
     val top = tops.getOrElse("tcs", "tcs:")
     for {
       channels <- buildChannels(service, top)
       applyCmd <-
         GeminiApplyCommand.build(service, channels.telltale, top + "apply", top + "applyC")
-    } yield new TcsEpicsImpl[F](applyCmd, channels)
+    } yield new TcsEpicsSystemImpl[F](new TcsEpicsImpl[F](applyCmd, channels))
   }
 
   val CadDirName: String = ".DIR"
@@ -458,22 +461,27 @@ object TcsEpics {
       tpd
     )
 
-  case class TcsCommandImpl[F[_]: Monad: Parallel](
+  case class TcsCommandsImpl[F[_]: Monad: Parallel](
     tcsEpics: TcsEpics[F],
     timeout:  FiniteDuration,
     params:   ParameterList[F]
-  ) extends TcsCommand[F] {
+  ) extends TcsCommands[F] {
     override def post: VerifiedEpics[F, ApplyCommandResult] =
       params.compile *> tcsEpics.post(timeout)
 
-    override val mcsParkCmd: ParameterlessCommand[F, TcsCommand[F]] =
-      new ParameterlessCommand[F, TcsCommand[F]] {
-        override def mark: TcsCommand[F] =
-          TcsCommandImpl(tcsEpics, timeout, params :+ tcsEpics.mountParkCmd.mark)
+    override val mcsParkCmd: BaseCommand[F, TcsCommands[F]] =
+      new BaseCommand[F, TcsCommands[F]] {
+        override def mark: TcsCommands[F] =
+          TcsCommandsImpl(tcsEpics, timeout, params :+ tcsEpics.mountParkCmd.mark)
       }
   }
 
-  class TcsEpicsImpl[F[_]: Monad: Parallel](
+  class TcsEpicsSystemImpl[F[_]: Monad: Parallel](epics: TcsEpics[F]) extends TcsEpicsSystem[F] {
+    override def startCommand(timeout: FiniteDuration): TcsCommands[F] =
+      TcsCommandsImpl(epics, timeout, List.empty)
+  }
+
+  class TcsEpicsImpl[F[_]: Monad](
     applyCmd: GeminiApplyCommand[F],
     channels: TcsChannels[F]
   ) extends TcsEpics[F] {
@@ -482,9 +490,6 @@ object TcsEpics {
 
     override val mountParkCmd: ParameterlessCommandChannel[F] =
       ParameterlessCommandChannel(channels.telltale, channels.telescopeParkDir)
-
-    override def startCommand(timeout: FiniteDuration): TcsCommand[F] =
-      TcsCommandImpl(this, timeout, List.empty)
   }
 
   case class ParameterlessCommandChannel[F[_]: Monad](
@@ -495,14 +500,14 @@ object TcsEpics {
       writeChannel[F, CadDirective](tt, dirChannel)(Applicative[F].pure(CadDirective.MARK))
   }
 
-  trait ParameterlessCommand[F[_], S] {
+  trait BaseCommand[F[_], +S] {
     def mark: S
   }
 
-  trait TcsCommand[F[_]] {
+  trait TcsCommands[F[_]] {
     def post: VerifiedEpics[F, ApplyCommandResult]
 
-    val mcsParkCmd: ParameterlessCommand[F, TcsCommand[F]]
+    val mcsParkCmd: BaseCommand[F, TcsCommands[F]]
   }
   /*
   trait ProbeGuideCmd[F[_]] extends EpicsCommand[F] {
