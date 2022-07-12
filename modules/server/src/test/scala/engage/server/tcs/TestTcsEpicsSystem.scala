@@ -9,7 +9,7 @@ import cats.syntax.all._
 import engage.epics.{ EpicsSystem, RemoteChannel }
 import engage.epics.VerifiedEpics.VerifiedEpics
 import engage.server.{ ApplyCommandResult, TestEpicsCommands }
-import engage.server.TestEpicsCommands.TestEpicsCommand0
+import engage.server.TestEpicsCommands.{ TestEpicsCommand0, TestEpicsCommand1 }
 import engage.server.tcs.TcsEpicsSystem.BaseCommand
 import engage.server.tcs.TestTcsEpicsSystem.{ State, TestTcsEvent }
 import engage.server.tcs.TestTcsEpicsSystem.TestTcsEvent.MountParkCmd
@@ -31,7 +31,8 @@ case class TestTcsEpicsSystem[F[_]: Monad](st: Ref[F, State], out: Ref[F, List[T
 
 object TestTcsEpicsSystem {
   case class State(
-    mountParked: Boolean
+    mountParked:  Boolean,
+    mountFollowS: Boolean
   )
 
   val DefaultTimeout: FiniteDuration = FiniteDuration(1, SECONDS)
@@ -41,7 +42,7 @@ object TestTcsEpicsSystem {
     st:   Ref[F, State],
     out:  Ref[F, List[TestTcsEvent]]
   ) extends TcsEpicsSystem.TcsCommands[F] {
-    override def post: VerifiedEpics[F, ApplyCommandResult]                =
+    override def post: VerifiedEpics[F, ApplyCommandResult] =
       new VerifiedEpics[F, ApplyCommandResult] {
         override val systems: Map[EpicsSystem.TelltaleChannel, Set[RemoteChannel]] = Map.empty
         override val run: F[ApplyCommandResult]                                    = st
@@ -51,22 +52,41 @@ object TestTcsEpicsSystem {
           }
           .flatMap { case (_, l) => out.modify(x => (x ++ l, ApplyCommandResult.Completed)) }
       }
-    override val mcsParkCmd: BaseCommand[F, TcsEpicsSystem.TcsCommands[F]] =
+
+    override val mcsParkCmd: BaseCommand[F, TcsEpicsSystem.TcsCommands[F]]                        =
       new TestEpicsCommand0[F, TcsCommandsImpl[F], State, TestTcsEvent](
-        Lens[TcsCommandsImpl[F], TestEpicsCommands[State, TestTcsEvent]](_.base)(a =>
-          b => b.copy(base = a)
-        ),
+        l,
         this
       ) {
         override protected def event(st: State): TestTcsEvent = TestTcsEvent.MountParkCmd
 
         override protected def cmd(st: State): State = st.focus(_.mountParked).replace(true)
       }
+    override val mcsFollowCommand: TcsEpicsSystem.FollowCommand[F, TcsEpicsSystem.TcsCommands[F]] =
+      new TestFollowCommand[F](this) {
+
+        override protected def event(st: State): TestTcsEvent =
+          TestTcsEvent.MountFollowCmd(st.mountFollowS)
+
+        override protected def cmd(v: Boolean)(st: State): State = st.copy(mountFollowS = v)
+      }
+  }
+
+  def l[F[_]: Monad]: Lens[TcsCommandsImpl[F], TestEpicsCommands[State, TestTcsEvent]] =
+    Lens[TcsCommandsImpl[F], TestEpicsCommands[State, TestTcsEvent]](_.base)(a =>
+      b => b.copy(base = a)
+    )
+
+  abstract class TestFollowCommand[F[_]: Monad](o: TcsCommandsImpl[F])
+      extends TestEpicsCommand1[F, TcsCommandsImpl[F], State, TestTcsEvent, Boolean](l, o)
+      with TcsEpicsSystem.FollowCommand[F, TcsEpicsSystem.TcsCommands[F]] {
+    override def setFollow(enable: Boolean): TcsEpicsSystem.TcsCommands[F] = param1(enable)
   }
 
   sealed trait TestTcsEvent extends Product with Serializable
   object TestTcsEvent {
-    case object MountParkCmd extends TestTcsEvent
+    case object MountParkCmd                    extends TestTcsEvent
+    case class MountFollowCmd(enabled: Boolean) extends TestTcsEvent
   }
 
   implicit val eqTestTcsEvPent: Eq[TestTcsEvent] = Eq.instance {
@@ -75,7 +95,8 @@ object TestTcsEpicsSystem {
   }
 
   val defaultState: State = State(
-    mountParked = false
+    mountParked = false,
+    mountFollowS = false
   )
 
   def build[F[_]: Monad: Ref.Make](s0: State): F[TestTcsEpicsSystem[F]] = for {

@@ -28,6 +28,10 @@ class EngageCommandRoutes[F[_]: Async](
       eng.mcsPark *>
         Ok(s"Park MCS")
 
+    case POST -> Root / "mcsFollow" / BooleanVar(en) / ClientIDVar(_) as _ =>
+      eng.mcsFollow(en) *>
+        Ok(s"Follow MCS ($en)")
+
   }
 
   val service: HttpRoutes[F] =

@@ -7,4 +7,5 @@ import engage.server.ApplyCommandResult
 
 trait TcsBaseController[F[_]] {
   def mcsPark: F[ApplyCommandResult]
+  def mcsFollow(enable: Boolean): F[ApplyCommandResult]
 }

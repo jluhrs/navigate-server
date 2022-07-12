@@ -12,4 +12,9 @@ package object http4s {
       Either.catchNonFatal(ClientId(java.util.UUID.fromString(str))).toOption
   }
 
+  object BooleanVar {
+    def unapply(str: String): Option[Boolean] =
+      Either.catchNonFatal(str.toBoolean).toOption
+  }
+
 }

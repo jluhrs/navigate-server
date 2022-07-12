@@ -7,6 +7,7 @@ import cats.syntax.option._
 import cats.syntax.foldable._
 import lucuma.core.util.Enumerated
 
+import java.lang.{ Boolean => JBoolean }
 import java.lang.{ Integer => JInteger }
 import java.lang.{ Double => JDouble }
 import java.lang.{ Float => JFloat }
@@ -27,6 +28,15 @@ package epics {
 }
 
 package object epics         {
+
+  implicit val booleanToJavaType: ToJavaType[Boolean] = new ToJavaType[Boolean] {
+    override type javaType = JBoolean
+    override val clazz: Class[JBoolean]              = classOf[JBoolean]
+    override val convert: Convert[Boolean, JBoolean] = new Convert[Boolean, JBoolean] {
+      override def toJava(v: Boolean): Option[JBoolean]   = JBoolean.valueOf(v).some
+      override def fromJava(x: JBoolean): Option[Boolean] = x.booleanValue().some
+    }
+  }
 
   implicit val intToJavaType: ToJavaType[Int] = new ToJavaType[Int] {
     override type javaType = JInteger
