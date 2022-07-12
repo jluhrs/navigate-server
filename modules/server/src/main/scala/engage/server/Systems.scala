@@ -3,11 +3,14 @@
 
 package engage.server
 
-import cats.{ Applicative, Monad }
+import cats.effect.std.Dispatcher
+import cats.effect.{ Async, Resource }
+import cats.Parallel
 import cats.syntax.all._
-import engage.model.config.EngageEngineConfiguration
+import engage.epics.EpicsService
+import engage.model.config.{ ControlStrategy, EngageEngineConfiguration }
 import org.http4s.client.Client
-import engage.server.tcs.{ TcsNorthController, TcsSouthController }
+import engage.server.tcs._
 import lucuma.core.`enum`.Site
 
 import scala.annotation.nowarn
@@ -19,26 +22,42 @@ final case class Systems[F[_]](
 )
 
 object Systems {
-  def build[F[_]: Monad](
-    site:         Site,
-    client:       Client[F],
-    @nowarn conf: EngageEngineConfiguration
-  ): F[Systems[F]] = for {
-    odb  <- buildOdbProxy(site, client)
-    tcsS <- buildTcsSouthController
-    tcsN <- buildTcsNorthController
-  } yield Systems[F](odb, tcsS, tcsN)
-
-  // These are placeholders.
-  def buildOdbProxy[F[_]: Applicative](
+  def build[F[_]: Async: Dispatcher: Parallel](
     @nowarn site:   Site,
-    @nowarn client: Client[F]
-  ): F[OdbProxy[F]] = OdbProxy.build
+    @nowarn client: Client[F],
+    conf:           EngageEngineConfiguration,
+    epicsSrv:       EpicsService[F]
+  ): Resource[F, Systems[F]] = {
+    val tops = decodeTops(conf.tops)
 
-  def buildTcsSouthController[F[_]: Applicative]: F[TcsSouthController[F]] =
-    new TcsSouthController[F] {}.pure
+    // These are placeholders.
+    def buildOdbProxy: Resource[F, OdbProxy[F]] = Resource.eval(OdbProxy.build)
 
-  def buildTcsNorthController[F[_]: Applicative]: F[TcsNorthController[F]] =
-    new TcsNorthController[F] {}.pure
+    def buildTcsSouthController: Resource[F, TcsSouthController[F]] =
+      if (conf.systemControl.tcs === ControlStrategy.FullControl)
+        TcsEpicsSystem.build(epicsSrv, tops).map(new TcsSouthControllerEpics(_, conf.ioTimeout))
+      else
+        Resource.pure(new TcsSouthControllerSim)
+
+    def buildTcsNorthController: Resource[F, TcsNorthController[F]] =
+      if (conf.systemControl.tcs === ControlStrategy.FullControl)
+        TcsEpicsSystem.build(epicsSrv, tops).map(new TcsNorthControllerEpics(_, conf.ioTimeout))
+      else
+        Resource.pure(new TcsNorthControllerSim)
+
+    for {
+      odb  <- buildOdbProxy
+      tcsS <- buildTcsSouthController
+      tcsN <- buildTcsNorthController
+    } yield Systems[F](odb, tcsS, tcsN)
+  }
+
+  private def decodeTops(s: String): Map[String, String] =
+    s.split("=|,")
+      .grouped(2)
+      .collect { case Array(k, v) =>
+        k.trim -> v.trim
+      }
+      .toMap
 
 }

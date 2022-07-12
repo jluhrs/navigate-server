@@ -3,4 +3,8 @@
 
 package engage.server.tcs
 
-trait TcsNorthController[F[_]] extends TcsBaseController[F]
+import cats.Applicative
+
+class TcsSouthControllerSim[F[_]: Applicative]
+    extends TcsBaseControllerSim[F]
+    with TcsSouthController[F] {}

@@ -5,7 +5,7 @@ package engage.epics
 
 import cats.effect.IO
 import cats.implicits._
-import engage.epics.CaWrapper.ConnectChannel
+import engage.epics.EpicsSystem.TelltaleChannel
 import munit.CatsEffectSuite
 import org.epics.ca.ConnectionState
 
@@ -15,32 +15,40 @@ import scala.concurrent.duration.FiniteDuration
 class EpicsSystemSpec extends CatsEffectSuite {
 
   private val epicsServer = ResourceFixture(
-    TestEpicsServer.init("test:").flatMap(_ => CaWrapper.getContext[IO]())
+    TestEpicsServer.init("test:").flatMap(_ => EpicsService.getBuilder.build[IO])
   )
 
-  epicsServer.test("Connect all channels") { ctx =>
+  epicsServer.test("Connect all channels") { srv =>
     assertIOBoolean {
-      for {
-        ch0 <- CaWrapper.getChannel[IO, Int](ctx, "test:intVal")
-        ch1 <- CaWrapper.getChannel[IO, Double](ctx, "test:doubleVal")
-        ch2 <- CaWrapper.getChannel[IO, String](ctx, "test:stringVal")
-        a    = EpicsSystem[IO](ch0, List(ch1, ch2))
-        _   <- a.connectionCheck
-        r   <- List[ConnectChannel[IO]](ch0, ch1, ch1).map(_.getConnectionState).parSequence
-      } yield r.forall(_.equals(ConnectionState.CONNECTED))
+      (for {
+        ch0 <- srv.getChannel[Int]("test:intVal")
+        ch1 <- srv.getChannel[Double]("test:doubleVal")
+        ch2 <- srv.getChannel[String]("test:stringVal")
+      } yield (ch0, ch1, ch2))
+        .use { case (ch0, ch1, ch2) =>
+          for {
+            _ <- EpicsSystem[IO](TelltaleChannel("foo", ch0), Set(ch1, ch2)).connectionCheck()
+            r <- List[RemoteChannel](ch0, ch1, ch1).map(_.getConnectionState[IO]).parSequence
+          } yield r.forall(_.equals(ConnectionState.CONNECTED))
+        }
     }
   }
 
-  epicsServer.test("Does not connect channels if it cannot connect taletell channel") { ctx =>
+  epicsServer.test("Does not connect channels if it cannot connect telltale channel") { srv =>
     assertIOBoolean {
-      for {
-        ch0 <- CaWrapper.getChannel[IO, Int](ctx, "test:foo")
-        ch1 <- CaWrapper.getChannel[IO, Double](ctx, "test:doubleVal")
-        ch2 <- CaWrapper.getChannel[IO, String](ctx, "test:stringVal")
-        a    = EpicsSystem[IO](ch0, List(ch1, ch2), FiniteDuration(1, TimeUnit.SECONDS))
-        _   <- a.connectionCheck
-        r   <- List[ConnectChannel[IO]](ch0, ch1, ch1).map(_.getConnectionState).parSequence
-      } yield !r.exists(_.equals(ConnectionState.CONNECTED))
+      (for {
+        ch0 <- srv.getChannel[Int]("test:foo")
+        ch1 <- srv.getChannel[Double]("test:doubleVal")
+        ch2 <- srv.getChannel[String]("test:stringVal")
+      } yield (ch0, ch1, ch2))
+        .use { case (ch0, ch1, ch2) =>
+          for {
+            _ <- EpicsSystem[IO](TelltaleChannel("foo", ch0), Set(ch1, ch2)).connectionCheck(
+                   FiniteDuration(1, TimeUnit.SECONDS)
+                 )
+            r <- List[RemoteChannel](ch0, ch1, ch1).map(_.getConnectionState[IO]).parSequence
+          } yield !r.exists(_.equals(ConnectionState.CONNECTED))
+        }
     }
   }
 

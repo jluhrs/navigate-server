@@ -3,22 +3,27 @@
 
 package engage.server
 
-import cats.{ Applicative, Functor }
-import cats.effect.{ Async, Ref, Temporal }
+import cats.ApplicativeError
+import cats.effect.{ Async, Concurrent, Ref, Temporal }
 import cats.effect.kernel.Sync
-import cats.effect.std.Queue
 import cats.syntax.all._
-import engage.model.EngageEvent
+import engage.model.EngageCommand.McsPark
+import engage.model.{ EngageCommand, EngageEvent }
+import engage.model.EngageEvent.{ CommandFailure, CommandPaused, CommandStart, CommandSuccess }
 import engage.model.config.EngageEngineConfiguration
+import engage.stateengine.StateEngine
 import fs2.{ Pipe, Stream }
 import lucuma.core.enum.Site
+import monocle.{ Focus, Lens }
 
 import scala.concurrent.duration.{ DurationInt, FiniteDuration }
 
-trait EngageEngine[F[_], T] {
+trait EngageEngine[F[_]] {
   val systems: Systems[F]
 
-  def eventStream(q: Queue[F, T]): Stream[F, EngageEvent]
+  def eventStream: Stream[F, EngageEvent]
+
+  def mcsPark: F[Unit]
 }
 
 object EngageEngine {
@@ -28,7 +33,7 @@ object EngageEngine {
     msg:     String
   ): Pipe[F, A, A] = in => {
     import scala.concurrent.TimeoutException
-    def now = Temporal[F].realTime
+    val now = Temporal[F].realTime
 
     Stream.eval(now.flatMap(Ref[F].of)).flatMap { lastActivityAt =>
       in.evalTap(_ => now.flatMap(lastActivityAt.set))
@@ -48,18 +53,55 @@ object EngageEngine {
     }
   }
 
-  private case class EngageEngineImpl[F[_]: Functor, T](
+  private case class EngageEngineImpl[F[_]: Concurrent](
     site:    Site,
     systems: Systems[F],
-    conf:    EngageEngineConfiguration
-  ) extends EngageEngine[F, T] {
-    override def eventStream(q: Queue[F, T]): Stream[F, EngageEvent] =
-      Stream.fromQueueUnterminated(q).as(EngageEvent.NullEvent)
+    conf:    EngageEngineConfiguration,
+    engine:  StateEngine[F, State, EngageEvent]
+  ) extends EngageEngine[F] {
+    override def eventStream: Stream[F, EngageEvent] =
+      engine.process(startState)
+
+    def mcsPark: F[Unit] =
+      command(engine, McsPark, systems.tcsSouth.mcsPark, Focus[State](_.mcsParkInProgress))
   }
 
-  def build[F[_]: Applicative, T](
+  def build[F[_]: Concurrent](
     site:    Site,
     systems: Systems[F],
     conf:    EngageEngineConfiguration
-  ): F[EngageEngine[F, T]] = EngageEngineImpl[F, T](site, systems, conf).pure[F].widen
+  ): F[EngageEngine[F]] = StateEngine
+    .build[F, State, EngageEvent]
+    .map(EngageEngineImpl[F](site, systems, conf, _))
+
+  case class State(
+    mcsParkInProgress: Boolean
+  ) {
+    lazy val tcsActionInProgress: Boolean = mcsParkInProgress
+  }
+
+  val startState: State = State(false)
+
+  private def command[F[_]: ApplicativeError[*[_], Throwable]](
+    engine:  StateEngine[F, State, EngageEvent],
+    cmdType: EngageCommand,
+    cmd:     F[ApplyCommandResult],
+    f:       Lens[State, Boolean]
+  ): F[Unit] = engine.offer(
+    engine.getState.flatMap { st =>
+      if (!st.tcsActionInProgress && !st.mcsParkInProgress) {
+        engine
+          .modifyState(f.replace(true))
+          .as(CommandStart(cmdType)) *>
+          engine.lift(cmd.attempt.map {
+            case Right(ApplyCommandResult.Paused)    => CommandPaused(cmdType)
+            case Right(ApplyCommandResult.Completed) => CommandSuccess(cmdType)
+            case Left(e)                             =>
+              CommandFailure(cmdType, s"${cmdType.name} command failed with error: ${e.getMessage}")
+          }) <*
+          engine.modifyState(f.replace(false))
+      } else engine.void
+    }
+  )
+
 }

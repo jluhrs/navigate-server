@@ -9,7 +9,6 @@ import cats.effect.std.Dispatcher
 import cats.implicits._
 import gov.aps.jca.cas.ServerContext
 import munit.CatsEffectSuite
-import org.epics.ca.Context
 import Channel.StreamEvent._
 
 import java.util.concurrent.TimeUnit
@@ -17,26 +16,25 @@ import scala.concurrent.duration.FiniteDuration
 
 class ChannelSpec extends CatsEffectSuite {
 
-  private val epicsServer: SyncIO[FunFixture[(ServerContext, Context)]] = ResourceFixture(
+  private val epicsServer: SyncIO[FunFixture[(ServerContext, EpicsService[IO])]] = ResourceFixture(
     TestEpicsServer
       .init("test:")
       .flatMap(x =>
-        CaWrapper.getBuilder
+        EpicsService.getBuilder
           .withConnectionTimeout(FiniteDuration(1, TimeUnit.SECONDS))
           .build[IO]
           .map((x, _))
       )
   )
 
-  epicsServer.test("Read stream of channel events") { case (serverCtx, ctx) =>
+  epicsServer.test("Read stream of channel events") { case (serverCtx, srv) =>
     assertIOBoolean(
       (
         for {
           dsp <- Dispatcher[IO]
-          ch  <- Resource.eval(CaWrapper.getChannel[IO, Int](ctx, "test:heartbeat"))
-          x    = Channel(ch)
-          _   <- Resource.eval(ch.connect)
-          s   <- x.eventStream(dsp, Concurrent[IO])
+          ch  <- srv.getChannel[Int]("test:heartbeat")
+          _   <- Resource.eval(ch.connect[IO])
+          s   <- ch.eventStream(dsp, Concurrent[IO])
         } yield s
       ).use {
         _.zipWithIndex

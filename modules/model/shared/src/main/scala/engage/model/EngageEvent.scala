@@ -23,10 +23,6 @@ object EngageEvent {
   }
 
   case object NullEvent extends EngageEvent
-  implicit lazy val neEqual: Eq[NullEvent.type] = Eq.instance {
-    case (NullEvent, NullEvent) => true
-    case _                      => false
-  }
 
   final case class ConnectionOpenEvent(
     userDetails:   Option[UserDetails],
@@ -39,11 +35,35 @@ object EngageEvent {
       Eq.by(x => (x.userDetails, x.clientId, x.serverVersion))
   }
 
+  final case class CommandStart(cmd: EngageCommand) extends EngageEvent
+  object CommandStart {
+    implicit val commandStartEq: Eq[CommandStart] = Eq.by(_.cmd)
+  }
+
+  final case class CommandSuccess(cmd: EngageCommand) extends EngageEvent
+  object CommandSuccess {
+    implicit val commandSuccessEq: Eq[CommandSuccess] = Eq.by(_.cmd)
+  }
+
+  final case class CommandPaused(cmd: EngageCommand) extends EngageEvent
+  object CommandPaused {
+    implicit val commandPausedEq: Eq[CommandPaused] = Eq.by(_.cmd)
+  }
+
+  final case class CommandFailure(cmd: EngageCommand, msg: String) extends EngageEvent
+  object CommandFailure {
+    implicit val commandFailureEq: Eq[CommandFailure] = Eq.by(x => (x.cmd, x.msg))
+  }
+
   implicit val equal: Eq[EngageEvent] =
     Eq.instance {
       case (a: ServerLogMessage, b: ServerLogMessage)       => a === b
       case (a: ConnectionOpenEvent, b: ConnectionOpenEvent) => a === b
-      case (_: NullEvent.type, _: NullEvent.type)           => true
+      case (NullEvent, NullEvent)                           => true
+      case (a: CommandStart, b: CommandStart)               => a === b
+      case (a: CommandFailure, b: CommandFailure)           => a === b
+      case (a: CommandSuccess, b: CommandSuccess)           => a === b
+      case (a: CommandPaused, b: CommandPaused)             => a === b
       case _                                                => false
     }
 

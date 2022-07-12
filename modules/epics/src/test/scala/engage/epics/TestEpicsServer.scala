@@ -5,7 +5,7 @@ package engage.epics
 
 import cats.effect.{ Async, IO, Resource }
 import com.cosylab.epics.caj.cas.util.{ DefaultServerImpl, MemoryProcessVariable }
-import gov.aps.jca.dbr.DBRType
+import gov.aps.jca.dbr.{ DBRType, DBR_Int }
 import gov.aps.jca.JCALibrary
 import gov.aps.jca.cas.ServerContext
 import lucuma.core.util.Enumerated
@@ -56,7 +56,7 @@ object TestEpicsServer {
     Resource.make {
       Async[F].delay {
         val index: Short = Enumerated[T].all.indexOf(init).toShort
-        val memPV        = TestEpicsUtil.createEnumMemoryProcessVariable(name, Array(index))
+        val memPV        = new MemoryProcessVariable(name, null, DBRType.ENUM, Array(index))
         memPV.setEnumLabels(Enumerated[T].all.map(_.toString()).toArray)
         server.registerProcessVaribale(memPV)
         memPV
@@ -80,20 +80,20 @@ object TestEpicsServer {
                     x.dispose()
                   )
                 }
+      _      <- Resource.make {
+                  IO.delay(ctx.run(0)).start.void
+                }(_ => IO.delay(ctx.shutdown()))
       _      <- createPV[IO, JInteger](server, top ++ "intVal", Array(0))
       _      <- createPV[IO, JDouble](server, top ++ "doubleVal", Array(0.0))
       _      <- createPV[IO, JFloat](server, top ++ "floatVal", Array(0.0f))
       _      <- createPV[IO, String](server, top ++ "stringVal", Array("dummy"))
       _      <- createPVEnum[IO, TestEnumerated](server, top ++ "enumVal", TestEnumerated.VAL0)
       h      <- createPV[IO, JInteger](server, top ++ "heartbeat", Array(0))
-      _      <- Resource.make {
-                  IO.delay(ctx.run(0)).start.void
-                }(_ => IO.delay(ctx.shutdown()))
       _      <- Stream
                   .awakeEvery[IO](FiniteDuration(200, TimeUnit.MILLISECONDS))
                   .evalMapAccumulate(1) { (s: Int, _: FiniteDuration) =>
                     IO.delay {
-                      h.write(TestEpicsUtil.dbrIntValue(JInteger.valueOf(s)), null)
+                      h.write(new DBR_Int(Array(s)), null)
                       (s + 1, ())
                     }
                   }

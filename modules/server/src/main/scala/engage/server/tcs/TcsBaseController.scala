@@ -3,4 +3,8 @@
 
 package engage.server.tcs
 
-trait TcsNorthController[F[_]] extends TcsBaseController[F]
+import engage.server.ApplyCommandResult
+
+trait TcsBaseController[F[_]] {
+  def mcsPark: F[ApplyCommandResult]
+}
