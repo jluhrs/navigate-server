@@ -17,7 +17,7 @@ import scala.concurrent.duration.FiniteDuration
 
 trait TcsEpicsSystem[F[_]] {
   // TcsCommands accumulates the list of channels that need to be written to set parameters.
-  // Once all the parameters are defined, the user cals the post method. Only then the EPICS channels will be verified,
+  // Once all the parameters are defined, the user calls the post method. Only then the EPICS channels will be verified,
   // the parameters written, and the apply record triggered.
   def startCommand(timeout: FiniteDuration): tcs.TcsEpicsSystem.TcsCommands[F]
 }
@@ -28,7 +28,9 @@ object TcsEpicsSystem {
 
     def post(timeout: FiniteDuration): VerifiedEpics[F, ApplyCommandResult]
 
-    val mountParkCmd: ParameterlessCommandChannel[F]
+    val mountParkCmd: ParameterlessCommandChannels[F]
+
+    val mountFollowCmd: FollowCommandChannels[F]
 
     /*  val m1GuideCmd: M1GuideCmd[F]
 
@@ -452,16 +454,19 @@ object TcsEpicsSystem {
 
   case class TcsChannels[F[_]](
     telltale:         TelltaleChannel,
-    telescopeParkDir: Channel[F, CadDirective]
+    telescopeParkDir: Channel[F, CadDirective],
+    mountFollow:      Channel[F, Boolean]
   )
 
   def buildChannels[F[_]](service: EpicsService[F], top: String): Resource[F, TcsChannels[F]] =
     for {
       tt  <- service.getChannel[String](top + "sad:health.VAL").map(TelltaleChannel(sysName, _))
       tpd <- service.getChannel[CadDirective](top + "telpark" + CadDirName)
+      mf  <- service.getChannel[Boolean](top + "mcFollow.A")
     } yield TcsChannels[F](
       tt,
-      tpd
+      tpd,
+      mf
     )
 
   case class TcsCommandsImpl[F[_]: Monad: Parallel](
@@ -469,13 +474,23 @@ object TcsEpicsSystem {
     timeout:  FiniteDuration,
     params:   ParameterList[F]
   ) extends TcsCommands[F] {
+
+    private def addParam(p: VerifiedEpics[F, Unit]): TcsCommands[F] =
+      TcsCommandsImpl(tcsEpics, timeout, params :+ p)
+
     override def post: VerifiedEpics[F, ApplyCommandResult] =
       params.compile *> tcsEpics.post(timeout)
 
     override val mcsParkCmd: BaseCommand[F, TcsCommands[F]] =
       new BaseCommand[F, TcsCommands[F]] {
-        override def mark: TcsCommands[F] =
-          TcsCommandsImpl(tcsEpics, timeout, params :+ tcsEpics.mountParkCmd.mark)
+        override def mark: TcsCommands[F] = addParam(tcsEpics.mountParkCmd.mark)
+      }
+
+    override val mcsFollowCommand: FollowCommand[F, TcsCommands[F]] =
+      new FollowCommand[F, TcsCommands[F]] {
+        override def setFollow(enable: Boolean): TcsCommands[F] = addParam(
+          tcsEpics.mountFollowCmd.setFollow(enable)
+        )
       }
   }
 
@@ -491,11 +506,14 @@ object TcsEpicsSystem {
     override def post(timeout: FiniteDuration): VerifiedEpics[F, ApplyCommandResult] =
       applyCmd.post(timeout)
 
-    override val mountParkCmd: ParameterlessCommandChannel[F] =
-      ParameterlessCommandChannel(channels.telltale, channels.telescopeParkDir)
+    override val mountParkCmd: ParameterlessCommandChannels[F] =
+      ParameterlessCommandChannels(channels.telltale, channels.telescopeParkDir)
+
+    override val mountFollowCmd: FollowCommandChannels[F] =
+      FollowCommandChannels(channels.telltale, channels.mountFollow)
   }
 
-  case class ParameterlessCommandChannel[F[_]: Monad](
+  case class ParameterlessCommandChannels[F[_]: Monad](
     tt:         TelltaleChannel,
     dirChannel: Channel[F, CadDirective]
   ) {
@@ -503,14 +521,28 @@ object TcsEpicsSystem {
       writeChannel[F, CadDirective](tt, dirChannel)(Applicative[F].pure(CadDirective.MARK))
   }
 
+  case class FollowCommandChannels[F[_]: Monad](
+    tt:            TelltaleChannel,
+    followChannel: Channel[F, Boolean]
+  ) {
+    def setFollow(enable: Boolean): VerifiedEpics[F, Unit] =
+      writeChannel[F, Boolean](tt, followChannel)(Applicative[F].pure(enable))
+  }
+
   trait BaseCommand[F[_], +S] {
     def mark: S
+  }
+
+  trait FollowCommand[F[_], +S] {
+    def setFollow(enable: Boolean): S
   }
 
   trait TcsCommands[F[_]] {
     def post: VerifiedEpics[F, ApplyCommandResult]
 
     val mcsParkCmd: BaseCommand[F, TcsCommands[F]]
+
+    val mcsFollowCommand: FollowCommand[F, TcsCommands[F]]
   }
   /*
   trait ProbeGuideCmd[F[_]] extends EpicsCommand[F] {

@@ -34,8 +34,19 @@ object TestEpicsCommands {
     protected def cmd(st: S): S
   }
 
-  object TestEpicsCommand0 {
-    type State = Boolean
+  abstract class TestEpicsCommand1[F[_], +C, S, A, U](
+    l: Lens[C, TestEpicsCommands[S, A]],
+    c: C
+  ) {
+    def param1(v: U): C = l.modify(cs =>
+      cs.add(
+        State.modify(cmd(v)).get.map(event)
+      )
+    )(c)
+
+    protected def event(st: S): A
+
+    protected def cmd(v: U)(st: S): S
   }
 
 }

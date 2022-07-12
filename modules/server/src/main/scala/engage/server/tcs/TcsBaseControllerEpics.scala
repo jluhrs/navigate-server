@@ -15,5 +15,18 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
   timeout:  FiniteDuration
 ) extends TcsBaseController[F] {
   override def mcsPark: F[ApplyCommandResult] =
-    tcsEpics.startCommand(timeout).mcsParkCmd.mark.post.verifiedRun(ConnectionTimeout)
+    tcsEpics
+      .startCommand(timeout)
+      .mcsParkCmd
+      .mark
+      .post
+      .verifiedRun(ConnectionTimeout)
+
+  override def mcsFollow(enable: Boolean): F[ApplyCommandResult] =
+    tcsEpics
+      .startCommand(timeout)
+      .mcsFollowCommand
+      .setFollow(enable)
+      .post
+      .verifiedRun(ConnectionTimeout)
 }

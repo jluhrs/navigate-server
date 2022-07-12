@@ -7,7 +7,7 @@ import cats.ApplicativeError
 import cats.effect.{ Async, Concurrent, Ref, Temporal }
 import cats.effect.kernel.Sync
 import cats.syntax.all._
-import engage.model.EngageCommand.McsPark
+import engage.model.EngageCommand.{ McsFollow, McsPark }
 import engage.model.{ EngageCommand, EngageEvent }
 import engage.model.EngageEvent.{ CommandFailure, CommandPaused, CommandStart, CommandSuccess }
 import engage.model.config.EngageEngineConfiguration
@@ -24,6 +24,8 @@ trait EngageEngine[F[_]] {
   def eventStream: Stream[F, EngageEvent]
 
   def mcsPark: F[Unit]
+
+  def mcsFollow(enable: Boolean): F[Unit]
 }
 
 object EngageEngine {
@@ -64,6 +66,13 @@ object EngageEngine {
 
     def mcsPark: F[Unit] =
       command(engine, McsPark, systems.tcsSouth.mcsPark, Focus[State](_.mcsParkInProgress))
+
+    override def mcsFollow(enable: Boolean): F[Unit] =
+      command(engine,
+              McsFollow(enable),
+              systems.tcsSouth.mcsFollow(enable),
+              Focus[State](_.mcsFollowInProgress)
+      )
   }
 
   def build[F[_]: Concurrent](
@@ -75,12 +84,13 @@ object EngageEngine {
     .map(EngageEngineImpl[F](site, systems, conf, _))
 
   case class State(
-    mcsParkInProgress: Boolean
+    mcsParkInProgress:   Boolean,
+    mcsFollowInProgress: Boolean
   ) {
-    lazy val tcsActionInProgress: Boolean = mcsParkInProgress
+    lazy val tcsActionInProgress: Boolean = mcsParkInProgress || mcsFollowInProgress
   }
 
-  val startState: State = State(false)
+  val startState: State = State(mcsParkInProgress = false, mcsFollowInProgress = false)
 
   private def command[F[_]: ApplicativeError[*[_], Throwable]](
     engine:  StateEngine[F, State, EngageEvent],
