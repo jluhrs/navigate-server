@@ -122,6 +122,7 @@ object Settings {
     val ScalaMock   = "org.scalamock"     %% "scalamock"          % LibraryVersions.scalaMock % "test"
     // Server side libraries
     val Cats        = Def.setting("org.typelevel" %%% "cats-core" % LibraryVersions.cats)
+    val CatsLaws    = Def.setting("org.typelevel" %%% "cats-laws" % LibraryVersions.cats  % "test")
     val CatsEffect  =
       Def.setting("org.typelevel" %%% "cats-effect" % LibraryVersions.catsEffect)
     val Fs2         = "co.fs2"            %% "fs2-core"           % LibraryVersions.fs2

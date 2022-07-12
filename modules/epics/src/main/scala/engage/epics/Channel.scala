@@ -18,13 +18,32 @@ import java.lang.{ Boolean => JBoolean }
 
 abstract class Channel[F[_], T] extends RemoteChannel {
   val get: F[T]
-  def get(timeout:                          FiniteDuration): F[T]
-  def put(v:                                T): F[Unit]
-  def valueStream(implicit dispatcher:      Dispatcher[F]): Resource[F, Stream[F, T]]
+  def get(timeout: FiniteDuration): F[T]
+  def put(v:       T): F[Unit]
+
+  /**
+   * Stream of channel values.
+   * @return
+   *   The stream of values, contained inside a Resource
+   */
+  def valueStream(implicit dispatcher: Dispatcher[F]): Resource[F, Stream[F, T]]
+
+  /**
+   * Stream of connection events. The values are of type <code>Boolean</code>, <code>true</code>
+   * means the channels is connected, <code>false</code> means that the channel is disconnected.
+   * @return
+   *   The stream of events, contained inside a Resource
+   */
   def connectionStream(implicit dispatcher: Dispatcher[F]): Resource[F, Stream[F, Boolean]]
+
+  /**
+   * Stream combining the values and connection events streams.
+   * @return
+   *   The stream, contained inside a Resource
+   */
   def eventStream(implicit
-    dispatcher:                             Dispatcher[F],
-    concurrent:                             Concurrent[F]
+    dispatcher: Dispatcher[F],
+    concurrent: Concurrent[F]
   ): Resource[F, Stream[F, StreamEvent[T]]]
 }
 
@@ -63,8 +82,8 @@ object Channel {
       .map(a => Async[F].fromCompletableFuture(Async[F].delay(caChannel.putAsync(a))))
       .getOrElse(Status.NOCONVERT.pure[F])
       .flatMap { s =>
-        if (s.getSeverity() == Severity.SUCCESS) Async[F].unit
-        else Async[F].raiseError(new Throwable(s.getMessage()))
+        if (s.getSeverity == Severity.SUCCESS) Async[F].unit
+        else Async[F].raiseError(new Throwable(s.getMessage))
       }
 
     override def valueStream(implicit dispatcher: Dispatcher[F]): Resource[F, Stream[F, T]] = for {

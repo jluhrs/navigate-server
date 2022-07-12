@@ -115,9 +115,6 @@ object Handler {
     State.pure[D, RetVal[F, V, A]](RetVal(v, none))
   )
 
-//  sealed trait RetVal[F[_], V, +A] extends Product with Serializable
-//  final case class Pure[F[_], V, A](v: A) extends RetVal[F, V, A]
-//  final case class Delay[F[_], V, A](s: Stream[F, V]) extends RetVal[F, V, A]
   final case class RetVal[F[_], V, +A](v: A, s: Option[Stream[F, V]])
 
 }

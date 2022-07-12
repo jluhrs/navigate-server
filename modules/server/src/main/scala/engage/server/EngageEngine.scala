@@ -14,8 +14,7 @@ import engage.model.config.EngageEngineConfiguration
 import engage.stateengine.StateEngine
 import fs2.{ Pipe, Stream }
 import lucuma.core.enum.Site
-import monocle.Lens
-import monocle.macros.Lenses
+import monocle.{ Focus, Lens }
 
 import scala.concurrent.duration.{ DurationInt, FiniteDuration }
 
@@ -64,7 +63,7 @@ object EngageEngine {
       engine.process(startState)
 
     def mcsPark: F[Unit] =
-      command(engine, McsPark, systems.tcsSouth.mcsPark, State.mcsParkInProgress)
+      command(engine, McsPark, systems.tcsSouth.mcsPark, Focus[State](_.mcsParkInProgress))
   }
 
   def build[F[_]: Concurrent](
@@ -75,7 +74,6 @@ object EngageEngine {
     .build[F, State, EngageEvent]
     .map(EngageEngineImpl[F](site, systems, conf, _))
 
-  @Lenses
   case class State(
     mcsParkInProgress: Boolean
   ) {

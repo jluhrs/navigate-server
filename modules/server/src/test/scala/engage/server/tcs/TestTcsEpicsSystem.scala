@@ -14,7 +14,7 @@ import engage.server.tcs.TcsEpicsSystem.BaseCommand
 import engage.server.tcs.TestTcsEpicsSystem.{ State, TestTcsEvent }
 import engage.server.tcs.TestTcsEpicsSystem.TestTcsEvent.MountParkCmd
 import monocle.Lens
-import monocle.macros.Lenses
+import monocle.syntax.all._
 
 import java.util.concurrent.TimeUnit.SECONDS
 import scala.concurrent.duration.FiniteDuration
@@ -30,7 +30,6 @@ case class TestTcsEpicsSystem[F[_]: Monad](st: Ref[F, State], out: Ref[F, List[T
 }
 
 object TestTcsEpicsSystem {
-  @Lenses
   case class State(
     mountParked: Boolean
   )
@@ -61,7 +60,7 @@ object TestTcsEpicsSystem {
       ) {
         override protected def event(st: State): TestTcsEvent = TestTcsEvent.MountParkCmd
 
-        override protected def cmd(st: State): State = State.mountParked.replace(true)(st)
+        override protected def cmd(st: State): State = st.focus(_.mountParked).replace(true)
       }
   }
 

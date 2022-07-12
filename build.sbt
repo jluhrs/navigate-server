@@ -114,6 +114,7 @@ lazy val stateengine = project
       Libraries.CatsEffect.value,
       Libraries.Mouse.value,
       Libraries.Fs2,
+      Libraries.CatsLaws.value
     ) ++ Libraries.MUnit.value
   )
 

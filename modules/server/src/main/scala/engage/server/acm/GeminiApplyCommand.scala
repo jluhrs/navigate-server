@@ -20,6 +20,16 @@ import mouse.all.booleanSyntaxMouse
 import scala.concurrent.duration.FiniteDuration
 
 trait GeminiApplyCommand[F[_]] {
+
+  /**
+   * Given a pair of apply and CAR records, this function produces a program that will trigger the
+   * apply record and then monitor the apply and CAR record to finally produce a command result. If
+   * the command takes longer than the <code>timeout</code>. The program is contained in a
+   * <code>VerifiedEpics</code> that checks the connection to the channels.
+   * @param timeout
+   *   The timeout for running the command
+   * @return
+   */
   def post(timeout: FiniteDuration): VerifiedEpics[F, ApplyCommandResult]
 }
 
@@ -80,13 +90,13 @@ object GeminiApplyCommand {
         avs.flatMap {
           case StreamEvent.ValueChanged(v) => Stream(ApplyValChange(v))
           case StreamEvent.Disconnected    =>
-            Stream.raiseError[F](new Throwable(s"Apply record %{apply.name} disconnected"))
+            Stream.raiseError[F](new Throwable(s"Apply record ${apply.name} disconnected"))
           case _                           => Stream.empty
         },
         cvs.flatMap {
           case StreamEvent.ValueChanged(v) => Stream(CarValChange(v))
           case StreamEvent.Disconnected    =>
-            Stream.raiseError[F](new Throwable(s"CAR record %{apply.name} disconnected"))
+            Stream.raiseError[F](new Throwable(s"CAR record ${apply.name} disconnected"))
           case _                           => Stream.empty
         },
         Stream.eval(dw).as(Started)
@@ -98,13 +108,13 @@ object GeminiApplyCommand {
             case (Processing(None, x), ApplyValChange(v)) if v < 0               =>
               (Processing(None, x),
                msr.flatMap(msg =>
-                 new Throwable(s"Apply record %{apply.name} failed with error: $msg").raiseError
+                 new Throwable(s"Apply record ${apply.name} failed with error: $msg").raiseError
                )
               )
             case (Processing(None, x), ApplyValChange(v)) if v === 0             =>
               (Processing(None, x),
                new Throwable(
-                 s"Apply record %{apply.name} triggered externally while processing."
+                 s"Apply record ${apply.name} triggered externally while processing."
                ).raiseError
               )
             case (Processing(None, x), ApplyValChange(v)) if v > 0               =>
@@ -112,7 +122,7 @@ object GeminiApplyCommand {
             case (Processing(v, _), CarValChange(CarState.Error))                =>
               (Processing(v, WaitingIdle),
                omsr.flatMap(msg =>
-                 new Throwable(s"CAR record %{car.name} has error: $msg").raiseError
+                 new Throwable(s"CAR record ${car.name} has error: $msg").raiseError
                )
               )
             case (Processing(v, WaitingBusy), CarValChange(CarState.Busy))       =>

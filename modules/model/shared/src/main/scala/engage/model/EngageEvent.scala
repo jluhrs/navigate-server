@@ -37,17 +37,17 @@ object EngageEvent {
 
   final case class CommandStart(cmd: EngageCommand) extends EngageEvent
   object CommandStart {
-    implicit val commandStartEq: Eq[CommandStart] = Eq.by(x => x.cmd)
+    implicit val commandStartEq: Eq[CommandStart] = Eq.by(_.cmd)
   }
 
   final case class CommandSuccess(cmd: EngageCommand) extends EngageEvent
   object CommandSuccess {
-    implicit val commandSuccessEq: Eq[CommandSuccess] = Eq.by(x => x.cmd)
+    implicit val commandSuccessEq: Eq[CommandSuccess] = Eq.by(_.cmd)
   }
 
   final case class CommandPaused(cmd: EngageCommand) extends EngageEvent
   object CommandPaused {
-    implicit val commandPausedEq: Eq[CommandPaused] = Eq.by(x => x.cmd)
+    implicit val commandPausedEq: Eq[CommandPaused] = Eq.by(_.cmd)
   }
 
   final case class CommandFailure(cmd: EngageCommand, msg: String) extends EngageEvent
