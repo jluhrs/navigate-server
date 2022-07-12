@@ -16,6 +16,9 @@ import engage.server.acm.{ CadDirective, GeminiApplyCommand }
 import scala.concurrent.duration.FiniteDuration
 
 trait TcsEpicsSystem[F[_]] {
+  // TcsCommands accumulates the list of channels that need to be written to set parameters.
+  // Once all the parameters are defined, the user cals the post method. Only then the EPICS channels will be verified,
+  // the parameters written, and the apply record triggered.
   def startCommand(timeout: FiniteDuration): tcs.TcsEpicsSystem.TcsCommands[F]
 }
 

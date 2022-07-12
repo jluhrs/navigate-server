@@ -15,6 +15,18 @@ import scala.concurrent.duration.FiniteDuration
 
 import RemoteChannel._
 
+/**
+ * Class EpicsSystem groups EPICS channels from the same IOC. On eof the channels is designed as a
+ * representative of the state of the IOC. Connections and checks are optimized using this channel.
+ * If this channel does not connect, the application will not try to connect to the other channels
+ * in the list.
+ * @param telltale
+ *   the channel designed to indicate the state of the IOC
+ * @param channelList
+ *   the rest of the channels from the IOC
+ * @tparam F
+ *   Effect that encapsulate the reading and writing of channels.
+ */
 case class EpicsSystem[F[_]: Async: Parallel](
   telltale:    TelltaleChannel,
   channelList: Set[RemoteChannel]
@@ -33,6 +45,13 @@ case class EpicsSystem[F[_]: Async: Parallel](
     )
   )
 
+  /**
+   * Checks that the telltale channel is connected, and attempts to connect it once if not.
+   * @param connectionTimeout
+   *   Timeout used when attempting to connect to the channel.
+   * @return
+   *   <code>true</code> if the channel is connected.
+   */
   def telltaleConnectionCheck(
     connectionTimeout: FiniteDuration = FiniteDuration(5, TimeUnit.SECONDS)
   ): F[Boolean] = isConnected.flatMap(
@@ -42,6 +61,15 @@ case class EpicsSystem[F[_]: Async: Parallel](
     )
   )
 
+  /**
+   * Checks the connection state of all the channels. If a channel is not connected, it attempts to
+   * connect to that channel once. If the telltale channel is not connected it assumes the IOC is
+   * down, and does not try to connect to any other channel.
+   * @param connectionTimeout
+   *   Timeout used when attempting to connect to the channels.
+   * @return
+   *   <code>true</code> if all the channels are connected.
+   */
   def connectionCheck(
     connectionTimeout: FiniteDuration = FiniteDuration(5, TimeUnit.SECONDS)
   ): F[Boolean] = telltaleConnectionCheck(connectionTimeout)
@@ -66,6 +94,7 @@ case class EpicsSystem[F[_]: Async: Parallel](
 }
 
 object EpicsSystem {
+
   case class TelltaleChannel(sysName: String, channel: RemoteChannel)
 
 }

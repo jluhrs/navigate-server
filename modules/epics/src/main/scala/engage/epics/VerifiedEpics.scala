@@ -14,6 +14,13 @@ import engage.epics.EpicsSystem.TelltaleChannel
 
 import scala.concurrent.duration.FiniteDuration
 
+/**
+ * <code>VerifiedEpics</code> keeps a program that involves access to EPICS channels, together with
+ * a list of the channels involved. Calling the method <code>verifiedRun</code> on a
+ * <code>VerifiedEpics</code> instance will produce a program that adds a verification of all the
+ * channels involved before executing the original program. Several constructors and combiners are
+ * provided.
+ */
 object VerifiedEpics {
 
   trait ChannelTracker[A] {
@@ -39,15 +46,6 @@ object VerifiedEpics {
     override val run: B                                            = b.run
   }
 
-  //  case class ComposedFlatMap[F[_]: Monad, T, U](fa: ChannelTracker[F[T]], ff: F[T] => ChannelTracker[T => F[U]]) extends ChannelTracker[F[U]] {
-//    private val c1                                     = fa.toCristal
-//    private val c2                                     = ff(c1.run).toCristal
-//    override protected val toCristal: Cristal[F[U]] = Cristal(
-//      merge(c1.systems, c2.systems),
-//      c1.run.flatMap(c2.run)
-//    )
-//  }
-
   def merge(
     m1: Map[TelltaleChannel, Set[RemoteChannel]],
     m2: Map[TelltaleChannel, Set[RemoteChannel]]
@@ -60,7 +58,6 @@ object VerifiedEpics {
   implicit class Ops[A](v: ChannelTracker[A]) extends AnyRef {
     def ap[B](ff: ChannelTracker[A => B]): ChannelTracker[B] = Apply(v, ff)
     def map[B](ff: A => B): ChannelTracker[B]                = ap(pure(ff))
-    // def flatMap[B](ff: A => ChannelTracker[B]): ChannelTracker[B] = Bind(v, ff)
   }
 
   type VerifiedEpics[F[_], A] = ChannelTracker[F[A]]
@@ -129,12 +126,6 @@ object VerifiedEpics {
   implicit class OpsF[F[_]: Monad, A](v: VerifiedEpics[F, A]) {
     def ap[B](ff: VerifiedEpics[F, A => B]): VerifiedEpics[F, B] = ApplyF[F, A, B](v, ff)
 
-    // def map[B](ff: A => B): VerifiedEpics[F, B] = ap(pure(ff))
-
-    // def flatMap[B](ff: ChannelTracker[A => F[B]]): VerifiedEpics[F, B] = BindF(v, ff)
-
-    // def flatMap[B](ff: F[A] => ChannelTracker[A => F[B]]): VerifiedEpics[F, B] = BindF(v, ff)
-
     def flatMap[B](ff: F[A] => VerifiedEpics[F, B]): VerifiedEpics[F, B] =
       new ChannelTracker[F[B]] {
         val fb                                                         = ff(v.run)
@@ -149,14 +140,6 @@ object VerifiedEpics {
 
   }
 
-//  implicit class WeirdOpsF[F[_]: Monad, A](v: ChannelTracker[F[A]]) {
-//    def flatMap[B](ff: F[A] => VerifiedEpics[F, B]): VerifiedEpics[F, B] = new ChannelTracker[F[B]] {
-//          val fb = ff(v.run)
-//          override val systems: Map[TelltaleChannel, Set[RemoteChannel]] = merge(v.systems, fb.systems)
-//          override val run: F[B] = v.run.flatMap(_ => fb.run)
-//        }
-//  }
-
   implicit class VerifiedRun[F[_]: Async: Parallel, A](v: VerifiedEpics[F, A]) {
     def verifiedRun(connectionTimeout: FiniteDuration): F[A] =
       v.systems
@@ -165,9 +148,5 @@ object VerifiedEpics {
         .toList
         .parSequence *> v.run
   }
-
-//  implicit class ComposedFlatMapOps[F[_]: Monad, T](v: ChannelTracker[T]) extends AnyRef {
-//    def flatMap[U](ff: T => ChannelTracker)
-//  }
 
 }

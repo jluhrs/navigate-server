@@ -51,7 +51,7 @@ class VerifiedEpicsSpec extends CatsEffectSuite {
   }
 
   epicsService.test("Makes sure channels are connected before reading a stream") { service =>
-    val valueCount: Long = 5
+    val valueCount = 5
     (for {
       tt  <- service.getChannel[Int]("test:stringVal").map(c => TelltaleChannel("foo", c))
       ch1 <- service.getChannel[Int]("test:heartbeat")
@@ -63,7 +63,10 @@ class VerifiedEpicsSpec extends CatsEffectSuite {
           .eventStream(tt, ch1)
           .map(
             _.use(
-              _.collect { case StreamEvent.ValueChanged(x) => x }.take(valueCount).compile.toList
+              _.collect { case StreamEvent.ValueChanged(x) => x }
+                .take(valueCount.toLong)
+                .compile
+                .toList
             )
           )
 
