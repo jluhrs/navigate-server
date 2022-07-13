@@ -22,7 +22,7 @@ object Settings {
     val scalaJSReactSortable    = "0.5.2"
 
     // Scala libraries
-    val catsEffect   = "3.3.13"
+    val catsEffect   = "3.3.14"
     val cats         = "2.8.0"
     val mouse        = "1.1.0"
     val fs2          = "3.2.8"
@@ -122,7 +122,7 @@ object Settings {
     val ScalaMock   = "org.scalamock"     %% "scalamock"          % LibraryVersions.scalaMock % "test"
     // Server side libraries
     val Cats        = Def.setting("org.typelevel" %%% "cats-core" % LibraryVersions.cats)
-    val CatsLaws    = Def.setting("org.typelevel" %%% "cats-laws" % LibraryVersions.cats  % "test")
+    val CatsLaws    = Def.setting("org.typelevel" %%% "cats-laws" % LibraryVersions.cats % "test")
     val CatsEffect  =
       Def.setting("org.typelevel" %%% "cats-effect" % LibraryVersions.catsEffect)
     val Fs2         = "co.fs2"            %% "fs2-core"           % LibraryVersions.fs2
