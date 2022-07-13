@@ -92,7 +92,7 @@ object Settings {
     val lucumaUI      = "0.36.3"
     val lucumaSchemas = "0.30.3"
 
-    val clue = "0.23.0"
+    val clue = "0.23.1"
 
     val sttp = "3.6.2"
 
@@ -122,7 +122,7 @@ object Settings {
     val ScalaMock   = "org.scalamock"     %% "scalamock"          % LibraryVersions.scalaMock % "test"
     // Server side libraries
     val Cats        = Def.setting("org.typelevel" %%% "cats-core" % LibraryVersions.cats)
-    val CatsLaws    = Def.setting("org.typelevel" %%% "cats-laws" % LibraryVersions.cats  % "test")
+    val CatsLaws    = Def.setting("org.typelevel" %%% "cats-laws" % LibraryVersions.cats % "test")
     val CatsEffect  =
       Def.setting("org.typelevel" %%% "cats-effect" % LibraryVersions.catsEffect)
     val Fs2         = "co.fs2"            %% "fs2-core"           % LibraryVersions.fs2
