@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2021 Association of Universities for Research in Astronomy, Inc. (AURA)
+// Copyright (c) 2016-2022 Association of Universities for Research in Astronomy, Inc. (AURA)
 // For license information see LICENSE or https://opensource.org/licenses/BSD-3-Clause
 
 package engage.web.server.http4s
@@ -14,7 +14,7 @@ import fs2.Pipe
 import fs2.Stream
 import fs2.concurrent.Topic
 import org.typelevel.log4cats.Logger
-import lucuma.core.enum.Site
+import lucuma.core.enums.Site
 import org.http4s._
 import org.http4s.dsl._
 import org.http4s.headers.`User-Agent`
@@ -104,7 +104,7 @@ class EngageUIApiRoutes[F[_]: Async](
     }
   }
 
-  val protectedServices: AuthedRoutes[AuthResult, F] =
+  def protectedServices(wsBuilder: WebSocketBuilder[F]): AuthedRoutes[AuthResult, F] =
     AuthedRoutes.of {
       // Route used for testing only
       case GET -> Root / "log" / IntVar(count) as _ if mode === Mode.Development =>
@@ -163,15 +163,15 @@ class EngageUIApiRoutes[F[_]: Async](
           initial   = initialEvent(clientId)
           streams   = Stream(pingStream, engineEvents(clientId)).parJoinUnbounded
                         .onFinalize[F](clientsDb.removeClient(clientId))
-          ws       <- WebSocketBuilder[F]
-                        .copy(filterPingPongs = false)
+          ws       <- wsBuilder
+                        .withFilterPingPongs(filterPingPongs = false)
                         .build(initial ++ streams, clientEventsSink(clientId))
         } yield ws
 
     }
 
-  def service: HttpRoutes[F] =
-    publicService <+> TokenRefresher(GZip(httpAuthentication.optAuth(protectedServices)),
+  def service(wsBuilder: WebSocketBuilder[F]): HttpRoutes[F] =
+    publicService <+> TokenRefresher(GZip(httpAuthentication.optAuth(protectedServices(wsBuilder))),
                                      httpAuthentication
     )
 

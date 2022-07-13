@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2021 Association of Universities for Research in Astronomy, Inc. (AURA)
+// Copyright (c) 2016-2022 Association of Universities for Research in Astronomy, Inc. (AURA)
 // For license information see LICENSE or https://opensource.org/licenses/BSD-3-Clause
 
 package engage.web.server.http4s.encoder
@@ -19,7 +19,7 @@ trait BooEncoders extends ModelBooPicklers with BooPickleInstances {
   implicit def usrLoginDecoder[F[_]: Concurrent]: EntityDecoder[F, UserLoginRequest] =
     booOf[F, UserLoginRequest]
   implicit def userDetailEncoder[F[_]]: EntityEncoder[F, UserDetails]                =
-    booEncoderOf[F, UserDetails]
+    booEncoderOf[UserDetails]
 }
 
 /**
@@ -27,5 +27,5 @@ trait BooEncoders extends ModelBooPicklers with BooPickleInstances {
  */
 trait ClientBooEncoders extends ModelBooPicklers with BooPickleInstances {
   implicit def usrLoginEncoder[F[_]]: EntityEncoder[F, UserLoginRequest] =
-    booEncoderOf[F, UserLoginRequest]
+    booEncoderOf[UserLoginRequest]
 }
