@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2021 Association of Universities for Research in Astronomy, Inc. (AURA)
+// Copyright (c) 2016-2022 Association of Universities for Research in Astronomy, Inc. (AURA)
 // For license information see LICENSE or https://opensource.org/licenses/BSD-3-Clause
 
 package engage.server
@@ -13,7 +13,7 @@ import engage.model.EngageEvent.{ CommandFailure, CommandPaused, CommandStart, C
 import engage.model.config.EngageEngineConfiguration
 import engage.stateengine.StateEngine
 import fs2.{ Pipe, Stream }
-import lucuma.core.enum.Site
+import lucuma.core.enums.Site
 import monocle.{ Focus, Lens }
 
 import scala.concurrent.duration.{ DurationInt, FiniteDuration }

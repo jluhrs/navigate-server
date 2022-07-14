@@ -48,7 +48,7 @@ ThisBuild / resolvers ++= Seq(
   "JCenter".at("https://jcenter.bintray.com/")
 )
 
-Global / resolvers += Resolver.sonatypeRepo("public")
+Global / resolvers ++= Resolver.sonatypeOssRepos("public")
 
 enablePlugins(GitBranchPrompt)
 
@@ -72,8 +72,7 @@ addCommandAlias("startEngageAll", startEngageAllCommands.mkString(";", ";", ""))
 addCommandAlias("restartEngageWDS", restartEngageWDSCommands.mkString(";", ";", ""))
 addCommandAlias("stopEngageAll", stopEngageAllCommands.mkString(";", ";", ""))
 
-ThisBuild / resolvers +=
-  Resolver.sonatypeRepo("snapshots")
+ThisBuild / resolvers ++= Resolver.sonatypeOssRepos("snapshots")
 
 ThisBuild / updateOptions := updateOptions.value.withLatestSnapshots(false)
 
@@ -159,7 +158,6 @@ lazy val engage_web_client = project
   .enablePlugins(BuildInfoPlugin)
   .enablePlugins(GitBranchPrompt)
   .disablePlugins(RevolverPlugin)
-  .settings(lucumaScalaJsSettings: _*)
   .settings(
     // Needed for Monocle macros
     scalacOptions += "-Ymacro-annotations",
@@ -251,6 +249,7 @@ lazy val engage_model = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Full)
   .in(file("modules/model"))
   .enablePlugins(GitBranchPrompt)
+  .enablePlugins(ScalaJSPlugin)
   .settings(
     scalacOptions += "-Ymacro-annotations",
     libraryDependencies ++= Seq(
@@ -264,7 +263,6 @@ lazy val engage_model = crossProject(JVMPlatform, JSPlatform)
     commonSettings,
     libraryDependencies += Http4sCore
   )
-  .jsSettings(lucumaScalaJsSettings)
   .jsSettings(
     // And add a custom one
     libraryDependencies += JavaTimeJS.value,

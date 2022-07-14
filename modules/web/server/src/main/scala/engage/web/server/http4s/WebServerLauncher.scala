@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2021 Association of Universities for Research in Astronomy, Inc. (AURA)
+// Copyright (c) 2016-2022 Association of Universities for Research in Astronomy, Inc. (AURA)
 // For license information see LICENSE or https://opensource.org/licenses/BSD-3-Clause
 
 package engage.web.server.http4s
@@ -17,9 +17,8 @@ import engage.model.EngageEvent
 import engage.web.server.common.{ LogInitialization, RedirectToHttpsRoutes, StaticRoutes }
 import fs2.Stream
 import fs2.concurrent.Topic
-import org.asynchttpclient.{ AsyncHttpClientConfig, DefaultAsyncHttpClientConfig }
 import org.http4s.HttpRoutes
-import org.http4s.asynchttpclient.client.AsyncHttpClient
+import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.client.Client
 import org.http4s.server.{ Router, Server }
@@ -34,12 +33,11 @@ import engage.web.server.OcsBuildInfo
 import engage.web.server.logging._
 import engage.web.server.config._
 import engage.web.server.security.AuthenticationService
+import org.http4s.server.websocket.WebSocketBuilder
 
 import java.io.FileInputStream
 import java.security.{ KeyStore, Security }
 import javax.net.ssl.{ KeyManagerFactory, SSLContext, TrustManagerFactory }
-import scala.concurrent.ExecutionContext.global
-import scala.concurrent.duration.FiniteDuration
 
 object WebServerLauncher extends IOApp with LogInitialization {
   private implicit def L: Logger[IO] = Slf4jLogger.getLoggerFromName[IO]("engage")
@@ -107,31 +105,29 @@ object WebServerLauncher extends IOApp with LogInitialization {
 
     val ssl: F[Option[SSLContext]] = conf.webServer.tls.map(makeContext[F]).sequence
 
-    def build(all: F[HttpRoutes[F]]): Resource[F, Server] =
-      Resource
-        .eval(all.flatMap { all =>
-          val builder =
-            BlazeServerBuilder[F]
-              .bindHttp(conf.webServer.port, conf.webServer.host)
-              .withHttpApp(all.orNotFound)
-          ssl.map(_.fold(builder)(builder.withSslContext)).map(_.resource)
-        })
-        .flatten
+    def build(all: WebSocketBuilder[F] => HttpRoutes[F]): Resource[F, Server] = Resource.eval {
+      val builder =
+        BlazeServerBuilder[F]
+          .bindHttp(conf.webServer.port, conf.webServer.host)
+          .withHttpWebSocketApp(wsb => all(wsb).orNotFound)
+      ssl.map(_.fold(builder)(builder.withSslContext)).map(_.resource)
+    }.flatten
 
-    val router = Router[F](
+    def router(wsBuilder: WebSocketBuilder[F]) = Router[F](
       "/"                    -> new StaticRoutes(conf.mode === Mode.Development, OcsBuildInfo.builtAtMillis).service,
       "/api/engage/commands" -> new EngageCommandRoutes(as, se).service,
-      "/api"                 -> new EngageUIApiRoutes(conf.site, conf.mode, as, clientsDb, outputs).service
+      "/api"                 -> new EngageUIApiRoutes(conf.site, conf.mode, as, clientsDb, outputs)
+        .service(wsBuilder)
     )
 
     val pingRouter = Router[F](
       "/ping" -> new PingRoutes(as).service
     )
 
-    val loggedRoutes =
-      pingRouter <+> Http4sLogger.httpRoutes(logHeaders = false, logBody = false)(router)
+    def loggedRoutes(wsBuilder: WebSocketBuilder[F]) =
+      pingRouter <+> Http4sLogger.httpRoutes(logHeaders = false, logBody = false)(router(wsBuilder))
 
-    build(loggedRoutes.pure[F])
+    build(loggedRoutes)
 
   }
 
@@ -140,7 +136,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
       "/" -> new RedirectToHttpsRoutes[F](443, conf.externalBaseUrl).service
     )
 
-    BlazeServerBuilder[F](global)
+    BlazeServerBuilder[F]
       .bindHttp(conf.insecurePort, conf.host)
       .withHttpApp(router.orNotFound)
       .resource
@@ -205,10 +201,8 @@ object WebServerLauncher extends IOApp with LogInitialization {
   def engage[I]: IO[ExitCode] = {
 
     // Override the default client config
-    def clientConfig(timeout: FiniteDuration): AsyncHttpClientConfig =
-      new DefaultAsyncHttpClientConfig.Builder(AsyncHttpClient.defaultConfig)
-        .setRequestTimeout(timeout.toMillis.toInt) // Change the timeout
-        .build()
+    def client(timeout: Duration): Resource[IO, Client[IO]] =
+      EmberClientBuilder.default[IO].withTimeout(timeout).build
 
     def engineIO(
       conf:       EngageConfiguration,
@@ -244,7 +238,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
         _      <- Resource.eval(configLog[IO]) // Initialize log before the engine is setup
         conf   <- Resource.eval(config[IO].flatMap(loadConfiguration[IO]))
         _      <- Resource.eval(printBanner(conf))
-        cli    <- AsyncHttpClient.resource[IO](clientConfig(10.seconds))
+        cli    <- client(10.seconds)
         out    <- Resource.eval(Topic[IO, EngageEvent])
         dsp    <- Dispatcher[IO]
         _      <- Resource.eval(logToClients(out, dsp))

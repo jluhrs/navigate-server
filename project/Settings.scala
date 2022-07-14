@@ -35,7 +35,7 @@ object Settings {
     val log4Cats         = "2.3.2"
     val log4CatsLogLevel = "0.3.1"
 
-    val http4s      = "1.0.0-M27"
+    val http4s      = "1.0.0-M32"
     val squants     = "1.8.3"
     val commonsHttp = "2.0.2"
     val unboundId   = "3.2.1"
@@ -88,8 +88,8 @@ object Settings {
     val gppUI   = "0.0.3"
 
     // Lucuma
-    val lucumaCore    = "0.24.0"
-    val lucumaUI      = "0.36.3"
+    val lucumaCore    = "0.44.0"
+    val lucumaUI      = "0.37.0"
     val lucumaSchemas = "0.30.3"
 
     val clue = "0.23.1"
@@ -173,7 +173,7 @@ object Settings {
     )
     val Http4sClient     = Seq(
       "org.http4s" %% "http4s-dsl"               % LibraryVersions.http4s,
-      "org.http4s" %% "http4s-async-http-client" % LibraryVersions.http4s
+      "org.http4s" %% "http4s-ember-client" % LibraryVersions.http4s
     )
     val Http4sBoopickle  = "org.http4s"    %% "http4s-boopickle" % LibraryVersions.http4s
     val Http4sCore       = "org.http4s"    %% "http4s-core"      % LibraryVersions.http4s
