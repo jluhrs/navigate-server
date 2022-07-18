@@ -28,7 +28,7 @@ class EpicsSystemSpec extends CatsEffectSuite {
         .use { case (ch0, ch1, ch2) =>
           for {
             _ <- EpicsSystem[IO](TelltaleChannel("foo", ch0), Set(ch1, ch2)).connectionCheck()
-            r <- List[RemoteChannel](ch0, ch1, ch1).map(_.getConnectionState[IO]).parSequence
+            r <- List[RemoteChannel[IO]](ch0, ch1, ch1).map(_.getConnectionState).parSequence
           } yield r.forall(_.equals(ConnectionState.CONNECTED))
         }
     }
@@ -46,7 +46,7 @@ class EpicsSystemSpec extends CatsEffectSuite {
             _ <- EpicsSystem[IO](TelltaleChannel("foo", ch0), Set(ch1, ch2)).connectionCheck(
                    FiniteDuration(1, TimeUnit.SECONDS)
                  )
-            r <- List[RemoteChannel](ch0, ch1, ch1).map(_.getConnectionState[IO]).parSequence
+            r <- List[RemoteChannel[IO]](ch0, ch1, ch1).map(_.getConnectionState).parSequence
           } yield !r.exists(_.equals(ConnectionState.CONNECTED))
         }
     }

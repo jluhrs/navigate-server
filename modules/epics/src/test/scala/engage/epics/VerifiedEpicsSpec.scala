@@ -37,8 +37,8 @@ class VerifiedEpicsSpec extends CatsEffectSuite {
         } yield fr
 
         for {
-          tts1  <- tt.channel.getConnectionState[IO]
-          ch1s1 <- ch1.getConnectionState[IO]
+          tts1  <- tt.channel.getConnectionState
+          ch1s1 <- ch1.getConnectionState
           r     <- TestEpicsServer.init("test:").use { _ =>
                      q.verifiedRun(FiniteDuration(1, TimeUnit.SECONDS))
                    }
@@ -71,8 +71,8 @@ class VerifiedEpicsSpec extends CatsEffectSuite {
           )
 
         for {
-          tts1  <- tt.channel.getConnectionState[IO]
-          ch1s1 <- ch1.getConnectionState[IO]
+          tts1  <- tt.channel.getConnectionState
+          ch1s1 <- ch1.getConnectionState
           r     <- TestEpicsServer.init("test:").use { _ =>
                      q.verifiedRun(FiniteDuration(1, TimeUnit.SECONDS))
                    }

@@ -33,7 +33,7 @@ class ChannelSpec extends CatsEffectSuite {
         for {
           dsp <- Dispatcher[IO]
           ch  <- srv.getChannel[Int]("test:heartbeat")
-          _   <- Resource.eval(ch.connect[IO])
+          _   <- Resource.eval(ch.connect)
           s   <- ch.eventStream(dsp, Concurrent[IO])
         } yield s
       ).use {

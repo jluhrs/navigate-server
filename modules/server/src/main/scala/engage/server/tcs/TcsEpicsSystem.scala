@@ -6,12 +6,15 @@ package engage.server.tcs
 import cats.{ Applicative, Monad, Parallel }
 import cats.effect.std.Dispatcher
 import cats.effect.{ Resource, Temporal }
+import mouse.all._
 import engage.epics.EpicsSystem.TelltaleChannel
 import engage.epics.{ Channel, EpicsService }
 import engage.epics.VerifiedEpics._
 import engage.server.{ ApplyCommandResult, tcs }
 import engage.server.acm.ParameterList._
 import engage.server.acm.{ CadDirective, GeminiApplyCommand }
+import engage.server.epicsdata.BinaryYesNo
+import squants.Angle
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -26,11 +29,19 @@ object TcsEpicsSystem {
 
   trait TcsEpics[F[_]] extends {
 
-    def post(timeout: FiniteDuration): VerifiedEpics[F, ApplyCommandResult]
+    def post(timeout: FiniteDuration): VerifiedEpics[F, F, ApplyCommandResult]
 
     val mountParkCmd: ParameterlessCommandChannels[F]
 
-    val mountFollowCmd: FollowCommandChannels[F]
+    val mountFollowCmd: Command1Channels[F, Boolean]
+
+    val rotStopCmd: Command1Channels[F, BinaryYesNo]
+
+    val rotParkCmd: ParameterlessCommandChannels[F]
+
+    val rotFollowCmd: Command1Channels[F, Boolean]
+
+    val rotMoveCmd: Command1Channels[F, Double]
 
     /*  val m1GuideCmd: M1GuideCmd[F]
 
@@ -438,6 +449,11 @@ object TcsEpicsSystem {
 
   val className: String = getClass.getName
 
+  private[tcs] def buildSystem[F[_]: Monad: Parallel](
+    applyCmd: GeminiApplyCommand[F],
+    channels: TcsChannels[F]
+  ): TcsEpicsSystem[F] = new TcsEpicsSystemImpl[F](new TcsEpicsImpl[F](applyCmd, channels))
+
   def build[F[_]: Dispatcher: Temporal: Parallel](
     service: EpicsService[F],
     tops:    Map[String, String]
@@ -447,15 +463,19 @@ object TcsEpicsSystem {
       channels <- buildChannels(service, top)
       applyCmd <-
         GeminiApplyCommand.build(service, channels.telltale, top + "apply", top + "applyC")
-    } yield new TcsEpicsSystemImpl[F](new TcsEpicsImpl[F](applyCmd, channels))
+    } yield buildSystem(applyCmd, channels)
   }
 
   val CadDirName: String = ".DIR"
 
   case class TcsChannels[F[_]](
-    telltale:         TelltaleChannel,
+    telltale:         TelltaleChannel[F],
     telescopeParkDir: Channel[F, CadDirective],
-    mountFollow:      Channel[F, Boolean]
+    mountFollow:      Channel[F, Boolean],
+    rotStopBrake:     Channel[F, BinaryYesNo],
+    rotParkDir:       Channel[F, CadDirective],
+    rotFollow:        Channel[F, Boolean],
+    rotMoveAngle:     Channel[F, Double]
   )
 
   def buildChannels[F[_]](service: EpicsService[F], top: String): Resource[F, TcsChannels[F]] =
@@ -463,10 +483,18 @@ object TcsEpicsSystem {
       tt  <- service.getChannel[String](top + "sad:health.VAL").map(TelltaleChannel(sysName, _))
       tpd <- service.getChannel[CadDirective](top + "telpark" + CadDirName)
       mf  <- service.getChannel[Boolean](top + "mcFollow.A")
+      rsb <- service.getChannel[BinaryYesNo](top + "rotStop.B")
+      rpd <- service.getChannel[CadDirective](top + "rotPark" + CadDirName)
+      rf  <- service.getChannel[Boolean](top + "crFollow.A")
+      rma <- service.getChannel[Double](top + "rotMove.A")
     } yield TcsChannels[F](
       tt,
       tpd,
-      mf
+      mf,
+      rsb,
+      rpd,
+      rf,
+      rma
     )
 
   case class TcsCommandsImpl[F[_]: Monad: Parallel](
@@ -475,13 +503,13 @@ object TcsEpicsSystem {
     params:   ParameterList[F]
   ) extends TcsCommands[F] {
 
-    private def addParam(p: VerifiedEpics[F, Unit]): TcsCommands[F] =
+    private def addParam(p: VerifiedEpics[F, F, Unit]): TcsCommands[F] =
       TcsCommandsImpl(tcsEpics, timeout, params :+ p)
 
-    override def post: VerifiedEpics[F, ApplyCommandResult] =
+    override def post: VerifiedEpics[F, F, ApplyCommandResult] =
       params.compile *> tcsEpics.post(timeout)
 
-    override val mcsParkCmd: BaseCommand[F, TcsCommands[F]] =
+    override val mcsParkCommand: BaseCommand[F, TcsCommands[F]] =
       new BaseCommand[F, TcsCommands[F]] {
         override def mark: TcsCommands[F] = addParam(tcsEpics.mountParkCmd.mark)
       }
@@ -489,7 +517,33 @@ object TcsEpicsSystem {
     override val mcsFollowCommand: FollowCommand[F, TcsCommands[F]] =
       new FollowCommand[F, TcsCommands[F]] {
         override def setFollow(enable: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.mountFollowCmd.setFollow(enable)
+          tcsEpics.mountFollowCmd.setParam1(enable)
+        )
+      }
+
+    override val rotStopCommand: RotStopCommand[F, TcsCommands[F]] =
+      new RotStopCommand[F, TcsCommands[F]] {
+        override def setBrakes(enable: Boolean): TcsCommands[F] = addParam(
+          tcsEpics.rotStopCmd.setParam1(enable.fold(BinaryYesNo.Yes, BinaryYesNo.No))
+        )
+      }
+
+    override val rotParkCommand: BaseCommand[F, TcsCommands[F]] =
+      new BaseCommand[F, TcsCommands[F]] {
+        override def mark: TcsCommands[F] = addParam(tcsEpics.rotParkCmd.mark)
+      }
+
+    override val rotFollowCommand: FollowCommand[F, TcsCommands[F]] =
+      new FollowCommand[F, TcsCommands[F]] {
+        override def setFollow(enable: Boolean): TcsCommands[F] = addParam(
+          tcsEpics.rotFollowCmd.setParam1(enable)
+        )
+      }
+
+    override val rotMoveCommand: RotMoveCommand[F, TcsCommands[F]] =
+      new RotMoveCommand[F, TcsCommands[F]] {
+        override def setAngle(angle: Angle): TcsCommands[F] = addParam(
+          tcsEpics.rotMoveCmd.setParam1(angle.toDegrees)
         )
       }
   }
@@ -503,30 +557,42 @@ object TcsEpicsSystem {
     applyCmd: GeminiApplyCommand[F],
     channels: TcsChannels[F]
   ) extends TcsEpics[F] {
-    override def post(timeout: FiniteDuration): VerifiedEpics[F, ApplyCommandResult] =
+    override def post(timeout: FiniteDuration): VerifiedEpics[F, F, ApplyCommandResult] =
       applyCmd.post(timeout)
 
     override val mountParkCmd: ParameterlessCommandChannels[F] =
       ParameterlessCommandChannels(channels.telltale, channels.telescopeParkDir)
 
-    override val mountFollowCmd: FollowCommandChannels[F] =
-      FollowCommandChannels(channels.telltale, channels.mountFollow)
+    override val mountFollowCmd: Command1Channels[F, Boolean] =
+      Command1Channels(channels.telltale, channels.mountFollow)
+
+    override val rotStopCmd: Command1Channels[F, BinaryYesNo] =
+      Command1Channels(channels.telltale, channels.rotStopBrake)
+
+    override val rotParkCmd: ParameterlessCommandChannels[F] =
+      ParameterlessCommandChannels(channels.telltale, channels.rotParkDir)
+
+    override val rotFollowCmd: Command1Channels[F, Boolean] =
+      Command1Channels(channels.telltale, channels.rotFollow)
+
+    override val rotMoveCmd: Command1Channels[F, Double] =
+      Command1Channels(channels.telltale, channels.rotMoveAngle)
   }
 
   case class ParameterlessCommandChannels[F[_]: Monad](
-    tt:         TelltaleChannel,
+    tt:         TelltaleChannel[F],
     dirChannel: Channel[F, CadDirective]
   ) {
-    val mark: VerifiedEpics[F, Unit] =
+    val mark: VerifiedEpics[F, F, Unit] =
       writeChannel[F, CadDirective](tt, dirChannel)(Applicative[F].pure(CadDirective.MARK))
   }
 
-  case class FollowCommandChannels[F[_]: Monad](
-    tt:            TelltaleChannel,
-    followChannel: Channel[F, Boolean]
+  case class Command1Channels[F[_]: Monad, A](
+    tt:            TelltaleChannel[F],
+    param1Channel: Channel[F, A]
   ) {
-    def setFollow(enable: Boolean): VerifiedEpics[F, Unit] =
-      writeChannel[F, Boolean](tt, followChannel)(Applicative[F].pure(enable))
+    def setParam1(enable: A): VerifiedEpics[F, F, Unit] =
+      writeChannel[F, A](tt, param1Channel)(Applicative[F].pure(enable))
   }
 
   trait BaseCommand[F[_], +S] {
@@ -537,12 +603,28 @@ object TcsEpicsSystem {
     def setFollow(enable: Boolean): S
   }
 
-  trait TcsCommands[F[_]] {
-    def post: VerifiedEpics[F, ApplyCommandResult]
+  trait RotStopCommand[F[_], +S] {
+    def setBrakes(enable: Boolean): S
+  }
 
-    val mcsParkCmd: BaseCommand[F, TcsCommands[F]]
+  trait RotMoveCommand[F[_], +S] {
+    def setAngle(angle: Angle): S
+  }
+
+  trait TcsCommands[F[_]] {
+    def post: VerifiedEpics[F, F, ApplyCommandResult]
+
+    val mcsParkCommand: BaseCommand[F, TcsCommands[F]]
 
     val mcsFollowCommand: FollowCommand[F, TcsCommands[F]]
+
+    val rotStopCommand: RotStopCommand[F, TcsCommands[F]]
+
+    val rotParkCommand: BaseCommand[F, TcsCommands[F]]
+
+    val rotFollowCommand: FollowCommand[F, TcsCommands[F]]
+
+    val rotMoveCommand: RotMoveCommand[F, TcsCommands[F]]
   }
   /*
   trait ProbeGuideCmd[F[_]] extends EpicsCommand[F] {
@@ -644,10 +726,10 @@ object TcsEpicsSystem {
   )
 
   trait ProbeGuideConfig[F[_]] {
-    def nodachopa: VerifiedEpics[F, Int]
-    def nodachopb: VerifiedEpics[F, Int]
-    def nodbchopa: VerifiedEpics[F, Int]
-    def nodbchopb: VerifiedEpics[F, Int]
+    def nodachopa: VerifiedEpics[F, F, Int]
+    def nodachopb: VerifiedEpics[F, F, Int]
+    def nodbchopa: VerifiedEpics[F, F, Int]
+    def nodbchopb: VerifiedEpics[F, F, Int]
   }
 
   final class ProbeGuideConfigImpl[F[_]: Sync](
@@ -655,16 +737,16 @@ object TcsEpicsSystem {
     protected val service: EpicsService[F]
   ) extends ProbeGuideConfig[F] {
     private val aa = service.
-    override def nodachopa: VerifiedEpics[F, Int] = service.safeAttributeSIntF(
+    override def nodachopa: VerifiedEpics[F, F, Int] = service.safeAttributeSIntF(
       tcsState.getIntegerAttribute(prefix + "nodachopa")
     )
-    override def nodachopb: VerifiedEpics[F, Int] = safeAttributeSIntF(
+    override def nodachopb: VerifiedEpics[F, F, Int] = safeAttributeSIntF(
       tcsState.getIntegerAttribute(prefix + "nodachopb")
     )
-    override def nodbchopa: VerifiedEpics[F, Int] = safeAttributeSIntF(
+    override def nodbchopa: VerifiedEpics[F, F, Int] = safeAttributeSIntF(
       tcsState.getIntegerAttribute(prefix + "nodbchopa")
     )
-    override def nodbchopb: VerifiedEpics[F, Int] = safeAttributeSIntF(
+    override def nodbchopb: VerifiedEpics[F, F, Int] = safeAttributeSIntF(
       tcsState.getIntegerAttribute(prefix + "nodbchopb")
     )
   }
@@ -710,73 +792,73 @@ object TcsEpicsSystem {
   }
 
   trait M1GuideCmd[F[_]] {
-    def setState(v: String): VerifiedEpics[F, Unit]
+    def setState(v: String): VerifiedEpics[F, F, Unit]
   }
 
   trait M2GuideCmd[F[_]] {
-    def setState(v: String): VerifiedEpics[F, Unit]
+    def setState(v: String): VerifiedEpics[F, F, Unit]
   }
 
   trait M2GuideModeCmd[F[_]] {
-    def setComa(v: String): VerifiedEpics[F, Unit]
+    def setComa(v: String): VerifiedEpics[F, F, Unit]
   }
 
   trait M2GuideConfigCmd[F[_]] {
-    def setSource(v: String): VerifiedEpics[F, Unit]
-    def setBeam(v:   String): VerifiedEpics[F, Unit]
-    def setReset(v:  String): VerifiedEpics[F, Unit]
+    def setSource(v: String): VerifiedEpics[F, F, Unit]
+    def setBeam(v:   String): VerifiedEpics[F, F, Unit]
+    def setReset(v:  String): VerifiedEpics[F, F, Unit]
   }
 
   trait MountGuideCmd[F[_]] {
-    def setSource(v:   String): VerifiedEpics[F, Unit]
-    def setP1Weight(v: Double): VerifiedEpics[F, Unit]
-    def setP2Weight(v: Double): VerifiedEpics[F, Unit]
-    def setMode(v:     String): VerifiedEpics[F, Unit]
+    def setSource(v:   String): VerifiedEpics[F, F, Unit]
+    def setP1Weight(v: Double): VerifiedEpics[F, F, Unit]
+    def setP2Weight(v: Double): VerifiedEpics[F, F, Unit]
+    def setMode(v:     String): VerifiedEpics[F, F, Unit]
   }
 
   trait OffsetCmd[F[_]] {
-    def setX(v: Double): VerifiedEpics[F, Unit]
-    def setY(v: Double): VerifiedEpics[F, Unit]
+    def setX(v: Double): VerifiedEpics[F, F, Unit]
+    def setY(v: Double): VerifiedEpics[F, F, Unit]
   }
 
   trait M2Beam[F[_]] {
-    def setBeam(v: String): VerifiedEpics[F, Unit]
+    def setBeam(v: String): VerifiedEpics[F, F, Unit]
   }
 
   trait HrwfsPosCmd[F[_]] {
-    def setHrwfsPos(v: String): VerifiedEpics[F, Unit]
+    def setHrwfsPos(v: String): VerifiedEpics[F, F, Unit]
   }
 
   trait ScienceFoldPosCmd[F[_]] {
-    def setScfold(v: String): VerifiedEpics[F, Unit]
+    def setScfold(v: String): VerifiedEpics[F, F, Unit]
   }
 
   trait AoCorrect[F[_]] {
-    def setCorrections(v: String): VerifiedEpics[F, Unit]
-    def setGains(v:       Int): VerifiedEpics[F, Unit]
-    def setMatrix(v:      Int): VerifiedEpics[F, Unit]
+    def setCorrections(v: String): VerifiedEpics[F, F, Unit]
+    def setGains(v:       Int): VerifiedEpics[F, F, Unit]
+    def setMatrix(v:      Int): VerifiedEpics[F, F, Unit]
   }
 
   trait AoPrepareControlMatrix[F[_]] {
-    def setX(v:             Double): VerifiedEpics[F, Unit]
-    def setY(v:             Double): VerifiedEpics[F, Unit]
-    def setSeeing(v:        Double): VerifiedEpics[F, Unit]
-    def setStarMagnitude(v: Double): VerifiedEpics[F, Unit]
-    def setWindSpeed(v:     Double): VerifiedEpics[F, Unit]
+    def setX(v:             Double): VerifiedEpics[F, F, Unit]
+    def setY(v:             Double): VerifiedEpics[F, F, Unit]
+    def setSeeing(v:        Double): VerifiedEpics[F, F, Unit]
+    def setStarMagnitude(v: Double): VerifiedEpics[F, F, Unit]
+    def setWindSpeed(v:     Double): VerifiedEpics[F, F, Unit]
   }
 
   trait AoStatistics[F[_]] {
-    def setFileName(v:            String): VerifiedEpics[F, Unit]
-    def setSamples(v:             Int): VerifiedEpics[F, Unit]
-    def setInterval(v:            Double): VerifiedEpics[F, Unit]
-    def setTriggerTimeInterval(v: Double): VerifiedEpics[F, Unit]
+    def setFileName(v:            String): VerifiedEpics[F, F, Unit]
+    def setSamples(v:             Int): VerifiedEpics[F, F, Unit]
+    def setInterval(v:            Double): VerifiedEpics[F, F, Unit]
+    def setTriggerTimeInterval(v: Double): VerifiedEpics[F, F, Unit]
   }
 
   trait TargetFilter[F[_]] {
-    def setBandwidth(v:    Double): VerifiedEpics[F, Unit]
-    def setMaxVelocity(v:  Double): VerifiedEpics[F, Unit]
-    def setGrabRadius(v:   Double): VerifiedEpics[F, Unit]
-    def setShortCircuit(v: String): VerifiedEpics[F, Unit]
+    def setBandwidth(v:    Double): VerifiedEpics[F, F, Unit]
+    def setMaxVelocity(v:  Double): VerifiedEpics[F, F, Unit]
+    def setGrabRadius(v:   Double): VerifiedEpics[F, F, Unit]
+    def setShortCircuit(v: String): VerifiedEpics[F, F, Unit]
   }
    */
 }

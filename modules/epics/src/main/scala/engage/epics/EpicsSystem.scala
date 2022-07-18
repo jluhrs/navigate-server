@@ -13,8 +13,6 @@ import org.epics.ca.ConnectionState
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
 
-import RemoteChannel._
-
 /**
  * Class EpicsSystem groups EPICS channels from the same IOC. On eof the channels is designed as a
  * representative of the state of the IOC. Connections and checks are optimized using this channel.
@@ -28,8 +26,8 @@ import RemoteChannel._
  *   Effect that encapsulate the reading and writing of channels.
  */
 case class EpicsSystem[F[_]: Async: Parallel](
-  telltale:    TelltaleChannel,
-  channelList: Set[RemoteChannel]
+  telltale:    TelltaleChannel[F],
+  channelList: Set[RemoteChannel[F]]
 ) {
   def isConnected: F[Boolean] =
     telltale.channel.getConnectionState.map(_.equals(ConnectionState.CONNECTED))
@@ -95,6 +93,6 @@ case class EpicsSystem[F[_]: Async: Parallel](
 
 object EpicsSystem {
 
-  case class TelltaleChannel(sysName: String, channel: RemoteChannel)
+  case class TelltaleChannel[F[_]](sysName: String, channel: RemoteChannel[F])
 
 }
