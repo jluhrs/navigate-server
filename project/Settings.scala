@@ -172,7 +172,7 @@ object Settings {
                      "org.http4s" %% "http4s-blaze-server" % LibraryVersions.http4s
     )
     val Http4sClient     = Seq(
-      "org.http4s" %% "http4s-dsl"               % LibraryVersions.http4s,
+      "org.http4s" %% "http4s-dsl"          % LibraryVersions.http4s,
       "org.http4s" %% "http4s-ember-client" % LibraryVersions.http4s
     )
     val Http4sBoopickle  = "org.http4s"    %% "http4s-boopickle" % LibraryVersions.http4s
