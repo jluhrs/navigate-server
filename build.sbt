@@ -134,7 +134,7 @@ lazy val engage_web_server = project
                                 CatsEffect.value,
                                 Log4Cats.value,
                                 BooPickle.value,
-                                Http4sBoopickle,
+                                Http4sBoopickle
     ) ++
       Http4sClient ++ Http4s ++ PureConfig ++ Logging.value ++ MUnit.value,
     // Supports launching the server in the background
