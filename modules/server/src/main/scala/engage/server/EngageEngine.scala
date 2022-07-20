@@ -7,7 +7,7 @@ import cats.ApplicativeError
 import cats.effect.{ Async, Concurrent, Ref, Temporal }
 import cats.effect.kernel.Sync
 import cats.syntax.all._
-import engage.model.EngageCommand.{ McsFollow, McsPark }
+import engage.model.EngageCommand.{ CrcsFollow, CrcsMove, CrcsPark, CrcsStop, McsFollow, McsPark }
 import engage.model.{ EngageCommand, EngageEvent }
 import engage.model.EngageEvent.{ CommandFailure, CommandPaused, CommandStart, CommandSuccess }
 import engage.model.config.EngageEngineConfiguration
@@ -15,6 +15,7 @@ import engage.stateengine.StateEngine
 import fs2.{ Pipe, Stream }
 import lucuma.core.enums.Site
 import monocle.{ Focus, Lens }
+import squants.Angle
 
 import scala.concurrent.duration.{ DurationInt, FiniteDuration }
 
@@ -26,6 +27,11 @@ trait EngageEngine[F[_]] {
   def mcsPark: F[Unit]
 
   def mcsFollow(enable: Boolean): F[Unit]
+
+  def rotStop(useBrakes: Boolean): F[Unit]
+  def rotPark: F[Unit]
+  def rotFollow(enable:  Boolean): F[Unit]
+  def rotMove(angle:     Angle): F[Unit]
 }
 
 object EngageEngine {
@@ -64,7 +70,7 @@ object EngageEngine {
     override def eventStream: Stream[F, EngageEvent] =
       engine.process(startState)
 
-    def mcsPark: F[Unit] =
+    override def mcsPark: F[Unit] =
       command(engine, McsPark, systems.tcsSouth.mcsPark, Focus[State](_.mcsParkInProgress))
 
     override def mcsFollow(enable: Boolean): F[Unit] =
@@ -72,6 +78,30 @@ object EngageEngine {
               McsFollow(enable),
               systems.tcsSouth.mcsFollow(enable),
               Focus[State](_.mcsFollowInProgress)
+      )
+
+    override def rotStop(useBrakes: Boolean): F[Unit] =
+      command(engine,
+              CrcsStop(useBrakes),
+              systems.tcsSouth.rotStop(useBrakes),
+              Focus[State](_.rotStopInProgress)
+      )
+
+    override def rotPark: F[Unit] =
+      command(engine, CrcsPark, systems.tcsSouth.rotPark, Focus[State](_.rotParkInProgress))
+
+    override def rotFollow(enable: Boolean): F[Unit] =
+      command(engine,
+              CrcsFollow(enable),
+              systems.tcsSouth.rotFollow(enable),
+              Focus[State](_.rotFollowInProgress)
+      )
+
+    override def rotMove(angle: Angle): F[Unit] =
+      command(engine,
+              CrcsMove(angle),
+              systems.tcsSouth.rotMove(angle),
+              Focus[State](_.rotMoveInProgress)
       )
   }
 
@@ -85,12 +115,29 @@ object EngageEngine {
 
   case class State(
     mcsParkInProgress:   Boolean,
-    mcsFollowInProgress: Boolean
+    mcsFollowInProgress: Boolean,
+    rotStopInProgress:   Boolean,
+    rotParkInProgress:   Boolean,
+    rotFollowInProgress: Boolean,
+    rotMoveInProgress:   Boolean
   ) {
-    lazy val tcsActionInProgress: Boolean = mcsParkInProgress || mcsFollowInProgress
+    lazy val tcsActionInProgress: Boolean =
+      mcsParkInProgress ||
+        mcsFollowInProgress ||
+        rotStopInProgress ||
+        rotParkInProgress ||
+        rotFollowInProgress ||
+        rotMoveInProgress
   }
 
-  val startState: State = State(mcsParkInProgress = false, mcsFollowInProgress = false)
+  val startState: State = State(
+    mcsParkInProgress = false,
+    mcsFollowInProgress = false,
+    rotStopInProgress = false,
+    rotParkInProgress = false,
+    rotFollowInProgress = false,
+    rotMoveInProgress = false
+  )
 
   private def command[F[_]: ApplicativeError[*[_], Throwable]](
     engine:  StateEngine[F, State, EngageEvent],

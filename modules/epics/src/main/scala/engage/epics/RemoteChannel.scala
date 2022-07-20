@@ -11,25 +11,33 @@ import org.epics.ca.{ AccessRights, ConnectionState }
 
 import scala.concurrent.duration.FiniteDuration
 
-abstract class RemoteChannel {
-  val caChannel: CaChannel[_]
+trait RemoteChannel[F[_]] {
+  def connect: F[Unit]
+  def connect(timeout: FiniteDuration): F[Unit]
+  def disconnect: F[Unit]
+  def getName: F[String]
+  def getConnectionState: F[ConnectionState]
+  def getAccessRights: F[AccessRights]
 }
 
 object RemoteChannel {
 
-  implicit class RemoteChannelOps[R <: RemoteChannel](ch: R) {
-    def connect[F[_]: Async]: F[Unit]                          =
-      Async[F].fromCompletableFuture(Async[F].delay(ch.caChannel.connectAsync())).void
-    def connect[F[_]: Async](timeout: FiniteDuration): F[Unit] = connect.timeout(timeout)
-    def disconnect[F[_]: Async]: F[Unit]                       = Async[F].delay(ch.caChannel.close())
-    def getName[F[_]: Async]: F[String]                        = Async[F].delay(ch.caChannel.getName)
-    def getConnectionState[F[_]: Async]: F[ConnectionState]    =
-      Async[F].delay(ch.caChannel.getConnectionState)
-    def getAccessRights[F[_]: Async]: F[AccessRights]          = Async[F].delay(ch.caChannel.getAccessRights)
+  abstract class RemoteChannelImpl[F[_]: Async] extends RemoteChannel[F] {
+    val caChannel: CaChannel[_]
+
+    override def connect: F[Unit]                          =
+      Async[F].fromCompletableFuture(Async[F].delay(caChannel.connectAsync())).void
+    override def connect(timeout: FiniteDuration): F[Unit] = connect.timeout(timeout)
+    override def disconnect: F[Unit]                       = Async[F].delay(caChannel.close())
+    override def getName: F[String]                        = Async[F].delay(caChannel.getName)
+    override def getConnectionState: F[ConnectionState]    =
+      Async[F].delay(caChannel.getConnectionState)
+    override def getAccessRights: F[AccessRights]          = Async[F].delay(caChannel.getAccessRights)
   }
 
-  implicit val remoteChannelEq: Eq[RemoteChannel] = Eq.instance { case (a, b) =>
-    a.caChannel == b.caChannel
+  implicit def remoteChannelEq[F[_]]: Eq[RemoteChannel[F]] = Eq.instance {
+    case (a: RemoteChannelImpl[F], b: RemoteChannelImpl[F]) => a.caChannel == b.caChannel
+    case (a, b)                                             => a.equals(b)
   }
 
 }

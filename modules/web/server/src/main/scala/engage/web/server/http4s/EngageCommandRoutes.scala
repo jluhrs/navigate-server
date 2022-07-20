@@ -11,6 +11,7 @@ import engage.web.server.security.{ AuthenticationService, Http4sAuthentication,
 import org.http4s.{ AuthedRoutes, HttpRoutes }
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.middleware.GZip
+import squants.space.AngleConversions._
 import lucuma.core.model.Observation.{ Id => ObsId }
 
 class EngageCommandRoutes[F[_]: Async](
@@ -31,6 +32,22 @@ class EngageCommandRoutes[F[_]: Async](
     case POST -> Root / "mcsFollow" / BooleanVar(en) / ClientIDVar(_) as _ =>
       eng.mcsFollow(en) *>
         Ok(s"Follow MCS ($en)")
+
+    case POST -> Root / "crcsStop" / BooleanVar(en) / ClientIDVar(_) as _ =>
+      eng.rotStop(en) *>
+        Ok(s"Stop CRCS ($en)")
+
+    case POST -> Root / "crcsPark" / ClientIDVar(_) as _ =>
+      eng.rotPark *>
+        Ok(s"Park CRCS")
+
+    case POST -> Root / "crcsFollow" / BooleanVar(en) / ClientIDVar(_) as _ =>
+      eng.rotFollow(en) *>
+        Ok(s"Follow CRCS ($en)")
+
+    case POST -> Root / "crcsMove" / DoubleVar(angle) / ClientIDVar(_) as _ =>
+      eng.rotMove(angle.degrees) *>
+        Ok(s"Move CRCS ($angle)")
 
   }
 

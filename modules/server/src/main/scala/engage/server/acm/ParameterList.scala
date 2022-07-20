@@ -9,13 +9,13 @@ import engage.epics.{ EpicsSystem, RemoteChannel }
 import engage.epics.VerifiedEpics.VerifiedEpics
 
 object ParameterList {
-  type ParameterList[F[_]] = List[VerifiedEpics[F, Unit]]
+  type ParameterList[F[_]] = List[VerifiedEpics[F, F, Unit]]
 
   implicit class ParameterListOps[F[_]: Applicative: Parallel](l: ParameterList[F]) extends AnyRef {
-    def compile: VerifiedEpics[F, Unit] = new VerifiedEpics[F, Unit] {
-      override val systems: Map[EpicsSystem.TelltaleChannel, Set[RemoteChannel]] =
+    def compile: VerifiedEpics[F, F, Unit] = new VerifiedEpics[F, F, Unit] {
+      override val systems: Map[EpicsSystem.TelltaleChannel[F], Set[RemoteChannel[F]]] =
         l.flatMap(_.systems.toList).groupBy(_._1).view.mapValues(_.flatMap(_._2.toList).toSet).toMap
-      override val run: F[Unit]                                                  = l.map(_.run).parSequence.void
+      override val run: F[Unit]                                                        = l.map(_.run).parSequence.void
     }
   }
 }

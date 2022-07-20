@@ -136,7 +136,7 @@ lazy val engage_web_server = project
                                 BooPickle.value,
                                 Http4sBoopickle
     ) ++
-      Http4sClient ++ Http4s ++ PureConfig ++ Logging.value,
+      Http4sClient ++ Http4s ++ PureConfig ++ Logging.value ++ MUnit.value,
     // Supports launching the server in the background
     reStart / mainClass  := Some("engage.web.server.http4s.WebServerLauncher"),
     Compile / bspEnabled := false
@@ -277,7 +277,7 @@ lazy val engage_server = project
       CatsEffect.value,
       Fs2,
       Log4Cats.value
-    ) ++ LucumaCore.value ++ Http4sClient
+    )  ++ MUnit.value ++ LucumaCore.value ++ Http4sClient
   )
   .dependsOn(engage_model.jvm % "compile->compile;test->test")
   .dependsOn(epics)

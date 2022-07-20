@@ -17,4 +17,9 @@ package object http4s {
       Either.catchNonFatal(str.toBoolean).toOption
   }
 
+  object DoubleVar {
+    def unapply(str: String): Option[Double] =
+      Either.catchNonFatal(str.toDouble).toOption
+  }
+
 }

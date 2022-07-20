@@ -53,17 +53,13 @@ object Settings {
 
     // test libraries
     val xmlUnit                     = "1.6"
-    val jUnitInterface              = "0.13.2"
     val scalaMock                   = "5.2.0"
-    lazy val munitVersion           = "0.7.29"
-    lazy val munitDisciplineVersion = "1.0.9"
     lazy val munitCatsEffectVersion = "1.0.7"
 
     val apacheXMLRPC        = "3.1.3"
     val opencsv             = "2.3"
     val epicsService        = "1.0.7"
     val gmpCommandRecords   = "0.7.7"
-    val acm                 = "0.1.1"
     val giapi               = "1.1.7"
     val giapiJmsUtil        = "0.5.7"
     val giapiJmsProvider    = "1.6.7"
@@ -111,14 +107,10 @@ object Settings {
     )
     val MUnit          = Def.setting(
       Seq(
-        "org.scalameta" %%% "munit"               % LibraryVersions.munitVersion           % Test,
-        "org.typelevel" %%% "munit-cats-effect-3" % LibraryVersions.munitCatsEffectVersion % Test,
-        "org.typelevel" %%% "discipline-munit"    % LibraryVersions.munitDisciplineVersion % Test
+        "org.typelevel" %% "munit-cats-effect-3" % LibraryVersions.munitCatsEffectVersion % Test
       )
     )
     val XmlUnit        = "xmlunit" % "xmlunit" % LibraryVersions.xmlUnit % "test"
-    val JUnitInterface =
-      "com.novocode" % "junit-interface" % LibraryVersions.jUnitInterface % "test"
     val ScalaMock   = "org.scalamock"     %% "scalamock"          % LibraryVersions.scalaMock % "test"
     // Server side libraries
     val Cats        = Def.setting("org.typelevel" %%% "cats-core" % LibraryVersions.cats)

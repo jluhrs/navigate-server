@@ -8,6 +8,7 @@ import engage.server.{ ApplyCommandResult, ConnectionTimeout }
 
 import scala.concurrent.duration.FiniteDuration
 import engage.epics.VerifiedEpics._
+import squants.Angle
 
 /* This class implements the common TCS commands */
 class TcsBaseControllerEpics[F[_]: Async: Parallel](
@@ -17,7 +18,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
   override def mcsPark: F[ApplyCommandResult] =
     tcsEpics
       .startCommand(timeout)
-      .mcsParkCmd
+      .mcsParkCommand
       .mark
       .post
       .verifiedRun(ConnectionTimeout)
@@ -27,6 +28,38 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
       .startCommand(timeout)
       .mcsFollowCommand
       .setFollow(enable)
+      .post
+      .verifiedRun(ConnectionTimeout)
+
+  override def rotStop(useBrakes: Boolean): F[ApplyCommandResult] =
+    tcsEpics
+      .startCommand(timeout)
+      .rotStopCommand
+      .setBrakes(useBrakes)
+      .post
+      .verifiedRun(ConnectionTimeout)
+
+  override def rotPark: F[ApplyCommandResult] =
+    tcsEpics
+      .startCommand(timeout)
+      .rotParkCommand
+      .mark
+      .post
+      .verifiedRun(ConnectionTimeout)
+
+  override def rotFollow(enable: Boolean): F[ApplyCommandResult] =
+    tcsEpics
+      .startCommand(timeout)
+      .rotFollowCommand
+      .setFollow(enable)
+      .post
+      .verifiedRun(ConnectionTimeout)
+
+  override def rotMove(angle: Angle): F[ApplyCommandResult] =
+    tcsEpics
+      .startCommand(timeout)
+      .rotMoveCommand
+      .setAngle(angle)
       .post
       .verifiedRun(ConnectionTimeout)
 }
