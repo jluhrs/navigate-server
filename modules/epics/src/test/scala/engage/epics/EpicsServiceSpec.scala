@@ -13,8 +13,6 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.TimeoutException
 import scala.concurrent.duration.{ FiniteDuration, SECONDS }
 
-import RemoteChannel._
-
 class EpicsServiceSpec extends CatsEffectSuite {
 
   private val epicsServer = ResourceFixture(
@@ -29,7 +27,7 @@ class EpicsServiceSpec extends CatsEffectSuite {
         .getChannel[Int]("test:foo")
         .use(ch =>
           for {
-            _ <- ch.connect[IO](FiniteDuration(1, SECONDS))
+            _ <- ch.connect(FiniteDuration(1, SECONDS))
             v <- ch.get
           } yield v
         )
@@ -42,7 +40,7 @@ class EpicsServiceSpec extends CatsEffectSuite {
         .getChannel[Int]("test:intVal")
         .use(ch =>
           for {
-            _ <- ch.connect[IO]
+            _ <- ch.connect
             v <- ch.get
           } yield v
         ),
@@ -56,7 +54,7 @@ class EpicsServiceSpec extends CatsEffectSuite {
         .getChannel[Double]("test:doubleVal")
         .use(ch =>
           for {
-            _ <- ch.connect[IO]
+            _ <- ch.connect
             v <- ch.get
           } yield v
         ),
@@ -70,7 +68,7 @@ class EpicsServiceSpec extends CatsEffectSuite {
         .getChannel[Float]("test:floatVal")
         .use(ch =>
           for {
-            _ <- ch.connect[IO]
+            _ <- ch.connect
             v <- ch.get
           } yield v
         ),
@@ -84,7 +82,7 @@ class EpicsServiceSpec extends CatsEffectSuite {
         .getChannel[String]("test:stringVal")
         .use(ch =>
           for {
-            _ <- ch.connect[IO]
+            _ <- ch.connect
             v <- ch.get
           } yield v
         ),
@@ -98,7 +96,7 @@ class EpicsServiceSpec extends CatsEffectSuite {
         .getChannel[TestEnumerated]("test:enumVal")
         .use(ch =>
           for {
-            _ <- ch.connect[IO]
+            _ <- ch.connect
             v <- ch.get
           } yield v
         ),
@@ -112,7 +110,7 @@ class EpicsServiceSpec extends CatsEffectSuite {
         for {
           dsp <- Dispatcher[IO]
           ch  <- srv.getChannel[Int]("test:heartbeat")
-          _   <- Resource.eval(ch.connect[IO])
+          _   <- Resource.eval(ch.connect)
           s   <- ch.valueStream(dsp)
         } yield s
       ).use(_.drop(2).take(5).compile.toList)
@@ -129,7 +127,7 @@ class EpicsServiceSpec extends CatsEffectSuite {
         .getChannel[Int]("test:intVal")
         .use(ch =>
           for {
-            _ <- ch.connect[IO]
+            _ <- ch.connect
             _ <- ch.put(t)
             v <- ch.get
           } yield v
@@ -145,7 +143,7 @@ class EpicsServiceSpec extends CatsEffectSuite {
         .getChannel[Double]("test:doubleVal")
         .use(ch =>
           for {
-            _ <- ch.connect[IO]
+            _ <- ch.connect
             _ <- ch.put(t)
             v <- ch.get
           } yield v
@@ -161,7 +159,7 @@ class EpicsServiceSpec extends CatsEffectSuite {
         .getChannel[Float]("test:floatVal")
         .use(ch =>
           for {
-            _ <- ch.connect[IO]
+            _ <- ch.connect
             _ <- ch.put(t)
             v <- ch.get
           } yield v
@@ -177,7 +175,7 @@ class EpicsServiceSpec extends CatsEffectSuite {
         .getChannel[String]("test:stringVal")
         .use(ch =>
           for {
-            _ <- ch.connect[IO]
+            _ <- ch.connect
             _ <- ch.put(t)
             v <- ch.get
           } yield v
@@ -193,7 +191,7 @@ class EpicsServiceSpec extends CatsEffectSuite {
         .getChannel[TestEnumerated]("test:enumVal")
         .use(ch =>
           for {
-            _ <- ch.connect[IO]
+            _ <- ch.connect
             _ <- ch.put(t)
             v <- ch.get
           } yield v

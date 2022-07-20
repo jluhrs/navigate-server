@@ -30,7 +30,7 @@ trait GeminiApplyCommand[F[_]] {
    *   The timeout for running the command
    * @return
    */
-  def post(timeout: FiniteDuration): VerifiedEpics[F, ApplyCommandResult]
+  def post(timeout: FiniteDuration): VerifiedEpics[F, F, ApplyCommandResult]
 }
 
 object GeminiApplyCommand {
@@ -50,11 +50,11 @@ object GeminiApplyCommand {
   case class CarValChange(v: CarState) extends Event
 
   final class GeminiApplyCommandImpl[F[_]: Dispatcher: Temporal](
-    telltaleChannel: TelltaleChannel,
+    telltaleChannel: TelltaleChannel[F],
     apply:           ApplyRecord[F],
     car:             CarRecord[F]
   ) extends GeminiApplyCommand[F] {
-    override def post(timeout: FiniteDuration): VerifiedEpics[F, ApplyCommandResult] = {
+    override def post(timeout: FiniteDuration): VerifiedEpics[F, F, ApplyCommandResult] = {
       val streamsV = for {
         avrs   <- eventStream(telltaleChannel, apply.oval)
         cvrs   <- eventStream(telltaleChannel, car.oval)
@@ -151,7 +151,7 @@ object GeminiApplyCommand {
 
   def build[F[_]: Dispatcher: Temporal](
     srv:             EpicsService[F],
-    telltaleChannel: TelltaleChannel,
+    telltaleChannel: TelltaleChannel[F],
     applyName:       String,
     carName:         String
   ): Resource[F, GeminiApplyCommand[F]] = for {
@@ -160,14 +160,14 @@ object GeminiApplyCommand {
   } yield new GeminiApplyCommandImpl[F](telltaleChannel, apply, car)
 
   def smartSetParam[F[_]: Monad, A, B](
-    tt:    TelltaleChannel,
+    tt:    TelltaleChannel[F],
     st:    Channel[F, A],
     pr:    Channel[F, B],
     cmp:   (A, B) => Boolean
-  )(value: B): VerifiedEpics[F, Unit] = {
+  )(value: B): VerifiedEpics[F, F, Unit] = {
     val statusRead = readChannel(tt, st)
     val paramWrite = writeChannel(tt, pr)(value.pure[F])
 
-    statusRead.flatMap(fa => ifF(fa.map(cmp(_, value)))(VerifiedEpics.unit[F])(paramWrite))
+    statusRead.flatMap(fa => ifF(fa.map(cmp(_, value)))(VerifiedEpics.unit[F, F])(paramWrite))
   }
 }

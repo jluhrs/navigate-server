@@ -4,6 +4,7 @@
 package engage.model
 
 import cats.kernel.Eq
+import squants.space.Angle
 
 sealed trait EngageCommand extends Product with Serializable
 
@@ -37,6 +38,8 @@ object EngageCommand {
   case object Odgw2Park                   extends EngageCommand
   case object Odgw3Park                   extends EngageCommand
   case object Odgw4Park                   extends EngageCommand
+  case class CrcsStop(brakes: Boolean)    extends EngageCommand
+  case class CrcsMove(angle: Angle)       extends EngageCommand
 
   implicit val engageCommandEq: Eq[EngageCommand] = Eq.fromUniversalEquals
 
@@ -70,6 +73,8 @@ object EngageCommand {
       case Odgw2Park      => "Odgw2 Park"
       case Odgw3Park      => "Odgw3 Park"
       case Odgw4Park      => "Odgw4 Park"
+      case CrcsStop(_)    => "Crcs Stop"
+      case CrcsMove(_)    => "Crcs Move"
     }
   }
 
