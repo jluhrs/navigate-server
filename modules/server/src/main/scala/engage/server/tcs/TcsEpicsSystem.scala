@@ -10,10 +10,11 @@ import mouse.all._
 import engage.epics.EpicsSystem.TelltaleChannel
 import engage.epics.{ Channel, EpicsService }
 import engage.epics.VerifiedEpics._
+import engage.model.enums.{ DomeMode, ShutterMode }
 import engage.server.{ ApplyCommandResult, tcs }
 import engage.server.acm.ParameterList._
 import engage.server.acm.{ CadDirective, GeminiApplyCommand }
-import engage.server.epicsdata.BinaryYesNo
+import engage.server.epicsdata.{ BinaryOnOff, BinaryYesNo, DirSuffix }
 import squants.Angle
 
 import scala.concurrent.duration.FiniteDuration
@@ -42,6 +43,20 @@ object TcsEpicsSystem {
     val rotFollowCmd: Command1Channels[F, Boolean]
 
     val rotMoveCmd: Command1Channels[F, Double]
+
+    val carouselModeCmd: Command5Channels[F,
+                                          DomeMode,
+                                          ShutterMode,
+                                          Double,
+                                          BinaryOnOff,
+                                          BinaryOnOff
+    ]
+
+    val carouselMoveCmd: Command1Channels[F, Double]
+
+    val shuttersMoveCmd: Command2Channels[F, Double, Double]
+
+    val ventGatesMoveCmd: Command2Channels[F, Double, Double]
 
     /*  val m1GuideCmd: M1GuideCmd[F]
 
@@ -466,8 +481,6 @@ object TcsEpicsSystem {
     } yield buildSystem(applyCmd, channels)
   }
 
-  val CadDirName: String = ".DIR"
-
   case class TcsChannels[F[_]](
     telltale:         TelltaleChannel[F],
     telescopeParkDir: Channel[F, CadDirective],
@@ -475,18 +488,38 @@ object TcsEpicsSystem {
     rotStopBrake:     Channel[F, BinaryYesNo],
     rotParkDir:       Channel[F, CadDirective],
     rotFollow:        Channel[F, Boolean],
-    rotMoveAngle:     Channel[F, Double]
+    rotMoveAngle:     Channel[F, Double],
+    ecsDomeMode:      Channel[F, DomeMode],
+    ecsShutterMode:   Channel[F, ShutterMode],
+    ecsSlitHeight:    Channel[F, Double],
+    ecsDomeEnable:    Channel[F, BinaryOnOff],
+    ecsShutterEnable: Channel[F, BinaryOnOff],
+    ecsMoveAngle:     Channel[F, Double],
+    ecsShutterTop:    Channel[F, Double],
+    ecsShutterBottom: Channel[F, Double],
+    ecsVentGateEast:  Channel[F, Double],
+    ecsVentGateWest:  Channel[F, Double]
   )
 
   def buildChannels[F[_]](service: EpicsService[F], top: String): Resource[F, TcsChannels[F]] =
     for {
       tt  <- service.getChannel[String](top + "sad:health.VAL").map(TelltaleChannel(sysName, _))
-      tpd <- service.getChannel[CadDirective](top + "telpark" + CadDirName)
+      tpd <- service.getChannel[CadDirective](top + "telpark" + DirSuffix)
       mf  <- service.getChannel[Boolean](top + "mcFollow.A")
       rsb <- service.getChannel[BinaryYesNo](top + "rotStop.B")
-      rpd <- service.getChannel[CadDirective](top + "rotPark" + CadDirName)
+      rpd <- service.getChannel[CadDirective](top + "rotPark" + DirSuffix)
       rf  <- service.getChannel[Boolean](top + "crFollow.A")
       rma <- service.getChannel[Double](top + "rotMove.A")
+      edm <- service.getChannel[DomeMode](top + "carouselMode.A")
+      esm <- service.getChannel[ShutterMode](top + "carouselMode.B")
+      esh <- service.getChannel[Double](top + "carouselMode.C")
+      ede <- service.getChannel[BinaryOnOff](top + "carouselMode.D")
+      ese <- service.getChannel[BinaryOnOff](top + "carouselMode.E")
+      ema <- service.getChannel[Double](top + "carousel.A")
+      est <- service.getChannel[Double](top + "shutter.A")
+      esb <- service.getChannel[Double](top + "shutter.B")
+      eve <- service.getChannel[Double](top + "ventgates.A")
+      evw <- service.getChannel[Double](top + "ventgates.B")
     } yield TcsChannels[F](
       tt,
       tpd,
@@ -494,7 +527,17 @@ object TcsEpicsSystem {
       rsb,
       rpd,
       rf,
-      rma
+      rma,
+      edm,
+      esm,
+      esh,
+      ede,
+      ese,
+      ema,
+      est,
+      esb,
+      eve,
+      evw
     )
 
   case class TcsCommandsImpl[F[_]: Monad: Parallel](
@@ -546,6 +589,58 @@ object TcsEpicsSystem {
           tcsEpics.rotMoveCmd.setParam1(angle.toDegrees)
         )
       }
+
+    override val ecsCarouselModeCmd: CarouselModeCommand[F, TcsCommands[F]] =
+      new CarouselModeCommand[F, TcsCommands[F]] {
+        override def setDomeMode(mode: DomeMode): TcsCommands[F] = addParam(
+          tcsEpics.carouselModeCmd.setParam1(mode)
+        )
+
+        override def setShutterMode(mode: ShutterMode): TcsCommands[F] = addParam(
+          tcsEpics.carouselModeCmd.setParam2(mode)
+        )
+
+        override def setSlitHeight(height: Double): TcsCommands[F] = addParam(
+          tcsEpics.carouselModeCmd.setParam3(height)
+        )
+
+        override def setDomeEnable(enable: Boolean): TcsCommands[F] = addParam(
+          tcsEpics.carouselModeCmd.setParam4(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+        )
+
+        override def setShutterEnable(enable: Boolean): TcsCommands[F] = addParam(
+          tcsEpics.carouselModeCmd.setParam5(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+        )
+      }
+
+    override val ecsCarouselMoveCmd: CarouselMoveCommand[F, TcsCommands[F]] =
+      new CarouselMoveCommand[F, TcsCommands[F]] {
+        override def setAngle(angle: Angle): TcsCommands[F] = addParam(
+          tcsEpics.carouselMoveCmd.setParam1(angle.toDegrees)
+        )
+      }
+
+    override val ecsShuttersMoveCmd: ShuttersMoveCommand[F, TcsCommands[F]] =
+      new ShuttersMoveCommand[F, TcsCommands[F]] {
+        override def setTop(pos: Double): TcsCommands[F] = addParam(
+          tcsEpics.shuttersMoveCmd.setParam1(pos)
+        )
+
+        override def setBottom(pos: Double): TcsCommands[F] = addParam(
+          tcsEpics.shuttersMoveCmd.setParam2(pos)
+        )
+      }
+
+    override val ecsVenGatesMoveCmd: VentGatesMoveCommand[F, TcsCommands[F]] =
+      new VentGatesMoveCommand[F, TcsCommands[F]] {
+        override def setVentGateEast(pos: Double): TcsCommands[F] = addParam(
+          tcsEpics.ventGatesMoveCmd.setParam1(pos)
+        )
+
+        override def setVentGateWest(pos: Double): TcsCommands[F] = addParam(
+          tcsEpics.ventGatesMoveCmd.setParam2(pos)
+        )
+      }
   }
 
   class TcsEpicsSystemImpl[F[_]: Monad: Parallel](epics: TcsEpics[F]) extends TcsEpicsSystem[F] {
@@ -577,6 +672,25 @@ object TcsEpicsSystem {
 
     override val rotMoveCmd: Command1Channels[F, Double] =
       Command1Channels(channels.telltale, channels.rotMoveAngle)
+
+    override val carouselModeCmd
+      : Command5Channels[F, DomeMode, ShutterMode, Double, BinaryOnOff, BinaryOnOff] =
+      Command5Channels(channels.telltale,
+                       channels.ecsDomeMode,
+                       channels.ecsShutterMode,
+                       channels.ecsSlitHeight,
+                       channels.ecsDomeEnable,
+                       channels.ecsShutterEnable
+      )
+
+    override val carouselMoveCmd: Command1Channels[F, Double] =
+      Command1Channels(channels.telltale, channels.ecsMoveAngle)
+
+    override val shuttersMoveCmd: Command2Channels[F, Double, Double] =
+      Command2Channels(channels.telltale, channels.ecsShutterTop, channels.ecsShutterBottom)
+
+    override val ventGatesMoveCmd: Command2Channels[F, Double, Double] =
+      Command2Channels(channels.telltale, channels.ecsVentGateEast, channels.ecsVentGateWest)
   }
 
   case class ParameterlessCommandChannels[F[_]: Monad](
@@ -591,8 +705,70 @@ object TcsEpicsSystem {
     tt:            TelltaleChannel[F],
     param1Channel: Channel[F, A]
   ) {
-    def setParam1(enable: A): VerifiedEpics[F, F, Unit] =
-      writeChannel[F, A](tt, param1Channel)(Applicative[F].pure(enable))
+    def setParam1(v: A): VerifiedEpics[F, F, Unit] =
+      writeChannel[F, A](tt, param1Channel)(Applicative[F].pure(v))
+  }
+
+  case class Command2Channels[F[_]: Monad, A, B](
+    tt:            TelltaleChannel[F],
+    param1Channel: Channel[F, A],
+    param2Channel: Channel[F, B]
+  ) {
+    def setParam1(v: A): VerifiedEpics[F, F, Unit] =
+      writeChannel[F, A](tt, param1Channel)(Applicative[F].pure(v))
+    def setParam2(v: B): VerifiedEpics[F, F, Unit] =
+      writeChannel[F, B](tt, param2Channel)(Applicative[F].pure(v))
+  }
+
+  case class Command3Channels[F[_]: Monad, A, B, C](
+    tt:            TelltaleChannel[F],
+    param1Channel: Channel[F, A],
+    param2Channel: Channel[F, B],
+    param3Channel: Channel[F, C]
+  ) {
+    def setParam1(v: A): VerifiedEpics[F, F, Unit] =
+      writeChannel[F, A](tt, param1Channel)(Applicative[F].pure(v))
+    def setParam2(v: B): VerifiedEpics[F, F, Unit] =
+      writeChannel[F, B](tt, param2Channel)(Applicative[F].pure(v))
+    def setParam3(v: C): VerifiedEpics[F, F, Unit] =
+      writeChannel[F, C](tt, param3Channel)(Applicative[F].pure(v))
+  }
+
+  case class Command4Channels[F[_]: Monad, A, B, C, D](
+    tt:            TelltaleChannel[F],
+    param1Channel: Channel[F, A],
+    param2Channel: Channel[F, B],
+    param3Channel: Channel[F, C],
+    param4Channel: Channel[F, D]
+  ) {
+    def setParam1(v: A): VerifiedEpics[F, F, Unit] =
+      writeChannel[F, A](tt, param1Channel)(Applicative[F].pure(v))
+    def setParam2(v: B): VerifiedEpics[F, F, Unit] =
+      writeChannel[F, B](tt, param2Channel)(Applicative[F].pure(v))
+    def setParam3(v: C): VerifiedEpics[F, F, Unit] =
+      writeChannel[F, C](tt, param3Channel)(Applicative[F].pure(v))
+    def setParam4(v: D): VerifiedEpics[F, F, Unit] =
+      writeChannel[F, D](tt, param4Channel)(Applicative[F].pure(v))
+  }
+
+  case class Command5Channels[F[_]: Monad, A, B, C, D, E](
+    tt:            TelltaleChannel[F],
+    param1Channel: Channel[F, A],
+    param2Channel: Channel[F, B],
+    param3Channel: Channel[F, C],
+    param4Channel: Channel[F, D],
+    param5Channel: Channel[F, E]
+  ) {
+    def setParam1(v: A): VerifiedEpics[F, F, Unit] =
+      writeChannel[F, A](tt, param1Channel)(Applicative[F].pure(v))
+    def setParam2(v: B): VerifiedEpics[F, F, Unit] =
+      writeChannel[F, B](tt, param2Channel)(Applicative[F].pure(v))
+    def setParam3(v: C): VerifiedEpics[F, F, Unit] =
+      writeChannel[F, C](tt, param3Channel)(Applicative[F].pure(v))
+    def setParam4(v: D): VerifiedEpics[F, F, Unit] =
+      writeChannel[F, D](tt, param4Channel)(Applicative[F].pure(v))
+    def setParam5(v: E): VerifiedEpics[F, F, Unit] =
+      writeChannel[F, E](tt, param5Channel)(Applicative[F].pure(v))
   }
 
   trait BaseCommand[F[_], +S] {
@@ -611,6 +787,28 @@ object TcsEpicsSystem {
     def setAngle(angle: Angle): S
   }
 
+  trait CarouselModeCommand[F[_], +S] {
+    def setDomeMode(mode:        DomeMode): S
+    def setShutterMode(mode:     ShutterMode): S
+    def setSlitHeight(height:    Double): S
+    def setDomeEnable(enable:    Boolean): S
+    def setShutterEnable(enable: Boolean): S
+  }
+
+  trait CarouselMoveCommand[F[_], +S] {
+    def setAngle(angle: Angle): S
+  }
+
+  trait ShuttersMoveCommand[F[_], +S] {
+    def setTop(pos:    Double): S
+    def setBottom(pos: Double): S
+  }
+
+  trait VentGatesMoveCommand[F[_], +S] {
+    def setVentGateEast(pos: Double): S
+    def setVentGateWest(pos: Double): S
+  }
+
   trait TcsCommands[F[_]] {
     def post: VerifiedEpics[F, F, ApplyCommandResult]
 
@@ -625,6 +823,15 @@ object TcsEpicsSystem {
     val rotFollowCommand: FollowCommand[F, TcsCommands[F]]
 
     val rotMoveCommand: RotMoveCommand[F, TcsCommands[F]]
+
+    val ecsCarouselModeCmd: CarouselModeCommand[F, TcsCommands[F]]
+
+    val ecsCarouselMoveCmd: CarouselMoveCommand[F, TcsCommands[F]]
+
+    val ecsShuttersMoveCmd: ShuttersMoveCommand[F, TcsCommands[F]]
+
+    val ecsVenGatesMoveCmd: VentGatesMoveCommand[F, TcsCommands[F]]
+
   }
   /*
   trait ProbeGuideCmd[F[_]] extends EpicsCommand[F] {
@@ -765,7 +972,6 @@ object TcsEpicsSystem {
     def radialVelocity: F[Double]
   }
 
-  // TODO: Delete me after fully moved to tagless
   implicit class TargetIOOps(val tio: Target[IO]) extends AnyVal {
     def to[F[_]: LiftIO]: Target[F] = new Target[F] {
       def objectName: F[String]        = tio.objectName.to[F]

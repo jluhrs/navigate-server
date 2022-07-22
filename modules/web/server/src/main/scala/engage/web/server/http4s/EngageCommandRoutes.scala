@@ -49,6 +49,19 @@ class EngageCommandRoutes[F[_]: Async](
       eng.rotMove(angle.degrees) *>
         Ok(s"Move CRCS ($angle)")
 
+    case POST -> Root / "ecsCarouselMode" / DomeModeVar(domeMode) / ShutterModeVar(
+          shutterMode
+        ) / DoubleVar(slitHeight) / BooleanVar(domeEnable) / BooleanVar(
+          shutterEnable
+        ) / ClientIDVar(_) as _ =>
+      eng.ecsCarouselMode(domeMode, shutterMode, slitHeight, domeEnable, shutterEnable) *>
+        Ok(s"Carousel Mode ($domeMode, $shutterMode, $slitHeight, $domeEnable, $shutterEnable)")
+
+    case POST -> Root / "ecsVentGatesMove" / DoubleVar(east) / DoubleVar(west) / ClientIDVar(
+          _
+        ) as _ =>
+      eng.ecsVentGatesMove(east, west) *>
+        Ok(s"Move Vent Gates ($east, $west)")
   }
 
   val service: HttpRoutes[F] =

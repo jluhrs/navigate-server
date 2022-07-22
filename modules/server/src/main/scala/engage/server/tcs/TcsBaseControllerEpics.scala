@@ -8,6 +8,7 @@ import engage.server.{ ApplyCommandResult, ConnectionTimeout }
 
 import scala.concurrent.duration.FiniteDuration
 import engage.epics.VerifiedEpics._
+import engage.model.enums.{ DomeMode, ShutterMode }
 import squants.Angle
 
 /* This class implements the common TCS commands */
@@ -60,6 +61,38 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
       .startCommand(timeout)
       .rotMoveCommand
       .setAngle(angle)
+      .post
+      .verifiedRun(ConnectionTimeout)
+
+  override def ecsCarouselMode(
+    domeMode:      DomeMode,
+    shutterMode:   ShutterMode,
+    slitHeight:    Double,
+    domeEnable:    Boolean,
+    shutterEnable: Boolean
+  ): F[ApplyCommandResult] =
+    tcsEpics
+      .startCommand(timeout)
+      .ecsCarouselModeCmd
+      .setDomeMode(domeMode)
+      .ecsCarouselModeCmd
+      .setShutterMode(shutterMode)
+      .ecsCarouselModeCmd
+      .setSlitHeight(slitHeight)
+      .ecsCarouselModeCmd
+      .setDomeEnable(domeEnable)
+      .ecsCarouselModeCmd
+      .setShutterEnable(shutterEnable)
+      .post
+      .verifiedRun(ConnectionTimeout)
+
+  override def ecsVentGatesMove(gateEast: Double, gateWest: Double): F[ApplyCommandResult] =
+    tcsEpics
+      .startCommand(timeout)
+      .ecsVenGatesMoveCmd
+      .setVentGateEast(gateEast)
+      .ecsVenGatesMoveCmd
+      .setVentGateWest(gateWest)
       .post
       .verifiedRun(ConnectionTimeout)
 }

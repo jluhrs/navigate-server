@@ -3,7 +3,7 @@
 
 package engage.web.server.logging
 
-import engage.model.`enum`.ServerLogLevel
+import engage.model.enums.ServerLogLevel
 
 import java.time.Instant
 

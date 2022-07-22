@@ -4,7 +4,7 @@
 package engage.web.server
 
 import engage.model.EngageEvent
-import engage.model.`enum`.ServerLogLevel
+import engage.model.enums.ServerLogLevel
 
 import java.time.Instant
 
