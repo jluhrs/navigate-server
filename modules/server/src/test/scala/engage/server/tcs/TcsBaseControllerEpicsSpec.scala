@@ -4,8 +4,10 @@
 package engage.server.tcs
 
 import cats.effect.{ IO, Ref }
+import cats.syntax.option._
+import engage.model.enums.{ DomeMode, ShutterMode }
 import engage.server.acm.CadDirective
-import engage.server.epicsdata.BinaryYesNo
+import engage.server.epicsdata.{ BinaryOnOff, BinaryYesNo }
 import munit.CatsEffectSuite
 import squants.space.AngleConversions._
 
@@ -18,16 +20,10 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
 
   test("Mount commands") {
     for {
-      st <- Ref.of[IO, TestTcsEpicsSystem.State](TestTcsEpicsSystem.defaultState)
-      sys = TestTcsEpicsSystem.build(st)
-      _  <- sys.startCommand(DefaultTimeout).mcsParkCommand.mark.post.verifiedRun(DefaultTimeout)
-      _  <- sys
-              .startCommand(DefaultTimeout)
-              .mcsFollowCommand
-              .setFollow(enable = true)
-              .post
-              .verifiedRun(DefaultTimeout)
-      rs <- st.get
+      (st, ctr) <- createController
+      _         <- ctr.mcsPark
+      _         <- ctr.mcsFollow(enable = true)
+      rs        <- st.get
     } yield {
       assert(rs.telescopeParkDir.connected)
       assertEquals(rs.telescopeParkDir.value.get, CadDirective.MARK)
@@ -40,28 +36,12 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
     val testAngle = 123.456.degrees
 
     for {
-      st <- Ref.of[IO, TestTcsEpicsSystem.State](TestTcsEpicsSystem.defaultState)
-      sys = TestTcsEpicsSystem.build(st)
-      _  <- sys.startCommand(DefaultTimeout).rotParkCommand.mark.post.verifiedRun(DefaultTimeout)
-      _  <- sys
-              .startCommand(DefaultTimeout)
-              .rotFollowCommand
-              .setFollow(enable = true)
-              .post
-              .verifiedRun(DefaultTimeout)
-      _  <- sys
-              .startCommand(DefaultTimeout)
-              .rotStopCommand
-              .setBrakes(enable = true)
-              .post
-              .verifiedRun(DefaultTimeout)
-      _  <- sys
-              .startCommand(DefaultTimeout)
-              .rotMoveCommand
-              .setAngle(testAngle)
-              .post
-              .verifiedRun(DefaultTimeout)
-      rs <- st.get
+      (st, ctr) <- createController
+      _         <- ctr.rotPark
+      _         <- ctr.rotFollow(enable = true)
+      _         <- ctr.rotStop(useBrakes = true)
+      _         <- ctr.rotMove(testAngle)
+      rs        <- st.get
     } yield {
       assert(rs.rotParkDir.connected)
       assertEquals(rs.rotParkDir.value.get, CadDirective.MARK)
@@ -74,5 +54,45 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
     }
 
   }
+
+  test("Enclosure commands") {
+    val testHeight   = 123.456
+    val testVentEast = 0.3
+    val testVentWest = 0.2
+
+    for {
+      (st, ctr) <- createController
+      _         <- ctr.ecsCarouselMode(DomeMode.MinVibration,
+                                       ShutterMode.Tracking,
+                                       testHeight,
+                                       domeEnable = true,
+                                       shutterEnable = true
+                   )
+      _         <- ctr.ecsVentGatesMove(testVentEast, testVentWest)
+      rs        <- st.get
+    } yield {
+      assert(rs.ecsDomeMode.connected)
+      assert(rs.ecsShutterMode.connected)
+      assert(rs.ecsSlitHeight.connected)
+      assert(rs.ecsDomeEnable.connected)
+      assert(rs.ecsShutterEnable.connected)
+      assert(rs.ecsVentGateEast.connected)
+      assert(rs.ecsVentGateWest.connected)
+      assertEquals(rs.ecsDomeMode.value, DomeMode.MinVibration.some)
+      assertEquals(rs.ecsShutterMode.value, ShutterMode.Tracking.some)
+      assertEquals(rs.ecsSlitHeight.value, testHeight.some)
+      assertEquals(rs.ecsDomeEnable.value, BinaryOnOff.On.some)
+      assertEquals(rs.ecsShutterEnable.value, BinaryOnOff.On.some)
+      assertEquals(rs.ecsVentGateEast.value, testVentEast.some)
+      assertEquals(rs.ecsVentGateWest.value, testVentWest.some)
+    }
+
+  }
+
+  def createController: IO[(Ref[IO, TestTcsEpicsSystem.State], TcsBaseControllerEpics[IO])] =
+    Ref.of[IO, TestTcsEpicsSystem.State](TestTcsEpicsSystem.defaultState).map { st =>
+      val sys = TestTcsEpicsSystem.build(st)
+      (st, new TcsBaseControllerEpics[IO](sys, DefaultTimeout))
+    }
 
 }

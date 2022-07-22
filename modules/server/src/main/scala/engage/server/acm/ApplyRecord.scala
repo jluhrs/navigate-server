@@ -5,6 +5,7 @@ package engage.server.acm
 
 import cats.effect.Resource
 import engage.epics.{ Channel, EpicsService }
+import engage.server.epicsdata.DirSuffix
 
 case class ApplyRecord[F[_]](
   name: String,
@@ -13,14 +14,13 @@ case class ApplyRecord[F[_]](
   mess: Channel[F, String]
 )
 object ApplyRecord {
-  private val DIR_SUFFIX = ".DIR"
-  private val VAL_SUFFIX = ".VAL"
-  private val MSG_SUFFIX = ".MESS"
+  private val ValSuffix = ".VAL"
+  private val MsgSuffix = ".MESS"
 
   def build[F[_]](srv: EpicsService[F], applyName: String): Resource[F, ApplyRecord[F]] = for {
-    v   <- srv.getChannel[Int](applyName + VAL_SUFFIX)
-    dir <- srv.getChannel[CadDirective](applyName + DIR_SUFFIX)
-    ms  <- srv.getChannel[String](applyName + MSG_SUFFIX)
+    v   <- srv.getChannel[Int](applyName + ValSuffix)
+    dir <- srv.getChannel[CadDirective](applyName + DirSuffix)
+    ms  <- srv.getChannel[String](applyName + MsgSuffix)
   } yield ApplyRecord(applyName, dir, v, ms)
 
 }

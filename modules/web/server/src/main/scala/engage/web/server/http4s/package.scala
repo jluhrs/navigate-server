@@ -5,6 +5,8 @@ package engage.web.server
 
 import cats.syntax.all._
 import engage.model.ClientId
+import engage.model.enums.{ DomeMode, ShutterMode }
+import lucuma.core.util.Enumerated
 
 package object http4s {
   object ClientIDVar {
@@ -20,6 +22,16 @@ package object http4s {
   object DoubleVar {
     def unapply(str: String): Option[Double] =
       Either.catchNonFatal(str.toDouble).toOption
+  }
+
+  object DomeModeVar {
+    def unapply(str: String): Option[DomeMode] =
+      Enumerated[DomeMode].fromTag(str)
+  }
+
+  object ShutterModeVar {
+    def unapply(str: String): Option[ShutterMode] =
+      Enumerated[ShutterMode].fromTag(str)
   }
 
 }

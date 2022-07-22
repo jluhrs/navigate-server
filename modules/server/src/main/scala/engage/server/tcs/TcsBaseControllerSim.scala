@@ -4,6 +4,7 @@
 package engage.server.tcs
 
 import cats.Applicative
+import engage.model.enums.{ DomeMode, ShutterMode }
 import engage.server.ApplyCommandResult
 import squants.Angle
 
@@ -23,5 +24,17 @@ class TcsBaseControllerSim[F[_]: Applicative] extends TcsBaseController[F] {
     Applicative[F].pure(ApplyCommandResult.Completed)
 
   override def rotMove(angle: Angle): F[ApplyCommandResult] =
+    Applicative[F].pure(ApplyCommandResult.Completed)
+
+  override def ecsCarouselMode(
+    domeMode:      DomeMode,
+    shutterMode:   ShutterMode,
+    slitHeight:    Double,
+    domeEnable:    Boolean,
+    shutterEnable: Boolean
+  ): F[ApplyCommandResult] =
+    Applicative[F].pure(ApplyCommandResult.Completed)
+
+  override def ecsVentGatesMove(gateEast: Double, westGate: Double): F[ApplyCommandResult] =
     Applicative[F].pure(ApplyCommandResult.Completed)
 }

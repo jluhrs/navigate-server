@@ -7,10 +7,19 @@ import cats.ApplicativeError
 import cats.effect.{ Async, Concurrent, Ref, Temporal }
 import cats.effect.kernel.Sync
 import cats.syntax.all._
-import engage.model.EngageCommand.{ CrcsFollow, CrcsMove, CrcsPark, CrcsStop, McsFollow, McsPark }
+import engage.model.EngageCommand.{
+  CrcsFollow,
+  CrcsMove,
+  CrcsPark,
+  CrcsStop,
+  EcsCarouselMode,
+  McsFollow,
+  McsPark
+}
 import engage.model.{ EngageCommand, EngageEvent }
 import engage.model.EngageEvent.{ CommandFailure, CommandPaused, CommandStart, CommandSuccess }
 import engage.model.config.EngageEngineConfiguration
+import engage.model.enums.{ DomeMode, ShutterMode }
 import engage.stateengine.StateEngine
 import fs2.{ Pipe, Stream }
 import lucuma.core.enums.Site
@@ -28,10 +37,18 @@ trait EngageEngine[F[_]] {
 
   def mcsFollow(enable: Boolean): F[Unit]
 
-  def rotStop(useBrakes: Boolean): F[Unit]
+  def rotStop(useBrakes:         Boolean): F[Unit]
   def rotPark: F[Unit]
-  def rotFollow(enable:  Boolean): F[Unit]
-  def rotMove(angle:     Angle): F[Unit]
+  def rotFollow(enable:          Boolean): F[Unit]
+  def rotMove(angle:             Angle): F[Unit]
+  def ecsCarouselMode(
+    domeMode:                    DomeMode,
+    shutterMode:                 ShutterMode,
+    slitHeight:                  Double,
+    domeEnable:                  Boolean,
+    shutterEnable:               Boolean
+  ): F[Unit]
+  def ecsVentGatesMove(gateEast: Double, westGate: Double): F[Unit]
 }
 
 object EngageEngine {
@@ -103,6 +120,26 @@ object EngageEngine {
               systems.tcsSouth.rotMove(angle),
               Focus[State](_.rotMoveInProgress)
       )
+
+    override def ecsCarouselMode(
+      domeMode:      DomeMode,
+      shutterMode:   ShutterMode,
+      slitHeight:    Double,
+      domeEnable:    Boolean,
+      shutterEnable: Boolean
+    ): F[Unit] = command(
+      engine,
+      EcsCarouselMode(domeMode, shutterMode, slitHeight, domeEnable, shutterEnable),
+      systems.tcsSouth.ecsCarouselMode(domeMode,
+                                       shutterMode,
+                                       slitHeight,
+                                       domeEnable,
+                                       shutterEnable
+      ),
+      Focus[State](_.ecsDomeModeInProgress)
+    )
+
+    override def ecsVentGatesMove(gateEast: Double, westGate: Double): F[Unit] = ???
   }
 
   def build[F[_]: Concurrent](
@@ -114,12 +151,14 @@ object EngageEngine {
     .map(EngageEngineImpl[F](site, systems, conf, _))
 
   case class State(
-    mcsParkInProgress:   Boolean,
-    mcsFollowInProgress: Boolean,
-    rotStopInProgress:   Boolean,
-    rotParkInProgress:   Boolean,
-    rotFollowInProgress: Boolean,
-    rotMoveInProgress:   Boolean
+    mcsParkInProgress:         Boolean,
+    mcsFollowInProgress:       Boolean,
+    rotStopInProgress:         Boolean,
+    rotParkInProgress:         Boolean,
+    rotFollowInProgress:       Boolean,
+    rotMoveInProgress:         Boolean,
+    ecsDomeModeInProgress:     Boolean,
+    ecsVentGateMoveInProgress: Boolean
   ) {
     lazy val tcsActionInProgress: Boolean =
       mcsParkInProgress ||
@@ -127,7 +166,9 @@ object EngageEngine {
         rotStopInProgress ||
         rotParkInProgress ||
         rotFollowInProgress ||
-        rotMoveInProgress
+        rotMoveInProgress ||
+        ecsDomeModeInProgress ||
+        ecsVentGateMoveInProgress
   }
 
   val startState: State = State(
@@ -136,7 +177,9 @@ object EngageEngine {
     rotStopInProgress = false,
     rotParkInProgress = false,
     rotFollowInProgress = false,
-    rotMoveInProgress = false
+    rotMoveInProgress = false,
+    ecsDomeModeInProgress = false,
+    ecsVentGateMoveInProgress = false
   )
 
   private def command[F[_]: ApplicativeError[*[_], Throwable]](
