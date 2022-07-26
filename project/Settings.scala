@@ -25,7 +25,7 @@ object Settings {
     val catsEffect   = "3.3.14"
     val cats         = "2.8.0"
     val mouse        = "1.1.0"
-    val fs2          = "3.2.10"
+    val fs2          = "3.2.11"
     val shapeless    = "2.3.7"
     val scalaParsers = "1.1.2"
     val scalaXml     = "1.2.0"
@@ -102,15 +102,15 @@ object Settings {
    */
   object Libraries {
     // Test Libraries
-    val TestLibs       = Def.setting(
+    val TestLibs    = Def.setting(
       "org.typelevel" %%% "cats-testkit-scalatest" % "2.1.5" % "test"
     )
-    val MUnit          = Def.setting(
+    val MUnit       = Def.setting(
       Seq(
         "org.typelevel" %% "munit-cats-effect-3" % LibraryVersions.munitCatsEffectVersion % Test
       )
     )
-    val XmlUnit        = "xmlunit" % "xmlunit" % LibraryVersions.xmlUnit % "test"
+    val XmlUnit     = "xmlunit"            % "xmlunit"            % LibraryVersions.xmlUnit   % "test"
     val ScalaMock   = "org.scalamock"     %% "scalamock"          % LibraryVersions.scalaMock % "test"
     // Server side libraries
     val Cats        = Def.setting("org.typelevel" %%% "cats-core" % LibraryVersions.cats)
