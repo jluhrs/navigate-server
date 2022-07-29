@@ -37,4 +37,7 @@ class TcsBaseControllerSim[F[_]: Applicative] extends TcsBaseController[F] {
 
   override def ecsVentGatesMove(gateEast: Double, westGate: Double): F[ApplyCommandResult] =
     Applicative[F].pure(ApplyCommandResult.Completed)
+
+  override def applyTcsConfig(config: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
+    Applicative[F].pure(ApplyCommandResult.Completed)
 }
