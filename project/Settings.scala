@@ -25,7 +25,7 @@ object Settings {
     val catsEffect   = "3.3.14"
     val cats         = "2.8.0"
     val mouse        = "1.1.0"
-    val fs2          = "3.2.10"
+    val fs2          = "3.2.11"
     val shapeless    = "2.3.7"
     val scalaParsers = "1.1.2"
     val scalaXml     = "1.2.0"
@@ -84,13 +84,13 @@ object Settings {
     val gppUI   = "0.0.3"
 
     // Lucuma
-    val lucumaCore    = "0.44.0"
+    val lucumaCore    = "0.45.0"
     val lucumaUI      = "0.39.0"
     val lucumaSchemas = "0.31.0"
 
     val clue = "0.23.1"
 
-    val sttp = "3.7.1"
+    val sttp = "3.7.2"
 
     // Pure JS libraries
     val fomanticUI = "2.8.7"
