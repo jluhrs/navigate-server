@@ -39,7 +39,7 @@ object Settings {
     val squants     = "1.8.3"
     val commonsHttp = "2.0.2"
     val unboundId   = "3.2.1"
-    val jwt         = "5.0.0"
+    val jwt         = "9.0.6"
     val slf4j       = "1.7.36"
     val log4s       = "1.10.0"
     val logback     = "1.2.11"
@@ -76,7 +76,7 @@ object Settings {
 
     // EPICS Libraries
     val ca  = "1.3.2"
-    val jca = "2.4.6"
+    val jca = "2.4.7"
 
     // Gemini Libraries
     val gspMath = "0.1.17"
@@ -124,8 +124,8 @@ object Settings {
     val CommonsHttp = "commons-httpclient" % "commons-httpclient" % LibraryVersions.commonsHttp
     val UnboundId   =
       "com.unboundid" % "unboundid-ldapsdk-minimal-edition" % LibraryVersions.unboundId
-    val JwtCore          = "com.pauldijou" %% "jwt-core"     % LibraryVersions.jwt
-    val JwtCirce         = "com.pauldijou" %% "jwt-circe"    % LibraryVersions.jwt
+    val JwtCore          = "com.github.jwt-scala" %% "jwt-core" % LibraryVersions.jwt
+    val JwtCirce         = "com.github.jwt-scala" %% "jwt-circe" % LibraryVersions.jwt
     val Slf4j            = "org.slf4j"      % "slf4j-api"    % LibraryVersions.slf4j
     val JuliSlf4j        = "org.slf4j"      % "jul-to-slf4j" % LibraryVersions.slf4j
     val NopSlf4j         = "org.slf4j"      % "slf4j-nop"    % LibraryVersions.slf4j

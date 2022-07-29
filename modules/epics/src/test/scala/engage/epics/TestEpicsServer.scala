@@ -43,7 +43,7 @@ object TestEpicsServer {
       }
     } { x =>
       Async[F].delay {
-        server.unregisterProcessVaribale(name)
+        server.unregisterProcessVariable(name)
         x.destroy()
       }
     }
@@ -58,12 +58,12 @@ object TestEpicsServer {
         val index: Short = Enumerated[T].all.indexOf(init).toShort
         val memPV        = new MemoryProcessVariable(name, null, DBRType.ENUM, Array(index))
         memPV.setEnumLabels(Enumerated[T].all.map(_.toString()).toArray)
-        server.registerProcessVaribale(memPV)
+        server.registerProcessVariable(memPV)
         memPV
       }
     } { x =>
       Async[F].delay {
-        server.unregisterProcessVaribale(name)
+        server.unregisterProcessVariable(name)
         x.destroy()
       }
     }
