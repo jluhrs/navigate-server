@@ -277,7 +277,7 @@ lazy val engage_server = project
       CatsEffect.value,
       Fs2,
       Log4Cats.value
-    )  ++ MUnit.value ++ LucumaCore.value ++ Http4sClient
+    ) ++ MUnit.value ++ LucumaCore.value ++ Http4sClient
   )
   .dependsOn(engage_model.jvm % "compile->compile;test->test")
   .dependsOn(epics)
