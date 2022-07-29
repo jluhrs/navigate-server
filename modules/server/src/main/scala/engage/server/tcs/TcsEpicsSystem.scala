@@ -58,6 +58,8 @@ object TcsEpicsSystem {
 
     val ventGatesMoveCmd: Command2Channels[F, Double, Double]
 
+    val sourceACmd: TargetCommandChannels[F]
+
     /*  val m1GuideCmd: M1GuideCmd[F]
 
   val m2GuideCmd: M2GuideCmd[F]
@@ -489,6 +491,11 @@ object TcsEpicsSystem {
     rotParkDir:       Channel[F, CadDirective],
     rotFollow:        Channel[F, Boolean],
     rotMoveAngle:     Channel[F, Double],
+    enclosure:        EnclosureChannels[F],
+    sourceA:          TargetChannels[F]
+  )
+
+  case class EnclosureChannels[F[_]](
     ecsDomeMode:      Channel[F, DomeMode],
     ecsShutterMode:   Channel[F, ShutterMode],
     ecsSlitHeight:    Channel[F, Double],
@@ -501,15 +508,26 @@ object TcsEpicsSystem {
     ecsVentGateWest:  Channel[F, Double]
   )
 
-  def buildChannels[F[_]](service: EpicsService[F], top: String): Resource[F, TcsChannels[F]] =
+  case class TargetChannels[F[_]](
+    objectName:     Channel[F, String],
+    coordSystem:    Channel[F, String],
+    coord1:         Channel[F, Double],
+    coord2:         Channel[F, Double],
+    epoch:          Channel[F, String],
+    equinox:        Channel[F, String],
+    parallax:       Channel[F, Double],
+    properMotion1:  Channel[F, Double],
+    properMotion2:  Channel[F, Double],
+    radialVelocity: Channel[F, Double],
+    brightness:     Channel[F, Double],
+    ephemerisFile:  Channel[F, String]
+  )
+
+  def buildEnclosureChannels[F[_]](
+    service: EpicsService[F],
+    top:     String
+  ): Resource[F, EnclosureChannels[F]] =
     for {
-      tt  <- service.getChannel[String](top + "sad:health.VAL").map(TelltaleChannel(sysName, _))
-      tpd <- service.getChannel[CadDirective](top + "telpark" + DirSuffix)
-      mf  <- service.getChannel[Boolean](top + "mcFollow.A")
-      rsb <- service.getChannel[BinaryYesNo](top + "rotStop.B")
-      rpd <- service.getChannel[CadDirective](top + "rotPark" + DirSuffix)
-      rf  <- service.getChannel[Boolean](top + "crFollow.A")
-      rma <- service.getChannel[Double](top + "rotMove.A")
       edm <- service.getChannel[DomeMode](top + "carouselMode.A")
       esm <- service.getChannel[ShutterMode](top + "carouselMode.B")
       esh <- service.getChannel[Double](top + "carouselMode.C")
@@ -520,14 +538,7 @@ object TcsEpicsSystem {
       esb <- service.getChannel[Double](top + "shutter.B")
       eve <- service.getChannel[Double](top + "ventgates.A")
       evw <- service.getChannel[Double](top + "ventgates.B")
-    } yield TcsChannels[F](
-      tt,
-      tpd,
-      mf,
-      rsb,
-      rpd,
-      rf,
-      rma,
+    } yield EnclosureChannels(
       edm,
       esm,
       esh,
@@ -538,6 +549,61 @@ object TcsEpicsSystem {
       esb,
       eve,
       evw
+    )
+
+  def buildTargetChannels[F[_]](
+    service: EpicsService[F],
+    prefix:  String
+  ): Resource[F, TargetChannels[F]] =
+    for {
+      on  <- service.getChannel[String](prefix + ".A")
+      cs  <- service.getChannel[String](prefix + ".B")
+      co1 <- service.getChannel[Double](prefix + ".C")
+      co2 <- service.getChannel[Double](prefix + ".D")
+      ep  <- service.getChannel[String](prefix + ".E")
+      eq  <- service.getChannel[String](prefix + ".F")
+      pr  <- service.getChannel[Double](prefix + ".G")
+      pm1 <- service.getChannel[Double](prefix + ".H")
+      pm2 <- service.getChannel[Double](prefix + ".I")
+      rv  <- service.getChannel[Double](prefix + ".J")
+      br  <- service.getChannel[Double](prefix + ".K")
+      eph <- service.getChannel[String](prefix + ".L")
+    } yield TargetChannels(
+      on,
+      cs,
+      co1,
+      co2,
+      ep,
+      eq,
+      pr,
+      pm1,
+      pm2,
+      rv,
+      br,
+      eph
+    )
+
+  def buildChannels[F[_]](service: EpicsService[F], top: String): Resource[F, TcsChannels[F]] =
+    for {
+      tt  <- service.getChannel[String](top + "sad:health.VAL").map(TelltaleChannel(sysName, _))
+      tpd <- service.getChannel[CadDirective](top + "telpark" + DirSuffix)
+      mf  <- service.getChannel[Boolean](top + "mcFollow.A")
+      rsb <- service.getChannel[BinaryYesNo](top + "rotStop.B")
+      rpd <- service.getChannel[CadDirective](top + "rotPark" + DirSuffix)
+      rf  <- service.getChannel[Boolean](top + "crFollow.A")
+      rma <- service.getChannel[Double](top + "rotMove.A")
+      ecs <- buildEnclosureChannels(service, top)
+      sra <- buildTargetChannels(service, top + "sourceA")
+    } yield TcsChannels[F](
+      tt,
+      tpd,
+      mf,
+      rsb,
+      rpd,
+      rf,
+      rma,
+      ecs,
+      sra
     )
 
   case class TcsCommandsImpl[F[_]: Monad: Parallel](
@@ -641,6 +707,56 @@ object TcsEpicsSystem {
           tcsEpics.ventGatesMoveCmd.setParam2(pos)
         )
       }
+    override val sourceACmd: TargetCommand[F, TcsCommands[F]]                =
+      new TargetCommand[F, TcsCommands[F]] {
+        override def objectName(v: String): TcsCommands[F] = addParam(
+          tcsEpics.sourceACmd.objectName(v)
+        )
+
+        override def coordSystem(v: String): TcsCommands[F] = addParam(
+          tcsEpics.sourceACmd.coordSystem(v)
+        )
+
+        override def coord1(v: Double): TcsCommands[F] = addParam(
+          tcsEpics.sourceACmd.coord1(v)
+        )
+
+        override def coord2(v: Double): TcsCommands[F] = addParam(
+          tcsEpics.sourceACmd.coord2(v)
+        )
+
+        override def epoch(v: String): TcsCommands[F] = addParam(
+          tcsEpics.sourceACmd.epoch(v)
+        )
+
+        override def equinox(v: String): TcsCommands[F] = addParam(
+          tcsEpics.sourceACmd.equinox(v)
+        )
+
+        override def parallax(v: Double): TcsCommands[F] = addParam(
+          tcsEpics.sourceACmd.parallax(v)
+        )
+
+        override def properMotion1(v: Double): TcsCommands[F] = addParam(
+          tcsEpics.sourceACmd.properMotion1(v)
+        )
+
+        override def properMotion2(v: Double): TcsCommands[F] = addParam(
+          tcsEpics.sourceACmd.properMotion2(v)
+        )
+
+        override def radialVelocity(v: Double): TcsCommands[F] = addParam(
+          tcsEpics.sourceACmd.radialVelocity(v)
+        )
+
+        override def brightness(v: Double): TcsCommands[F] = addParam(
+          tcsEpics.sourceACmd.brightness(v)
+        )
+
+        override def ephemerisFile(v: String): TcsCommands[F] = addParam(
+          tcsEpics.sourceACmd.ephemerisFile(v)
+        )
+      }
   }
 
   class TcsEpicsSystemImpl[F[_]: Monad: Parallel](epics: TcsEpics[F]) extends TcsEpicsSystem[F] {
@@ -675,22 +791,32 @@ object TcsEpicsSystem {
 
     override val carouselModeCmd
       : Command5Channels[F, DomeMode, ShutterMode, Double, BinaryOnOff, BinaryOnOff] =
-      Command5Channels(channels.telltale,
-                       channels.ecsDomeMode,
-                       channels.ecsShutterMode,
-                       channels.ecsSlitHeight,
-                       channels.ecsDomeEnable,
-                       channels.ecsShutterEnable
+      Command5Channels(
+        channels.telltale,
+        channels.enclosure.ecsDomeMode,
+        channels.enclosure.ecsShutterMode,
+        channels.enclosure.ecsSlitHeight,
+        channels.enclosure.ecsDomeEnable,
+        channels.enclosure.ecsShutterEnable
       )
 
     override val carouselMoveCmd: Command1Channels[F, Double] =
-      Command1Channels(channels.telltale, channels.ecsMoveAngle)
+      Command1Channels(channels.telltale, channels.enclosure.ecsMoveAngle)
 
     override val shuttersMoveCmd: Command2Channels[F, Double, Double] =
-      Command2Channels(channels.telltale, channels.ecsShutterTop, channels.ecsShutterBottom)
+      Command2Channels(channels.telltale,
+                       channels.enclosure.ecsShutterTop,
+                       channels.enclosure.ecsShutterBottom
+      )
 
     override val ventGatesMoveCmd: Command2Channels[F, Double, Double] =
-      Command2Channels(channels.telltale, channels.ecsVentGateEast, channels.ecsVentGateWest)
+      Command2Channels(channels.telltale,
+                       channels.enclosure.ecsVentGateEast,
+                       channels.enclosure.ecsVentGateWest
+      )
+
+    override val sourceACmd: TargetCommandChannels[F] =
+      TargetCommandChannels[F](channels.telltale, channels.sourceA)
   }
 
   case class ParameterlessCommandChannels[F[_]: Monad](
@@ -771,6 +897,36 @@ object TcsEpicsSystem {
       writeChannel[F, E](tt, param5Channel)(Applicative[F].pure(v))
   }
 
+  case class TargetCommandChannels[F[_]: Monad](
+    tt:             TelltaleChannel[F],
+    targetChannels: TargetChannels[F]
+  ) {
+    def objectName(v: String): VerifiedEpics[F, F, Unit]     =
+      writeChannel[F, String](tt, targetChannels.objectName)(Applicative[F].pure(v))
+    def coordSystem(v: String): VerifiedEpics[F, F, Unit]    =
+      writeChannel[F, String](tt, targetChannels.coordSystem)(Applicative[F].pure(v))
+    def coord1(v: Double): VerifiedEpics[F, F, Unit]         =
+      writeChannel[F, Double](tt, targetChannels.coord1)(Applicative[F].pure(v))
+    def coord2(v: Double): VerifiedEpics[F, F, Unit]         =
+      writeChannel[F, Double](tt, targetChannels.coord2)(Applicative[F].pure(v))
+    def epoch(v: String): VerifiedEpics[F, F, Unit]          =
+      writeChannel[F, String](tt, targetChannels.epoch)(Applicative[F].pure(v))
+    def equinox(v: String): VerifiedEpics[F, F, Unit]        =
+      writeChannel[F, String](tt, targetChannels.equinox)(Applicative[F].pure(v))
+    def parallax(v: Double): VerifiedEpics[F, F, Unit]       =
+      writeChannel[F, Double](tt, targetChannels.parallax)(Applicative[F].pure(v))
+    def properMotion1(v: Double): VerifiedEpics[F, F, Unit]  =
+      writeChannel[F, Double](tt, targetChannels.properMotion1)(Applicative[F].pure(v))
+    def properMotion2(v: Double): VerifiedEpics[F, F, Unit]  =
+      writeChannel[F, Double](tt, targetChannels.properMotion2)(Applicative[F].pure(v))
+    def radialVelocity(v: Double): VerifiedEpics[F, F, Unit] =
+      writeChannel[F, Double](tt, targetChannels.radialVelocity)(Applicative[F].pure(v))
+    def brightness(v: Double): VerifiedEpics[F, F, Unit]     =
+      writeChannel[F, Double](tt, targetChannels.brightness)(Applicative[F].pure(v))
+    def ephemerisFile(v: String): VerifiedEpics[F, F, Unit]  =
+      writeChannel[F, String](tt, targetChannels.ephemerisFile)(Applicative[F].pure(v))
+  }
+
   trait BaseCommand[F[_], +S] {
     def mark: S
   }
@@ -809,6 +965,21 @@ object TcsEpicsSystem {
     def setVentGateWest(pos: Double): S
   }
 
+  trait TargetCommand[F[_], +S] {
+    def objectName(v:     String): S
+    def coordSystem(v:    String): S
+    def coord1(v:         Double): S
+    def coord2(v:         Double): S
+    def epoch(v:          String): S
+    def equinox(v:        String): S
+    def parallax(v:       Double): S
+    def properMotion1(v:  Double): S
+    def properMotion2(v:  Double): S
+    def radialVelocity(v: Double): S
+    def brightness(v:     Double): S
+    def ephemerisFile(v:  String): S
+  }
+
   trait TcsCommands[F[_]] {
     def post: VerifiedEpics[F, F, ApplyCommandResult]
 
@@ -831,6 +1002,8 @@ object TcsEpicsSystem {
     val ecsShuttersMoveCmd: ShuttersMoveCommand[F, TcsCommands[F]]
 
     val ecsVenGatesMoveCmd: VentGatesMoveCommand[F, TcsCommands[F]]
+
+    val sourceACmd: TargetCommand[F, TcsCommands[F]]
 
   }
   /*

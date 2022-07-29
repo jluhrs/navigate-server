@@ -8,6 +8,8 @@ import cats.syntax.option._
 import engage.model.enums.{ DomeMode, ShutterMode }
 import engage.server.acm.CadDirective
 import engage.server.epicsdata.{ BinaryOnOff, BinaryYesNo }
+import engage.server.tcs.TcsBaseController.{ SiderealTarget, TcsConfig }
+import lucuma.core.math.{ Coordinates, Epoch }
 import munit.CatsEffectSuite
 import squants.space.AngleConversions._
 
@@ -71,22 +73,65 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       _         <- ctr.ecsVentGatesMove(testVentEast, testVentWest)
       rs        <- st.get
     } yield {
-      assert(rs.ecsDomeMode.connected)
-      assert(rs.ecsShutterMode.connected)
-      assert(rs.ecsSlitHeight.connected)
-      assert(rs.ecsDomeEnable.connected)
-      assert(rs.ecsShutterEnable.connected)
-      assert(rs.ecsVentGateEast.connected)
-      assert(rs.ecsVentGateWest.connected)
-      assertEquals(rs.ecsDomeMode.value, DomeMode.MinVibration.some)
-      assertEquals(rs.ecsShutterMode.value, ShutterMode.Tracking.some)
-      assertEquals(rs.ecsSlitHeight.value, testHeight.some)
-      assertEquals(rs.ecsDomeEnable.value, BinaryOnOff.On.some)
-      assertEquals(rs.ecsShutterEnable.value, BinaryOnOff.On.some)
-      assertEquals(rs.ecsVentGateEast.value, testVentEast.some)
-      assertEquals(rs.ecsVentGateWest.value, testVentWest.some)
+      assert(rs.enclosure.ecsDomeMode.connected)
+      assert(rs.enclosure.ecsShutterMode.connected)
+      assert(rs.enclosure.ecsSlitHeight.connected)
+      assert(rs.enclosure.ecsDomeEnable.connected)
+      assert(rs.enclosure.ecsShutterEnable.connected)
+      assert(rs.enclosure.ecsVentGateEast.connected)
+      assert(rs.enclosure.ecsVentGateWest.connected)
+      assertEquals(rs.enclosure.ecsDomeMode.value, DomeMode.MinVibration.some)
+      assertEquals(rs.enclosure.ecsShutterMode.value, ShutterMode.Tracking.some)
+      assertEquals(rs.enclosure.ecsSlitHeight.value, testHeight.some)
+      assertEquals(rs.enclosure.ecsDomeEnable.value, BinaryOnOff.On.some)
+      assertEquals(rs.enclosure.ecsShutterEnable.value, BinaryOnOff.On.some)
+      assertEquals(rs.enclosure.ecsVentGateEast.value, testVentEast.some)
+      assertEquals(rs.enclosure.ecsVentGateWest.value, testVentWest.some)
     }
+  }
 
+  test("Tcs config command") {
+    val target = SiderealTarget(
+      objectName = "dummy",
+      brightness = 7.3,
+      coordinates = Coordinates.unsafeFromRadians(-0.321, 0.123),
+      epoch = Epoch.J2000,
+      equinox = "XXX",
+      properMotion = none,
+      radialVelocity = none,
+      parallax = none
+    )
+
+    for {
+      (st, ctr) <- createController
+      _         <- ctr.applyTcsConfig(TcsConfig(target))
+      rs        <- st.get
+    } yield {
+      assert(rs.sourceA.objectName.connected)
+      assert(rs.sourceA.brightness.connected)
+      assert(rs.sourceA.coord1.connected)
+      assert(rs.sourceA.coord2.connected)
+      assert(rs.sourceA.properMotion1.connected)
+      assert(rs.sourceA.properMotion2.connected)
+      assert(rs.sourceA.epoch.connected)
+      assert(rs.sourceA.equinox.connected)
+      assert(rs.sourceA.parallax.connected)
+      assert(rs.sourceA.radialVelocity.connected)
+      assert(rs.sourceA.coordSystem.connected)
+      assert(rs.sourceA.ephemerisFile.connected)
+      assertEquals(rs.sourceA.objectName.value, target.objectName.some)
+      assertEquals(rs.sourceA.brightness.value, target.brightness.some)
+      assertEquals(rs.sourceA.coord1.value, target.coordinates.ra.toAngle.toDoubleDegrees.some)
+      assertEquals(rs.sourceA.coord2.value, target.coordinates.dec.toAngle.toDoubleDegrees.some)
+      assertEquals(rs.sourceA.properMotion1.value, 0.0.some)
+      assertEquals(rs.sourceA.properMotion2.value, 0.0.some)
+      assertEquals(rs.sourceA.epoch.value, target.epoch.toString().some)
+      assertEquals(rs.sourceA.equinox.value, target.equinox.some)
+      assertEquals(rs.sourceA.parallax.value, 0.0.some)
+      assertEquals(rs.sourceA.radialVelocity.value, 0.0.some)
+      assertEquals(rs.sourceA.coordSystem.value, "FK5/J2000".some)
+      assertEquals(rs.sourceA.ephemerisFile.value, "".some)
+    }
   }
 
   def createController: IO[(Ref[IO, TestTcsEpicsSystem.State], TcsBaseControllerEpics[IO])] =
