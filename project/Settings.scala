@@ -39,7 +39,7 @@ object Settings {
     val squants     = "1.8.3"
     val commonsHttp = "2.0.2"
     val unboundId   = "3.2.1"
-    val jwt         = "9.0.6"
+    val jwt         = "9.1.0"
     val slf4j       = "1.7.36"
     val log4s       = "1.10.0"
     val logback     = "1.2.11"
@@ -124,11 +124,11 @@ object Settings {
     val CommonsHttp = "commons-httpclient" % "commons-httpclient" % LibraryVersions.commonsHttp
     val UnboundId   =
       "com.unboundid" % "unboundid-ldapsdk-minimal-edition" % LibraryVersions.unboundId
-    val JwtCore          = "com.github.jwt-scala" %% "jwt-core" % LibraryVersions.jwt
-    val JwtCirce         = "com.github.jwt-scala" %% "jwt-circe" % LibraryVersions.jwt
-    val Slf4j            = "org.slf4j"      % "slf4j-api"    % LibraryVersions.slf4j
-    val JuliSlf4j        = "org.slf4j"      % "jul-to-slf4j" % LibraryVersions.slf4j
-    val NopSlf4j         = "org.slf4j"      % "slf4j-nop"    % LibraryVersions.slf4j
+    val JwtCore          = "com.github.jwt-scala" %% "jwt-core"     % LibraryVersions.jwt
+    val JwtCirce         = "com.github.jwt-scala" %% "jwt-circe"    % LibraryVersions.jwt
+    val Slf4j            = "org.slf4j"             % "slf4j-api"    % LibraryVersions.slf4j
+    val JuliSlf4j        = "org.slf4j"             % "jul-to-slf4j" % LibraryVersions.slf4j
+    val NopSlf4j         = "org.slf4j"             % "slf4j-nop"    % LibraryVersions.slf4j
     val CatsTime         = Def.setting(
       "org.typelevel" %%% "cats-time" % LibraryVersions.catsTime % "compile->compile;test->test"
     )
