@@ -25,7 +25,7 @@ object Settings {
     val catsEffect   = "3.3.14"
     val cats         = "2.8.0"
     val mouse        = "1.1.0"
-    val fs2          = "3.2.11"
+    val fs2          = "3.2.12"
     val shapeless    = "2.3.7"
     val scalaParsers = "1.1.2"
     val scalaXml     = "1.2.0"
@@ -39,7 +39,7 @@ object Settings {
     val squants     = "1.8.3"
     val commonsHttp = "2.0.2"
     val unboundId   = "3.2.1"
-    val jwt         = "9.0.6"
+    val jwt         = "9.1.0"
     val slf4j       = "2.0.0"
     val log4s       = "1.10.0"
     val logback     = "1.2.11"
@@ -90,7 +90,7 @@ object Settings {
 
     val clue = "0.23.1"
 
-    val sttp = "3.7.2"
+    val sttp = "3.7.4"
 
     // Pure JS libraries
     val fomanticUI = "2.8.7"
