@@ -33,7 +33,7 @@ import engage.web.server.OcsBuildInfo
 import engage.web.server.logging._
 import engage.web.server.config._
 import engage.web.server.security.AuthenticationService
-import org.http4s.server.websocket.WebSocketBuilder
+import org.http4s.server.websocket.WebSocketBuilder2
 
 import java.io.FileInputStream
 import java.security.{ KeyStore, Security }
@@ -105,7 +105,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
 
     val ssl: F[Option[SSLContext]] = conf.webServer.tls.map(makeContext[F]).sequence
 
-    def build(all: WebSocketBuilder[F] => HttpRoutes[F]): Resource[F, Server] = Resource.eval {
+    def build(all: WebSocketBuilder2[F] => HttpRoutes[F]): Resource[F, Server] = Resource.eval {
       val builder =
         BlazeServerBuilder[F]
           .bindHttp(conf.webServer.port, conf.webServer.host)
@@ -113,7 +113,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
       ssl.map(_.fold(builder)(builder.withSslContext)).map(_.resource)
     }.flatten
 
-    def router(wsBuilder: WebSocketBuilder[F]) = Router[F](
+    def router(wsBuilder: WebSocketBuilder2[F]) = Router[F](
       "/"                    -> new StaticRoutes(conf.mode === Mode.Development, OcsBuildInfo.builtAtMillis).service,
       "/api/engage/commands" -> new EngageCommandRoutes(as, se).service,
       "/api"                 -> new EngageUIApiRoutes(conf.site, conf.mode, as, clientsDb, outputs)
@@ -124,7 +124,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
       "/ping" -> new PingRoutes(as).service
     )
 
-    def loggedRoutes(wsBuilder: WebSocketBuilder[F]) =
+    def loggedRoutes(wsBuilder: WebSocketBuilder2[F]) =
       pingRouter <+> Http4sLogger.httpRoutes(logHeaders = false, logBody = false)(router(wsBuilder))
 
     build(loggedRoutes)
