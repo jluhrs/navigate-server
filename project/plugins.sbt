@@ -8,7 +8,7 @@ addSbtPlugin("org.portable-scala" % "sbt-scalajs-crossproject" % "1.2.0")
 // sbt revolver lets launching applications from the sbt console
 addSbtPlugin("io.spray"           % "sbt-revolver"             % "0.9.1")
 addSbtPlugin("com.timushev.sbt"   % "sbt-updates"              % "0.6.3")
-addSbtPlugin("ch.epfl.scala"      % "sbt-scalajs-bundler"      % "0.20.0")
+addSbtPlugin("ch.epfl.scala"      % "sbt-scalajs-bundler"      % "0.21.0")
 // Support making distributions
 addSbtPlugin("com.typesafe.sbt"   % "sbt-native-packager"      % "1.7.6")
 
