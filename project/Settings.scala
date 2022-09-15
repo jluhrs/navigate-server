@@ -32,7 +32,7 @@ object Settings {
     val catsTime     = "0.5.0"
 
     // Logging
-    val log4Cats         = "2.4.0"
+    val log4Cats         = "2.5.0"
     val log4CatsLogLevel = "0.3.1"
 
     val http4s      = "1.0.0-M32"
