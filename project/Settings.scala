@@ -71,7 +71,7 @@ object Settings {
     val guava               = "31.0.1-jre"
     val prometheusClient    = "0.14.1"
     val geminiLocales       = "0.7.0"
-    val pprint              = "0.7.3"
+    val pprint              = "0.8.0"
     val jaxb                = "3.0.1"
 
     // EPICS Libraries
