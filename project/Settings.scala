@@ -35,21 +35,25 @@ object Settings {
     val log4Cats         = "2.4.0"
     val log4CatsLogLevel = "0.3.1"
 
-    val http4s      = "1.0.0-M32"
-    val squants     = "1.8.3"
-    val commonsHttp = "2.0.2"
-    val unboundId   = "3.2.1"
-    val jwt         = "9.1.0"
-    val slf4j       = "2.0.0"
-    val log4s       = "1.10.0"
-    val logback     = "1.2.11"
-    val janino      = "3.1.7"
-    val logstash    = "7.0"
-    val pureConfig  = "0.17.1"
-    val monocle     = "3.1.0"
-    val circe       = "0.14.2"
-    val doobie      = "0.6.0"
-    val flyway      = "6.0.4"
+    val http4s           = "0.23.15"
+    val http4sBlaze      = "0.23.12"
+    val http4sBoopickle  = "0.23.11"
+    val http4sXml        = "0.23.12"
+    val http4sPrometheus = "0.23.12"
+    val squants          = "1.8.3"
+    val commonsHttp      = "2.0.2"
+    val unboundId        = "3.2.1"
+    val jwt              = "9.1.0"
+    val slf4j            = "2.0.0"
+    val log4s            = "1.10.0"
+    val logback          = "1.2.11"
+    val janino           = "3.1.7"
+    val logstash         = "7.0"
+    val pureConfig       = "0.17.1"
+    val monocle          = "3.1.0"
+    val circe            = "0.14.2"
+    val doobie           = "0.6.0"
+    val flyway           = "6.0.4"
 
     // test libraries
     val xmlUnit                     = "1.6"
@@ -90,7 +94,7 @@ object Settings {
 
     val clue = "0.23.1"
 
-    val sttp = "3.7.4"
+    val sttp = "3.7.6"
 
     // Pure JS libraries
     val fomanticUI = "2.8.7"
@@ -161,18 +165,18 @@ object Settings {
     val ScalaXml         =
       Def.setting("org.scala-lang.modules" %%% "scala-xml" % LibraryVersions.scalaXml)
     val Http4s           = Seq("org.http4s" %% "http4s-dsl" % LibraryVersions.http4s,
-                     "org.http4s" %% "http4s-blaze-server" % LibraryVersions.http4s
+                     "org.http4s" %% "http4s-blaze-server" % LibraryVersions.http4sBlaze
     )
     val Http4sClient     = Seq(
       "org.http4s" %% "http4s-dsl"          % LibraryVersions.http4s,
       "org.http4s" %% "http4s-ember-client" % LibraryVersions.http4s
     )
-    val Http4sBoopickle  = "org.http4s"    %% "http4s-boopickle" % LibraryVersions.http4s
+    val Http4sBoopickle  = "org.http4s"    %% "http4s-boopickle" % LibraryVersions.http4sBoopickle
     val Http4sCore       = "org.http4s"    %% "http4s-core"      % LibraryVersions.http4s
     val Http4sCirce      = "org.http4s"    %% "http4s-circe"     % LibraryVersions.http4s
-    val Http4sXml        = "org.http4s"    %% "http4s-scala-xml" % LibraryVersions.http4s
+    val Http4sXml        = "org.http4s"    %% "http4s-scala-xml" % LibraryVersions.http4sXml
     val Http4sPrometheus =
-      "org.http4s" %% "http4s-prometheus-metrics" % LibraryVersions.http4s
+      "org.http4s" %% "http4s-prometheus-metrics" % LibraryVersions.http4sPrometheus
     val Monocle = Def.setting(
       Seq(
         "dev.optics" %%% "monocle-core"   % LibraryVersions.monocle,
