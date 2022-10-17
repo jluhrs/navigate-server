@@ -20,7 +20,7 @@ import org.http4s.dsl._
 import org.http4s.headers.`User-Agent`
 import org.http4s.headers.`WWW-Authenticate`
 import org.http4s.server.middleware.GZip
-import org.http4s.server.websocket.WebSocketBuilder
+import org.http4s.server.websocket.WebSocketBuilder2
 import org.http4s.websocket.WebSocketFrame
 import org.http4s.websocket.WebSocketFrame.Binary
 import org.http4s.websocket.WebSocketFrame.Close
@@ -104,7 +104,7 @@ class EngageUIApiRoutes[F[_]: Async](
     }
   }
 
-  def protectedServices(wsBuilder: WebSocketBuilder[F]): AuthedRoutes[AuthResult, F] =
+  def protectedServices(wsBuilder: WebSocketBuilder2[F]): AuthedRoutes[AuthResult, F] =
     AuthedRoutes.of {
       // Route used for testing only
       case GET -> Root / "log" / IntVar(count) as _ if mode === Mode.Development =>
@@ -170,7 +170,7 @@ class EngageUIApiRoutes[F[_]: Async](
 
     }
 
-  def service(wsBuilder: WebSocketBuilder[F]): HttpRoutes[F] =
+  def service(wsBuilder: WebSocketBuilder2[F]): HttpRoutes[F] =
     publicService <+> TokenRefresher(GZip(httpAuthentication.optAuth(protectedServices(wsBuilder))),
                                      httpAuthentication
     )
