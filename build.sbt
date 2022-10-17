@@ -22,14 +22,6 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 
 Global / semanticdbEnabled := true
 
-inThisBuild(
-  Seq(
-    scalacOptions += "-Ymacro-annotations",
-    Global / onChangedBuildSource := ReloadOnSourceChanges,
-    scalafixDependencies ++= List(ClueGenerator, LucumaSchemas)
-  )
-)
-
 // Gemini repository
 ThisBuild / resolvers ++= Seq(
   "Gemini Repository".at("https://github.com/gemini-hlsw/maven-repo/raw/master/releases"),
