@@ -46,7 +46,7 @@ object Settings {
     val jwt              = "9.1.1"
     val slf4j            = "2.0.3"
     val log4s            = "1.10.0"
-    val logback          = "1.2.11"
+    val logback          = "1.4.4"
     val janino           = "3.1.8"
     val logstash         = "7.0"
     val pureConfig       = "0.17.1"
