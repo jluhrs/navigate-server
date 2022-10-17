@@ -5,7 +5,7 @@ package engage.web.server.http4s
 
 import cats.Parallel
 
-import java.nio.file.{ Path => FilePath }
+import java.nio.file.{Path => FilePath}
 import cats.effect.std.Dispatcher
 import cats.effect._
 
@@ -14,21 +14,21 @@ import cats.syntax.all._
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.Appender
 import engage.model.EngageEvent
-import engage.web.server.common.{ LogInitialization, RedirectToHttpsRoutes, StaticRoutes }
+import engage.web.server.common.{LogInitialization, RedirectToHttpsRoutes, StaticRoutes}
 import fs2.Stream
 import fs2.concurrent.Topic
 import org.http4s.HttpRoutes
 import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.client.Client
-import org.http4s.server.{ Router, Server }
+import org.http4s.server.{Router, Server}
 import org.http4s.server.SSLKeyStoreSupport.StoreInfo
-import org.http4s.server.middleware.{ Logger => Http4sLogger }
+import org.http4s.server.middleware.{Logger => Http4sLogger}
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
-import pureconfig.{ ConfigObjectSource, ConfigSource }
+import pureconfig.{ConfigObjectSource, ConfigSource}
 import engage.model.config._
-import engage.server.{ CaServiceInit, EngageEngine, EngageFailure, Systems }
+import engage.server.{CaServiceInit, EngageEngine, EngageFailure, Systems}
 import engage.web.server.OcsBuildInfo
 import engage.web.server.logging._
 import engage.web.server.config._
@@ -36,8 +36,8 @@ import engage.web.server.security.AuthenticationService
 import org.http4s.server.websocket.WebSocketBuilder2
 
 import java.io.FileInputStream
-import java.security.{ KeyStore, Security }
-import javax.net.ssl.{ KeyManagerFactory, SSLContext, TrustManagerFactory }
+import java.security.{KeyStore, Security}
+import javax.net.ssl.{KeyManagerFactory, SSLContext, TrustManagerFactory}
 
 object WebServerLauncher extends IOApp with LogInitialization {
   private implicit def L: Logger[IO] = Slf4jLogger.getLoggerFromName[IO]("engage")
@@ -163,7 +163,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
     out:        Topic[IO, EngageEvent],
     dispatcher: Dispatcher[IO]
   ): IO[Appender[ILoggingEvent]] = IO.apply {
-    import ch.qos.logback.classic.{ AsyncAppender, Logger, LoggerContext }
+    import ch.qos.logback.classic.{AsyncAppender, Logger, LoggerContext}
     import org.slf4j.LoggerFactory
 
     val asyncAppender = new AsyncAppender

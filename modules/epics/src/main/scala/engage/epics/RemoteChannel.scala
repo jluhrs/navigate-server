@@ -6,8 +6,8 @@ import cats.effect.Async
 import cats.implicits._
 import cats.effect.implicits._
 import cats.kernel.Eq
-import org.epics.ca.{ Channel => CaChannel }
-import org.epics.ca.{ AccessRights, ConnectionState }
+import org.epics.ca.{Channel => CaChannel}
+import org.epics.ca.{AccessRights, ConnectionState}
 
 import scala.concurrent.duration.FiniteDuration
 

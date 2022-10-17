@@ -4,9 +4,9 @@
 package engage.epics
 
 import cats.effect.std.Dispatcher
-import cats.effect.{ Async, Concurrent, Resource }
+import cats.effect.{Async, Concurrent, Resource}
 import cats.syntax.all._
-import cats.{ Applicative, FlatMap, Monad, Parallel }
+import cats.{Applicative, FlatMap, Monad, Parallel}
 import mouse.boolean._
 import fs2.Stream
 import engage.epics.Channel.StreamEvent

@@ -5,13 +5,13 @@ package engage.epics
 
 import cats.Applicative
 import cats.effect.std.Dispatcher
-import cats.effect.{ Concurrent, Ref, Resource }
+import cats.effect.{Concurrent, Ref, Resource}
 import cats.syntax.all._
 import engage.epics.TestChannel.State
 import fs2.Stream
 import monocle.Lens
 import mouse.all._
-import org.epics.ca.{ AccessRights, ConnectionState }
+import org.epics.ca.{AccessRights, ConnectionState}
 
 import scala.concurrent.duration.FiniteDuration
 

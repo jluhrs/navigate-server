@@ -4,7 +4,7 @@
 package engage.model
 
 import cats.kernel.Eq
-import engage.model.enums.{ DomeMode, ShutterMode }
+import engage.model.enums.{DomeMode, ShutterMode}
 import squants.space.Angle
 
 sealed trait EngageCommand extends Product with Serializable

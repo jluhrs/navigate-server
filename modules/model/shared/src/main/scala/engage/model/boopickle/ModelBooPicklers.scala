@@ -23,7 +23,7 @@ import lucuma.core.util.Enumerated
 import engage.model._
 import engage.model.EngageEvent._
 import engage.model.enums.ServerLogLevel
-import engage.model.security.{ UserDetails, UserLoginRequest }
+import engage.model.security.{UserDetails, UserLoginRequest}
 import squants.time.Time
 import squants.time.TimeConversions._
 

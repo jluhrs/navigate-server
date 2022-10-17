@@ -3,7 +3,7 @@
 
 package engage.epics
 
-import cats.effect.{ Concurrent, IO, SyncIO }
+import cats.effect.{Concurrent, IO, SyncIO}
 import cats.effect.kernel.Resource
 import cats.effect.std.Dispatcher
 import cats.implicits._

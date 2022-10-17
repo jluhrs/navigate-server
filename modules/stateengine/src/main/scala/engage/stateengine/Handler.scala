@@ -3,7 +3,7 @@
 
 package engage.stateengine
 
-import cats.{ Applicative, Monad }
+import cats.{Applicative, Monad}
 import cats.data.State
 import cats.syntax.all._
 import engage.stateengine.Handler.RetVal

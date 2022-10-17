@@ -3,7 +3,7 @@
 
 package engage.epics
 
-import cats.effect.{ Async, Resource }
+import cats.effect.{Async, Resource}
 import cats.syntax.option._
 import org.epics.ca.Context
 import org.epics.ca.impl.ProtocolConfiguration.PropertyNames.{

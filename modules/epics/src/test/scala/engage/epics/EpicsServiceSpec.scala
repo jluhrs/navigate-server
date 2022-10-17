@@ -11,7 +11,7 @@ import cats.effect.std.Dispatcher
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.TimeoutException
-import scala.concurrent.duration.{ FiniteDuration, SECONDS }
+import scala.concurrent.duration.{FiniteDuration, SECONDS}
 
 class EpicsServiceSpec extends CatsEffectSuite {
 

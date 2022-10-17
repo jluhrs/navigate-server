@@ -5,7 +5,7 @@ package engage.web.server
 
 import cats.syntax.all._
 import engage.model.ClientId
-import engage.model.enums.{ DomeMode, ShutterMode }
+import engage.model.enums.{DomeMode, ShutterMode}
 import lucuma.core.util.Enumerated
 
 package object http4s {

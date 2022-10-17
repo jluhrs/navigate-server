@@ -3,7 +3,7 @@
 
 package engage.model
 
-import cats.{ Eq, Order }
+import cats.{Eq, Order}
 import cats.syntax.all._
 import engage.model.enums.ServerLogLevel
 import engage.model.security.UserDetails

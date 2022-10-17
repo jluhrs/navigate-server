@@ -28,7 +28,7 @@ import org.http4s.websocket.WebSocketFrame.Ping
 import org.http4s.websocket.WebSocketFrame.Pong
 import scodec.bits.ByteVector
 import engage.model.ClientId
-import engage.model.EngageEvent.{ ConnectionOpenEvent, ForClient, NullEvent }
+import engage.model.EngageEvent.{ConnectionOpenEvent, ForClient, NullEvent}
 import engage.model._
 import engage.model.boopickle._
 import engage.model.config._

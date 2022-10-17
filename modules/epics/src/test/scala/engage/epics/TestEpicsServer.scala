@@ -3,17 +3,17 @@
 
 package engage.epics
 
-import cats.effect.{ Async, IO, Resource }
-import com.cosylab.epics.caj.cas.util.{ DefaultServerImpl, MemoryProcessVariable }
-import gov.aps.jca.dbr.{ DBRType, DBR_Int }
+import cats.effect.{Async, IO, Resource}
+import com.cosylab.epics.caj.cas.util.{DefaultServerImpl, MemoryProcessVariable}
+import gov.aps.jca.dbr.{DBRType, DBR_Int}
 import gov.aps.jca.JCALibrary
 import gov.aps.jca.cas.ServerContext
 import lucuma.core.util.Enumerated
 import fs2.Stream
 
-import java.lang.{ Integer => JInteger }
-import java.lang.{ Double => JDouble }
-import java.lang.{ Float => JFloat }
+import java.lang.{Integer => JInteger}
+import java.lang.{Double => JDouble}
+import java.lang.{Float => JFloat}
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
 

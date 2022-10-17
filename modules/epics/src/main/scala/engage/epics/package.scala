@@ -7,10 +7,10 @@ import cats.syntax.option._
 import cats.syntax.foldable._
 import lucuma.core.util.Enumerated
 
-import java.lang.{ Boolean => JBoolean }
-import java.lang.{ Integer => JInteger }
-import java.lang.{ Double => JDouble }
-import java.lang.{ Float => JFloat }
+import java.lang.{Boolean => JBoolean}
+import java.lang.{Integer => JInteger}
+import java.lang.{Double => JDouble}
+import java.lang.{Float => JFloat}
 
 package epics {
 

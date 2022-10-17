@@ -12,7 +12,7 @@ import lucuma.core.enums.Site
 import org.scalajs.dom.document
 import org.scalajs.dom.Element
 import engage.web.client.components.EngageUI
-import typings.loglevel.mod.{ ^ => logger }
+import typings.loglevel.mod.{^ => logger}
 
 /**
  * Engage WebApp entry point

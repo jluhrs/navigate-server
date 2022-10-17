@@ -4,8 +4,8 @@
 package engage.web.server.common
 
 import java.io.File
-import java.nio.file.{ Path, Paths }
-import java.util.logging.{ Level, LogManager, Logger }
+import java.nio.file.{Path, Paths}
+import java.util.logging.{Level, LogManager, Logger}
 
 import cats.effect.Sync
 import org.slf4j.bridge.SLF4JBridgeHandler
