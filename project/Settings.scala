@@ -89,7 +89,7 @@ object Settings {
 
     // Lucuma
     val lucumaCore    = "0.57.0"
-    val lucumaUI      = "0.39.0"
+    val lucumaUI      = "0.50.1"
     val lucumaSchemas = "0.33.0"
 
     val clue = "0.23.1"
@@ -207,19 +207,19 @@ object Settings {
     val ScalaJSReactCommon      =
       Def.setting("io.github.cquiroz.react" %%% "lucuma-react-common" % LibraryVersions.lucumaReact)
     val ScalaJSReactSemanticUI  = Def.setting(
-      "io.github.cquiroz.react" %%% "react-semantic-ui" % LibraryVersions.scalaJSSemanticUI
+      "edu.gemini" %%% "lucuma-react-semantic-ui" % LibraryVersions.lucumaReact
     )
     val ScalaJSReactVirtualized = Def.setting(
       "io.github.cquiroz.react" %%% "react-virtualized" % LibraryVersions.scalaJSReactVirtualized
     )
     val ScalaJSReactDraggable   = Def.setting(
-      "io.github.cquiroz.react" %%% "react-draggable" % LibraryVersions.scalaJSReactDraggable
+      "edu.gemini" %%% "lucuma-react-draggable" % LibraryVersions.lucumaReact
     )
     val ScalaJSReactSortable    = Def.setting(
       "io.github.cquiroz.react" %%% "react-sortable-hoc" % LibraryVersions.scalaJSReactSortable
     )
     val ScalaJSReactClipboard   = Def.setting(
-      "io.github.cquiroz.react" %%% "react-clipboard" % LibraryVersions.scalaJSReactClipboard
+      "edu.gemini" %%% "lucuma-react-clipboard" % LibraryVersions.lucumaReact
     )
     val BooPickle               = Def.setting("io.suzaku" %%% "boopickle" % LibraryVersions.booPickle)
     val JavaTimeJS              =
