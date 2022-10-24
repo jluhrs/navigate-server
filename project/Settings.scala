@@ -14,7 +14,7 @@ object Settings {
     val scalajsReact            = "2.1.1"
     val booPickle               = "1.4.0"
     val javaTimeJS              = "2.4.0"
-    val scalaJSReactCommon      = "0.14.7"
+    val lucumaReact             = "0.15.0"
     val scalaJSSemanticUI       = "0.13.1"
     val scalaJSReactVirtualized = "0.13.1"
     val scalaJSReactClipboard   = "1.5.1"
@@ -205,9 +205,7 @@ object Settings {
     )
     val ScalaJSDom              = Def.setting("org.scala-js" %%% "scalajs-dom" % LibraryVersions.scalaDom)
     val ScalaJSReactCommon      =
-      Def.setting("io.github.cquiroz.react" %%% "common" % LibraryVersions.scalaJSReactCommon)
-    val ScalaJSReactCats        =
-      Def.setting("io.github.cquiroz.react" %%% "cats" % LibraryVersions.scalaJSReactCommon)
+      Def.setting("io.github.cquiroz.react" %%% "lucuma-react-common" % LibraryVersions.lucumaReact)
     val ScalaJSReactSemanticUI  = Def.setting(
       "io.github.cquiroz.react" %%% "react-semantic-ui" % LibraryVersions.scalaJSSemanticUI
     )
