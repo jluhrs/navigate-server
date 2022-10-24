@@ -188,7 +188,7 @@ lazy val engage_web_client = project
       "file-loader"                   -> "6.0.0",
       "css-loader"                    -> "3.5.3",
       "style-loader"                  -> "1.2.1",
-      "less"                          -> "3.9.0",
+      "less"                          -> "4.1.3",
       "less-loader"                   -> "7.0.1",
       "webpack-merge"                 -> "4.2.2",
       "mini-css-extract-plugin"       -> "0.8.0",
