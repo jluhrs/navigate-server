@@ -15,6 +15,6 @@ object Mode {
   case object Development extends Mode
 
   implicit val ModeEnumerated: Enumerated[Mode] =
-    Enumerated.of(Production, Development)
+    Enumerated.from(Production, Development).withTag(_ => "Mode")
 
 }

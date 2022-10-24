@@ -18,5 +18,5 @@ object ShutterMode {
     case _                      => false
   }
 
-  implicit val shutterModeEnum: Enumerated[ShutterMode] = Enumerated.of(FullyOpen, Tracking)
+  implicit val shutterModeEnum: Enumerated[ShutterMode] = Enumerated.from(FullyOpen, Tracking).withTag(_ => "ShutterMode")
 }

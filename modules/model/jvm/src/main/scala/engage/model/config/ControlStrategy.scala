@@ -24,7 +24,7 @@ object ControlStrategy {
   }
 
   implicit val ControlStrategyEnumerated: Enumerated[ControlStrategy] =
-    Enumerated.of(FullControl, ReadOnly, Simulated)
+    Enumerated.from(FullControl, ReadOnly, Simulated).withTag(_ => "ControlStrategy")
 
   implicit class ControlStrategyOps(v: ControlStrategy) {
     val connect: Boolean      = v =!= ControlStrategy.Simulated
