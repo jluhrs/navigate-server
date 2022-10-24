@@ -142,7 +142,6 @@ lazy val engage_web_client = project
   .disablePlugins(RevolverPlugin)
   .settings(
     // Needed for Monocle macros
-    scalacOptions += "-Ymacro-annotations",
     scalacOptions ~= (_.filterNot(
       Set(
         // By necessity facades will have unused params
@@ -229,7 +228,6 @@ lazy val engage_model = crossProject(JVMPlatform, JSPlatform)
   .enablePlugins(GitBranchPrompt)
   .enablePlugins(ScalaJSPlugin)
   .settings(
-    scalacOptions += "-Ymacro-annotations",
     libraryDependencies ++= Seq(
       Squants.value,
       Mouse.value,
