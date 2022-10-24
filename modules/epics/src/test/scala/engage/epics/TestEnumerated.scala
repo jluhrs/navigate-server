@@ -17,6 +17,6 @@ object TestEnumerated {
   implicit val testEq: Eq[TestEnumerated] = Eq.fromUniversalEquals
 
   implicit val testEnumerated: Enumerated[TestEnumerated] =
-    Enumerated.of[TestEnumerated](VAL0, VAL1, VAL2)
+    Enumerated.from[TestEnumerated](VAL0, VAL1, VAL2).withTag(_ => "TestEnumerated")
 
 }
