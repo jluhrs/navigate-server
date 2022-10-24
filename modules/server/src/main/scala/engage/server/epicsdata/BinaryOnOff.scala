@@ -12,7 +12,7 @@ object BinaryOnOff {
   case object Off extends BinaryOnOff
   case object On  extends BinaryOnOff
 
-  implicit val onoffEnum: Enumerated[BinaryOnOff] = Enumerated.of(Off, On)
+  implicit val onoffEnum: Enumerated[BinaryOnOff] = Enumerated.from(Off, On).withTag(_ => "BinaryOnOff")
 
   implicit val onoffEq: Eq[BinaryOnOff] = Eq.instance {
     case (Off, Off) => true

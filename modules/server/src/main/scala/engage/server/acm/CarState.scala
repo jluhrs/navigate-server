@@ -16,5 +16,5 @@ object CarState {
 
   implicit val carStateEq: Eq[CarState] = Eq.fromUniversalEquals
 
-  implicit val carStateEnum: Enumerated[CarState] = Enumerated.of(Idle, Paused, Busy, Idle)
+  implicit val carStateEnum: Enumerated[CarState] = Enumerated.from(Idle, Paused, Busy, Idle).withTag(_ => "CarState")
 }

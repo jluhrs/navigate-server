@@ -13,5 +13,5 @@ object ApplyCommandResult {
 
   /** @group Typeclass Instances */
   implicit val ApplyCommandResultEnumerated: Enumerated[ApplyCommandResult] =
-    Enumerated.of(Paused, Completed)
+    Enumerated.from(Paused, Completed).withTag(_ => "ApplyCommandResult")
 }

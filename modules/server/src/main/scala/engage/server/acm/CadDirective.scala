@@ -18,5 +18,5 @@ object CadDirective {
   implicit val cadDirectiveEq: Eq[CadDirective] = Eq.fromUniversalEquals
 
   implicit val cadDirectiveEnum: Enumerated[CadDirective] =
-    Enumerated.of(MARK, CLEAR, PRESET, START, STOP)
+    Enumerated.from(MARK, CLEAR, PRESET, START, STOP).withTag(_ => "CadDirective")
 }
