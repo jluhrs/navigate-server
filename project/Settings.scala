@@ -155,7 +155,7 @@ object Settings {
       "io.prometheus" % "simpleclient_common" % LibraryVersions.prometheusClient
     val Logging          = Def.setting(Seq(JuliSlf4j, Log4s.value) ++ Logback)
     val PureConfig       = Seq(
-      "com.github.pureconfig" %% "pureconfig"             % LibraryVersions.pureConfig,
+      "com.github.pureconfig" %% "pureconfig-core"        % LibraryVersions.pureConfig,
       "com.github.pureconfig" %% "pureconfig-cats"        % LibraryVersions.pureConfig,
       "com.github.pureconfig" %% "pureconfig-cats-effect" % LibraryVersions.pureConfig,
       "com.github.pureconfig" %% "pureconfig-http4s"      % LibraryVersions.pureConfig
