@@ -111,7 +111,6 @@ lazy val engage_web_server = project
                                 JwtCore,
                                 JwtCirce,
                                 CommonsHttp,
-                                ScalaMock,
                                 Log4CatsNoop.value,
                                 CatsEffect.value,
                                 Log4Cats.value,
