@@ -16,6 +16,8 @@ import react.common._
 import react.common.implicits._
 import react.semanticui.elements.divider.Divider
 
+import scala.language.implicitConversions
+
 final case class AppTitle(site: Site) extends ReactProps[AppTitle, Unit, Unit](AppTitle.component)
 
 object AppTitle {
