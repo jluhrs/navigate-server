@@ -225,7 +225,6 @@ lazy val engage_model = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Full)
   .in(file("modules/model"))
   .enablePlugins(GitBranchPrompt)
-  .enablePlugins(ScalaJSPlugin)
   .settings(
     libraryDependencies ++= Seq(
       Squants.value,
