@@ -62,7 +62,7 @@ ThisBuild / evictionErrorLevel := Level.Info
 // Projects
 //////////////
 
-ThisBuild / crossScalaVersions := Seq("3.2.1-RC4")
+ThisBuild / crossScalaVersions := Seq("3.2.1")
 
 lazy val root = tlCrossRootProject.aggregate(epics,
                                              stateengine,
