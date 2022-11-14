@@ -11,7 +11,7 @@ object Pages {
 
   case object Root extends EngagePages
 
-  implicit val engagePagesEq: Eq[EngagePages] = Eq.instance {
-    case (Root, Root) => true
+  implicit val engagePagesEq: Eq[EngagePages] = Eq.instance { case (Root, Root) =>
+    true
   }
 }

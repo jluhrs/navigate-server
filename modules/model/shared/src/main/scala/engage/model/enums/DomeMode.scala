@@ -20,5 +20,6 @@ object DomeMode {
     case _                            => false
   }
 
-  implicit val domeModeEnum: Enumerated[DomeMode] = Enumerated.from(Basic, MinScatter, MinVibration).withTag(_ => "DomeMode")
+  implicit val domeModeEnum: Enumerated[DomeMode] =
+    Enumerated.from(Basic, MinScatter, MinVibration).withTag(_ => "DomeMode")
 }
