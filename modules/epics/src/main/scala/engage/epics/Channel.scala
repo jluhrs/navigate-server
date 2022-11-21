@@ -65,7 +65,7 @@ object Channel {
     implicit def streamEventEq[T: Eq]: Eq[StreamEvent[T]] = Eq.instance {
       case (Connected, Connected)             => true
       case (Disconnected, Disconnected)       => true
-      case (ValueChanged(a), ValueChanged(b)) => Eq[T].eqv(a, b)
+      case (ValueChanged(a), ValueChanged(b)) => (a: T) === b
       case _                                  => false
     }
 
