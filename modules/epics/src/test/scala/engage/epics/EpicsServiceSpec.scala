@@ -110,7 +110,7 @@ class EpicsServiceSpec extends CatsEffectSuite {
     assertIO(
       (
         for {
-          dsp <- Dispatcher[IO]
+          dsp <- Dispatcher.sequential[IO]
           ch  <- srv.getChannel[Int]("test:heartbeat")
           _   <- Resource.eval(ch.connect)
           s   <- ch.valueStream(dsp)
@@ -229,7 +229,7 @@ class EpicsServiceSpec extends CatsEffectSuite {
   epicsServer.test("Error trying to get stream from unconnected channel") { srv =>
     interceptIO[IllegalStateException](
       (for {
-        dsp <- Dispatcher[IO]
+        dsp <- Dispatcher.sequential[IO]
         ch  <- srv.getChannel[Int]("test:intVal")
         v   <- ch.valueStream(dsp)
       } yield v).use_
