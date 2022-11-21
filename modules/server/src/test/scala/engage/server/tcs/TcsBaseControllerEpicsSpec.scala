@@ -22,8 +22,7 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
 
   test("Mount commands") {
     for {
-      controller <- createController
-      (st, ctr) = controller
+      (st, ctr) <- createController
       _         <- ctr.mcsPark
       _         <- ctr.mcsFollow(enable = true)
       rs        <- st.get
@@ -39,8 +38,7 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
     val testAngle = 123.456.degrees
 
     for {
-      controller <- createController
-      (st, ctr) = controller
+      (st, ctr) <- createController
       _         <- ctr.rotPark
       _         <- ctr.rotFollow(enable = true)
       _         <- ctr.rotStop(useBrakes = true)
@@ -65,8 +63,7 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
     val testVentWest = 0.2
 
     for {
-      controller <- createController
-      (st, ctr) = controller
+      (st, ctr) <- createController
       _         <- ctr.ecsCarouselMode(DomeMode.MinVibration,
                                        ShutterMode.Tracking,
                                        testHeight,
@@ -106,8 +103,7 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
     )
 
     for {
-      controller <- createController
-      (st, ctr) = controller
+      (st, ctr) <- createController
       _         <- ctr.applyTcsConfig(TcsConfig(target))
       rs        <- st.get
     } yield {
