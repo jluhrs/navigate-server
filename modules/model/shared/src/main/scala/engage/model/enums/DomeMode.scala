@@ -6,12 +6,12 @@ package engage.model.enums
 import cats.Eq
 import lucuma.core.util.Enumerated
 
-sealed trait DomeMode extends Product with Serializable
+sealed abstract class DomeMode(val tag: String) extends Product with Serializable
 
 object DomeMode {
-  case object Basic        extends DomeMode
-  case object MinScatter   extends DomeMode
-  case object MinVibration extends DomeMode
+  case object Basic        extends DomeMode("basic")
+  case object MinScatter   extends DomeMode("minScatter")
+  case object MinVibration extends DomeMode("minVibration")
 
   implicit val domeModeEq: Eq[DomeMode] = Eq.instance {
     case (Basic, Basic)               => true
@@ -21,5 +21,5 @@ object DomeMode {
   }
 
   implicit val domeModeEnum: Enumerated[DomeMode] =
-    Enumerated.from(Basic, MinScatter, MinVibration).withTag(_ => "DomeMode")
+    Enumerated.from(Basic, MinScatter, MinVibration).withTag(_.tag)
 }

@@ -15,5 +15,5 @@ object ServerLogLevel {
 
   /** @group Typeclass Instances */
   implicit val ServerLogLevelEnumerated: Enumerated[ServerLogLevel] =
-    Enumerated.from(INFO, WARN, ERROR).withTag(_ => "ServerLogLevel")
+    Enumerated.from(INFO, WARN, ERROR).withTag(_.label)
 }
