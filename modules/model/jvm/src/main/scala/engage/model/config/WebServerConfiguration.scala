@@ -43,7 +43,7 @@ case class WebServerConfiguration(
   host:            String,
   port:            Int,
   insecurePort:    Int,
-  externalBaseUrl: String,
+  externalBaseUrl: String
 ) {
   // FIXME Pureconfig can't load this anymore
   val tls: Option[TLSConfig] = None

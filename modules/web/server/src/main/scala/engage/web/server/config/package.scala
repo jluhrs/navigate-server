@@ -23,7 +23,6 @@ case class StrategyValueUnknown(strategy: String) extends FailureReason {
   def description: String = s"strategy '$strategy' invalid"
 }
 
-
 given ConfigReader[Site] = ConfigReader.fromCursor[Site] { cf =>
   cf.asString.flatMap {
     case "GS" => Site.GS.asRight
