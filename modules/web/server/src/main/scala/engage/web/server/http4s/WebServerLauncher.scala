@@ -217,7 +217,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
       httpClient: Client[IO]
     ): Resource[IO, EngageEngine[IO]] =
       for {
-        dspt <- Dispatcher[IO]
+        dspt <- Dispatcher.sequential[IO]
         cas  <- CaServiceInit.caInit[IO](conf.engageEngine)
         sys  <-
           Systems
@@ -248,7 +248,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
         _      <- Resource.eval(printBanner(conf))
         cli    <- client(10.seconds)
         out    <- Resource.eval(Topic[IO, EngageEvent])
-        dsp    <- Dispatcher[IO]
+        dsp    <- Dispatcher.sequential[IO]
         _      <- Resource.eval(logToClients(out, dsp))
         cs     <- Resource.eval(
                     Ref.of[IO, ClientsSetDb.ClientsSet](Map.empty).map(ClientsSetDb.apply[IO](_))
