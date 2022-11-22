@@ -16,13 +16,13 @@ import java.nio.file.Path
  * @param certPwd
  *   Password for the certificate used for TLS
  */
-final case class TLSConfig(keyStore: Path, keyStorePwd: String, certPwd: String)
+case class TLSConfig(keyStore: Path, keyStorePwd: String, certPwd: String)
 
 object TLSConfig {
 
-  implicit val pathEq: Eq[Path] = Eq.fromUniversalEquals
+  given Eq[Path] = Eq.fromUniversalEquals
 
-  implicit val sslConfigEq: Eq[TLSConfig] =
+  given Eq[TLSConfig] =
     Eq.by(x => (x.keyStore, x.keyStorePwd, x.certPwd))
 }
 
@@ -39,15 +39,17 @@ object TLSConfig {
  * @param tls
  *   Configuration of TLS, optional
  */
-final case class WebServerConfiguration(
+case class WebServerConfiguration(
   host:            String,
   port:            Int,
   insecurePort:    Int,
   externalBaseUrl: String,
-  tls:             Option[TLSConfig]
-)
+) {
+  // FIXME Pureconfig can't load this anymore
+  val tls: Option[TLSConfig] = None
+}
 
 object WebServerConfiguration {
-  implicit val webServerConfigurationEq: Eq[WebServerConfiguration] =
+  given Eq[WebServerConfiguration] =
     Eq.by(x => (x.host, x.port, x.insecurePort, x.externalBaseUrl, x.tls))
 }

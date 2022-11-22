@@ -52,7 +52,7 @@ package security {
     implicit val clock: time.Clock = java.time.Clock.systemUTC()
 
     private val hosts =
-      config.ldapURLs.map(u => new LDAPURL(u.renderString)).map(u => (u.getHost, u.getPort))
+      config.ldapUrls.map(u => new LDAPURL(u.renderString)).map(u => (u.getHost, u.getPort))
 
     val ldapService: AuthService[F] = new FreeLDAPAuthenticationService(hosts)
 
