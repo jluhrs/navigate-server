@@ -24,7 +24,7 @@ trait RemoteChannel[F[_]] {
 object RemoteChannel {
 
   abstract class RemoteChannelImpl[F[_]: Async] extends RemoteChannel[F] {
-    val caChannel: CaChannel[_]
+    val caChannel: CaChannel[?]
 
     override def connect: F[Unit] =
       Async[F].fromCompletableFuture(Async[F].delay(caChannel.connectAsync())).void

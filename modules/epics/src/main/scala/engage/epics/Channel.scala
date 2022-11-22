@@ -65,7 +65,7 @@ object Channel {
     implicit def streamEventEq[T: Eq]: Eq[StreamEvent[T]] = Eq.instance {
       case (Connected, Connected)             => true
       case (Disconnected, Disconnected)       => true
-      case (ValueChanged(a), ValueChanged(b)) => a === b
+      case (ValueChanged(a), ValueChanged(b)) => (a: T) === b
       case _                                  => false
     }
 
@@ -73,7 +73,7 @@ object Channel {
 
   private final class ChannelImpl[F[_]: Async, T, J](override val caChannel: CaChannel[J])(implicit
     cv:                                                                      Convert[T, J]
-  ) extends RemoteChannelImpl
+  ) extends RemoteChannelImpl[F]
       with Channel[F, T] {
     override val get: F[T] =
       Async[F]

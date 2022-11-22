@@ -99,7 +99,7 @@ package security {
 
     // Allows calling authenticate on a list of authenticator, stopping at the first
     // that succeeds
-    implicit class ComposedAuth[F[_]: MonadError[*[_], Throwable]: Logger](
+    implicit class ComposedAuth[F[_]: MonadThrow: Logger](
       val s: AuthenticationServices[F]
     ) {
 

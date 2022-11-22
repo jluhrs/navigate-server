@@ -275,9 +275,9 @@ object WebServerLauncher extends IOApp with LogInitialization {
 
   /** Reads the configuration and launches Engage */
   override def run(args: List[String]): IO[ExitCode] =
-    engage.guaranteeCase {
-      case ExitCode.Success => IO.unit
-      case e                => IO(Console.println(s"Exit code $e")) // scalastyle:off console.io
+    engage.guaranteeCase { oc =>
+      if (oc.isSuccess) IO.unit
+      else IO(Console.println(s"Exit code $oc")) // scalastyle:off console.io
     }
 
 }
