@@ -62,6 +62,8 @@ ThisBuild / evictionErrorLevel := Level.Info
 // Projects
 //////////////
 
+ThisBuild / crossScalaVersions := Seq("3.2.1")
+
 lazy val root = tlCrossRootProject.aggregate(epics,
                                              stateengine,
                                              engage_web_server,
@@ -109,7 +111,6 @@ lazy val engage_web_server = project
                                 JwtCore,
                                 JwtCirce,
                                 CommonsHttp,
-                                ScalaMock,
                                 Log4CatsNoop.value,
                                 CatsEffect.value,
                                 Log4Cats.value,
@@ -140,7 +141,6 @@ lazy val engage_web_client = project
   .disablePlugins(RevolverPlugin)
   .settings(
     // Needed for Monocle macros
-    scalacOptions += "-Ymacro-annotations",
     scalacOptions ~= (_.filterNot(
       Set(
         // By necessity facades will have unused params
@@ -186,7 +186,7 @@ lazy val engage_web_client = project
       "file-loader"                   -> "6.0.0",
       "css-loader"                    -> "3.5.3",
       "style-loader"                  -> "1.2.1",
-      "less"                          -> "3.9.0",
+      "less"                          -> "4.1.3",
       "less-loader"                   -> "7.0.1",
       "webpack-merge"                 -> "4.2.2",
       "mini-css-extract-plugin"       -> "0.8.0",
@@ -205,9 +205,7 @@ lazy val engage_web_client = project
       ScalaJSDom.value,
       JavaTimeJS.value,
       ScalaJSReactSemanticUI.value,
-      ScalaJSReactVirtualized.value,
       ScalaJSReactClipboard.value,
-      ScalaJSReactSortable.value,
       ScalaJSReactDraggable.value,
       GeminiLocales.value,
       LucumaUI.value,
@@ -227,9 +225,7 @@ lazy val engage_model = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Full)
   .in(file("modules/model"))
   .enablePlugins(GitBranchPrompt)
-  .enablePlugins(ScalaJSPlugin)
   .settings(
-    scalacOptions += "-Ymacro-annotations",
     libraryDependencies ++= Seq(
       Squants.value,
       Mouse.value,

@@ -35,7 +35,7 @@ object EpicsService {
       .map(x => Channel.build[F, T, tjt.javaType](x)(Async[F], tjt.convert))
   }
 
-  final case class Builder private (
+  final case class Builder(
     addrList:          Option[List[InetAddress]],
     autoAddrList:      Option[Boolean],
     connectionTimeout: Option[FiniteDuration],

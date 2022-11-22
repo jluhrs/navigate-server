@@ -217,7 +217,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
       httpClient: Client[IO]
     ): Resource[IO, EngageEngine[IO]] =
       for {
-        dspt <- Dispatcher[IO]
+        dspt <- Dispatcher.sequential[IO]
         cas  <- CaServiceInit.caInit[IO](conf.engageEngine)
         sys  <-
           Systems
@@ -248,7 +248,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
         _      <- Resource.eval(printBanner(conf))
         cli    <- client(10.seconds)
         out    <- Resource.eval(Topic[IO, EngageEvent])
-        dsp    <- Dispatcher[IO]
+        dsp    <- Dispatcher.sequential[IO]
         _      <- Resource.eval(logToClients(out, dsp))
         cs     <- Resource.eval(
                     Ref.of[IO, ClientsSetDb.ClientsSet](Map.empty).map(ClientsSetDb.apply[IO](_))
@@ -275,9 +275,9 @@ object WebServerLauncher extends IOApp with LogInitialization {
 
   /** Reads the configuration and launches Engage */
   override def run(args: List[String]): IO[ExitCode] =
-    engage.guaranteeCase {
-      case ExitCode.Success => IO.unit
-      case e                => IO(Console.println(s"Exit code $e")) // scalastyle:off console.io
+    engage.guaranteeCase { oc =>
+      if (oc.isSuccess) IO.unit
+      else IO(Console.println(s"Exit code $oc")) // scalastyle:off console.io
     }
 
 }

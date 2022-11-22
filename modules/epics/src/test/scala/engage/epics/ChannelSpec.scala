@@ -34,7 +34,7 @@ class ChannelSpec extends CatsEffectSuite {
     assertIOBoolean(
       (
         for {
-          dsp <- Dispatcher[IO]
+          dsp <- Dispatcher.sequential[IO]
           ch  <- srv.getChannel[Int]("test:heartbeat")
           _   <- Resource.eval(ch.connect)
           s   <- ch.eventStream(dsp, Concurrent[IO])
