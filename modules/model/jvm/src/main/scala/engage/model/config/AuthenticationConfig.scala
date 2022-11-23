@@ -28,11 +28,11 @@ final case class AuthenticationConfig(
   cookieName:     String,
   secretKey:      String,
   useSSL:         Boolean = false,
-  ldapURLs:       List[Uri]
+  ldapUrls:       List[Uri]
 )
 
 object AuthenticationConfig {
-  implicit val eqAuthenticationConfig: Eq[AuthenticationConfig] =
-    Eq.by(x => (x.sessionLifeHrs.toNanos, x.cookieName, x.secretKey, x.useSSL, x.ldapURLs))
+  given Eq[AuthenticationConfig] =
+    Eq.by(x => (x.sessionLifeHrs.toNanos, x.cookieName, x.secretKey, x.useSSL, x.ldapUrls))
 
 }

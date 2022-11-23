@@ -3,4 +3,4 @@
 
 package engage.web.server.http4s
 
-package object encoder extends BooEncoders
+package object encoder

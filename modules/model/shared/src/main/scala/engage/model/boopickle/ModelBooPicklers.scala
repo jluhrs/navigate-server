@@ -85,6 +85,4 @@ trait ModelBooPicklers extends BooPicklerSyntax {
     .addConcreteType[ServerLogMessage]
     .addConcreteType[NullEvent.type]
 
-  implicit val userLoginPickler: Pickler[UserLoginRequest] = generatePickler[UserLoginRequest]
-
 }

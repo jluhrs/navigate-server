@@ -114,6 +114,7 @@ lazy val engage_web_server = project
                                 Log4CatsNoop.value,
                                 CatsEffect.value,
                                 Log4Cats.value,
+                                Http4sCirce,
                                 BooPickle.value,
                                 Http4sBoopickle
     ) ++

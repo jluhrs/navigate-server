@@ -6,18 +6,18 @@ package engage.web.server.http4s
 import cats.data.NonEmptyList
 import cats.effect.Async
 import cats.effect.Sync
-import cats.syntax.all._
+import cats.syntax.all.*
 import engage.model.ClientId
 import engage.model.EngageEvent.ConnectionOpenEvent
 import engage.model.EngageEvent.ForClient
 import engage.model.EngageEvent.NullEvent
-import engage.model._
-import engage.model.boopickle._
-import engage.model.config._
+import engage.model.*
+import engage.model.boopickle.*
+import engage.model.config.*
 import engage.model.security.UserLoginRequest
 import engage.server.EngageEngine
 import engage.web.server.OcsBuildInfo
-import engage.web.server.http4s.encoder._
+import engage.web.server.http4s.encoder.*
 import engage.web.server.security.AuthenticationService
 import engage.web.server.security.AuthenticationService.AuthResult
 import engage.web.server.security.Http4sAuthentication
@@ -26,8 +26,10 @@ import fs2.Pipe
 import fs2.Stream
 import fs2.concurrent.Topic
 import lucuma.core.enums.Site
-import org.http4s._
-import org.http4s.dsl._
+import org.http4s.*
+import org.http4s.circe.CirceEntityDecoder.*
+import org.http4s.circe.CirceEntityEncoder.*
+import org.http4s.dsl.*
 import org.http4s.headers.`User-Agent`
 import org.http4s.headers.`WWW-Authenticate`
 import org.http4s.server.middleware.GZip
@@ -41,8 +43,8 @@ import org.typelevel.log4cats.Logger
 import scodec.bits.ByteVector
 
 import java.util.UUID
-import scala.concurrent.duration._
-import scala.math._
+import scala.concurrent.duration.*
+import scala.math.*
 
 /**
  * Rest Endpoints under the /api route

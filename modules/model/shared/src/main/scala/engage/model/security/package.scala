@@ -4,16 +4,18 @@
 package engage.model
 
 import cats.Eq
+import io.circe.Decoder
+import io.circe.Encoder
 
 package security {
   // Shared classes used for authentication
-  final case class UserLoginRequest(username: String, password: String)
+  case class UserLoginRequest(username: String, password: String) derives Decoder
 
   object UserLoginRequest {
-    implicit val eq: Eq[UserLoginRequest] = Eq.by(x => (x.username, x.password))
+    given Eq[UserLoginRequest] = Eq.by(x => (x.username, x.password))
   }
 
-  final case class UserDetails(username: String, displayName: String)
+  case class UserDetails(username: String, displayName: String) derives Encoder.AsObject
 
   object UserDetails {
     // Some useful type aliases for user elements
@@ -22,7 +24,7 @@ package security {
     type Groups      = List[String]
     type Thumbnail   = Array[Byte]
 
-    implicit val eq: Eq[UserDetails] = Eq.by(x => (x.username, x.displayName))
+    given Eq[UserDetails] = Eq.by(x => (x.username, x.displayName))
   }
 
 }

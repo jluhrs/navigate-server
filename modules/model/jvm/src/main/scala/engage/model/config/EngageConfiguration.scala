@@ -19,7 +19,7 @@ import lucuma.core.enums.Site
  * @param authentication
  *   Configuration to support authentication
  */
-final case class EngageConfiguration(
+case class EngageConfiguration(
   site:           Site,
   mode:           Mode,
   engageEngine:   EngageEngineConfiguration,
@@ -28,6 +28,6 @@ final case class EngageConfiguration(
 )
 
 object EngageConfiguration {
-  implicit val eqEngageConfiguration: Eq[EngageConfiguration] =
+  given Eq[EngageConfiguration] =
     Eq.by(x => (x.site, x.mode, x.engageEngine, x.webServer, x.authentication))
 }
