@@ -30,8 +30,10 @@ import org.http4s.*
 import org.http4s.circe.CirceEntityDecoder.*
 import org.http4s.circe.CirceEntityEncoder.*
 import org.http4s.dsl.*
+import org.http4s.headers.Origin
 import org.http4s.headers.`User-Agent`
 import org.http4s.headers.`WWW-Authenticate`
+import org.http4s.server.middleware.CORS
 import org.http4s.server.middleware.GZip
 import org.http4s.server.websocket.WebSocketBuilder2
 import org.http4s.websocket.WebSocketFrame
@@ -175,9 +177,17 @@ class EngageUIApiRoutes[F[_]: Async](
 
     }
 
+  val corsOriginSvc = CORS.policy
+    // FIXME limits the origin for production
+    .withAllowOriginAll
+    .withAllowMethodsIn(Set(Method.GET, Method.POST))
+
   def service(wsBuilder: WebSocketBuilder2[F]): HttpRoutes[F] =
-    publicService <+> TokenRefresher(GZip(httpAuthentication.optAuth(protectedServices(wsBuilder))),
-                                     httpAuthentication
+    corsOriginSvc(
+      publicService <+> TokenRefresher(
+        GZip(httpAuthentication.optAuth(protectedServices(wsBuilder))),
+        httpAuthentication
+      )
     )
 
   // Event to WebSocket frame
