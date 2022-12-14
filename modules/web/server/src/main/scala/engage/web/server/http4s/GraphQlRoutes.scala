@@ -7,12 +7,16 @@ import cats.effect.Async
 import cats.syntax.all.*
 import engage.model.security.UserDetails
 import engage.server.EngageEngine
-import engage.web.server.security.{AuthenticationService, Http4sAuthentication, TokenRefresher}
-import org.http4s.{AuthedRoutes, HttpRoutes}
+import engage.web.server.security.AuthenticationService
+import engage.web.server.security.Http4sAuthentication
+import engage.web.server.security.TokenRefresher
+import lucuma.graphql.routes.GrackleGraphQLService
+import lucuma.graphql.routes.Routes
+import natchez.Trace
+import org.http4s.AuthedRoutes
+import org.http4s.HttpRoutes
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.middleware.GZip
-import lucuma.graphql.routes.{GrackleGraphQLService, Routes}
-import natchez.Trace
 import org.http4s.server.websocket.WebSocketBuilder2
 import org.typelevel.log4cats.Logger
 

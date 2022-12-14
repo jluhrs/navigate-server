@@ -9,26 +9,27 @@ import cats.effect.Sync
 import cats.effect.syntax.all.*
 import cats.syntax.all.*
 import cats.syntax.either.catsSyntaxEither
-import org.typelevel.log4cats.Logger
-import edu.gemini.grackle.{
-  Cursor,
-  Mapping,
-  Path,
-  Problem,
-  Query,
-  Result,
-  Schema,
-  TypeRef,
-  ValueMapping
-}
+import edu.gemini.grackle.Cursor
+import edu.gemini.grackle.Mapping
+import edu.gemini.grackle.Path
+import edu.gemini.grackle.Problem
+import edu.gemini.grackle.Query
+import edu.gemini.grackle.Result
+import edu.gemini.grackle.Schema
+import edu.gemini.grackle.TypeRef
+import edu.gemini.grackle.ValueMapping
 import engage.server.EngageEngine
-import engage.server.tcs.{FollowStatus, ParkStatus}
-import io.circe.{Decoder, Encoder, Json}
+import engage.server.tcs.FollowStatus
+import engage.server.tcs.ParkStatus
+import io.circe.Decoder
+import io.circe.Encoder
+import io.circe.Json
 import io.circe.syntax.*
+import org.typelevel.log4cats.Logger
 import spire.math.Algebraic.Expr.Sub
 
-import scala.util.Using
 import scala.io.Source
+import scala.util.Using
 
 class EngageMappings[F[_]: Sync](server: EngageEngine[F])(override val schema: Schema)
     extends ValueMapping[F] {
@@ -75,7 +76,7 @@ class EngageMappings[F[_]: Sync](server: EngageEngine[F])(override val schema: S
 object EngageMappings {
 
   def loadSchema[F[_]: Sync]: F[Schema] = Sync[F].defer {
-    Using(Source.fromResource("newTCC.graphql", getClass.getClassLoader)) { src =>
+    Using(Source.fromResource("NewTCC.graphql", getClass.getClassLoader)) { src =>
       Schema(src.mkString).right.get
     }.liftTo[F]
   }

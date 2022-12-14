@@ -3,21 +3,29 @@
 
 package engage.web.server.http4s
 
-import cats.syntax.all.*
-import cats.effect.{IO, Ref}
-import fs2.Stream
-import engage.model.EngageEvent
-import engage.model.enums.{DomeMode, ShutterMode}
-import engage.server.{EngageEngine, OdbProxy, Systems}
-import munit.CatsEffectSuite
-import squants.Angle
-import edu.gemini.grackle.syntax.*
-import engage.server.tcs.{FollowStatus, ParkStatus, TcsNorthControllerSim, TcsSouthControllerSim}
 import cats.*
+import cats.effect.IO
+import cats.effect.Ref
 import cats.effect.unsafe.implicits.global
+import cats.syntax.all.*
 import edu.gemini.grackle.ValueMapping
-import io.circe.{Decoder, Json}
+import edu.gemini.grackle.syntax.*
+import engage.model.EngageEvent
+import engage.model.enums.DomeMode
+import engage.model.enums.ShutterMode
+import engage.server.EngageEngine
+import engage.server.OdbProxy
+import engage.server.Systems
+import engage.server.tcs.FollowStatus
+import engage.server.tcs.ParkStatus
+import engage.server.tcs.TcsNorthControllerSim
+import engage.server.tcs.TcsSouthControllerSim
+import fs2.Stream
+import io.circe.Decoder
+import io.circe.Json
+import munit.CatsEffectSuite
 import munit.Clue.generate
+import squants.Angle
 
 import EngageMappings._
 

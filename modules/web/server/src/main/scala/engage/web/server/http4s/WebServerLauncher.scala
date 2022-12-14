@@ -24,6 +24,7 @@ import engage.web.server.logging._
 import engage.web.server.security.AuthenticationService
 import fs2.Stream
 import fs2.concurrent.Topic
+import natchez.Trace.Implicits.noop
 import org.http4s.HttpRoutes
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.client.Client
@@ -37,7 +38,6 @@ import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import pureconfig.ConfigObjectSource
 import pureconfig.ConfigSource
-import natchez.Trace.Implicits.noop
 
 import java.io.FileInputStream
 import java.nio.file.{Path => FilePath}
