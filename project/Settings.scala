@@ -50,7 +50,7 @@ object Settings {
     val janino           = "3.1.9"
     val logstash         = "7.0"
     val pureConfig       = "0.17.2"
-    val monocle          = "3.1.0"
+    val monocle          = "3.2.0"
     val circe            = "0.14.3"
     val doobie           = "0.6.0"
     val flyway           = "6.0.4"
