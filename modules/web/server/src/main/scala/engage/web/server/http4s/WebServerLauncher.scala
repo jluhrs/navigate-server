@@ -24,6 +24,7 @@ import engage.web.server.logging._
 import engage.web.server.security.AuthenticationService
 import fs2.Stream
 import fs2.concurrent.Topic
+import natchez.Trace.Implicits.noop
 import org.http4s.HttpRoutes
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.client.Client
@@ -125,7 +126,8 @@ object WebServerLauncher extends IOApp with LogInitialization {
       "/"                    -> new StaticRoutes(conf.mode === Mode.Development, OcsBuildInfo.builtAtMillis).service,
       "/api/engage/commands" -> new EngageCommandRoutes(as, se).service,
       "/api"                 -> new EngageUIApiRoutes(conf.site, conf.mode, as, clientsDb, outputs)
-        .service(wsBuilder)
+        .service(wsBuilder),
+      "/graphqlapi"          -> new GraphQlRoutes(se).service(wsBuilder)
     )
 
     val pingRouter = Router[F](
