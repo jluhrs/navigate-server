@@ -12,12 +12,16 @@ import cats.syntax.either.catsSyntaxEither
 import edu.gemini.grackle.Cursor
 import edu.gemini.grackle.Mapping
 import edu.gemini.grackle.Path
+import edu.gemini.grackle.Predicate.Eql
 import edu.gemini.grackle.Problem
 import edu.gemini.grackle.Query
+import edu.gemini.grackle.Query.{Binding, Environment, Filter, Select, Unique}
 import edu.gemini.grackle.Result
 import edu.gemini.grackle.Schema
 import edu.gemini.grackle.TypeRef
 import edu.gemini.grackle.ValueMapping
+import edu.gemini.grackle.QueryCompiler.SelectElaborator
+import edu.gemini.grackle.Value.BooleanValue
 import engage.server.EngageEngine
 import engage.server.tcs.FollowStatus
 import engage.server.tcs.ParkStatus
@@ -59,6 +63,18 @@ class EngageMappings[F[_]: Sync](server: EngageEngine[F])(override val schema: S
   val MutationType: TypeRef     = schema.ref("Mutation")
   val ParkStatusType: TypeRef   = schema.ref("ParkStatus")
   val FollowStatusType: TypeRef = schema.ref("FollowStatus")
+
+  override val selectElaborator: SelectElaborator = new SelectElaborator(
+    Map(
+      MutationType -> {
+        case Select("mountFollow", List(Binding("enable", BooleanValue(en))), child) =>
+          Environment(
+            Cursor.Env("enable" -> en),
+            Select("mountFollow", Nil, child)
+          ).rightIor
+      }
+    )
+  )
 
   override val typeMappings: List[TypeMapping] = List(
     ObjectMapping(
