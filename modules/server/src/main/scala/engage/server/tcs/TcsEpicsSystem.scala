@@ -3,18 +3,18 @@
 
 package engage.server.tcs
 
-import cats.{ Applicative, Monad, Parallel }
+import cats.{Applicative, Monad, Parallel}
 import cats.effect.std.Dispatcher
-import cats.effect.{ Resource, Temporal }
+import cats.effect.{Resource, Temporal}
 import mouse.all._
 import engage.epics.EpicsSystem.TelltaleChannel
 import engage.epics._
 import engage.epics.VerifiedEpics._
-import engage.model.enums.{ DomeMode, ShutterMode }
-import engage.server.{ ApplyCommandResult, tcs }
+import engage.model.enums.{DomeMode, ShutterMode}
+import engage.server.{ApplyCommandResult, tcs}
 import engage.server.acm.ParameterList._
-import engage.server.acm.{ CadDirective, GeminiApplyCommand }
-import engage.server.epicsdata.{ BinaryOnOff, BinaryYesNo, DirSuffix }
+import engage.server.acm.{CadDirective, GeminiApplyCommand}
+import engage.server.epicsdata.{BinaryOnOff, BinaryYesNo, DirSuffix}
 import squants.Angle
 
 import scala.concurrent.duration.FiniteDuration

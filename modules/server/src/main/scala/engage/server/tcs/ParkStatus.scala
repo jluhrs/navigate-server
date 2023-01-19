@@ -10,14 +10,15 @@ sealed abstract class ParkStatus(val tag: String) extends Product with Serializa
 
 object ParkStatus {
   case object NotParked extends ParkStatus("NotParked")
-  case object Parked extends ParkStatus("Parked")
+  case object Parked    extends ParkStatus("Parked")
 
   implicit val eqParkStatus: Eq[ParkStatus] = Eq.instance {
     case (NotParked, NotParked) => true
-    case (Parked, Parked) => true
-    case _ => false
+    case (Parked, Parked)       => true
+    case _                      => false
   }
 
-  implicit val enumParkStatus: Enumerated[ParkStatus] = Enumerated.from(NotParked, Parked).withTag(_.tag)
+  implicit val enumParkStatus: Enumerated[ParkStatus] =
+    Enumerated.from(NotParked, Parked).withTag(_.tag)
 
 }

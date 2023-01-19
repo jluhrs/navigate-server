@@ -4,7 +4,7 @@
 package engage.server.tcs
 
 import cats.Applicative
-import engage.model.enums.{ DomeMode, ShutterMode }
+import engage.model.enums.{DomeMode, ShutterMode}
 import engage.server.ApplyCommandResult
 import squants.Angle
 

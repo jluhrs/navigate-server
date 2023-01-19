@@ -4,11 +4,11 @@
 package engage.server
 
 import cats.effect.std.Dispatcher
-import cats.effect.{ Async, Resource }
+import cats.effect.{Async, Resource}
 import cats.Parallel
 import cats.syntax.all._
 import engage.epics.EpicsService
-import engage.model.config.{ ControlStrategy, EngageEngineConfiguration }
+import engage.model.config.{ControlStrategy, EngageEngineConfiguration}
 import org.http4s.client.Client
 import engage.server.tcs._
 import lucuma.core.enums.Site

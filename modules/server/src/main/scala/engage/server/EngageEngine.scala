@@ -4,7 +4,7 @@
 package engage.server
 
 import cats.ApplicativeThrow
-import cats.effect.{ Async, Concurrent, Ref, Temporal }
+import cats.effect.{Async, Concurrent, Ref, Temporal}
 import cats.effect.kernel.Sync
 import cats.syntax.all._
 import engage.model.EngageCommand.{
@@ -16,17 +16,17 @@ import engage.model.EngageCommand.{
   McsFollow,
   McsPark
 }
-import engage.model.{ EngageCommand, EngageEvent }
-import engage.model.EngageEvent.{ CommandFailure, CommandPaused, CommandStart, CommandSuccess }
+import engage.model.{EngageCommand, EngageEvent}
+import engage.model.EngageEvent.{CommandFailure, CommandPaused, CommandStart, CommandSuccess}
 import engage.model.config.EngageEngineConfiguration
-import engage.model.enums.{ DomeMode, ShutterMode }
+import engage.model.enums.{DomeMode, ShutterMode}
 import engage.stateengine.StateEngine
-import fs2.{ Pipe, Stream }
+import fs2.{Pipe, Stream}
 import lucuma.core.enums.Site
-import monocle.{ Focus, Lens }
+import monocle.{Focus, Lens}
 import squants.Angle
 
-import scala.concurrent.duration.{ DurationInt, FiniteDuration }
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 trait EngageEngine[F[_]] {
   val systems: Systems[F]
@@ -49,7 +49,7 @@ trait EngageEngine[F[_]] {
     shutterEnable:               Boolean
   ): F[Unit]
   def ecsVentGatesMove(gateEast: Double, westGate: Double): F[Unit]
-  
+
 }
 
 object EngageEngine {
