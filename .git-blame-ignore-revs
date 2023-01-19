@@ -3,3 +3,6 @@
 
 # adopt sbt-lucuma
 19a2b3cec0145e95652506ee3e5b36e1b72d0d27
+
+# Scala Steward: Reformat with scalafmt 3.7.0
+12918c50e56592345222695bc9bad8547a184a9e
