@@ -3,16 +3,16 @@
 
 package engage.server.tcs
 import cats.effect.Ref
-import cats.{ Applicative, Monad, Parallel }
+import cats.{Applicative, Monad, Parallel}
 import engage.epics.EpicsSystem.TelltaleChannel
 import engage.epics.VerifiedEpics.VerifiedEpics
-import engage.epics.{ TestChannel, VerifiedEpics }
-import engage.model.enums.{ DomeMode, ShutterMode }
-import engage.server.acm.{ CadDirective, GeminiApplyCommand }
-import engage.server.epicsdata.{ BinaryOnOff, BinaryYesNo }
-import engage.server.tcs.TcsEpicsSystem.{ EnclosureChannels, TargetChannels, TcsChannels }
+import engage.epics.{TestChannel, VerifiedEpics}
+import engage.model.enums.{DomeMode, ShutterMode}
+import engage.server.acm.{CadDirective, GeminiApplyCommand}
+import engage.server.epicsdata.{BinaryOnOff, BinaryYesNo}
+import engage.server.tcs.TcsEpicsSystem.{EnclosureChannels, TargetChannels, TcsChannels}
 import engage.server.ApplyCommandResult
-import monocle.{ Focus, Lens }
+import monocle.{Focus, Lens}
 
 import scala.concurrent.duration.FiniteDuration
 

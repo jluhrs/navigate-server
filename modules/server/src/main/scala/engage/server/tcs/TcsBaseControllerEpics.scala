@@ -4,14 +4,14 @@
 package engage.server.tcs
 import cats.Parallel
 import cats.effect.Async
-import engage.server.{ ApplyCommandResult, ConnectionTimeout }
+import engage.server.{ApplyCommandResult, ConnectionTimeout}
 
 import scala.concurrent.duration.FiniteDuration
 import engage.epics.VerifiedEpics._
-import engage.model.enums.{ DomeMode, ShutterMode }
+import engage.model.enums.{DomeMode, ShutterMode}
 import engage.server.tcs.TcsBaseController.Target
-import engage.server.tcs.TcsEpicsSystem.{ TargetCommand, TcsCommands }
-import lucuma.core.math.{ Parallax, ProperMotion, RadialVelocity }
+import engage.server.tcs.TcsEpicsSystem.{TargetCommand, TcsCommands}
+import lucuma.core.math.{Parallax, ProperMotion, RadialVelocity}
 import monocle.Getter
 import squants.Angle
 

@@ -3,15 +3,15 @@
 
 package engage.server.acm
 
-import cats.{ Applicative, Monad }
-import cats.effect.{ Resource, Temporal }
+import cats.{Applicative, Monad}
+import cats.effect.{Resource, Temporal}
 import cats.effect.std.Dispatcher
 import cats.effect.syntax.temporal._
 import cats.syntax.all._
 import engage.epics.Channel.StreamEvent
 import engage.epics.VerifiedEpics._
 import engage.server.ApplyCommandResult
-import engage.epics.{ Channel, EpicsService, VerifiedEpics }
+import engage.epics.{Channel, EpicsService, VerifiedEpics}
 import engage.epics.EpicsSystem.TelltaleChannel
 import fs2.Stream
 import fs2.RaiseThrowable._

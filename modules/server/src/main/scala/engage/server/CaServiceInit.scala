@@ -3,7 +3,7 @@
 
 package engage.server
 
-import cats.effect.{ Async, Resource }
+import cats.effect.{Async, Resource}
 import cats.syntax.all._
 import engage.epics.EpicsService
 import engage.model.config.EngageEngineConfiguration

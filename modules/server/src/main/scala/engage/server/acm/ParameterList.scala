@@ -3,9 +3,9 @@
 
 package engage.server.acm
 
-import cats.{ Applicative, Parallel }
+import cats.{Applicative, Parallel}
 import cats.syntax.all._
-import engage.epics.{ EpicsSystem, RemoteChannel }
+import engage.epics.{EpicsSystem, RemoteChannel}
 import engage.epics.VerifiedEpics.VerifiedEpics
 
 object ParameterList {

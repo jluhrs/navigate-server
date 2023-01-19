@@ -3,14 +3,14 @@
 
 package engage.server.tcs
 
-import cats.effect.{ IO, Ref }
+import cats.effect.{IO, Ref}
 import cats.effect.syntax.all._
 import cats.syntax.all._
-import engage.model.enums.{ DomeMode, ShutterMode }
+import engage.model.enums.{DomeMode, ShutterMode}
 import engage.server.acm.CadDirective
-import engage.server.epicsdata.{ BinaryOnOff, BinaryYesNo }
-import engage.server.tcs.TcsBaseController.{ SiderealTarget, TcsConfig }
-import lucuma.core.math.{ Coordinates, Epoch }
+import engage.server.epicsdata.{BinaryOnOff, BinaryYesNo}
+import engage.server.tcs.TcsBaseController.{SiderealTarget, TcsConfig}
+import lucuma.core.math.{Coordinates, Epoch}
 import munit.CatsEffectSuite
 import squants.space.AngleConversions._
 
@@ -23,11 +23,11 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
 
   test("Mount commands") {
     for {
-      x <- createController
+      x        <- createController
       (st, ctr) = x
-      _         <- ctr.mcsPark
-      _         <- ctr.mcsFollow(enable = true)
-      rs        <- st.get
+      _        <- ctr.mcsPark
+      _        <- ctr.mcsFollow(enable = true)
+      rs       <- st.get
     } yield {
       assert(rs.telescopeParkDir.connected)
       assertEquals(rs.telescopeParkDir.value.get, CadDirective.MARK)
@@ -40,13 +40,13 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
     val testAngle = 123.456.degrees
 
     for {
-      x <- createController
+      x        <- createController
       (st, ctr) = x
-      _         <- ctr.rotPark
-      _         <- ctr.rotFollow(enable = true)
-      _         <- ctr.rotStop(useBrakes = true)
-      _         <- ctr.rotMove(testAngle)
-      rs        <- st.get
+      _        <- ctr.rotPark
+      _        <- ctr.rotFollow(enable = true)
+      _        <- ctr.rotStop(useBrakes = true)
+      _        <- ctr.rotMove(testAngle)
+      rs       <- st.get
     } yield {
       assert(rs.rotParkDir.connected)
       assertEquals(rs.rotParkDir.value.get, CadDirective.MARK)
@@ -66,16 +66,16 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
     val testVentWest = 0.2
 
     for {
-      x <- createController
+      x        <- createController
       (st, ctr) = x
-      _         <- ctr.ecsCarouselMode(DomeMode.MinVibration,
-                                       ShutterMode.Tracking,
-                                       testHeight,
-                                       domeEnable = true,
-                                       shutterEnable = true
-                   )
-      _         <- ctr.ecsVentGatesMove(testVentEast, testVentWest)
-      rs        <- st.get
+      _        <- ctr.ecsCarouselMode(DomeMode.MinVibration,
+                                      ShutterMode.Tracking,
+                                      testHeight,
+                                      domeEnable = true,
+                                      shutterEnable = true
+                  )
+      _        <- ctr.ecsVentGatesMove(testVentEast, testVentWest)
+      rs       <- st.get
     } yield {
       assert(rs.enclosure.ecsDomeMode.connected)
       assert(rs.enclosure.ecsShutterMode.connected)
@@ -107,10 +107,10 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
     )
 
     for {
-      x <- createController
+      x        <- createController
       (st, ctr) = x
-      _         <- ctr.applyTcsConfig(TcsConfig(target))
-      rs        <- st.get
+      _        <- ctr.applyTcsConfig(TcsConfig(target))
+      rs       <- st.get
     } yield {
       assert(rs.sourceA.objectName.connected)
       assert(rs.sourceA.brightness.connected)

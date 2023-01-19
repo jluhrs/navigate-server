@@ -3,10 +3,10 @@
 
 package engage.server.tcs
 
-import engage.model.enums.{ DomeMode, ShutterMode }
+import engage.model.enums.{DomeMode, ShutterMode}
 import engage.server.ApplyCommandResult
-import lucuma.core.math.{ Angle, Coordinates, Epoch, Parallax, ProperMotion, RadialVelocity }
-import squants.{ Angle => SAngle }
+import lucuma.core.math.{Angle, Coordinates, Epoch, Parallax, ProperMotion, RadialVelocity}
+import squants.{Angle => SAngle}
 
 trait TcsBaseController[F[_]] {
   import TcsBaseController._

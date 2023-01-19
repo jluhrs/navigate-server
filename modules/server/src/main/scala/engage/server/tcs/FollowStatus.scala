@@ -10,13 +10,14 @@ sealed abstract class FollowStatus(val tag: String) extends Product with Seriali
 
 object FollowStatus {
   case object NotFollowing extends FollowStatus("NotFollowing")
-  case object Following extends FollowStatus("Following")
+  case object Following    extends FollowStatus("Following")
 
-  implicit val eqFollowStatus: Eq[FollowStatus] = Eq.instance{
+  implicit val eqFollowStatus: Eq[FollowStatus] = Eq.instance {
     case (NotFollowing, NotFollowing) => true
-    case (Following, Following) => true
-    case _ => false
+    case (Following, Following)       => true
+    case _                            => false
   }
-  
-  implicit val enumFollowStatus: Enumerated[FollowStatus] = Enumerated.from[FollowStatus](NotFollowing, Following).withTag(_.tag)
+
+  implicit val enumFollowStatus: Enumerated[FollowStatus] =
+    Enumerated.from[FollowStatus](NotFollowing, Following).withTag(_.tag)
 }
