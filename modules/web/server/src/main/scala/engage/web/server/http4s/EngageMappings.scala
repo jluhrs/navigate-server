@@ -15,13 +15,17 @@ import edu.gemini.grackle.Path
 import edu.gemini.grackle.Predicate.Eql
 import edu.gemini.grackle.Problem
 import edu.gemini.grackle.Query
-import edu.gemini.grackle.Query.{Binding, Environment, Filter, Select, Unique}
+import edu.gemini.grackle.Query.Binding
+import edu.gemini.grackle.Query.Environment
+import edu.gemini.grackle.Query.Filter
+import edu.gemini.grackle.Query.Select
+import edu.gemini.grackle.Query.Unique
+import edu.gemini.grackle.QueryCompiler.SelectElaborator
 import edu.gemini.grackle.Result
 import edu.gemini.grackle.Schema
 import edu.gemini.grackle.TypeRef
-import edu.gemini.grackle.ValueMapping
-import edu.gemini.grackle.QueryCompiler.SelectElaborator
 import edu.gemini.grackle.Value.BooleanValue
+import edu.gemini.grackle.ValueMapping
 import engage.server.EngageEngine
 import engage.server.tcs.FollowStatus
 import engage.server.tcs.ParkStatus
