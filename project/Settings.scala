@@ -73,7 +73,7 @@ object Settings {
     val gmpStatusDatabase   = "0.3.7"
     val gmpCmdClientBridge  = "0.6.7"
     val guava               = "31.0.1-jre"
-    val prometheusClient    = "0.14.1"
+    val prometheusClient    = "0.16.0"
     val geminiLocales       = "0.7.0"
     val pprint              = "0.8.1"
     val jaxb                = "3.0.1"
@@ -88,15 +88,15 @@ object Settings {
     val gppUI   = "0.0.3"
 
     // Lucuma
-    val lucumaCore    = "0.62.0"
-    val lucumaUI      = "0.60.1"
-    val lucumaSchemas = "0.38.4"
+    val lucumaCore    = "0.64.0"
+    val lucumaUI      = "0.66.0"
+    val lucumaSchemas = "0.42.1"
 
     val grackle = "0.10.3"
 
     val graphQLRoutes = "0.5.10"
 
-    val clue = "0.23.1"
+    val clue = "0.24.1"
 
     val sttp = "3.8.9"
 
