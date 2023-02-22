@@ -51,7 +51,7 @@ object Settings {
     val logstash         = "7.0"
     val pureConfig       = "0.17.2"
     val monocle          = "3.2.0"
-    val circe            = "0.14.3"
+    val circe            = "0.14.4"
     val doobie           = "0.6.0"
     val flyway           = "6.0.4"
 
@@ -88,7 +88,7 @@ object Settings {
     val gppUI   = "0.0.3"
 
     // Lucuma
-    val lucumaCore    = "0.69.1"
+    val lucumaCore    = "0.69.2"
     val lucumaUI      = "0.66.0"
     val lucumaSchemas = "0.42.1"
 
@@ -98,7 +98,7 @@ object Settings {
 
     val clue = "0.24.1"
 
-    val sttp = "3.8.9"
+    val sttp = "3.8.11"
 
     // Pure JS libraries
     val fomanticUI = "2.8.7"
