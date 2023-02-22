@@ -13,9 +13,10 @@ import cats.syntax.all.*
 import cats.{Applicative, Eq, Monad}
 import edu.gemini.grackle.*
 import eu.timepit.refined.types.string.NonEmptyString
+import eu.timepit.refined.cats.given
 
 import scala.io.Source
-import scala.tools.nsc.io.Path
+import java.nio.file.Path
 
 // SchemaStitcher can build a grackle Schema from schema files that contains import statements of the form:
 // #import <type list> from <schema file name>
@@ -145,30 +146,30 @@ object SchemaStitcher {
       }
   }
 
-  given Order[NonEmptyString] = Order.by(_.toString)
-
-  val allElementsParser: Parser[Elements]                        = char('*').as(AllElements)
-  val firstCharInTypeParser: Parser[Char]                        = alpha | charIn('_')
-  val otherCharsInTypeParser: Parser[Char]                       = firstCharInTypeParser | digit
-  val elementNameParser: Parser[NonEmptyString]                  =
+  private val allElementsParser: Parser[Elements]                        = char('*').as(AllElements)
+  private val firstCharInTypeParser: Parser[Char]                        = alpha | charIn('_')
+  private val otherCharsInTypeParser: Parser[Char]                       = firstCharInTypeParser | digit
+  private val elementNameParser: Parser[NonEmptyString]                  =
     (firstCharInTypeParser ~ otherCharsInTypeParser.rep0).map { case (x, xx) =>
       NonEmptyString.unsafeFrom((x +: xx).mkString(""))
     }
-  val elementNameListParser: Parser[NonEmptySet[NonEmptyString]] =
+  private val elementNameListParser: Parser[NonEmptySet[NonEmptyString]] =
     (elementNameParser ~ (wsp.rep0.with1 *> char(
       ','
     ) *> wsp.rep0 *> elementNameParser).backtrack.rep0)
       .map { case (x, xx) => NonEmptySet.of(x, xx: _*) }
-  val elementListParser: Parser[Elements]                        = elementNameListParser.map(ElementList.apply)
-  val filenameCharParser: Parser[Char]                           = digit | alpha | charIn('.', '_', '\\')
-  val schemaFilenameParser: Parser[Path]                         =
+  private val elementListParser: Parser[Elements]                        = elementNameListParser.map(ElementList.apply)
+  private val filenameCharParser: Parser[Char]                           = digit | alpha | charIn('.', '_', '\\')
+  private val schemaFilenameParser: Parser[Path]                         =
     (Parser.char('\"') *> filenameCharParser.rep <* Parser.char('\"')).map(x =>
-      Path.apply(x.toList.mkString(""))
+      Path.of(x.toList.mkString(""))
     )
-  val importLineParser: Parser[(Elements, Path)]                 = (wsp.rep0.with1 *> string(
-    "#import"
-  ) *> wsp.rep *> (allElementsParser | elementListParser) <* wsp.rep)
-    ~ (string("from") *> wsp.rep *> schemaFilenameParser)
+  // Left public to allow testing the parser
+  val importLineParser: Parser[(Elements, Path)]                         =
+    (wsp.rep0.with1 *> char('#') *> wsp.rep0 *> string(
+      "import"
+    ) *> wsp.rep *> (allElementsParser | elementListParser) <* wsp.rep)
+      ~ (string("from") *> wsp.rep *> schemaFilenameParser)
 
   // The only way to build a SchemaStitcher
   def apply[F[_]: Sync](root: Path, resolver: SourceResolver[F]): SchemaStitcher[F] =

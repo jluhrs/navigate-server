@@ -5,7 +5,7 @@ package edu.gemini.schema
 
 import cats.Eq
 
-import scala.tools.nsc.io.Path
+import java.nio.file.Path
 
 package object util {
   given pathEq: Eq[Path] = Eq.fromUniversalEquals

@@ -13,32 +13,32 @@ import munit.Assertions.*
 import munit.CatsEffectSuite
 
 import scala.io.Source
-import scala.tools.nsc.io.Path
+import java.nio.file.Path
 
 class SchemaStitcherTest extends CatsEffectSuite {
   import SchemaStitcherTest.*
 
   test("SchemaStitcher should parse import statements") {
-    schemaResolver.resolve("baseSchema.graphql").map { x =>
+    schemaResolver.resolve(Path.of("baseSchema.graphql")).map { x =>
       val a = x.getLines.toList.map(SchemaStitcher.importLineParser.parse).collect {
         case Right((_, (els, path))) => (els, path)
       }
 
       assertEquals(a.length, 2)
       a(0) match {
-        case (SchemaStitcher.AllElements, path) => assertEquals(path.path, "schema1.graphql")
+        case (SchemaStitcher.AllElements, path) => assertEquals(path, Path.of("schema1.graphql"))
         case _                                  => fail
       }
       a(1) match {
         case (SchemaStitcher.ElementList(List("TypeA")), path) =>
-          assertEquals(path.path, "schema2.graphql")
+          assertEquals(path, Path.of("schema2.graphql"))
         case _                                                 => fail
       }
     }
   }
 
   test("SchemaStitcher should compose schema") {
-    SchemaStitcher[IO]("baseSchema.graphql", schemaResolver).build.map { x =>
+    SchemaStitcher[IO](Path.of("baseSchema.graphql"), schemaResolver).build.map { x =>
       (x, expectedSchema) match {
         case (Ior.Right(a), Ior.Right(b)) => assertEquals(a.toString, b.toString)
         case _                            => fail("Error creating schema")
@@ -112,9 +112,9 @@ object SchemaStitcherTest {
 
   val schemaResolver: SourceResolver[IO] = SourceResolver.fromStringMap(
     Map(
-      Path("baseSchema.graphql") -> baseSchema,
-      Path("schema1.graphql")    -> schema1,
-      Path("schema2.graphql")    -> schema2
+      Path.of("baseSchema.graphql") -> baseSchema,
+      Path.of("schema1.graphql")    -> schema1,
+      Path.of("schema2.graphql")    -> schema2
     )
   )
 

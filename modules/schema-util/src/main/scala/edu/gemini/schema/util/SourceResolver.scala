@@ -4,7 +4,7 @@
 package edu.gemini.schema.util
 
 import scala.io.Source
-import scala.tools.nsc.io.Path
+import java.nio.file.Path
 import cats.effect.Resource
 import cats.effect.Sync
 import cats.effect.syntax.all.*
