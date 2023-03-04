@@ -14,9 +14,9 @@ import java.time.Instant
 
 trait ClientsSetDb[F[_]] {
   def newClient(
-    id:                ClientId,
-    addr:              ClientsSetDb.ClientAddr,
-    ua:                Option[ClientsSetDb.UserAgent]
+    id:   ClientId,
+    addr: ClientsSetDb.ClientAddr,
+    ua:   Option[ClientsSetDb.UserAgent]
   ): F[Unit]
   def removeClient(id: ClientId): F[Unit]
   def report: F[Unit]

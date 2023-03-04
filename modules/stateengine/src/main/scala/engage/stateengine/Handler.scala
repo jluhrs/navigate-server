@@ -42,7 +42,7 @@ object Handler {
 
       override def flatMap[A, B](
         fa: Handler[F, D, V, A]
-      )(f:  A => Handler[F, D, V, B]): Handler[F, D, V, B] = Handler[F, D, V, B](
+      )(f: A => Handler[F, D, V, B]): Handler[F, D, V, B] = Handler[F, D, V, B](
         fa.run.flatMap { case RetVal(a, op1) =>
           f(a).run.map { case RetVal(b, op2) =>
             RetVal(b, concatOpP(op1, op2))

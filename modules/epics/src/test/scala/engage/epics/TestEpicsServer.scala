@@ -39,7 +39,7 @@ object TestEpicsServer {
   val jcaLibrary: JCALibrary = JCALibrary.getInstance()
 
   def createPV[F[_]: Async, T](server: DefaultServerImpl, name: String, init: Object)(implicit
-    t:                                 ToDBRType[T]
+    t: ToDBRType[T]
   ): Resource[F, MemoryProcessVariable] =
     Resource.make {
       Async[F].delay {

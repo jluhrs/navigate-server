@@ -72,7 +72,7 @@ object Channel {
   }
 
   private final class ChannelImpl[F[_]: Async, T, J](override val caChannel: CaChannel[J])(implicit
-    cv:                                                                      Convert[T, J]
+    cv: Convert[T, J]
   ) extends RemoteChannelImpl[F]
       with Channel[F, T] {
     override val get: F[T] =
@@ -132,7 +132,7 @@ object Channel {
   }
 
   def build[F[_]: Async, T, J](caChannel: CaChannel[J])(implicit
-    cv:                                   Convert[T, J]
+    cv: Convert[T, J]
   ): Channel[F, T] = new ChannelImpl[F, T, J](caChannel)
 
 }
