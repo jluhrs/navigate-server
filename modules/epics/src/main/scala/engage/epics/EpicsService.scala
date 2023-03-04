@@ -27,7 +27,7 @@ object EpicsService {
 
   final class EpicsServiceImpl[F[_]: Async](ctx: Context) extends EpicsService[F] {
     override def getChannel[T](
-      name:         String
+      name: String
     )(implicit tjt: ToJavaType[T]): Resource[F, Channel[F, T]] = Resource
       .make(
         Async[F]

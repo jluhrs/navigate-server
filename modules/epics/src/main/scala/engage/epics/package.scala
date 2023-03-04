@@ -27,7 +27,7 @@ package epics {
 
 }
 
-package object epics         {
+package object epics {
 
   implicit val booleanToJavaType: ToJavaType[Boolean] = new ToJavaType[Boolean] {
     override type javaType = JBoolean
