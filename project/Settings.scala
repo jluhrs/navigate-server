@@ -44,7 +44,7 @@ object Settings {
     val commonsHttp      = "2.0.2"
     val unboundId        = "3.2.1"
     val jwt              = "9.2.0"
-    val slf4j            = "2.0.6"
+    val slf4j            = "2.0.7"
     val log4s            = "1.10.0"
     val logback          = "1.4.6"
     val janino           = "3.1.9"
