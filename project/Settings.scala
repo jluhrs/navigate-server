@@ -36,7 +36,7 @@ object Settings {
     val log4CatsLogLevel = "0.3.1"
 
     val http4s           = "0.23.18"
-    val http4sBlaze      = "0.23.13"
+    val http4sBlaze      = "0.23.14"
     val http4sBoopickle  = "0.23.11"
     val http4sXml        = "0.23.12"
     val http4sPrometheus = "0.23.12"
@@ -44,14 +44,14 @@ object Settings {
     val commonsHttp      = "2.0.2"
     val unboundId        = "3.2.1"
     val jwt              = "9.2.0"
-    val slf4j            = "2.0.6"
+    val slf4j            = "2.0.7"
     val log4s            = "1.10.0"
-    val logback          = "1.4.5"
+    val logback          = "1.4.6"
     val janino           = "3.1.9"
     val logstash         = "7.0"
     val pureConfig       = "0.17.2"
     val monocle          = "3.2.0"
-    val circe            = "0.14.4"
+    val circe            = "0.14.5"
     val doobie           = "0.6.0"
     val flyway           = "6.0.4"
 
@@ -88,17 +88,17 @@ object Settings {
     val gppUI   = "0.0.3"
 
     // Lucuma
-    val lucumaCore    = "0.69.2"
+    val lucumaCore    = "0.71.0"
     val lucumaUI      = "0.66.0"
-    val lucumaSchemas = "0.42.1"
+    val lucumaSchemas = "0.47.0"
 
     val grackle = "0.10.3"
 
-    val graphQLRoutes = "0.5.10"
+    val graphQLRoutes = "0.5.11"
 
     val clue = "0.24.1"
 
-    val sttp = "3.8.11"
+    val sttp = "3.8.13"
 
     // Pure JS libraries
     val fomanticUI = "2.8.7"

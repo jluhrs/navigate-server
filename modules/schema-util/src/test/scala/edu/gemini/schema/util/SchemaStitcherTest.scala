@@ -72,11 +72,15 @@ object SchemaStitcherTest {
     |  attr0: Boolean!
     |  attr1: Float
     |}
+    |
+    |type TypeX {
+    |  attr0: [TypeA]!
+    |}
   """.stripMargin
 
   val baseSchema: String = """
     |#import * from "schema1.graphql"
-    |#import TypeA from "schema2.graphql"
+    |#import TypeA, TypeX from "schema2.graphql"
     |
     |type TypeC {
     |  attr0: TypeB
@@ -84,6 +88,7 @@ object SchemaStitcherTest {
     |
     |type Query {
     |  query1(par: TypeA!): TypeC!
+    |  query2(par: TypeX!): TypeC!
     |}
   """.stripMargin
 
@@ -97,6 +102,10 @@ object SchemaStitcherTest {
     |  attr0: [EnumX]!
     |}
     |
+    |type TypeX {
+    |  attr0: [TypeA]!
+    |}
+    |
     |type TypeB {
     |  val1: TypeA!
     |}
@@ -107,6 +116,7 @@ object SchemaStitcherTest {
     |
     |type Query {
     |  query1(par: TypeA!): TypeC!
+    |  query2(par: TypeX!): TypeC!
     |}
     |""".stripMargin)
 

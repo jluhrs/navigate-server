@@ -109,7 +109,8 @@ lazy val engage_web_server = project
       BooPickle.value,
       Http4sBoopickle,
       GrackleRoutes,
-      Natchez
+      Natchez,
+      LucumaSchemas
     ) ++
       Http4sClient ++ Http4s ++ PureConfig ++ Logging.value ++ MUnit.value ++ Grackle.value,
     // Supports launching the server in the background

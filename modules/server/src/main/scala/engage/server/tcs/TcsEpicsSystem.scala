@@ -60,7 +60,9 @@ object TcsEpicsSystem {
 
     val sourceACmd: TargetCommandChannels[F]
 
-    /*  val m1GuideCmd: M1GuideCmd[F]
+    val wavelSourceA: Command1Channels[F, Double]
+
+/*  val m1GuideCmd: M1GuideCmd[F]
 
   val m2GuideCmd: M2GuideCmd[F]
 
@@ -74,7 +76,6 @@ object TcsEpicsSystem {
 
   val offsetBCmd: OffsetCmd[F]
 
-  val wavelSourceA: TargetWavelengthCmd[F]
 
   val wavelSourceB: TargetWavelengthCmd[F]
 
@@ -492,7 +493,8 @@ object TcsEpicsSystem {
     rotFollow:        Channel[F, BinaryOnOff],
     rotMoveAngle:     Channel[F, Double],
     enclosure:        EnclosureChannels[F],
-    sourceA:          TargetChannels[F]
+    sourceA:          TargetChannels[F],
+    wavelSourceA:     Channel[F, Double]
   )
 
   case class EnclosureChannels[F[_]](
@@ -594,6 +596,7 @@ object TcsEpicsSystem {
       rma <- service.getChannel[Double](top + "rotMove.A")
       ecs <- buildEnclosureChannels(service, top)
       sra <- buildTargetChannels(service, top + "sourceA")
+      wva <- service.getChannel[Double](top + "wavelSourceA.A")
     } yield TcsChannels[F](
       tt,
       tpd,
@@ -603,7 +606,8 @@ object TcsEpicsSystem {
       rf,
       rma,
       ecs,
-      sra
+      sra,
+      wva
     )
 
   case class TcsCommandsImpl[F[_]: Monad: Parallel](
@@ -624,18 +628,14 @@ object TcsEpicsSystem {
       }
 
     override val mcsFollowCommand: FollowCommand[F, TcsCommands[F]] =
-      new FollowCommand[F, TcsCommands[F]] {
-        override def setFollow(enable: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.mountFollowCmd.setParam1(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
-        )
-      }
+      (enable: Boolean) => addParam(
+        tcsEpics.mountFollowCmd.setParam1(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+      )
 
     override val rotStopCommand: RotStopCommand[F, TcsCommands[F]] =
-      new RotStopCommand[F, TcsCommands[F]] {
-        override def setBrakes(enable: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.rotStopCmd.setParam1(enable.fold(BinaryYesNo.Yes, BinaryYesNo.No))
-        )
-      }
+      (enable: Boolean) => addParam(
+        tcsEpics.rotStopCmd.setParam1(enable.fold(BinaryYesNo.Yes, BinaryYesNo.No))
+      )
 
     override val rotParkCommand: BaseCommand[F, TcsCommands[F]] =
       new BaseCommand[F, TcsCommands[F]] {
@@ -643,18 +643,14 @@ object TcsEpicsSystem {
       }
 
     override val rotFollowCommand: FollowCommand[F, TcsCommands[F]] =
-      new FollowCommand[F, TcsCommands[F]] {
-        override def setFollow(enable: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.rotFollowCmd.setParam1(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
-        )
-      }
+      (enable: Boolean) => addParam(
+        tcsEpics.rotFollowCmd.setParam1(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+      )
 
     override val rotMoveCommand: RotMoveCommand[F, TcsCommands[F]] =
-      new RotMoveCommand[F, TcsCommands[F]] {
-        override def setAngle(angle: Angle): TcsCommands[F] = addParam(
-          tcsEpics.rotMoveCmd.setParam1(angle.toDegrees)
-        )
-      }
+      (angle: Angle) => addParam(
+        tcsEpics.rotMoveCmd.setParam1(angle.toDegrees)
+      )
 
     override val ecsCarouselModeCmd: CarouselModeCommand[F, TcsCommands[F]] =
       new CarouselModeCommand[F, TcsCommands[F]] {
@@ -680,11 +676,9 @@ object TcsEpicsSystem {
       }
 
     override val ecsCarouselMoveCmd: CarouselMoveCommand[F, TcsCommands[F]] =
-      new CarouselMoveCommand[F, TcsCommands[F]] {
-        override def setAngle(angle: Angle): TcsCommands[F] = addParam(
-          tcsEpics.carouselMoveCmd.setParam1(angle.toDegrees)
-        )
-      }
+      (angle: Angle) => addParam(
+        tcsEpics.carouselMoveCmd.setParam1(angle.toDegrees)
+      )
 
     override val ecsShuttersMoveCmd: ShuttersMoveCommand[F, TcsCommands[F]] =
       new ShuttersMoveCommand[F, TcsCommands[F]] {
@@ -757,6 +751,9 @@ object TcsEpicsSystem {
           tcsEpics.sourceACmd.ephemerisFile(v)
         )
       }
+
+    override val sourceAWavel: WavelengthCommand[F, TcsCommands[F]] = (v: Double) => addParam(tcsEpics.wavelSourceA.setParam1(v))
+
   }
 
   class TcsEpicsSystemImpl[F[_]: Monad: Parallel](epics: TcsEpics[F]) extends TcsEpicsSystem[F] {
@@ -817,6 +814,8 @@ object TcsEpicsSystem {
 
     override val sourceACmd: TargetCommandChannels[F] =
       TargetCommandChannels[F](channels.telltale, channels.sourceA)
+
+    override val wavelSourceA: Command1Channels[F, Double] = Command1Channels(channels.telltale, channels.wavelSourceA)
   }
 
   case class ParameterlessCommandChannels[F[_]: Monad](
@@ -980,6 +979,10 @@ object TcsEpicsSystem {
     def ephemerisFile(v:  String): S
   }
 
+  trait WavelengthCommand[F[_], +S] {
+    def wavelength(v: Double): S
+  }
+
   trait TcsCommands[F[_]] {
     def post: VerifiedEpics[F, F, ApplyCommandResult]
 
@@ -1004,6 +1007,8 @@ object TcsEpicsSystem {
     val ecsVenGatesMoveCmd: VentGatesMoveCommand[F, TcsCommands[F]]
 
     val sourceACmd: TargetCommand[F, TcsCommands[F]]
+
+    val sourceAWavel: WavelengthCommand[F, TcsCommands[F]]
 
   }
   /*

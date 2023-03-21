@@ -3,23 +3,16 @@
 
 package engage.server
 
-import cats.ApplicativeThrow
+import cats.{ApplicativeThrow, Applicative}
 import cats.effect.{Async, Concurrent, Ref, Temporal}
 import cats.effect.kernel.Sync
-import cats.syntax.all._
-import engage.model.EngageCommand.{
-  CrcsFollow,
-  CrcsMove,
-  CrcsPark,
-  CrcsStop,
-  EcsCarouselMode,
-  McsFollow,
-  McsPark
-}
+import cats.syntax.all.*
+import engage.model.EngageCommand.{CrcsFollow, CrcsMove, CrcsPark, CrcsStop, EcsCarouselMode, McsFollow, McsPark}
 import engage.model.{EngageCommand, EngageEvent}
 import engage.model.EngageEvent.{CommandFailure, CommandPaused, CommandStart, CommandSuccess}
 import engage.model.config.EngageEngineConfiguration
 import engage.model.enums.{DomeMode, ShutterMode}
+import engage.server.tcs.SlewConfig
 import engage.stateengine.StateEngine
 import fs2.{Pipe, Stream}
 import lucuma.core.enums.Site
@@ -49,6 +42,7 @@ trait EngageEngine[F[_]] {
     shutterEnable:               Boolean
   ): F[Unit]
   def ecsVentGatesMove(gateEast: Double, westGate: Double): F[Unit]
+  def slew(slewConfig: SlewConfig): F[Unit]
 
 }
 
@@ -140,7 +134,11 @@ object EngageEngine {
       Focus[State](_.ecsDomeModeInProgress)
     )
 
-    override def ecsVentGatesMove(gateEast: Double, westGate: Double): F[Unit] = ???
+    // TODO
+    override def ecsVentGatesMove(gateEast: Double, westGate: Double): F[Unit] = Applicative[F].unit
+
+    // TODO
+    override def slew(slewConfig: SlewConfig): F[Unit] = Applicative[F].unit
   }
 
   def build[F[_]: Concurrent](

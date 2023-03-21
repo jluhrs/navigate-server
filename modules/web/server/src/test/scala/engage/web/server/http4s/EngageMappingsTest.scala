@@ -16,21 +16,26 @@ import engage.model.enums.ShutterMode
 import engage.server.EngageEngine
 import engage.server.OdbProxy
 import engage.server.Systems
-import engage.server.tcs.FollowStatus
-import engage.server.tcs.ParkStatus
-import engage.server.tcs.TcsNorthControllerSim
-import engage.server.tcs.TcsSouthControllerSim
+import engage.server.tcs.{
+  FollowStatus,
+  ParkStatus,
+  SlewConfig,
+  TcsNorthControllerSim,
+  TcsSouthControllerSim
+}
 import fs2.Stream
 import io.circe.Decoder
 import io.circe.Json
 import munit.CatsEffectSuite
 import munit.Clue.generate
 import squants.Angle
+import EngageMappings.*
 
-import EngageMappings._
+import scala.concurrent.duration.Duration
 
 class EngageMappingsTest extends CatsEffectSuite {
-  import EngageMappingsTest._
+  import EngageMappingsTest.*
+  import EngageMappingsTest.given
 
   def extractResult[T: Decoder](j: Json, mutation: String): Option[T] = j.hcursor
     .downField("data")
@@ -42,9 +47,9 @@ class EngageMappingsTest extends CatsEffectSuite {
     for {
       eng <- buildServer
       mp  <- EngageMappings[IO](eng)
-      r   <- mp.compileAndRun("mutation { mountFollow(enable: true) {} }")
+      r   <- mp.compileAndRun("mutation { mountFollow(enable: true) { result } }")
     } yield assert(
-      extractResult[FollowStatus](r, "mountFollow").exists(_ === FollowStatus.Following)
+      extractResult[OperationOutcome](r, "mountFollow").exists(_ === OperationOutcome.success)
     )
 
   }
@@ -53,9 +58,49 @@ class EngageMappingsTest extends CatsEffectSuite {
     for {
       eng <- buildServer
       mp  <- EngageMappings[IO](eng)
-      r   <- mp.compileAndRun("mutation { mountPark { } }")
-    } yield assert(extractResult[ParkStatus](r, "mountPark").exists(_ === ParkStatus.Parked))
+      r   <- mp.compileAndRun("mutation { mountPark { result } }")
+    } yield assert(
+      extractResult[OperationOutcome](r, "mountPark").exists(_ === OperationOutcome.success)
+    )
 
+  }
+
+  test("Process slew command") {
+    for {
+      eng <- buildServer
+      mp  <- EngageMappings[IO](eng)
+      r   <- mp.compileAndRun(
+               """
+                |mutation { slew (slewParams: {
+                |  slewOptions: {
+                |    stopGuide: true
+                |    clearGuide: true
+                |    autoParkProbes:true
+                |  }
+                |  baseTarget: {
+                |    id: "T0001"
+                |    name: "Dummy"
+                |    sidereal: {
+                |      ra: {
+                |        hms: "21:15:33"
+                |      }
+                |      dec: {
+                |        dms: "-30:26:38"
+                |      }
+                |      epoch:"J2000.000"
+                |    }
+                |    wavelength: {
+                |      nanometers: "400"
+                |    }
+                |  }
+                |}) {
+                |  result
+                |} }
+                |""".stripMargin
+             )
+    } yield assert(
+      extractResult[OperationOutcome](r, "slew").exists(_ === OperationOutcome.success)
+    )
   }
 
 }
@@ -91,5 +136,14 @@ object EngageMappingsTest {
     ): IO[Unit] = IO.unit
 
     override def ecsVentGatesMove(gateEast: Double, westGate: Double): IO[Unit] = IO.unit
+
+    override def slew(slewConfig: SlewConfig): IO[Unit] = IO.unit
+
   }.pure[IO]
+
+  given Decoder[OperationOutcome] = Decoder.instance(h =>
+    h.downField("result")
+      .as[OperationResult]
+      .map(r => OperationOutcome(r, h.downField("msg").as[String].toOption))
+  )
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2022 Association of Universities for Research in Astronomy, Inc. (AURA)
+// Copyright (c) 2016-2023 Association of Universities for Research in Astronomy, Inc. (AURA)
 // For license information see LICENSE or https://opensource.org/licenses/BSD-3-Clause
 
 package engage.server.tcs
@@ -60,7 +60,8 @@ object TestTcsEpicsSystem {
     rotFollow:        TestChannel.State[BinaryOnOff],
     rotMoveAngle:     TestChannel.State[Double],
     enclosure:        EnclosureChannelsState,
-    sourceA:          TargetChannelsState
+    sourceA:          TargetChannelsState,
+    wavelSourceA:     TestChannel.State[Double]
   )
 
   val defaultState: State = State(
@@ -96,7 +97,8 @@ object TestTcsEpicsSystem {
       radialVelocity = TestChannel.State.default,
       brightness = TestChannel.State.default,
       ephemerisFile = TestChannel.State.default
-    )
+    ),
+    wavelSourceA = TestChannel.State.default
   )
 
   def buildEnclosureChannels[F[_]: Applicative](s: Ref[F, State]): EnclosureChannels[F] =
@@ -167,7 +169,8 @@ object TestTcsEpicsSystem {
       rotFollow = new TestChannel[F, State, BinaryOnOff](s, Focus[State](_.rotFollow)),
       rotMoveAngle = new TestChannel[F, State, Double](s, Focus[State](_.rotMoveAngle)),
       enclosure = buildEnclosureChannels(s),
-      sourceA = buildTargetChannels(s, Focus[State](_.sourceA))
+      sourceA = buildTargetChannels(s, Focus[State](_.sourceA)),
+      wavelSourceA = new TestChannel[F, State, Double](s, Focus[State](_.rotMoveAngle))
     )
 
   def build[F[_]: Monad: Parallel](s: Ref[F, State]): TcsEpicsSystem[F] =

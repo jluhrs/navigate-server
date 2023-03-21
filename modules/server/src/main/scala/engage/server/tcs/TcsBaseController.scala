@@ -28,39 +28,6 @@ trait TcsBaseController[F[_]] {
 }
 
 object TcsBaseController {
-  sealed trait Target {
-    val objectName: String
-    val brightness: Double
-  }
-
-  final case class SiderealTarget(
-    override val objectName: String,
-    override val brightness: Double,
-    coordinates:             Coordinates,
-    epoch:                   Epoch,
-    equinox:                 String,
-    properMotion:            Option[ProperMotion],
-    radialVelocity:          Option[RadialVelocity],
-    parallax:                Option[Parallax]
-  ) extends Target
-
-  final case class Azimuth(toAngle: Angle)
-
-  final case class Elevation(toAngle: Angle)
-
-  final case class AzElCoordinates(azimuth: Azimuth, elevation: Elevation)
-
-  final case class AzElTarget(
-    override val objectName: String,
-    override val brightness: Double,
-    coordinates:             AzElCoordinates
-  ) extends Target
-
-  final case class EphemerisTarget(
-    override val objectName: String,
-    override val brightness: Double,
-    ephemerisFile:           String
-  ) extends Target
 
   final case class TcsConfig(
     sourceATarget: Target

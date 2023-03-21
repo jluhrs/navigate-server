@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2022 Association of Universities for Research in Astronomy, Inc. (AURA)
+// Copyright (c) 2016-2023 Association of Universities for Research in Astronomy, Inc. (AURA)
 // For license information see LICENSE or https://opensource.org/licenses/BSD-3-Clause
 
 package engage.server.tcs
@@ -9,8 +9,9 @@ import cats.syntax.all._
 import engage.model.enums.{DomeMode, ShutterMode}
 import engage.server.acm.CadDirective
 import engage.server.epicsdata.{BinaryOnOff, BinaryYesNo}
-import engage.server.tcs.TcsBaseController.{SiderealTarget, TcsConfig}
-import lucuma.core.math.{Coordinates, Epoch}
+import engage.server.tcs.Target.SiderealTarget
+import engage.server.tcs.TcsBaseController.TcsConfig
+import lucuma.core.math.{Coordinates, Epoch, Wavelength}
 import munit.CatsEffectSuite
 import squants.space.AngleConversions._
 
@@ -97,10 +98,9 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
   test("Tcs config command") {
     val target = SiderealTarget(
       objectName = "dummy",
-      brightness = 7.3,
+      wavelength = Wavelength.unsafeFromIntPicometers(400*1000),
       coordinates = Coordinates.unsafeFromRadians(-0.321, 0.123),
       epoch = Epoch.J2000,
-      equinox = "XXX",
       properMotion = none,
       radialVelocity = none,
       parallax = none
@@ -125,13 +125,11 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assert(rs.sourceA.coordSystem.connected)
       assert(rs.sourceA.ephemerisFile.connected)
       assertEquals(rs.sourceA.objectName.value, target.objectName.some)
-      assertEquals(rs.sourceA.brightness.value, target.brightness.some)
       assertEquals(rs.sourceA.coord1.value, target.coordinates.ra.toAngle.toDoubleDegrees.some)
       assertEquals(rs.sourceA.coord2.value, target.coordinates.dec.toAngle.toDoubleDegrees.some)
       assertEquals(rs.sourceA.properMotion1.value, 0.0.some)
       assertEquals(rs.sourceA.properMotion2.value, 0.0.some)
       assertEquals(rs.sourceA.epoch.value, target.epoch.toString().some)
-      assertEquals(rs.sourceA.equinox.value, target.equinox.some)
       assertEquals(rs.sourceA.parallax.value, 0.0.some)
       assertEquals(rs.sourceA.radialVelocity.value, 0.0.some)
       assertEquals(rs.sourceA.coordSystem.value, "FK5/J2000".some)

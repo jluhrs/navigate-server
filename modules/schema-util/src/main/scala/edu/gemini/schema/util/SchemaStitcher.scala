@@ -128,13 +128,14 @@ object SchemaStitcher {
       acc:      List[NamedType]
     ): List[NamedType] =
       if (newNames.isEmpty) {
-        acc
+        acc.distinct
       } else {
         val uniqueNews = newNames.distinct
         val nextVals   = uniqueNews
           .flatMap {
             case fields: TypeWithFields                => fields.fields.map(_.tpe.underlying.asNamed).flattenOption
             case UnionType(name, description, members) => members
+            case InputObjectType(_, _, inputFields)    => inputFields.map(_.tpe.underlying.asNamed).flattenOption
             case _                                     => List.empty
           }
           .map(_.dealias)
@@ -159,7 +160,7 @@ object SchemaStitcher {
     ) *> wsp.rep0 *> elementNameParser).backtrack.rep0)
       .map { case (x, xx) => NonEmptySet.of(x, xx: _*) }
   private val elementListParser: Parser[Elements]                        = elementNameListParser.map(ElementList.apply)
-  private val filenameCharParser: Parser[Char]                           = digit | alpha | charIn('.', '_', '\\')
+  private val filenameCharParser: Parser[Char]                           = digit | alpha | charIn('.', '_', '/')
   private val schemaFilenameParser: Parser[Path]                         =
     (Parser.char('\"') *> filenameCharParser.rep <* Parser.char('\"')).map(x =>
       Path.of(x.toList.mkString(""))
