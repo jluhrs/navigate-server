@@ -11,9 +11,22 @@ input TargetPropertiesInput {
 
 """Slew Options input"""
 input SlewOptionsInput {
-  stopGuide: Boolean!
-  clearGuide: Boolean!
-  autoParkProbes: Boolean!
+    zeroChopThrow:            Boolean!
+    zeroSourceOffset:         Boolean!
+    zeroSourceDiffTrack:      Boolean!
+    zeroMountOffset:          Boolean!
+    zeroMountDiffTrack:       Boolean!
+    shortcircuitTargetFilter: Boolean!
+    shortcircuitMountFilter:  Boolean!
+    resetPointing:            Boolean!
+    stopGuide:                Boolean!
+    zeroGuideOffset:          Boolean!
+    zeroInstrumentOffset:     Boolean!
+    autoparkPwfs1:            Boolean!
+    autoparkPwfs2:            Boolean!
+    autoparkOiwfs:            Boolean!
+    autoparkGems:             Boolean!
+    autoparkAowfs:            Boolean!
 }
 
 """Slew Options"""

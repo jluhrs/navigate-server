@@ -4,6 +4,6 @@
 package engage.server.tcs
 
 case class SlewConfig(
-  slewConfig: SlewOptions,
-  baseTarget: Target
-                     )
+                       slewOptions: SlewOptions,
+                       baseTarget: Target
+)

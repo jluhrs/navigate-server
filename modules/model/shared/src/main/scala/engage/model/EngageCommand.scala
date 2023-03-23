@@ -53,6 +53,7 @@ object EngageCommand {
     gateEast: Double,
     gateWest: Double
   ) extends EngageCommand
+  case object Slew                        extends EngageCommand
 
   implicit val engageCommandEq: Eq[EngageCommand] = Eq.fromUniversalEquals
 
@@ -90,6 +91,7 @@ object EngageCommand {
       case CrcsMove(_)         => "Crcs Move"
       case _: EcsCarouselMode  => "Ecs Carousel Mode"
       case _: EcsVentGatesMove => "Ecs Vent Gates Move"
+      case Slew                => "Slew"
     }
   }
 

@@ -149,13 +149,39 @@ object EngageMappings extends GrackleParsers {
   }
 
   def parseSlewOptionsInput(l: List[(String, Value)]): Option[SlewOptions] = for {
-    sg <- l.collectFirst { case ("stopGuide", BooleanValue(v)) => v }
-    cg <- l.collectFirst { case ("clearGuide", BooleanValue(v)) => v }
-    ap <- l.collectFirst { case ("autoParkProbes", BooleanValue(v)) => v }
+    zct  <- l.collectFirst { case ("zeroChopThrow", BooleanValue(v)) => v }
+    zso  <- l.collectFirst { case ("zeroSourceOffset", BooleanValue(v)) => v }
+    zsdt <- l.collectFirst { case ("zeroSourceDiffTrack", BooleanValue(v)) => v }
+    zmo  <- l.collectFirst { case ("zeroMountOffset", BooleanValue(v)) => v }
+    zmdt <- l.collectFirst { case ("zeroMountDiffTrack", BooleanValue(v)) => v }
+    stf  <- l.collectFirst { case ("shortcircuitTargetFilter", BooleanValue(v)) => v }
+    smf  <- l.collectFirst { case ("shortcircuitMountFilter", BooleanValue(v)) => v }
+    rp   <- l.collectFirst { case ("resetPointing", BooleanValue(v)) => v }
+    sg   <- l.collectFirst { case ("stopGuide", BooleanValue(v)) => v }
+    zgo  <- l.collectFirst { case ("zeroGuideOffset", BooleanValue(v)) => v }
+    zio  <- l.collectFirst { case ("zeroInstrumentOffset", BooleanValue(v)) => v }
+    ap1  <- l.collectFirst { case ("autoparkPwfs1", BooleanValue(v)) => v }
+    ap2  <- l.collectFirst { case ("autoparkPwfs2", BooleanValue(v)) => v }
+    ao   <- l.collectFirst { case ("autoparkOiwfs", BooleanValue(v)) => v }
+    ag   <- l.collectFirst { case ("autoparkGems", BooleanValue(v)) => v }
+    aa   <- l.collectFirst { case ("autoparkAowfs", BooleanValue(v)) => v }
   } yield SlewOptions(
+    zct,
+    zso,
+    zsdt,
+    zmo,
+    zmdt,
+    stf,
+    smf,
+    rp,
     sg,
-    cg,
-    ap
+    zgo,
+    zio,
+    ap1,
+    ap2,
+    ao,
+    ag,
+    aa
   )
 
   def parseSiderealTarget(

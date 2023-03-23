@@ -160,8 +160,28 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
         .compose[TcsCommands[F]](l.get(_).ephemerisFile(t.ephemerisFile))
   }
 
-  protected def setSourceAWalength(w: Wavelength): TcsCommands[F] => TcsCommands[F] = (x: TcsCommands[F]) =>
-    x.sourceAWavel.wavelength(Wavelength.decimalMicrometers.reverseGet(w).doubleValue)
+  protected def setSourceAWalength(w: Wavelength): TcsCommands[F] => TcsCommands[F] =
+    (x: TcsCommands[F]) =>
+      x.sourceAWavel.wavelength(Wavelength.decimalMicrometers.reverseGet(w).doubleValue)
+
+  protected def setSlewOptions(so: SlewOptions): TcsCommands[F] => TcsCommands[F] =
+      (x: TcsCommands[F]) =>
+        x.slewOptionsCommand.zeroChopThrow(so.zeroChopThrow)
+          .slewOptionsCommand.zeroSourceOffset(so.zeroSourceOffset)
+          .slewOptionsCommand.zeroSourceDiffTrack(so.zeroSourceDiffTrack)
+          .slewOptionsCommand.zeroMountOffset(so.zeroMountOffset)
+          .slewOptionsCommand.zeroMountDiffTrack(so.zeroMountDiffTrack)
+          .slewOptionsCommand.shortcircuitTargetFilter(so.shortcircuitTargetFilter)
+          .slewOptionsCommand.shortcircuitMountFilter(so.shortcircuitMountFilter)
+          .slewOptionsCommand.resetPointing(so.resetPointing)
+          .slewOptionsCommand.stopGuide(so.stopGuide)
+          .slewOptionsCommand.zeroGuideOffset(so.zeroGuideOffset)
+          .slewOptionsCommand.zeroInstrumentOffset(so.zeroInstrumentOffset)
+          .slewOptionsCommand.autoparkPwfs1(so.autoparkPwfs1)
+          .slewOptionsCommand.autoparkPwfs2(so.autoparkPwfs2)
+          .slewOptionsCommand.autoparkOiwfs(so.autoparkOiwfs)
+          .slewOptionsCommand.autoparkGems(so.autoparkGems)
+          .slewOptionsCommand.autoparkAowfs(so.autoparkAowfs)
 
   override def applyTcsConfig(config: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
     setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.sourceACmd),
@@ -169,5 +189,14 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
     ).compose(setSourceAWalength(config.sourceATarget.wavelength))(
       tcsEpics.startCommand(timeout)
     ).post
+      .verifiedRun(ConnectionTimeout)
+
+  override def slew(config: SlewConfig): F[ApplyCommandResult] =
+    setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.sourceACmd),
+              config.baseTarget
+    ).compose(setSourceAWalength(config.baseTarget.wavelength))
+      .compose(setSlewOptions(config.slewOptions))(
+        tcsEpics.startCommand(timeout)
+      ).post
       .verifiedRun(ConnectionTimeout)
 }

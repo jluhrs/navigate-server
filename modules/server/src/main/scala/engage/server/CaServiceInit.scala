@@ -35,8 +35,7 @@ object CaServiceInit {
                    addressList
                )
       srv   <-
-        EpicsService
-          .getBuilder
+        EpicsService.getBuilder
           .withConnectionTimeout(conf.ioTimeout)
           .withAddressList(addrl)
           .build[F]

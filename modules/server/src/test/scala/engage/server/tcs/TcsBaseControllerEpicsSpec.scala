@@ -95,10 +95,10 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
     }
   }
 
-  test("Tcs config command") {
+  test("Slew command") {
     val target = SiderealTarget(
       objectName = "dummy",
-      wavelength = Wavelength.unsafeFromIntPicometers(400*1000),
+      wavelength = Wavelength.unsafeFromIntPicometers(400 * 1000),
       coordinates = Coordinates.unsafeFromRadians(-0.321, 0.123),
       epoch = Epoch.J2000,
       properMotion = none,
@@ -106,10 +106,29 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       parallax = none
     )
 
+    val slewOptions = SlewOptions(
+      true,
+      false,
+      true,
+      false,
+      true,
+      false,
+      true,
+      false,
+      true,
+      false,
+      true,
+      false,
+      true,
+      false,
+      true,
+      false
+    )
+
     for {
       x        <- createController
       (st, ctr) = x
-      _        <- ctr.applyTcsConfig(TcsConfig(target))
+      _        <- ctr.slew(SlewConfig(slewOptions, target))
       rs       <- st.get
     } yield {
       assert(rs.sourceA.objectName.connected)
@@ -134,6 +153,38 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assertEquals(rs.sourceA.radialVelocity.value, 0.0.some)
       assertEquals(rs.sourceA.coordSystem.value, "FK5/J2000".some)
       assertEquals(rs.sourceA.ephemerisFile.value, "".some)
+      assert(rs.slew.zeroChopThrow.connected)
+      assert(rs.slew.zeroSourceOffset.connected)
+      assert(rs.slew.zeroSourceDiffTrack.connected)
+      assert(rs.slew.zeroMountOffset.connected)
+      assert(rs.slew.zeroMountDiffTrack.connected)
+      assert(rs.slew.shortcircuitTargetFilter.connected)
+      assert(rs.slew.shortcircuitMountFilter.connected)
+      assert(rs.slew.resetPointing.connected)
+      assert(rs.slew.stopGuide.connected)
+      assert(rs.slew.zeroGuideOffset.connected)
+      assert(rs.slew.zeroInstrumentOffset.connected)
+      assert(rs.slew.autoparkPwfs1.connected)
+      assert(rs.slew.autoparkPwfs2.connected)
+      assert(rs.slew.autoparkOiwfs.connected)
+      assert(rs.slew.autoparkGems.connected)
+      assert(rs.slew.autoparkAowfs.connected)
+      assertEquals(rs.slew.zeroChopThrow.value, BinaryOnOff.On.some)
+      assertEquals(rs.slew.zeroSourceOffset.value, BinaryOnOff.Off.some)
+      assertEquals(rs.slew.zeroSourceDiffTrack.value, BinaryOnOff.On.some)
+      assertEquals(rs.slew.zeroMountOffset.value, BinaryOnOff.Off.some)
+      assertEquals(rs.slew.zeroMountDiffTrack.value, BinaryOnOff.On.some)
+      assertEquals(rs.slew.shortcircuitTargetFilter.value, BinaryOnOff.Off.some)
+      assertEquals(rs.slew.shortcircuitMountFilter.value, BinaryOnOff.On.some)
+      assertEquals(rs.slew.resetPointing.value, BinaryOnOff.Off.some)
+      assertEquals(rs.slew.stopGuide.value, BinaryOnOff.On.some)
+      assertEquals(rs.slew.zeroGuideOffset.value, BinaryOnOff.Off.some)
+      assertEquals(rs.slew.zeroInstrumentOffset.value, BinaryOnOff.On.some)
+      assertEquals(rs.slew.autoparkPwfs1.value, BinaryOnOff.Off.some)
+      assertEquals(rs.slew.autoparkPwfs2.value, BinaryOnOff.On.some)
+      assertEquals(rs.slew.autoparkOiwfs.value, BinaryOnOff.Off.some)
+      assertEquals(rs.slew.autoparkGems.value, BinaryOnOff.On.some)
+      assertEquals(rs.slew.autoparkAowfs.value, BinaryOnOff.Off.some)
     }
   }
 

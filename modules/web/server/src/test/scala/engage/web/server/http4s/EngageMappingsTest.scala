@@ -73,9 +73,22 @@ class EngageMappingsTest extends CatsEffectSuite {
                """
                 |mutation { slew (slewParams: {
                 |  slewOptions: {
-                |    stopGuide: true
-                |    clearGuide: true
-                |    autoParkProbes:true
+                |    zeroChopThrow:            true
+                |    zeroSourceOffset:         true
+                |    zeroSourceDiffTrack:      true
+                |    zeroMountOffset:          true
+                |    zeroMountDiffTrack:       true
+                |    shortcircuitTargetFilter: true
+                |    shortcircuitMountFilter:  true
+                |    resetPointing:            true
+                |    stopGuide:                true
+                |    zeroGuideOffset:          true
+                |    zeroInstrumentOffset:     true
+                |    autoparkPwfs1:            true
+                |    autoparkPwfs2:            true
+                |    autoparkOiwfs:            true
+                |    autoparkGems:             true
+                |    autoparkAowfs:            true
                 |  }
                 |  baseTarget: {
                 |    id: "T0001"

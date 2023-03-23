@@ -25,6 +25,7 @@ trait TcsBaseController[F[_]] {
   ): F[ApplyCommandResult]
   def ecsVentGatesMove(gateEast: Double, westGate: Double): F[ApplyCommandResult]
   def applyTcsConfig(config:     TcsConfig): F[ApplyCommandResult]
+  def slew(config:               SlewConfig): F[ApplyCommandResult]
 }
 
 object TcsBaseController {
