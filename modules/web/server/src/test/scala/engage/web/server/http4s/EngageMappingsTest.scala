@@ -16,22 +16,21 @@ import engage.model.enums.ShutterMode
 import engage.server.EngageEngine
 import engage.server.OdbProxy
 import engage.server.Systems
-import engage.server.tcs.{
-  FollowStatus,
-  ParkStatus,
-  SlewConfig,
-  TcsNorthControllerSim,
-  TcsSouthControllerSim
-}
+import engage.server.tcs.FollowStatus
+import engage.server.tcs.ParkStatus
+import engage.server.tcs.SlewConfig
+import engage.server.tcs.TcsNorthControllerSim
+import engage.server.tcs.TcsSouthControllerSim
 import fs2.Stream
 import io.circe.Decoder
 import io.circe.Json
 import munit.CatsEffectSuite
 import munit.Clue.generate
 import squants.Angle
-import EngageMappings.*
 
 import scala.concurrent.duration.Duration
+
+import EngageMappings.*
 
 class EngageMappingsTest extends CatsEffectSuite {
   import EngageMappingsTest.*

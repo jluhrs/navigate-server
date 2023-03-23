@@ -4,20 +4,6 @@
 package engage.web.server.http4s
 
 import cats.syntax.all.*
-import edu.gemini.grackle.Value
-import edu.gemini.grackle.Value.{FloatValue, IntValue, ObjectValue, StringValue}
-import lucuma.core.math.{
-  Angle,
-  Declination,
-  Epoch,
-  HourAngle,
-  Parallax,
-  ProperMotion,
-  RadialVelocity,
-  RightAscension,
-  Wavelength
-}
-import lucuma.core.math.units.{CentimetersPerSecond, MetersPerSecond}
 import coulomb.*
 import coulomb.ops.algebra.spire.all.given
 import coulomb.policy.spire.standard.given
@@ -25,7 +11,23 @@ import coulomb.syntax.*
 import coulomb.units.si.*
 import coulomb.units.si.given
 import coulomb.units.si.prefixes.*
+import edu.gemini.grackle.Value
+import edu.gemini.grackle.Value.FloatValue
+import edu.gemini.grackle.Value.IntValue
+import edu.gemini.grackle.Value.ObjectValue
+import edu.gemini.grackle.Value.StringValue
+import lucuma.core.math.Angle
+import lucuma.core.math.Declination
+import lucuma.core.math.Epoch
+import lucuma.core.math.HourAngle
+import lucuma.core.math.Parallax
+import lucuma.core.math.ProperMotion
+import lucuma.core.math.RadialVelocity
+import lucuma.core.math.RightAscension
+import lucuma.core.math.Wavelength
 import lucuma.core.math.skycalc.solver.HourAngleSolver
+import lucuma.core.math.units.CentimetersPerSecond
+import lucuma.core.math.units.MetersPerSecond
 import lucuma.core.model.NonNegDuration
 
 import java.time.Duration

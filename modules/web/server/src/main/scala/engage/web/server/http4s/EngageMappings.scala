@@ -4,8 +4,8 @@
 package engage.web.server.http4s
 
 import cats.Applicative
-import cats.data.NonEmptyChain
 import cats.data.Ior
+import cats.data.NonEmptyChain
 import cats.effect.Sync
 import cats.effect.syntax.all.*
 import cats.syntax.all.*
@@ -24,34 +24,42 @@ import edu.gemini.grackle.QueryCompiler.SelectElaborator
 import edu.gemini.grackle.Result
 import edu.gemini.grackle.Schema
 import edu.gemini.grackle.TypeRef
-import edu.gemini.grackle.Value.{BooleanValue, FloatValue, IntValue, ObjectValue, StringValue}
 import edu.gemini.grackle.Value
+import edu.gemini.grackle.Value.BooleanValue
+import edu.gemini.grackle.Value.FloatValue
+import edu.gemini.grackle.Value.IntValue
+import edu.gemini.grackle.Value.ObjectValue
+import edu.gemini.grackle.Value.StringValue
 import edu.gemini.grackle.circe.CirceMapping
-import edu.gemini.schema.util.{SchemaStitcher, SourceResolver}
+import edu.gemini.schema.util.SchemaStitcher
+import edu.gemini.schema.util.SourceResolver
 import engage.server.EngageEngine
-import engage.server.tcs.{FollowStatus, ParkStatus, SlewConfig, SlewOptions, Target}
+import engage.server.tcs.FollowStatus
+import engage.server.tcs.ParkStatus
+import engage.server.tcs.SlewConfig
+import engage.server.tcs.SlewOptions
+import engage.server.tcs.Target
 import io.circe.Decoder
 import io.circe.Encoder
 import io.circe.Json
 import io.circe.syntax.*
-import lucuma.core.math.{
-  Coordinates,
-  Declination,
-  Epoch,
-  Parallax,
-  ProperMotion,
-  RadialVelocity,
-  RightAscension,
-  Wavelength
-}
+import lucuma.core.math.Coordinates
+import lucuma.core.math.Declination
+import lucuma.core.math.Epoch
+import lucuma.core.math.Parallax
+import lucuma.core.math.ProperMotion
+import lucuma.core.math.RadialVelocity
+import lucuma.core.math.RightAscension
+import lucuma.core.math.Wavelength
 import org.typelevel.log4cats.Logger
 import spire.math.Algebraic.Expr.Sub
 
-import scala.io.Source
-import scala.reflect.{ClassTag, classTag}
-import scala.util.Using
 import java.nio.file.Path as JPath
+import scala.io.Source
+import scala.reflect.ClassTag
+import scala.reflect.classTag
 import scala.tools.nsc.doc.base.comment.ColumnOption
+import scala.util.Using
 
 class EngageMappings[F[_]: Sync](server: EngageEngine[F])(override val schema: Schema)
     extends CirceMapping[F] {

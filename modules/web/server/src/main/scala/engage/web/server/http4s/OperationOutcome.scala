@@ -6,8 +6,9 @@ package engage.web.server.http4s
 import cats.Eq
 import cats.syntax.eq.*
 import cats.syntax.option.*
-import OperationResult.*
 import io.circe.Encoder
+
+import OperationResult.*
 
 final case class OperationOutcome(
   result: OperationResult,
