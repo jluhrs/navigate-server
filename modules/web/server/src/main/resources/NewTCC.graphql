@@ -29,13 +29,6 @@ input SlewOptionsInput {
     autoparkAowfs:            Boolean!
 }
 
-"""Slew Options"""
-type SlewOptions {
-  stopGuide: Boolean!
-  clearGuide: Boolean!
-  autoParkProbes: Boolean!
-}
-
 enum ParkStatus {
     NOT_PARKED
     PARKED
