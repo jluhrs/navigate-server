@@ -16,7 +16,7 @@ import com.typesafe.sbt.packager.docker._
 //lazy val jtsVersion                  = "0.0.9"
 //lazy val svgdotjsVersion             = "0.0.1"
 
-name := "engage"
+name := "navigate"
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
@@ -33,15 +33,15 @@ Global / resolvers ++= Resolver.sonatypeOssRepos("public")
 enablePlugins(GitBranchPrompt)
 
 // Custom commands to facilitate web development
-val startEngageAllCommands = List(
-  "engage_web_server/reStart"
+val startNavigateAllCommands = List(
+  "navigate_web_server/reStart"
 )
-val stopEngageAllCommands  = List(
-  "engage_web_server/reStop"
+val stopNavigateAllCommands  = List(
+  "navigate_web_server/reStop"
 )
 
-addCommandAlias("startEngageAll", startEngageAllCommands.mkString(";", ";", ""))
-addCommandAlias("stopEngageAll", stopEngageAllCommands.mkString(";", ";", ""))
+addCommandAlias("startNavigateAll", startNavigateAllCommands.mkString(";", ";", ""))
+addCommandAlias("stopNavigateAll", stopNavigateAllCommands.mkString(";", ";", ""))
 
 ThisBuild / resolvers ++= Resolver.sonatypeOssRepos("snapshots")
 
@@ -57,9 +57,9 @@ ThisBuild / crossScalaVersions := Seq("3.2.2")
 
 lazy val root = tlCrossRootProject.aggregate(epics,
                                              stateengine,
-                                             engage_web_server,
-                                             engage_model,
-                                             app_engage_server
+                                             navigate_web_server,
+                                             navigate_model,
+                                             app_navigate_server
 )
 
 lazy val epics = project
@@ -90,13 +90,13 @@ lazy val stateengine = project
     ) ++ Libraries.MUnit.value
   )
 
-lazy val engage_web_server = project
+lazy val navigate_web_server = project
   .in(file("modules/web/server"))
   .enablePlugins(BuildInfoPlugin)
   .enablePlugins(GitBranchPrompt)
   .settings(commonSettings: _*)
   .settings(
-    name                 := "engage_web_server",
+    name                 := "navigate_web_server",
     libraryDependencies ++= Seq(
       UnboundId,
       JwtCore,
@@ -114,7 +114,7 @@ lazy val engage_web_server = project
     ) ++
       Http4sClient ++ Http4s ++ PureConfig ++ Logging.value ++ MUnit.value ++ Grackle.value,
     // Supports launching the server in the background
-    reStart / mainClass  := Some("engage.web.server.http4s.WebServerLauncher"),
+    reStart / mainClass  := Some("navigate.web.server.http4s.WebServerLauncher"),
     Compile / bspEnabled := false
   )
   .settings(
@@ -122,13 +122,13 @@ lazy val engage_web_server = project
     buildInfoKeys ++= Seq[BuildInfoKey](name, version, buildInfoBuildNumber),
     buildInfoOptions += BuildInfoOption.BuildTime,
     buildInfoObject           := "OcsBuildInfo",
-    buildInfoPackage          := "engage.web.server"
+    buildInfoPackage          := "navigate.web.server"
   )
-  .dependsOn(engage_server)
-  .dependsOn(engage_model.jvm % "compile->compile;test->test")
+  .dependsOn(navigate_server)
+  .dependsOn(navigate_model.jvm % "compile->compile;test->test")
   .dependsOn(schema_util)
 
-lazy val engage_model = crossProject(JVMPlatform, JSPlatform)
+lazy val navigate_model = crossProject(JVMPlatform, JSPlatform)
   .crossType(CrossType.Full)
   .in(file("modules/model"))
   .enablePlugins(GitBranchPrompt)
@@ -161,7 +161,7 @@ lazy val schema_util = project
     ) ++ MUnit.value ++ LucumaCore.value ++ Http4sClient ++ Grackle.value
   )
 
-lazy val engage_server = project
+lazy val navigate_server = project
   .in(file("modules/server"))
   .settings(commonSettings: _*)
   .settings(
@@ -171,21 +171,21 @@ lazy val engage_server = project
       Log4Cats.value
     ) ++ MUnit.value ++ LucumaCore.value ++ Http4sClient
   )
-  .dependsOn(engage_model.jvm % "compile->compile;test->test")
+  .dependsOn(navigate_model.jvm % "compile->compile;test->test")
   .dependsOn(epics)
   .dependsOn(stateengine)
 
 /**
- * Project for the engage server app for development
+ * Project for the navigate server app for development
  */
-lazy val app_engage_server = preventPublication(project.in(file("app/engage-server")))
-  .dependsOn(engage_web_server)
-  .aggregate(engage_web_server)
+lazy val app_navigate_server = preventPublication(project.in(file("app/navigate-server")))
+  .dependsOn(navigate_web_server)
+  .aggregate(navigate_web_server)
   .enablePlugins(JavaServerAppPackaging)
   .enablePlugins(GitBranchPrompt)
-  .settings(engageCommonSettings: _*)
+  .settings(navigateCommonSettings: _*)
   .settings(
-    description          := "Engage server for local testing",
+    description          := "Navigate server for local testing",
     // Put the jar files in the lib dir
     Universal / mappings += {
       val jar = (Compile / packageBin).value
@@ -204,25 +204,25 @@ lazy val app_engage_server = preventPublication(project.in(file("app/engage-serv
       f -> ("bin/" + f.getName)
     },
     Universal / mappings += {
-      val f = (Compile / resourceDirectory).value / "engage-server.env"
+      val f = (Compile / resourceDirectory).value / "navigate-server.env"
       f -> ("systemd/" + f.getName)
     },
     Universal / mappings += {
-      val f = (Compile / resourceDirectory).value / "engage-server.service"
+      val f = (Compile / resourceDirectory).value / "navigate-server.service"
       f -> ("systemd/" + f.getName)
     }
   )
 
 /**
- * Common settings for the Engage instances
+ * Common settings for the Navigate instances
  */
-lazy val engageCommonSettings = Seq(
+lazy val navigateCommonSettings = Seq(
   // Main class for launching
-  Compile / mainClass           := Some("engage.web.server.http4s.WebServerLauncher"),
+  Compile / mainClass           := Some("navigate.web.server.http4s.WebServerLauncher"),
   // This is important to keep the file generation order correctly
   Universal / parallelExecution := false,
   // Name of the launch script
-  executableScriptName          := "engage-server",
+  executableScriptName          := "navigate-server",
   // Don't create launchers for Windows
   makeBatScripts                := Seq.empty,
   // Specify a different name for the config file
@@ -230,7 +230,7 @@ lazy val engageCommonSettings = Seq(
   bashScriptExtraDefines += """addJava "-Dlogback.configurationFile=${app_home}/../conf/logback.xml"""",
   // Copy logback.xml to let users customize it on site
   Universal / mappings += {
-    val f = (engage_web_server / Compile / resourceDirectory).value / "logback.xml"
+    val f = (navigate_web_server / Compile / resourceDirectory).value / "logback.xml"
     f -> ("conf/" + f.getName)
   },
   // Launch options

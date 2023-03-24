@@ -17,14 +17,6 @@ pull_request_rules:
   - status-success=Build and Test (ubuntu-latest, 3.2.2, temurin@17, rootJVM)
   actions:
     merge: {}
-- name: Label engage-server PRs
-  conditions:
-  - files~=^app/engage-server/
-  actions:
-    label:
-      add:
-      - engage-server
-      remove: []
 - name: Label epics PRs
   conditions:
   - files~=^modules/epics/
@@ -40,6 +32,14 @@ pull_request_rules:
     label:
       add:
       - model
+      remove: []
+- name: Label navigate-server PRs
+  conditions:
+  - files~=^app/navigate-server/
+  actions:
+    label:
+      add:
+      - navigate-server
       remove: []
 - name: Label schema-util PRs
   conditions:
