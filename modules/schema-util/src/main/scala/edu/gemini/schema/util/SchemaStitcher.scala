@@ -160,7 +160,7 @@ object SchemaStitcher {
     ) *> wsp.rep0 *> elementNameParser).backtrack.rep0)
       .map { case (x, xx) => NonEmptySet.of(x, xx: _*) }
   private val elementListParser: Parser[Elements]                        = elementNameListParser.map(ElementList.apply)
-  private val filenameCharParser: Parser[Char]                           = digit | alpha | charIn('.', '_', '/')
+  private val filenameCharParser: Parser[Char]                           = digit | alpha | charIn('.', '_', System.getProperty("file.separator").headOption.getOrElse('/'))
   private val schemaFilenameParser: Parser[Path]                         =
     (Parser.char('\"') *> filenameCharParser.rep <* Parser.char('\"')).map(x =>
       Path.of(x.toList.mkString(""))

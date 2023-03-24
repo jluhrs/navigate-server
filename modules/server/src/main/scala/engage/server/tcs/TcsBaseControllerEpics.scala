@@ -166,22 +166,22 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
 
   protected def setSlewOptions(so: SlewOptions): TcsCommands[F] => TcsCommands[F] =
       (x: TcsCommands[F]) =>
-        x.slewOptionsCommand.zeroChopThrow(so.zeroChopThrow)
-          .slewOptionsCommand.zeroSourceOffset(so.zeroSourceOffset)
-          .slewOptionsCommand.zeroSourceDiffTrack(so.zeroSourceDiffTrack)
-          .slewOptionsCommand.zeroMountOffset(so.zeroMountOffset)
-          .slewOptionsCommand.zeroMountDiffTrack(so.zeroMountDiffTrack)
-          .slewOptionsCommand.shortcircuitTargetFilter(so.shortcircuitTargetFilter)
-          .slewOptionsCommand.shortcircuitMountFilter(so.shortcircuitMountFilter)
-          .slewOptionsCommand.resetPointing(so.resetPointing)
-          .slewOptionsCommand.stopGuide(so.stopGuide)
-          .slewOptionsCommand.zeroGuideOffset(so.zeroGuideOffset)
-          .slewOptionsCommand.zeroInstrumentOffset(so.zeroInstrumentOffset)
-          .slewOptionsCommand.autoparkPwfs1(so.autoparkPwfs1)
-          .slewOptionsCommand.autoparkPwfs2(so.autoparkPwfs2)
-          .slewOptionsCommand.autoparkOiwfs(so.autoparkOiwfs)
-          .slewOptionsCommand.autoparkGems(so.autoparkGems)
-          .slewOptionsCommand.autoparkAowfs(so.autoparkAowfs)
+        x.slewOptionsCommand.zeroChopThrow(ZeroChopThrow.value(so.zeroChopThrow))
+          .slewOptionsCommand.zeroSourceOffset(ZeroSourceOffset.value(so.zeroSourceOffset))
+          .slewOptionsCommand.zeroSourceDiffTrack(ZeroSourceDiffTrack.value(so.zeroSourceDiffTrack))
+          .slewOptionsCommand.zeroMountOffset(ZeroMountOffset.value(so.zeroMountOffset))
+          .slewOptionsCommand.zeroMountDiffTrack(ZeroMountDiffTrack.value(so.zeroMountDiffTrack))
+          .slewOptionsCommand.shortcircuitTargetFilter(ShortcircuitTargetFilter.value(so.shortcircuitTargetFilter))
+          .slewOptionsCommand.shortcircuitMountFilter(ShortcircuitMountFilter.value(so.shortcircuitMountFilter))
+          .slewOptionsCommand.resetPointing(ResetPointing.value(so.resetPointing))
+          .slewOptionsCommand.stopGuide(StopGuide.value(so.stopGuide))
+          .slewOptionsCommand.zeroGuideOffset(ZeroGuideOffset.value(so.zeroGuideOffset))
+          .slewOptionsCommand.zeroInstrumentOffset(ZeroInstrumentOffset.value(so.zeroInstrumentOffset))
+          .slewOptionsCommand.autoparkPwfs1(AutoparkPwfs1.value(so.autoparkPwfs1))
+          .slewOptionsCommand.autoparkPwfs2(AutoparkPwfs2.value(so.autoparkPwfs2))
+          .slewOptionsCommand.autoparkOiwfs(AutoparkOiwfs.value(so.autoparkOiwfs))
+          .slewOptionsCommand.autoparkGems(AutoparkGems.value(so.autoparkGems))
+          .slewOptionsCommand.autoparkAowfs(AutoparkAowfs.value(so.autoparkAowfs))
 
   override def applyTcsConfig(config: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
     setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.sourceACmd),

@@ -107,22 +107,22 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
     )
 
     val slewOptions = SlewOptions(
-      true,
-      false,
-      true,
-      false,
-      true,
-      false,
-      true,
-      false,
-      true,
-      false,
-      true,
-      false,
-      true,
-      false,
-      true,
-      false
+      ZeroChopThrow(true),
+      ZeroSourceOffset(false),
+      ZeroSourceDiffTrack(true),
+      ZeroMountOffset(false),
+      ZeroMountDiffTrack(true),
+      ShortcircuitTargetFilter(false),
+      ShortcircuitMountFilter(true),
+      ResetPointing(false),
+      StopGuide(true),
+      ZeroGuideOffset(false),
+      ZeroInstrumentOffset(true),
+      AutoparkPwfs1(false),
+      AutoparkPwfs2(true),
+      AutoparkOiwfs(false),
+      AutoparkGems(true),
+      AutoparkAowfs(false)
     )
 
     for {

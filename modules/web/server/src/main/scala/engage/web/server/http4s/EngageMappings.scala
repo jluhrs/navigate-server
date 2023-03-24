@@ -34,11 +34,27 @@ import edu.gemini.grackle.circe.CirceMapping
 import edu.gemini.schema.util.SchemaStitcher
 import edu.gemini.schema.util.SourceResolver
 import engage.server.EngageEngine
+import engage.server.tcs.AutoparkAowfs
+import engage.server.tcs.AutoparkGems
+import engage.server.tcs.AutoparkOiwfs
+import engage.server.tcs.AutoparkPwfs1
+import engage.server.tcs.AutoparkPwfs2
 import engage.server.tcs.FollowStatus
 import engage.server.tcs.ParkStatus
+import engage.server.tcs.ResetPointing
+import engage.server.tcs.ShortcircuitMountFilter
+import engage.server.tcs.ShortcircuitTargetFilter
 import engage.server.tcs.SlewConfig
 import engage.server.tcs.SlewOptions
+import engage.server.tcs.StopGuide
 import engage.server.tcs.Target
+import engage.server.tcs.ZeroChopThrow
+import engage.server.tcs.ZeroGuideOffset
+import engage.server.tcs.ZeroInstrumentOffset
+import engage.server.tcs.ZeroMountDiffTrack
+import engage.server.tcs.ZeroMountOffset
+import engage.server.tcs.ZeroSourceDiffTrack
+import engage.server.tcs.ZeroSourceOffset
 import io.circe.Decoder
 import io.circe.Encoder
 import io.circe.Json
@@ -157,22 +173,36 @@ object EngageMappings extends GrackleParsers {
   }
 
   def parseSlewOptionsInput(l: List[(String, Value)]): Option[SlewOptions] = for {
-    zct  <- l.collectFirst { case ("zeroChopThrow", BooleanValue(v)) => v }
+    zct  <-
+      l.collectFirst { case ("zeroChopThrow", BooleanValue(v)) => v }.map(ZeroChopThrow.value(_))
     zso  <- l.collectFirst { case ("zeroSourceOffset", BooleanValue(v)) => v }
+              .map(ZeroSourceOffset.value(_))
     zsdt <- l.collectFirst { case ("zeroSourceDiffTrack", BooleanValue(v)) => v }
+              .map(ZeroSourceDiffTrack.value(_))
     zmo  <- l.collectFirst { case ("zeroMountOffset", BooleanValue(v)) => v }
+              .map(ZeroMountOffset.value(_))
     zmdt <- l.collectFirst { case ("zeroMountDiffTrack", BooleanValue(v)) => v }
+              .map(ZeroMountDiffTrack.value(_))
     stf  <- l.collectFirst { case ("shortcircuitTargetFilter", BooleanValue(v)) => v }
+              .map(ShortcircuitTargetFilter.value(_))
     smf  <- l.collectFirst { case ("shortcircuitMountFilter", BooleanValue(v)) => v }
-    rp   <- l.collectFirst { case ("resetPointing", BooleanValue(v)) => v }
-    sg   <- l.collectFirst { case ("stopGuide", BooleanValue(v)) => v }
+              .map(ShortcircuitMountFilter.value(_))
+    rp   <-
+      l.collectFirst { case ("resetPointing", BooleanValue(v)) => v }.map(ResetPointing.value(_))
+    sg   <- l.collectFirst { case ("stopGuide", BooleanValue(v)) => v }.map(StopGuide.value(_))
     zgo  <- l.collectFirst { case ("zeroGuideOffset", BooleanValue(v)) => v }
+              .map(ZeroGuideOffset.value(_))
     zio  <- l.collectFirst { case ("zeroInstrumentOffset", BooleanValue(v)) => v }
-    ap1  <- l.collectFirst { case ("autoparkPwfs1", BooleanValue(v)) => v }
-    ap2  <- l.collectFirst { case ("autoparkPwfs2", BooleanValue(v)) => v }
-    ao   <- l.collectFirst { case ("autoparkOiwfs", BooleanValue(v)) => v }
-    ag   <- l.collectFirst { case ("autoparkGems", BooleanValue(v)) => v }
-    aa   <- l.collectFirst { case ("autoparkAowfs", BooleanValue(v)) => v }
+              .map(ZeroInstrumentOffset.value(_))
+    ap1  <-
+      l.collectFirst { case ("autoparkPwfs1", BooleanValue(v)) => v }.map(AutoparkPwfs1.value(_))
+    ap2  <-
+      l.collectFirst { case ("autoparkPwfs2", BooleanValue(v)) => v }.map(AutoparkPwfs2.value(_))
+    ao   <-
+      l.collectFirst { case ("autoparkOiwfs", BooleanValue(v)) => v }.map(AutoparkOiwfs.value(_))
+    ag   <- l.collectFirst { case ("autoparkGems", BooleanValue(v)) => v }.map(AutoparkGems.value(_))
+    aa   <-
+      l.collectFirst { case ("autoparkAowfs", BooleanValue(v)) => v }.map(AutoparkAowfs.value(_))
   } yield SlewOptions(
     zct,
     zso,
