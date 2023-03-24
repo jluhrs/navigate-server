@@ -75,5 +75,3 @@ smartgcal
 node_modules/
 package-lock.json
 
-# Project specific
-modules/edu.gemini.engage.web/edu.gemini.engage.web.server/log/

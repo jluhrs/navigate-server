@@ -1,0 +1,21 @@
+// Copyright (c) 2016-2023 Association of Universities for Research in Astronomy, Inc. (AURA)
+// For license information see LICENSE or https://opensource.org/licenses/BSD-3-Clause
+
+package navigate.server.acm
+
+import cats.{Applicative, Parallel}
+import cats.syntax.all._
+import navigate.epics.{EpicsSystem, RemoteChannel}
+import navigate.epics.VerifiedEpics.VerifiedEpics
+
+object ParameterList {
+  type ParameterList[F[_]] = List[VerifiedEpics[F, F, Unit]]
+
+  implicit class ParameterListOps[F[_]: Applicative: Parallel](l: ParameterList[F]) extends AnyRef {
+    def compile: VerifiedEpics[F, F, Unit] = new VerifiedEpics[F, F, Unit] {
+      override val systems: Map[EpicsSystem.TelltaleChannel[F], Set[RemoteChannel[F]]] =
+        l.flatMap(_.systems.toList).groupBy(_._1).view.mapValues(_.flatMap(_._2.toList).toSet).toMap
+      override val run: F[Unit]                                                        = l.map(_.run).parSequence.void
+    }
+  }
+}
