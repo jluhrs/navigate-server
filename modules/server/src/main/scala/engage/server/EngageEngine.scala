@@ -3,10 +3,10 @@
 
 package engage.server
 
-import cats.ApplicativeThrow
+import cats.{Applicative, ApplicativeThrow}
 import cats.effect.{Async, Concurrent, Ref, Temporal}
 import cats.effect.kernel.Sync
-import cats.syntax.all._
+import cats.syntax.all.*
 import engage.model.EngageCommand.{
   CrcsFollow,
   CrcsMove,
@@ -14,12 +14,14 @@ import engage.model.EngageCommand.{
   CrcsStop,
   EcsCarouselMode,
   McsFollow,
-  McsPark
+  McsPark,
+  Slew
 }
 import engage.model.{EngageCommand, EngageEvent}
 import engage.model.EngageEvent.{CommandFailure, CommandPaused, CommandStart, CommandSuccess}
 import engage.model.config.EngageEngineConfiguration
 import engage.model.enums.{DomeMode, ShutterMode}
+import engage.server.tcs.SlewConfig
 import engage.stateengine.StateEngine
 import fs2.{Pipe, Stream}
 import lucuma.core.enums.Site
@@ -49,6 +51,7 @@ trait EngageEngine[F[_]] {
     shutterEnable:               Boolean
   ): F[Unit]
   def ecsVentGatesMove(gateEast: Double, westGate: Double): F[Unit]
+  def slew(slewConfig:           SlewConfig): F[Unit]
 
 }
 
@@ -140,7 +143,15 @@ object EngageEngine {
       Focus[State](_.ecsDomeModeInProgress)
     )
 
-    override def ecsVentGatesMove(gateEast: Double, westGate: Double): F[Unit] = ???
+    // TODO
+    override def ecsVentGatesMove(gateEast: Double, westGate: Double): F[Unit] = Applicative[F].unit
+
+    override def slew(slewConfig: SlewConfig): F[Unit] = command(
+      engine,
+      Slew,
+      systems.tcsSouth.slew(slewConfig),
+      Focus[State](_.slewInProgress)
+    )
   }
 
   def build[F[_]: Concurrent](
@@ -159,7 +170,8 @@ object EngageEngine {
     rotFollowInProgress:       Boolean,
     rotMoveInProgress:         Boolean,
     ecsDomeModeInProgress:     Boolean,
-    ecsVentGateMoveInProgress: Boolean
+    ecsVentGateMoveInProgress: Boolean,
+    slewInProgress:            Boolean
   ) {
     lazy val tcsActionInProgress: Boolean =
       mcsParkInProgress ||
@@ -169,7 +181,8 @@ object EngageEngine {
         rotFollowInProgress ||
         rotMoveInProgress ||
         ecsDomeModeInProgress ||
-        ecsVentGateMoveInProgress
+        ecsVentGateMoveInProgress ||
+        slewInProgress
   }
 
   val startState: State = State(
@@ -180,7 +193,8 @@ object EngageEngine {
     rotFollowInProgress = false,
     rotMoveInProgress = false,
     ecsDomeModeInProgress = false,
-    ecsVentGateMoveInProgress = false
+    ecsVentGateMoveInProgress = false,
+    slewInProgress = false
   )
 
   private def command[F[_]: ApplicativeThrow](

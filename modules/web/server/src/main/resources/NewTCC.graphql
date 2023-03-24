@@ -1,3 +1,34 @@
+#import NonEmptyString, Sidereal, TargetId, Nonsidereal, SiderealInput, NonsiderealInput, WavelengthInput from "lucuma/schemas/ObservationDB.graphql"
+
+"""Target properties input"""
+input TargetPropertiesInput {
+  id: TargetId!
+  name: NonEmptyString!
+  sidereal: SiderealInput
+  nonsidereal: NonsiderealInput
+  wavelength: WavelengthInput!
+}
+
+"""Slew Options input"""
+input SlewOptionsInput {
+    zeroChopThrow:            Boolean!
+    zeroSourceOffset:         Boolean!
+    zeroSourceDiffTrack:      Boolean!
+    zeroMountOffset:          Boolean!
+    zeroMountDiffTrack:       Boolean!
+    shortcircuitTargetFilter: Boolean!
+    shortcircuitMountFilter:  Boolean!
+    resetPointing:            Boolean!
+    stopGuide:                Boolean!
+    zeroGuideOffset:          Boolean!
+    zeroInstrumentOffset:     Boolean!
+    autoparkPwfs1:            Boolean!
+    autoparkPwfs2:            Boolean!
+    autoparkOiwfs:            Boolean!
+    autoparkGems:             Boolean!
+    autoparkAowfs:            Boolean!
+}
+
 enum ParkStatus {
     NOT_PARKED
     PARKED
@@ -17,12 +48,42 @@ type TelescopeStatus {
     mount: MountStatus!
 }
 
+input SlewInput {
+    slewOptions: SlewOptionsInput!
+    baseTarget: TargetPropertiesInput!
+}
+
+type Target {
+  """Target ID"""
+  id: TargetId!
+
+  """Target name."""
+  name: NonEmptyString!
+
+  """Sidereal tracking information, if this is a sidereal target"""
+  sidereal: Sidereal
+
+  """Nonsidereal tracking information, if this is a nonsidereal target"""
+  nonsidereal: Nonsidereal
+}
+
+enum OperationResult {
+    SUCCESS
+    FAILURE
+}
+
+type OperationOutcome {
+    result: OperationResult!
+    msg: String
+}
+
 type Query {
     telescopeStatus: TelescopeStatus!
 }
 
 type Mutation {
-    mountPark: ParkStatus!
-    mountFollow(enable: Boolean!): FollowStatus!
+    mountPark: OperationOutcome!
+    mountFollow(enable: Boolean!): OperationOutcome!
+    slew(slewParams: SlewInput!): OperationOutcome!
 }
 

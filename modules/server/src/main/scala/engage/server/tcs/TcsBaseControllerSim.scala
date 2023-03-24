@@ -40,4 +40,7 @@ class TcsBaseControllerSim[F[_]: Applicative] extends TcsBaseController[F] {
 
   override def applyTcsConfig(config: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
     Applicative[F].pure(ApplyCommandResult.Completed)
+
+  override def slew(config: SlewConfig): F[ApplyCommandResult] =
+    Applicative[F].pure(ApplyCommandResult.Completed)
 }

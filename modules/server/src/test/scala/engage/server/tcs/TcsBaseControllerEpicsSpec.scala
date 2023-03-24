@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2022 Association of Universities for Research in Astronomy, Inc. (AURA)
+// Copyright (c) 2016-2023 Association of Universities for Research in Astronomy, Inc. (AURA)
 // For license information see LICENSE or https://opensource.org/licenses/BSD-3-Clause
 
 package engage.server.tcs
@@ -9,8 +9,9 @@ import cats.syntax.all._
 import engage.model.enums.{DomeMode, ShutterMode}
 import engage.server.acm.CadDirective
 import engage.server.epicsdata.{BinaryOnOff, BinaryYesNo}
-import engage.server.tcs.TcsBaseController.{SiderealTarget, TcsConfig}
-import lucuma.core.math.{Coordinates, Epoch}
+import engage.server.tcs.Target.SiderealTarget
+import engage.server.tcs.TcsBaseController.TcsConfig
+import lucuma.core.math.{Coordinates, Epoch, Wavelength}
 import munit.CatsEffectSuite
 import squants.space.AngleConversions._
 
@@ -94,22 +95,40 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
     }
   }
 
-  test("Tcs config command") {
+  test("Slew command") {
     val target = SiderealTarget(
       objectName = "dummy",
-      brightness = 7.3,
+      wavelength = Wavelength.unsafeFromIntPicometers(400 * 1000),
       coordinates = Coordinates.unsafeFromRadians(-0.321, 0.123),
       epoch = Epoch.J2000,
-      equinox = "XXX",
       properMotion = none,
       radialVelocity = none,
       parallax = none
     )
 
+    val slewOptions = SlewOptions(
+      ZeroChopThrow(true),
+      ZeroSourceOffset(false),
+      ZeroSourceDiffTrack(true),
+      ZeroMountOffset(false),
+      ZeroMountDiffTrack(true),
+      ShortcircuitTargetFilter(false),
+      ShortcircuitMountFilter(true),
+      ResetPointing(false),
+      StopGuide(true),
+      ZeroGuideOffset(false),
+      ZeroInstrumentOffset(true),
+      AutoparkPwfs1(false),
+      AutoparkPwfs2(true),
+      AutoparkOiwfs(false),
+      AutoparkGems(true),
+      AutoparkAowfs(false)
+    )
+
     for {
       x        <- createController
       (st, ctr) = x
-      _        <- ctr.applyTcsConfig(TcsConfig(target))
+      _        <- ctr.slew(SlewConfig(slewOptions, target))
       rs       <- st.get
     } yield {
       assert(rs.sourceA.objectName.connected)
@@ -125,17 +144,47 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assert(rs.sourceA.coordSystem.connected)
       assert(rs.sourceA.ephemerisFile.connected)
       assertEquals(rs.sourceA.objectName.value, target.objectName.some)
-      assertEquals(rs.sourceA.brightness.value, target.brightness.some)
       assertEquals(rs.sourceA.coord1.value, target.coordinates.ra.toAngle.toDoubleDegrees.some)
       assertEquals(rs.sourceA.coord2.value, target.coordinates.dec.toAngle.toDoubleDegrees.some)
       assertEquals(rs.sourceA.properMotion1.value, 0.0.some)
       assertEquals(rs.sourceA.properMotion2.value, 0.0.some)
       assertEquals(rs.sourceA.epoch.value, target.epoch.toString().some)
-      assertEquals(rs.sourceA.equinox.value, target.equinox.some)
       assertEquals(rs.sourceA.parallax.value, 0.0.some)
       assertEquals(rs.sourceA.radialVelocity.value, 0.0.some)
       assertEquals(rs.sourceA.coordSystem.value, "FK5/J2000".some)
       assertEquals(rs.sourceA.ephemerisFile.value, "".some)
+      assert(rs.slew.zeroChopThrow.connected)
+      assert(rs.slew.zeroSourceOffset.connected)
+      assert(rs.slew.zeroSourceDiffTrack.connected)
+      assert(rs.slew.zeroMountOffset.connected)
+      assert(rs.slew.zeroMountDiffTrack.connected)
+      assert(rs.slew.shortcircuitTargetFilter.connected)
+      assert(rs.slew.shortcircuitMountFilter.connected)
+      assert(rs.slew.resetPointing.connected)
+      assert(rs.slew.stopGuide.connected)
+      assert(rs.slew.zeroGuideOffset.connected)
+      assert(rs.slew.zeroInstrumentOffset.connected)
+      assert(rs.slew.autoparkPwfs1.connected)
+      assert(rs.slew.autoparkPwfs2.connected)
+      assert(rs.slew.autoparkOiwfs.connected)
+      assert(rs.slew.autoparkGems.connected)
+      assert(rs.slew.autoparkAowfs.connected)
+      assertEquals(rs.slew.zeroChopThrow.value, BinaryOnOff.On.some)
+      assertEquals(rs.slew.zeroSourceOffset.value, BinaryOnOff.Off.some)
+      assertEquals(rs.slew.zeroSourceDiffTrack.value, BinaryOnOff.On.some)
+      assertEquals(rs.slew.zeroMountOffset.value, BinaryOnOff.Off.some)
+      assertEquals(rs.slew.zeroMountDiffTrack.value, BinaryOnOff.On.some)
+      assertEquals(rs.slew.shortcircuitTargetFilter.value, BinaryOnOff.Off.some)
+      assertEquals(rs.slew.shortcircuitMountFilter.value, BinaryOnOff.On.some)
+      assertEquals(rs.slew.resetPointing.value, BinaryOnOff.Off.some)
+      assertEquals(rs.slew.stopGuide.value, BinaryOnOff.On.some)
+      assertEquals(rs.slew.zeroGuideOffset.value, BinaryOnOff.Off.some)
+      assertEquals(rs.slew.zeroInstrumentOffset.value, BinaryOnOff.On.some)
+      assertEquals(rs.slew.autoparkPwfs1.value, BinaryOnOff.Off.some)
+      assertEquals(rs.slew.autoparkPwfs2.value, BinaryOnOff.On.some)
+      assertEquals(rs.slew.autoparkOiwfs.value, BinaryOnOff.Off.some)
+      assertEquals(rs.slew.autoparkGems.value, BinaryOnOff.On.some)
+      assertEquals(rs.slew.autoparkAowfs.value, BinaryOnOff.Off.some)
     }
   }
 
