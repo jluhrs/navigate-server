@@ -85,4 +85,37 @@ class VerifiedEpicsSpec extends CatsEffectSuite {
       }
   }
 
+  epicsService.test(
+    "Raises an Exception if it cannot connect channels when running a computation."
+  ) { service =>
+    interceptIO[Throwable] {
+      val testVal: Int = 1
+      (for {
+        tt  <- service.getChannel[Int]("test:nonexistent").map(c => TelltaleChannel("foo", c))
+        ch1 <- service.getChannel[Double]("test:doubleVal")
+        ch2 <- service.getChannel[Int]("test:intVal")
+      } yield (tt, ch1, ch2))
+        .use { case (tt, ch1, ch2) =>
+          val q = for {
+            _  <- VerifiedEpics.writeChannel(tt, ch1)(IO.pure(testVal.toDouble))
+            fa <- VerifiedEpics.readChannel(tt, ch1).map(_.map(_ + 1))
+            _  <- VerifiedEpics.writeChannel(tt, ch2)(fa.map(_.toInt))
+            fr <- VerifiedEpics.readChannel[IO, Int](tt, ch2)
+          } yield fr
+
+          for {
+            tts1  <- tt.channel.getConnectionState
+            ch1s1 <- ch1.getConnectionState
+            r     <- TestEpicsServer.init("test:").use { _ =>
+                       q.verifiedRun(FiniteDuration(1, TimeUnit.SECONDS))
+                     }
+          } yield {
+            assertEquals(tts1, ConnectionState.NEVER_CONNECTED)
+            assertEquals(ch1s1, ConnectionState.NEVER_CONNECTED)
+            assertEquals(r, testVal + 1)
+          }
+        }
+    }
+  }
+
 }

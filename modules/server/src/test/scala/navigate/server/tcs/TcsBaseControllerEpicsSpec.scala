@@ -148,7 +148,7 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assertEquals(rs.sourceA.coord2.value, target.coordinates.dec.toAngle.toDoubleDegrees.some)
       assertEquals(rs.sourceA.properMotion1.value, 0.0.some)
       assertEquals(rs.sourceA.properMotion2.value, 0.0.some)
-      assertEquals(rs.sourceA.epoch.value, target.epoch.toString().some)
+      assertEquals(rs.sourceA.epoch.value, target.epoch.epochYear.some)
       assertEquals(rs.sourceA.parallax.value, 0.0.some)
       assertEquals(rs.sourceA.radialVelocity.value, 0.0.some)
       assertEquals(rs.sourceA.coordSystem.value, "FK5/J2000".some)

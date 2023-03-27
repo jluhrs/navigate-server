@@ -157,9 +157,17 @@ object VerifiedEpics {
     def verifiedRun(connectionTimeout: FiniteDuration): F[A] =
       v.systems
         .map { case (k, v) => EpicsSystem(k, v) }
-        .map(_.connectionCheck(connectionTimeout))
+        .map(x => x.connectionCheck(connectionTimeout).map((x, _)))
         .toList
-        .parSequence *> v.run
+        .parSequence
+        .flatMap { x =>
+          val bads = x.collect { case (s, false) => s.telltale.sysName }
+          bads.isEmpty.fold(
+            v.run,
+            Async[F]
+              .raiseError(new Throwable(s"Cannot connect to remote systems ${bads.mkString(",")}"))
+          )
+        }
   }
 
 }
