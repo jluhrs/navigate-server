@@ -80,7 +80,7 @@ object FreeLDAPAuthenticationService {
 class FreeLDAPAuthenticationService[F[_]: Sync: Logger](hosts: List[(String, Int)])
     extends AuthService[F] {
   import FreeLDAPAuthenticationService._
-  private implicit val resultEqual: Eq[ResultCode] = Eq.fromUniversalEquals
+  private given Eq[ResultCode] = Eq.fromUniversalEquals
 
   // Shorten the default timeout
   private val Timeout = 1000

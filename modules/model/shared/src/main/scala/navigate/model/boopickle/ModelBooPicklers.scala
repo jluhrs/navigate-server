@@ -30,15 +30,15 @@ import squants.time.TimeConversions._
 import java.time._
 
 /**
- * Contains boopickle implicit picklers of model objects Boopickle can auto derive encoders but it
- * is preferred to make them explicitly
+ * Contains boopickle given picklers of model objects Boopickle can auto derive encoders but it is
+ * preferred to make them explicitly
  */
 trait ModelBooPicklers extends BooPicklerSyntax {
-  implicit val yearPickler: Pickler[Year]           = transformPickler(Year.of)(_.getValue)
-  implicit val localDatePickler: Pickler[LocalDate] =
+  given Pickler[Year]      = transformPickler(Year.of)(_.getValue)
+  given Pickler[LocalDate] =
     transformPickler(LocalDate.ofEpochDay)(_.toEpochDay)
 
-  implicit val posLongPickler: Pickler[PosLong] =
+  given Pickler[PosLong] =
     transformPickler[PosLong, Long]((l: Long) =>
       RefType
         .applyRef[PosLong](l)
@@ -62,25 +62,25 @@ trait ModelBooPicklers extends BooPicklerSyntax {
   def enumeratedPickler[A: Enumerated]: Pickler[A] =
     valuesMapPickler[A, Int](sourceIndex[A])
 
-  implicit val timeProgressPickler: Pickler[Time] =
+  given Pickler[Time] =
     transformPickler((t: Double) => t.milliseconds)(_.toMilliseconds)
 
-  implicit val userDetailsPickler: Pickler[UserDetails] = generatePickler[UserDetails]
+  given Pickler[UserDetails] = generatePickler[UserDetails]
 
-  implicit val instantPickler: Pickler[Instant] =
+  given Pickler[Instant] =
     transformPickler((t: Long) => Instant.ofEpochMilli(t))(_.toEpochMilli)
 
-  implicit val clientIdPickler: Pickler[ClientId] = generatePickler[ClientId]
+  given Pickler[ClientId] = generatePickler[ClientId]
 
-  implicit val serverLogLevelPickler: Pickler[ServerLogLevel] = enumeratedPickler[ServerLogLevel]
+  given Pickler[ServerLogLevel] = enumeratedPickler[ServerLogLevel]
 
-  implicit val connectionOpenEventPickler: Pickler[ConnectionOpenEvent] =
+  given Pickler[ConnectionOpenEvent] =
     generatePickler[ConnectionOpenEvent]
-  implicit val serverLogMessagePickler: Pickler[ServerLogMessage]       =
+  given Pickler[ServerLogMessage]    =
     generatePickler[ServerLogMessage]
 
   // Composite pickler for the navigate event hierarchy
-  implicit val eventsPickler: CompositePickler[NavigateEvent] = compositePickler[NavigateEvent]
+  given CompositePickler[NavigateEvent] = compositePickler[NavigateEvent]
     .addConcreteType[ConnectionOpenEvent]
     .addConcreteType[ServerLogMessage]
     .addConcreteType[NullEvent.type]

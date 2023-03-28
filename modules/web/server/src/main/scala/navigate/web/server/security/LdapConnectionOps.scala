@@ -12,7 +12,7 @@ import scala.jdk.CollectionConverters._
 
 object LdapConnectionOps {
   // Extension methods for ldap connection
-  implicit class LdapConnectionOps(val c: LDAPConnection) extends AnyVal {
+  extension (c: LDAPConnection) {
     def authenticate(u: String, p: String): UID = {
       val UidExtractor = s"([\\w\\.]*)(\\@.*)?".r
 

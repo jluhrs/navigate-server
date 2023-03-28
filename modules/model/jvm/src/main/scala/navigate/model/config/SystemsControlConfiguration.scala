@@ -21,7 +21,7 @@ final case class SystemsControlConfiguration(
 }
 
 object SystemsControlConfiguration {
-  implicit val eqSystemsControl: Eq[SystemsControlConfiguration] =
+  given Eq[SystemsControlConfiguration] =
     Eq.by(x => (x.altair, x.gems, x.gcal, x.gpi, x.gsaoi, x.tcs))
 
 }

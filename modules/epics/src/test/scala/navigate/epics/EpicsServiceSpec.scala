@@ -21,7 +21,7 @@ class EpicsServiceSpec extends CatsEffectSuite {
     TestEpicsServer.init("test:").flatMap(_ => EpicsService.getBuilder.build[IO])
   )
 
-  implicit val clazz: Class[TestEnumerated] = classOf[TestEnumerated]
+  given Class[TestEnumerated] = classOf[TestEnumerated]
 
   epicsServer.test("Timeout trying to connect to nonexistent channel") { srv =>
     interceptIO[TimeoutException](
@@ -113,7 +113,7 @@ class EpicsServiceSpec extends CatsEffectSuite {
           dsp <- Dispatcher.sequential[IO]
           ch  <- srv.getChannel[Int]("test:heartbeat")
           _   <- Resource.eval(ch.connect)
-          s   <- ch.valueStream(dsp)
+          s   <- ch.valueStream(using dsp)
         } yield s
       ).use(_.drop(2).take(5).compile.toList)
         .map(l => l.map(_ - l.head))
@@ -231,7 +231,7 @@ class EpicsServiceSpec extends CatsEffectSuite {
       (for {
         dsp <- Dispatcher.sequential[IO]
         ch  <- srv.getChannel[Int]("test:intVal")
-        v   <- ch.valueStream(dsp)
+        v   <- ch.valueStream(using dsp)
       } yield v).use_
     )
   }

@@ -20,7 +20,7 @@ object FixedLengthBuffer {
     require(maxLength >= data.length)
     require(maxLength >= 0)
 
-    def append(element: A)(implicit ev: Order[A]): FixedLengthBuffer[A] =
+    def append(element: A)(using ev: Order[A]): FixedLengthBuffer[A] =
       if (data.length === maxLength.toLong && data.length >= 0) {
         data match {
           case _ ==: tail => FixedLengthBufferImpl[A](maxLength, tail :+ element)
@@ -56,15 +56,15 @@ object FixedLengthBuffer {
 
   def Zero[A]: FixedLengthBuffer[A] = FixedLengthBufferImpl[A](0, Chain.empty[A])
 
-  implicit def equal[A: Eq]: Eq[FixedLengthBuffer[A]] =
+  given [A: Eq]: Eq[FixedLengthBuffer[A]] =
     Eq.by(x => (x.maxLength, x.toChain))
 
   /**
    * @typeclass
    *   Traverse Based on traverse implementation for List
    */
-  implicit val instance: Traverse[FixedLengthBuffer] = new Traverse[FixedLengthBuffer] {
-    override def traverse[G[_], A, B](fa: FixedLengthBuffer[A])(f: A => G[B])(implicit
+  given Traverse[FixedLengthBuffer] = new Traverse[FixedLengthBuffer] {
+    override def traverse[G[_], A, B](fa: FixedLengthBuffer[A])(f: A => G[B])(using
       G: Applicative[G]
     ): G[FixedLengthBuffer[B]] =
       fa.toChain.traverse(f).map(FixedLengthBufferImpl(fa.maxLength, _))
@@ -95,7 +95,7 @@ sealed trait FixedLengthBuffer[A] {
   /**
    * Append elements to the buffer
    */
-  def append(element: A)(implicit ev: Order[A]): FixedLengthBuffer[A]
+  def append(element: A)(using ev: Order[A]): FixedLengthBuffer[A]
 
   /**
    * Max length of the list

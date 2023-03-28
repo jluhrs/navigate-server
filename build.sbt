@@ -1,20 +1,11 @@
 import Settings.Libraries
 import Settings.Plugins
-import Common._
-import Settings.Libraries._
+import Common.*
+import Settings.Libraries.*
 import Settings.LibraryVersions
-import AppsCommon._
-import NativePackagerHelper._
-import com.typesafe.sbt.packager.docker._
-
-//lazy val attoVersion                 = "0.8.0"
-//lazy val catsVersion                 = "2.1.1"
-//lazy val collCompatVersion           = "2.1.6"
-//lazy val monocleVersion              = "2.0.5"
-//lazy val catsTestkitScalaTestVersion = "1.0.1"
-//lazy val scalaJavaTimeVersion        = "2.0.0"
-//lazy val jtsVersion                  = "0.0.9"
-//lazy val svgdotjsVersion             = "0.0.1"
+import AppsCommon.*
+import NativePackagerHelper.*
+import com.typesafe.sbt.packager.docker.*
 
 name := "navigate"
 

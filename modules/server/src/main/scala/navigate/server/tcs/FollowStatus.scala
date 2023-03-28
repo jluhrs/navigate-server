@@ -12,12 +12,12 @@ object FollowStatus {
   case object NotFollowing extends FollowStatus("NotFollowing")
   case object Following    extends FollowStatus("Following")
 
-  implicit val eqFollowStatus: Eq[FollowStatus] = Eq.instance {
+  given Eq[FollowStatus] = Eq.instance {
     case (NotFollowing, NotFollowing) => true
     case (Following, Following)       => true
     case _                            => false
   }
 
-  implicit val enumFollowStatus: Enumerated[FollowStatus] =
+  given Enumerated[FollowStatus] =
     Enumerated.from[FollowStatus](NotFollowing, Following).withTag(_.tag)
 }

@@ -12,13 +12,13 @@ object ParkStatus {
   case object NotParked extends ParkStatus("NotParked")
   case object Parked    extends ParkStatus("Parked")
 
-  implicit val eqParkStatus: Eq[ParkStatus] = Eq.instance {
+  given Eq[ParkStatus] = Eq.instance {
     case (NotParked, NotParked) => true
     case (Parked, Parked)       => true
     case _                      => false
   }
 
-  implicit val enumParkStatus: Enumerated[ParkStatus] =
+  given Enumerated[ParkStatus] =
     Enumerated.from(NotParked, Parked).withTag(_.tag)
 
 }

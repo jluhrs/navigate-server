@@ -49,14 +49,14 @@ package security {
     config: AuthenticationConfig
   ) extends AuthService[F] {
     import AuthenticationService._
-    implicit val clock: time.Clock = java.time.Clock.systemUTC()
+    given time.Clock = java.time.Clock.systemUTC()
 
     private val hosts =
       config.ldapUrls.map(u => new LDAPURL(u.renderString)).map(u => (u.getHost, u.getPort))
 
     val ldapService: AuthService[F] = new FreeLDAPAuthenticationService(hosts)
 
-    implicit val codecForUserDetails: Codec[UserDetails] = deriveCodec
+    given Codec[UserDetails] = deriveCodec
 
     private val authServices =
       if (mode === Mode.Development) List(new TestAuthenticationService[F], ldapService)
@@ -99,8 +99,8 @@ package security {
 
     // Allows calling authenticate on a list of authenticator, stopping at the first
     // that succeeds
-    implicit class ComposedAuth[F[_]: MonadThrow: Logger](
-      val s: AuthenticationServices[F]
+    extension [F[_]: MonadThrow: Logger](
+      s: AuthenticationServices[F]
     ) {
 
       def authenticateUser(username: String, password: String): F[AuthResult] = {

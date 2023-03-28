@@ -4,7 +4,7 @@
 package navigate.server.acm
 
 import cats.effect.Resource
-import navigate.epics._
+import navigate.epics.{EpicsService, Channel, given}
 import navigate.server.epicsdata.DirSuffix
 
 case class ApplyRecord[F[_]](

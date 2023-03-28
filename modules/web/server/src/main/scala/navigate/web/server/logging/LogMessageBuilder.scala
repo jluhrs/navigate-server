@@ -12,5 +12,5 @@ trait LogMessageBuilder[O] {
 }
 
 object LogMessageBuilder {
-  def apply[O](implicit m: LogMessageBuilder[O]): LogMessageBuilder[O] = m
+  def apply[O](using m: LogMessageBuilder[O]): LogMessageBuilder[O] = m
 }

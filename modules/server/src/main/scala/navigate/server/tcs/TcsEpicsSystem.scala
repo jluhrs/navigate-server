@@ -6,13 +6,13 @@ package navigate.server.tcs
 import cats.{Applicative, Monad, Parallel}
 import cats.effect.std.Dispatcher
 import cats.effect.{Resource, Temporal}
-import mouse.all._
+import mouse.all.*
 import navigate.epics.EpicsSystem.TelltaleChannel
-import navigate.epics._
-import navigate.epics.VerifiedEpics._
+import navigate.epics.{EpicsService, Channel, given}
+import navigate.epics.VerifiedEpics.*
 import navigate.model.enums.{DomeMode, ShutterMode}
 import navigate.server.{ApplyCommandResult, tcs}
-import navigate.server.acm.ParameterList._
+import navigate.server.acm.ParameterList.*
 import navigate.server.acm.{CadDirective, GeminiApplyCommand}
 import navigate.server.epicsdata.{BinaryOnOff, BinaryYesNo, DirSuffix}
 import squants.Angle
@@ -220,7 +220,7 @@ object TcsEpicsSystem {
   // This functions returns a F that, when run, first waits tcsSettleTime to absorb in-position transients, then waits
   // for the in-position to change to true and stay true for stabilizationTime. It will wait up to `timeout`
   // seconds for that to happen.
-  def waitInPosition(stabilizationTime: Duration, timeout: FiniteDuration)(implicit
+  def waitInPosition(stabilizationTime: Duration, timeout: FiniteDuration)(using
     T:                                  Timer[F]
   ): F[Unit]
 
@@ -228,7 +228,7 @@ object TcsEpicsSystem {
   /* TODO: AG inposition can take up to 1[s] to react to a TCS command. If the value is read before that, it may induce
      * an error. A better solution is to detect the edge, from not in position to in-position.
      */
-  def waitAGInPosition(timeout: FiniteDuration)(implicit T: Timer[F]): F[Unit]
+  def waitAGInPosition(timeout: FiniteDuration)(using T: Timer[F]): F[Unit]
 
   def hourAngle: F[String]
 
@@ -1350,7 +1350,7 @@ object TcsEpicsSystem {
     def radialVelocity: F[Double]
   }
 
-  implicit class TargetIOOps(val tio: Target[IO]) extends AnyVal {
+  extension (val tio: Target[IO]) {
     def to[F[_]: LiftIO]: Target[F] = new Target[F] {
       def objectName: F[String]        = tio.objectName.to[F]
       def ra: F[Double]                = tio.ra.to[F]

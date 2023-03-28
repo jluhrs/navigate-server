@@ -44,7 +44,7 @@ final case class NavigateEngineConfiguration(
 
 object NavigateEngineConfiguration {
 
-  implicit val eqNavigateEngineConfiguration: Eq[NavigateEngineConfiguration] =
+  given Eq[NavigateEngineConfiguration] =
     Eq.by(x =>
       (x.odb,
        x.systemControl,

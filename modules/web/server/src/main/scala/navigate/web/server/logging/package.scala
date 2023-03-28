@@ -9,6 +9,6 @@ import navigate.model.enums.ServerLogLevel
 import java.time.Instant
 
 package object logging {
-  implicit val navigateEventLogBuilder: LogMessageBuilder[NavigateEvent] =
+  given LogMessageBuilder[NavigateEvent] =
     (l: ServerLogLevel, t: Instant, msg: String) => NavigateEvent.ServerLogMessage(l, t, msg)
 }

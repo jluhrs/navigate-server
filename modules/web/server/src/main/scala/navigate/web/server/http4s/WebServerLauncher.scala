@@ -23,7 +23,8 @@ import navigate.web.server.common.LogInitialization
 import navigate.web.server.common.RedirectToHttpsRoutes
 import navigate.web.server.common.StaticRoutes
 import navigate.web.server.config._
-import navigate.web.server.logging._
+import navigate.web.server.logging.AppenderForClients
+import navigate.web.server.logging.given
 import navigate.web.server.security.AuthenticationService
 import org.http4s.HttpRoutes
 import org.http4s.blaze.server.BlazeServerBuilder
@@ -49,7 +50,7 @@ import javax.net.ssl.TrustManagerFactory
 import scala.concurrent.duration._
 
 object WebServerLauncher extends IOApp with LogInitialization {
-  private implicit def L: Logger[IO] = Slf4jLogger.getLoggerFromName[IO]("navigate")
+  private given Logger[IO] = Slf4jLogger.getLoggerFromName[IO]("navigate")
 
   // Attempt to get the configuration file relative to the base dir
   def configurationFile[F[_]: Sync]: F[FilePath] =

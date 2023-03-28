@@ -14,6 +14,6 @@ object ServerLogLevel {
   case object ERROR extends ServerLogLevel("ERROR")
 
   /** @group Typeclass Instances */
-  implicit val ServerLogLevelEnumerated: Enumerated[ServerLogLevel] =
+  given Enumerated[ServerLogLevel] =
     Enumerated.from(INFO, WARN, ERROR).withTag(_.label)
 }

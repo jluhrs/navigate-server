@@ -16,7 +16,7 @@ object CaServiceInit {
   // the configuration file or from the environment
   def caInit[F[_]: Async](
     conf:       NavigateEngineConfiguration
-  )(implicit L: Logger[F]): Resource[F, EpicsService[F]] = {
+  )(using L: Logger[F]): Resource[F, EpicsService[F]] = {
     val addressList = conf.epicsCaAddrList
       .map(_.pure[F])
       .getOrElse {

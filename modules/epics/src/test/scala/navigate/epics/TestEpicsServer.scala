@@ -29,16 +29,16 @@ object TestEpicsServer {
     def apply[T](t: DBRType): ToDBRType[T] = new ToDBRType[T] { override val dbrType: DBRType = t }
   }
 
-  implicit val intDBRType: ToDBRType[JInteger]         = ToDBRType(DBRType.INT)
-  implicit val doubleDBRType: ToDBRType[JDouble]       = ToDBRType(DBRType.DOUBLE)
-  implicit val floatDBRType: ToDBRType[JFloat]         = ToDBRType(DBRType.FLOAT)
-  implicit val stringDBRType: ToDBRType[String]        = ToDBRType(DBRType.STRING)
-  implicit def enumDBRType[T <: Enum[T]]: ToDBRType[T] =
+  given ToDBRType[JInteger]          = ToDBRType(DBRType.INT)
+  given ToDBRType[JDouble]           = ToDBRType(DBRType.DOUBLE)
+  given ToDBRType[JFloat]            = ToDBRType(DBRType.FLOAT)
+  given ToDBRType[String]            = ToDBRType(DBRType.STRING)
+  given [T <: Enum[T]]: ToDBRType[T] =
     ToDBRType(DBRType.ENUM)
 
   val jcaLibrary: JCALibrary = JCALibrary.getInstance()
 
-  def createPV[F[_]: Async, T](server: DefaultServerImpl, name: String, init: Object)(implicit
+  def createPV[F[_]: Async, T](server: DefaultServerImpl, name: String, init: Object)(using
     t: ToDBRType[T]
   ): Resource[F, MemoryProcessVariable] =
     Resource.make {
