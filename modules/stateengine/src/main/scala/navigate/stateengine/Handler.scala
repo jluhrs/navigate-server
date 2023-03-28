@@ -6,7 +6,8 @@ package navigate.stateengine
 import cats.Applicative
 import cats.Monad
 import cats.data.State
-import cats.syntax.all._
+import cats.data.StateT
+import cats.syntax.all.*
 import fs2.Stream
 import navigate.stateengine.Handler.RetVal
 
@@ -26,7 +27,7 @@ object Handler {
       Applicative[State[D, *]].pure[RetVal[F, V, Unit]](RetVal((), Some(p)))
     )
 
-  implicit def handlePMonad[F[_], D, V]: Monad[Handler[F, D, V, *]] =
+  given [F[_], D, V]: Monad[Handler[F, D, V, *]] =
     new Monad[Handler[F, D, V, *]] {
       private def concatOpP(
         op1: Option[Stream[F, V]],
@@ -75,7 +76,7 @@ object Handler {
 
   // This class adds a method to Handler similar to flatMap, but the Streams resulting from both Handler instances
   // are concatenated in the reverse order.
-  implicit class HandleReverseMap[F[_]: Monad, D, V, A](self: Handler[F, D, V, A]) {
+  extension [F[_]: Monad, D, V, A](self: Handler[F, D, V, A]) {
     private def reverseConcatOpP(
       op1: Option[Stream[F, V]],
       op2: Option[Stream[F, V]]
@@ -96,7 +97,7 @@ object Handler {
       )
   }
 
-  implicit class StateToHandle[F[_], D, V, A](self: State[D, A]) {
+  extension [F[_], D, V, A](self: State[D, A]) {
     def toHandle: Handler[F, D, V, A] = Handler(self.map(RetVal(_, none[Stream[F, V]])))
   }
 

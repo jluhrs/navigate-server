@@ -15,8 +15,8 @@ object CadDirective {
   case object START  extends CadDirective("start")
   case object STOP   extends CadDirective("stop")
 
-  implicit val cadDirectiveEq: Eq[CadDirective] = Eq.fromUniversalEquals
+  given Eq[CadDirective] = Eq.fromUniversalEquals
 
-  implicit val cadDirectiveEnum: Enumerated[CadDirective] =
+  given Enumerated[CadDirective] =
     Enumerated.from(MARK, CLEAR, PRESET, START, STOP).withTag(_.tag)
 }

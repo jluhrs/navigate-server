@@ -12,6 +12,6 @@ object ApplyCommandResult {
   case object Completed extends ApplyCommandResult("completed")
 
   /** @group Typeclass Instances */
-  implicit val ApplyCommandResultEnumerated: Enumerated[ApplyCommandResult] =
+  given Enumerated[ApplyCommandResult] =
     Enumerated.from(Paused, Completed).withTag(_.tag)
 }

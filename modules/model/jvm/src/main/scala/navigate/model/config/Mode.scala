@@ -14,7 +14,7 @@ object Mode {
   case object Production  extends Mode("production")
   case object Development extends Mode("development")
 
-  implicit val ModeEnumerated: Enumerated[Mode] =
+  given Enumerated[Mode] =
     Enumerated.from(Production, Development).withTag(_.tag)
 
 }

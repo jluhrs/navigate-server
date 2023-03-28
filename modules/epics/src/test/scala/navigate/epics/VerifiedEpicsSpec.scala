@@ -58,8 +58,8 @@ class VerifiedEpicsSpec extends CatsEffectSuite {
       dsp <- Dispatcher.sequential[IO]
     } yield (tt, ch1, dsp))
       .use { case (tt, ch1, dsp) =>
-        implicit val d: Dispatcher[IO] = dsp
-        val q                          = VerifiedEpics
+        given Dispatcher[IO] = dsp
+        val q                = VerifiedEpics
           .eventStream(tt, ch1)
           .map(
             _.use(

@@ -62,7 +62,7 @@ object VerifiedEpics {
   def pure[F[_], A](v: A): ChannelTracker[F, A] = Const(v)
   def unit[F[_]]: ChannelTracker[F, Unit] = pure[F, Unit](())
 
-  implicit class Ops[F[_], A](v: ChannelTracker[F, A]) extends AnyRef {
+  extension [F[_], A](v: ChannelTracker[F, A]) {
     def ap[B](ff:  ChannelTracker[F, A => B]): ChannelTracker[F, B] = Apply(v, ff)
     def map[B](ff: A => B): ChannelTracker[F, B]                    = ap(pure(ff))
   }
@@ -136,7 +136,7 @@ object VerifiedEpics {
     falseVal: => VerifiedEpics[F, G, A]
   ): VerifiedEpics[F, G, A] = IfF(cond, trueVal, falseVal)
 
-  implicit class OpsF[F[_], G[_]: Monad, A](v: VerifiedEpics[F, G, A]) {
+  extension [F[_], G[_]: Monad, A](v: VerifiedEpics[F, G, A]) {
     def ap[B](ff: VerifiedEpics[F, G, A => B]): VerifiedEpics[F, G, B] = ApplyF[F, G, A, B](v, ff)
 
     def flatMap[B](ff: G[A] => VerifiedEpics[F, G, B]): VerifiedEpics[F, G, B] =
@@ -153,7 +153,7 @@ object VerifiedEpics {
 
   }
 
-  implicit class VerifiedRun[F[_]: Async: Parallel, A](v: VerifiedEpics[F, F, A]) {
+  extension [F[_]: Async: Parallel, A](v: VerifiedEpics[F, F, A]) {
     def verifiedRun(connectionTimeout: FiniteDuration): F[A] =
       v.systems
         .map { case (k, v) => EpicsSystem(k, v) }

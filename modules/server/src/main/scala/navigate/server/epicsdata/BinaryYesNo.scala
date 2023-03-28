@@ -12,9 +12,9 @@ object BinaryYesNo {
   case object No  extends BinaryYesNo("no")
   case object Yes extends BinaryYesNo("yes")
 
-  implicit val yesnoEnum: Enumerated[BinaryYesNo] = Enumerated.from(No, Yes).withTag(_.tag)
+  given Enumerated[BinaryYesNo] = Enumerated.from(No, Yes).withTag(_.tag)
 
-  implicit val yesnoEq: Eq[BinaryYesNo] = Eq.instance {
+  given Eq[BinaryYesNo] = Eq.instance {
     case (No, No)   => true
     case (Yes, Yes) => true
     case _          => false

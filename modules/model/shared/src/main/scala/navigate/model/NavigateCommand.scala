@@ -55,9 +55,9 @@ object NavigateCommand {
   ) extends NavigateCommand
   case object Slew                        extends NavigateCommand
 
-  implicit val navigateCommandEq: Eq[NavigateCommand] = Eq.fromUniversalEquals
+  given Eq[NavigateCommand] = Eq.fromUniversalEquals
 
-  implicit class NavigateCommandOps(self: NavigateCommand) {
+  extension (self: NavigateCommand) {
     def name: String = self match {
       case McsFollow(_)        => "Mcs Follow"
       case ScsFollow(_)        => "Scs Follow"

@@ -8,14 +8,15 @@ import cats.effect.IO
 import cats.effect.SyncIO
 import cats.effect.kernel.Resource
 import cats.effect.std.Dispatcher
-import cats.implicits._
+import cats.syntax.all._
 import gov.aps.jca.cas.ServerContext
 import munit.CatsEffectSuite
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
 
-import Channel.StreamEvent._
+import Channel.StreamEvent.*
+import Channel.StreamEvent.given
 
 class ChannelSpec extends CatsEffectSuite {
 
@@ -37,7 +38,7 @@ class ChannelSpec extends CatsEffectSuite {
           dsp <- Dispatcher.sequential[IO]
           ch  <- srv.getChannel[Int]("test:heartbeat")
           _   <- Resource.eval(ch.connect)
-          s   <- ch.eventStream(dsp, Concurrent[IO])
+          s   <- ch.eventStream(using dsp, Concurrent[IO])
         } yield s
       ).use {
         _.zipWithIndex

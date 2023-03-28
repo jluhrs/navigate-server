@@ -13,14 +13,14 @@ object DomeMode {
   case object MinScatter   extends DomeMode("MinScatter")
   case object MinVibration extends DomeMode("MinVibration")
 
-  implicit val domeModeEq: Eq[DomeMode] = Eq.instance {
+  given Eq[DomeMode] = Eq.instance {
     case (Basic, Basic)               => true
     case (MinScatter, MinScatter)     => true
     case (MinVibration, MinVibration) => true
     case _                            => false
   }
 
-  implicit val domeModeEnum: Enumerated[DomeMode] =
+  given Enumerated[DomeMode] =
     Enumerated.from(Basic, MinScatter, MinVibration).withTag(_.tag)
 
 }

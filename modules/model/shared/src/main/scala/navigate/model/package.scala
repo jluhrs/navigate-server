@@ -12,6 +12,6 @@ package model {
 }
 package object model {
 
-  implicit val clientIdEq: Eq[ClientId] = Eq.by(x => x.self)
+  given Eq[ClientId] = Eq.by(x => x.self)
 
 }

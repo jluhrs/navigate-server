@@ -12,12 +12,14 @@ import fs2.Stream
 import fs2.concurrent.Topic
 import lucuma.core.enums.Site
 import navigate.model.ClientId
+import navigate.model.NavigateEvent
 import navigate.model.NavigateEvent.ConnectionOpenEvent
 import navigate.model.NavigateEvent.ForClient
 import navigate.model.NavigateEvent.NullEvent
-import navigate.model.*
+import navigate.model.NavigateEvent.given
 import navigate.model.boopickle.*
 import navigate.model.config.*
+import navigate.model.given
 import navigate.model.security.UserLoginRequest
 import navigate.server.NavigateEngine
 import navigate.web.server.OcsBuildInfo
@@ -57,7 +59,7 @@ class NavigateUIApiRoutes[F[_]: Async](
   auth:         AuthenticationService[F],
   clientsDb:    ClientsSetDb[F],
   engineOutput: Topic[F, NavigateEvent]
-)(implicit
+)(using
   L:            Logger[F]
 ) extends Http4sDsl[F] {
 

@@ -29,7 +29,7 @@ package epics {
 
 package object epics {
 
-  implicit val booleanToJavaType: ToJavaType[Boolean] = new ToJavaType[Boolean] {
+  given ToJavaType[Boolean] = new ToJavaType[Boolean] {
     override type javaType = JBoolean
     override val clazz: Class[JBoolean]              = classOf[JBoolean]
     override val convert: Convert[Boolean, JBoolean] = new Convert[Boolean, JBoolean] {
@@ -38,7 +38,7 @@ package object epics {
     }
   }
 
-  implicit val intToJavaType: ToJavaType[Int] = new ToJavaType[Int] {
+  given ToJavaType[Int] = new ToJavaType[Int] {
     override type javaType = JInteger
     override val clazz: Class[JInteger]          = classOf[JInteger]
     override val convert: Convert[Int, JInteger] = new Convert[Int, JInteger] {
@@ -47,7 +47,7 @@ package object epics {
     }
   }
 
-  implicit val doubleToJavaType: ToJavaType[Double] = new ToJavaType[Double] {
+  given ToJavaType[Double] = new ToJavaType[Double] {
     override type javaType = JDouble
     override val clazz: Class[javaType]            = classOf[JDouble]
     override val convert: Convert[Double, JDouble] = new Convert[Double, JDouble] {
@@ -56,7 +56,7 @@ package object epics {
     }
   }
 
-  implicit val floatToJavaType: ToJavaType[Float] = new ToJavaType[Float] {
+  given ToJavaType[Float] = new ToJavaType[Float] {
     override type javaType = JFloat
     override val clazz: Class[javaType]          = classOf[JFloat]
     override val convert: Convert[Float, JFloat] = new Convert[Float, JFloat] {
@@ -65,7 +65,7 @@ package object epics {
     }
   }
 
-  implicit val stringToJavaType: ToJavaType[String] = new ToJavaType[String] {
+  given ToJavaType[String] = new ToJavaType[String] {
     override type javaType = String
     override val clazz: Class[javaType]           = classOf[String]
     override val convert: Convert[String, String] = new Convert[String, String] {
@@ -74,7 +74,7 @@ package object epics {
     }
   }
 
-  implicit def enumeratedToJavaType[T: Enumerated]: ToJavaType[T] = new ToJavaType[T] {
+  given [T: Enumerated]: ToJavaType[T] = new ToJavaType[T] {
     override type javaType = JInteger
     override val clazz: Class[javaType]        = classOf[JInteger]
     override val convert: Convert[T, JInteger] = new Convert[T, JInteger] {

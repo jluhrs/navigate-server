@@ -14,9 +14,9 @@ object TestEnumerated {
   case object VAL1 extends TestEnumerated("val1")
   case object VAL2 extends TestEnumerated("val1")
 
-  implicit val testEq: Eq[TestEnumerated] = Eq.fromUniversalEquals
+  given Eq[TestEnumerated] = Eq.fromUniversalEquals
 
-  implicit val testEnumerated: Enumerated[TestEnumerated] =
+  given Enumerated[TestEnumerated] =
     Enumerated.from[TestEnumerated](VAL0, VAL1, VAL2).withTag(_.tag)
 
 }

@@ -36,7 +36,7 @@ object RemoteChannel {
     override def getAccessRights: F[AccessRights]       = Async[F].delay(caChannel.getAccessRights)
   }
 
-  implicit def remoteChannelEq[F[_]]: Eq[RemoteChannel[F]] = Eq.instance {
+  given [F[_]]: Eq[RemoteChannel[F]] = Eq.instance {
     case (a: RemoteChannelImpl[F], b: RemoteChannelImpl[F]) => a.caChannel == b.caChannel
     case (a, b)                                             => a.equals(b)
   }

@@ -32,7 +32,7 @@ trait Channel[F[_], T] extends RemoteChannel[F] {
    * @return
    *   The stream of values, contained inside a Resource
    */
-  def valueStream(implicit dispatcher: Dispatcher[F]): Resource[F, Stream[F, T]]
+  def valueStream(using dispatcher: Dispatcher[F]): Resource[F, Stream[F, T]]
 
   /**
    * Stream of connection events. The values are of type <code>Boolean</code>, <code>true</code>
@@ -40,14 +40,14 @@ trait Channel[F[_], T] extends RemoteChannel[F] {
    * @return
    *   The stream of events, contained inside a Resource
    */
-  def connectionStream(implicit dispatcher: Dispatcher[F]): Resource[F, Stream[F, Boolean]]
+  def connectionStream(using dispatcher: Dispatcher[F]): Resource[F, Stream[F, Boolean]]
 
   /**
    * Stream combining the values and connection events streams.
    * @return
    *   The stream, contained inside a Resource
    */
-  def eventStream(implicit
+  def eventStream(using
     dispatcher: Dispatcher[F],
     concurrent: Concurrent[F]
   ): Resource[F, Stream[F, StreamEvent[T]]]
@@ -62,7 +62,7 @@ object Channel {
     case object Disconnected         extends StreamEvent[Nothing]
     case class ValueChanged[T](v: T) extends StreamEvent[T]
 
-    implicit def streamEventEq[T: Eq]: Eq[StreamEvent[T]] = Eq.instance {
+    given [T: Eq]: Eq[StreamEvent[T]] = Eq.instance {
       case (Connected, Connected)             => true
       case (Disconnected, Disconnected)       => true
       case (ValueChanged(a), ValueChanged(b)) => (a: T) === b
@@ -71,7 +71,7 @@ object Channel {
 
   }
 
-  private final class ChannelImpl[F[_]: Async, T, J](override val caChannel: CaChannel[J])(implicit
+  private final class ChannelImpl[F[_]: Async, T, J](override val caChannel: CaChannel[J])(using
     cv: Convert[T, J]
   ) extends RemoteChannelImpl[F]
       with Channel[F, T] {
@@ -93,7 +93,7 @@ object Channel {
         else Async[F].raiseError(new Throwable(s.getMessage))
       }
 
-    override def valueStream(implicit dispatcher: Dispatcher[F]): Resource[F, Stream[F, T]] = for {
+    override def valueStream(using dispatcher: Dispatcher[F]): Resource[F, Stream[F, T]] = for {
       q <- Resource.eval(Queue.unbounded[F, T])
       _ <- Resource.make {
              Async[F].delay(
@@ -106,7 +106,7 @@ object Channel {
       s <- Resource.pure(Stream.fromQueueUnterminated(q))
     } yield s
 
-    override def connectionStream(implicit
+    override def connectionStream(using
       dispatcher: Dispatcher[F]
     ): Resource[F, Stream[F, Boolean]] = for {
       q <- Resource.eval(Queue.unbounded[F, Boolean])
@@ -120,7 +120,7 @@ object Channel {
       s <- Resource.pure(Stream.fromQueueUnterminated(q))
     } yield s
 
-    override def eventStream(implicit
+    override def eventStream(using
       dispatcher: Dispatcher[F],
       concurrent: Concurrent[F]
     ): Resource[F, Stream[F, StreamEvent[T]]] = for {
@@ -131,7 +131,7 @@ object Channel {
       .merge(cs.map(_.fold(StreamEvent.Connected, StreamEvent.Disconnected)))
   }
 
-  def build[F[_]: Async, T, J](caChannel: CaChannel[J])(implicit
+  def build[F[_]: Async, T, J](caChannel: CaChannel[J])(using
     cv: Convert[T, J]
   ): Channel[F, T] = new ChannelImpl[F, T, J](caChannel)
 

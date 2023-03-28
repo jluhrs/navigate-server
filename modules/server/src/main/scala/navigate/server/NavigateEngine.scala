@@ -3,26 +3,19 @@
 
 package navigate.server
 
-import cats.{Applicative, ApplicativeThrow}
+import cats.{Applicative, MonadThrow}
 import cats.effect.{Async, Concurrent, Ref, Temporal}
 import cats.effect.kernel.Sync
 import cats.syntax.all.*
-import navigate.model.NavigateCommand.{
-  CrcsFollow,
-  CrcsMove,
-  CrcsPark,
-  CrcsStop,
-  EcsCarouselMode,
-  McsFollow,
-  McsPark,
-  Slew
-}
+import org.typelevel.log4cats.Logger
+import navigate.model.NavigateCommand.{CrcsFollow, CrcsMove, CrcsPark, CrcsStop, EcsCarouselMode, McsFollow, McsPark, Slew}
 import navigate.model.{NavigateCommand, NavigateEvent}
 import navigate.model.NavigateEvent.{CommandFailure, CommandPaused, CommandStart, CommandSuccess}
 import navigate.model.config.NavigateEngineConfiguration
 import navigate.model.enums.{DomeMode, ShutterMode}
 import navigate.server.tcs.SlewConfig
 import navigate.stateengine.StateEngine
+import NavigateEvent.NullEvent
 import fs2.{Pipe, Stream}
 import lucuma.core.enums.Site
 import monocle.{Focus, Lens}
@@ -82,7 +75,7 @@ object NavigateEngine {
     }
   }
 
-  private case class NavigateEngineImpl[F[_]: Concurrent](
+  private case class NavigateEngineImpl[F[_]: Concurrent: Logger](
     site:    Site,
     systems: Systems[F],
     conf:    NavigateEngineConfiguration,
@@ -154,7 +147,7 @@ object NavigateEngine {
     )
   }
 
-  def build[F[_]: Concurrent](
+  def build[F[_]: Concurrent: Logger](
     site:    Site,
     systems: Systems[F],
     conf:    NavigateEngineConfiguration
@@ -197,25 +190,33 @@ object NavigateEngine {
     slewInProgress = false
   )
 
-  private def command[F[_]: ApplicativeThrow](
+  private def command[F[_]: MonadThrow: Logger](
     engine:  StateEngine[F, State, NavigateEvent],
     cmdType: NavigateCommand,
     cmd:     F[ApplyCommandResult],
     f:       Lens[State, Boolean]
   ): F[Unit] = engine.offer(
     engine.getState.flatMap { st =>
-      if (!st.tcsActionInProgress && !st.mcsParkInProgress) {
+      if (!st.tcsActionInProgress) {
         engine
           .modifyState(f.replace(true))
           .as(CommandStart(cmdType)) *>
-          engine.lift(cmd.attempt.map {
-            case Right(ApplyCommandResult.Paused)    => CommandPaused(cmdType)
-            case Right(ApplyCommandResult.Completed) => CommandSuccess(cmdType)
-            case Left(e)                             =>
-              CommandFailure(cmdType, s"${cmdType.name} command failed with error: ${e.getMessage}")
-          }) <*
+          engine.lift(
+            Logger[F].info(s"Start command ${cmdType.name}") *>
+            cmd.attempt.map {
+              case Right(ApplyCommandResult.Paused)    => CommandPaused(cmdType)
+              case Right(ApplyCommandResult.Completed) => CommandSuccess(cmdType)
+              case Left(e)                             =>
+                CommandFailure(cmdType, s"${cmdType.name} command failed with error: ${e.getMessage}")
+            }
+              .flatMap {x =>
+                Logger[F].info(s"Command ${cmdType.name} ended with result $x").as(x)
+              }
+          ) <*
           engine.modifyState(f.replace(false))
-      } else engine.void
+      } else {
+        engine.lift(Logger[F].warn(s"Cannot execute command ${cmdType.name} because a TCS command is in progress.").as(NullEvent)) *> engine.void
+      }
     }
   )
 

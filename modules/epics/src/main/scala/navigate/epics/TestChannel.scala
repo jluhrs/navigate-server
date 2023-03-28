@@ -26,15 +26,15 @@ class TestChannel[F[_]: Applicative, S, A](s: Ref[F, S], l: Lens[S, State[A]])
 
   override def put(v: A): F[Unit] = s.update(l.modify(x => x.copy(value = v.some)))
 
-  override def valueStream(implicit dispatcher: Dispatcher[F]): Resource[F, Stream[F, A]] =
+  override def valueStream(using dispatcher: Dispatcher[F]): Resource[F, Stream[F, A]] =
     Resource.pure(Stream.empty)
 
-  override def connectionStream(implicit
+  override def connectionStream(using
     dispatcher: Dispatcher[F]
   ): Resource[F, Stream[F, Boolean]] =
     Resource.pure(Stream.empty)
 
-  override def eventStream(implicit
+  override def eventStream(using
     dispatcher: Dispatcher[F],
     concurrent: Concurrent[F]
   ): Resource[F, fs2.Stream[F, Channel.StreamEvent[A]]] =

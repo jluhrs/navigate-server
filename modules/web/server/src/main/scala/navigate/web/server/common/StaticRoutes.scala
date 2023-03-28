@@ -38,17 +38,18 @@ class StaticRoutes[F[_]: Sync](
       .fromOption(Option(getClass.getResource(path)))
       .flatMap(StaticFile.fromURL(_, Some(req)))
 
-  implicit class ReqOps(req: Request[F]) {
-    private val timestampRegex = s"(.*)\\.$builtAtMillis\\.(.*)".r
+  extension (req: Request[F]) {
 
     /**
      * If a request contains the timestamp remove it to find the original file name
      */
-    def removeTimestamp(path: String): String =
+    def removeTimestamp(path: String): String = {
+      val timestampRegex = s"(.*)\\.$builtAtMillis\\.(.*)".r
       path match {
         case timestampRegex(b, e) => s"$b.$e"
         case xs                   => xs
       }
+    }
 
     def endsWith(exts: String*): Boolean = exts.exists(req.pathInfo.toString.endsWith)
 
