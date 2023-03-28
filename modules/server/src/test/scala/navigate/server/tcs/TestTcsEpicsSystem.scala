@@ -46,7 +46,7 @@ object TestTcsEpicsSystem {
     coordSystem:    TestChannel.State[String],
     coord1:         TestChannel.State[Double],
     coord2:         TestChannel.State[Double],
-    epoch:          TestChannel.State[String],
+    epoch:          TestChannel.State[Double],
     equinox:        TestChannel.State[String],
     parallax:       TestChannel.State[Double],
     properMotion1:  TestChannel.State[Double],
@@ -177,7 +177,7 @@ object TestTcsEpicsSystem {
         new TestChannel[F, State, Double](s, l.andThen(Focus[TargetChannelsState](_.coord1))),
       coord2 =
         new TestChannel[F, State, Double](s, l.andThen(Focus[TargetChannelsState](_.coord2))),
-      epoch = new TestChannel[F, State, String](s, l.andThen(Focus[TargetChannelsState](_.epoch))),
+      epoch = new TestChannel[F, State, Double](s, l.andThen(Focus[TargetChannelsState](_.epoch))),
       equinox =
         new TestChannel[F, State, String](s, l.andThen(Focus[TargetChannelsState](_.equinox))),
       parallax =

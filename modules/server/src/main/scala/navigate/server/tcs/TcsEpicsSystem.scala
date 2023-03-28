@@ -518,7 +518,7 @@ object TcsEpicsSystem {
     coordSystem:    Channel[F, String],
     coord1:         Channel[F, Double],
     coord2:         Channel[F, Double],
-    epoch:          Channel[F, String],
+    epoch:          Channel[F, Double],
     equinox:        Channel[F, String],
     parallax:       Channel[F, Double],
     properMotion1:  Channel[F, Double],
@@ -584,8 +584,8 @@ object TcsEpicsSystem {
       cs  <- service.getChannel[String](prefix + ".B")
       co1 <- service.getChannel[Double](prefix + ".C")
       co2 <- service.getChannel[Double](prefix + ".D")
-      ep  <- service.getChannel[String](prefix + ".E")
-      eq  <- service.getChannel[String](prefix + ".F")
+      eq  <- service.getChannel[String](prefix + ".E")
+      ep  <- service.getChannel[Double](prefix + ".F")
       pr  <- service.getChannel[Double](prefix + ".G")
       pm1 <- service.getChannel[Double](prefix + ".H")
       pm2 <- service.getChannel[Double](prefix + ".I")
@@ -787,7 +787,7 @@ object TcsEpicsSystem {
           tcsEpics.sourceACmd.coord2(v)
         )
 
-        override def epoch(v: String): TcsCommands[F] = addParam(
+        override def epoch(v: Double): TcsCommands[F] = addParam(
           tcsEpics.sourceACmd.epoch(v)
         )
 
@@ -1047,8 +1047,8 @@ object TcsEpicsSystem {
       writeChannel[F, Double](tt, targetChannels.coord1)(Applicative[F].pure(v))
     def coord2(v: Double): VerifiedEpics[F, F, Unit]         =
       writeChannel[F, Double](tt, targetChannels.coord2)(Applicative[F].pure(v))
-    def epoch(v: String): VerifiedEpics[F, F, Unit]          =
-      writeChannel[F, String](tt, targetChannels.epoch)(Applicative[F].pure(v))
+    def epoch(v: Double): VerifiedEpics[F, F, Unit]          =
+      writeChannel[F, Double](tt, targetChannels.epoch)(Applicative[F].pure(v))
     def equinox(v: String): VerifiedEpics[F, F, Unit]        =
       writeChannel[F, String](tt, targetChannels.equinox)(Applicative[F].pure(v))
     def parallax(v: Double): VerifiedEpics[F, F, Unit]       =
@@ -1148,7 +1148,7 @@ object TcsEpicsSystem {
     def coordSystem(v:    String): S
     def coord1(v:         Double): S
     def coord2(v:         Double): S
-    def epoch(v:          String): S
+    def epoch(v:          Double): S
     def equinox(v:        String): S
     def parallax(v:       Double): S
     def properMotion1(v:  Double): S
