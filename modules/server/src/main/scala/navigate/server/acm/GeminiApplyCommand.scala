@@ -160,10 +160,10 @@ object GeminiApplyCommand {
   } yield new GeminiApplyCommandImpl[F](telltaleChannel, apply, car)
 
   def smartSetParam[F[_]: Monad, A, B](
-    tt:    TelltaleChannel[F],
-    st:    Channel[F, A],
-    pr:    Channel[F, B],
-    cmp:   (A, B) => Boolean
+    tt:  TelltaleChannel[F],
+    st:  Channel[F, A],
+    pr:  Channel[F, B],
+    cmp: (A, B) => Boolean
   )(value: B): VerifiedEpics[F, F, Unit] = {
     val statusRead = readChannel(tt, st)
     val paramWrite = writeChannel(tt, pr)(value.pure[F])

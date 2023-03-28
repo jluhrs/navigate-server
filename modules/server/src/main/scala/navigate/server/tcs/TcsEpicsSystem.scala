@@ -8,7 +8,7 @@ import cats.effect.std.Dispatcher
 import cats.effect.{Resource, Temporal}
 import mouse.all.*
 import navigate.epics.EpicsSystem.TelltaleChannel
-import navigate.epics.{EpicsService, Channel, given}
+import navigate.epics.{Channel, EpicsService, given}
 import navigate.epics.VerifiedEpics.*
 import navigate.model.enums.{DomeMode, ShutterMode}
 import navigate.server.{ApplyCommandResult, tcs}
