@@ -8,7 +8,16 @@ import cats.effect.{Async, Concurrent, Ref, Temporal}
 import cats.effect.kernel.Sync
 import cats.syntax.all.*
 import org.typelevel.log4cats.Logger
-import navigate.model.NavigateCommand.{CrcsFollow, CrcsMove, CrcsPark, CrcsStop, EcsCarouselMode, McsFollow, McsPark, Slew}
+import navigate.model.NavigateCommand.{
+  CrcsFollow,
+  CrcsMove,
+  CrcsPark,
+  CrcsStop,
+  EcsCarouselMode,
+  McsFollow,
+  McsPark,
+  Slew
+}
 import navigate.model.{NavigateCommand, NavigateEvent}
 import navigate.model.NavigateEvent.{CommandFailure, CommandPaused, CommandStart, CommandSuccess}
 import navigate.model.config.NavigateEngineConfiguration
@@ -37,11 +46,11 @@ trait NavigateEngine[F[_]] {
   def rotFollow(enable:          Boolean): F[Unit]
   def rotMove(angle:             Angle): F[Unit]
   def ecsCarouselMode(
-    domeMode:                    DomeMode,
-    shutterMode:                 ShutterMode,
-    slitHeight:                  Double,
-    domeEnable:                  Boolean,
-    shutterEnable:               Boolean
+    domeMode:      DomeMode,
+    shutterMode:   ShutterMode,
+    slitHeight:    Double,
+    domeEnable:    Boolean,
+    shutterEnable: Boolean
   ): F[Unit]
   def ecsVentGatesMove(gateEast: Double, westGate: Double): F[Unit]
   def slew(slewConfig:           SlewConfig): F[Unit]
@@ -203,19 +212,26 @@ object NavigateEngine {
           .as(CommandStart(cmdType)) *>
           engine.lift(
             Logger[F].info(s"Start command ${cmdType.name}") *>
-            cmd.attempt.map {
-              case Right(ApplyCommandResult.Paused)    => CommandPaused(cmdType)
-              case Right(ApplyCommandResult.Completed) => CommandSuccess(cmdType)
-              case Left(e)                             =>
-                CommandFailure(cmdType, s"${cmdType.name} command failed with error: ${e.getMessage}")
-            }
-              .flatMap {x =>
-                Logger[F].info(s"Command ${cmdType.name} ended with result $x").as(x)
-              }
+              cmd.attempt
+                .map {
+                  case Right(ApplyCommandResult.Paused)    => CommandPaused(cmdType)
+                  case Right(ApplyCommandResult.Completed) => CommandSuccess(cmdType)
+                  case Left(e)                             =>
+                    CommandFailure(cmdType,
+                                   s"${cmdType.name} command failed with error: ${e.getMessage}"
+                    )
+                }
+                .flatMap { x =>
+                  Logger[F].info(s"Command ${cmdType.name} ended with result $x").as(x)
+                }
           ) <*
           engine.modifyState(f.replace(false))
       } else {
-        engine.lift(Logger[F].warn(s"Cannot execute command ${cmdType.name} because a TCS command is in progress.").as(NullEvent)) *> engine.void
+        engine.lift(
+          Logger[F]
+            .warn(s"Cannot execute command ${cmdType.name} because a TCS command is in progress.")
+            .as(NullEvent)
+        ) *> engine.void
       }
     }
   )

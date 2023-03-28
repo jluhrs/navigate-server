@@ -17,11 +17,11 @@ trait TcsBaseController[F[_]] {
   def rotFollow(enable:          Boolean): F[ApplyCommandResult]
   def rotMove(angle:             SAngle): F[ApplyCommandResult]
   def ecsCarouselMode(
-    domeMode:                    DomeMode,
-    shutterMode:                 ShutterMode,
-    slitHeight:                  Double,
-    domeEnable:                  Boolean,
-    shutterEnable:               Boolean
+    domeMode:      DomeMode,
+    shutterMode:   ShutterMode,
+    slitHeight:    Double,
+    domeEnable:    Boolean,
+    shutterEnable: Boolean
   ): F[ApplyCommandResult]
   def ecsVentGatesMove(gateEast: Double, westGate: Double): F[ApplyCommandResult]
   def applyTcsConfig(config:     TcsConfig): F[ApplyCommandResult]

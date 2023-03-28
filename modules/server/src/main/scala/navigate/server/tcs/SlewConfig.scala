@@ -4,6 +4,6 @@
 package navigate.server.tcs
 
 case class SlewConfig(
-                       slewOptions: SlewOptions,
-                       baseTarget: Target
+  slewOptions: SlewOptions,
+  baseTarget:  Target
 )
