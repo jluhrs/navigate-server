@@ -84,6 +84,8 @@ type Query {
 type Mutation {
     mountPark: OperationOutcome!
     mountFollow(enable: Boolean!): OperationOutcome!
+    rotatorPark: OperationOutcome!
+    rotatorFollow(enable: Boolean!): OperationOutcome!
     slew(slewParams: SlewInput!): OperationOutcome!
 }
 

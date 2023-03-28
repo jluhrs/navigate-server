@@ -103,6 +103,28 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
         Ior.Left(NonEmptyChain(Problem("mountFollow parameter could not be parsed."))).pure[F]
       )
 
+  def rotatorPark(p: Path, env: Cursor.Env): F[Result[OperationOutcome]] =
+    server.rotPark.attempt
+      .map(x =>
+        x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success).rightIor
+      )
+
+  def rotatorFollow(p: Path, env: Cursor.Env): F[Result[OperationOutcome]] =
+    env
+      .get[Boolean]("enable")
+      .map { en =>
+        server
+          .rotFollow(en)
+          .attempt
+          .map(x =>
+            x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+              .rightIor
+          )
+      }
+      .getOrElse(
+        Ior.Left(NonEmptyChain(Problem("rotatorFollow parameter could not be parsed."))).pure[F]
+      )
+
   def slew(p: Path, env: Cursor.Env): F[Result[OperationOutcome]] =
     env
       .get[SlewConfig]("slewParams")(classTag[SlewConfig])
@@ -126,12 +148,17 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
   override val selectElaborator: SelectElaborator = new SelectElaborator(
     Map(
       MutationType -> {
-        case Select("mountFollow", List(Binding("enable", BooleanValue(en))), child) =>
+        case Select("mountFollow", List(Binding("enable", BooleanValue(en))), child)   =>
           Environment(
             Cursor.Env("enable" -> en),
             Select("mountFollow", Nil, child)
           ).rightIor
-        case Select("slew", List(Binding("slewParams", ObjectValue(fields))), child) =>
+        case Select("rotatorFollow", List(Binding("enable", BooleanValue(en))), child) =>
+          Environment(
+            Cursor.Env("enable" -> en),
+            Select("rotatorFollow", Nil, child)
+          ).rightIor
+        case Select("slew", List(Binding("slewParams", ObjectValue(fields))), child)   =>
           Result.fromOption(
             parseSlewConfigInput(fields).map { x =>
               Environment(
@@ -151,6 +178,8 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
       fieldMappings = List(
         RootEffect.computeEncodable("mountPark")((_, p, env) => mountPark(p, env)),
         RootEffect.computeEncodable("mountFollow")((_, p, env) => mountFollow(p, env)),
+        RootEffect.computeEncodable("rotatorPark")((_, p, env) => rotatorPark(p, env)),
+        RootEffect.computeEncodable("rotatorFollow")((_, p, env) => rotatorFollow(p, env)),
         RootEffect.computeEncodable("slew")((_, p, env) => slew(p, env))
       )
     ),
