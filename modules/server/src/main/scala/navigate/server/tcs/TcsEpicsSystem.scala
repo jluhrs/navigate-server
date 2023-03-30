@@ -34,22 +34,22 @@ object TcsEpicsSystem {
 
     val mountParkCmd: ParameterlessCommandChannels[F]
 
-    val mountFollowCmd: Command1Channels[F, BinaryOnOff]
+    val mountFollowCmd: Command1Channels[F, String]
 
-    val rotStopCmd: Command1Channels[F, BinaryYesNo]
+    val rotStopCmd: Command1Channels[F, String]
 
     val rotParkCmd: ParameterlessCommandChannels[F]
 
-    val rotFollowCmd: Command1Channels[F, BinaryOnOff]
+    val rotFollowCmd: Command1Channels[F, String]
 
     val rotMoveCmd: Command1Channels[F, Double]
 
     val carouselModeCmd: Command5Channels[F,
-                                          DomeMode,
-                                          ShutterMode,
+      String,
+      String,
                                           Double,
-                                          BinaryOnOff,
-                                          BinaryOnOff
+      String,
+      String
     ]
 
     val carouselMoveCmd: Command1Channels[F, Double]
@@ -489,10 +489,10 @@ object TcsEpicsSystem {
   case class TcsChannels[F[_]](
     telltale:         TelltaleChannel[F],
     telescopeParkDir: Channel[F, CadDirective],
-    mountFollow:      Channel[F, BinaryOnOff],
-    rotStopBrake:     Channel[F, BinaryYesNo],
+    mountFollow:      Channel[F, String],
+    rotStopBrake:     Channel[F, String],
     rotParkDir:       Channel[F, CadDirective],
-    rotFollow:        Channel[F, BinaryOnOff],
+    rotFollow:        Channel[F, String],
     rotMoveAngle:     Channel[F, Double],
     enclosure:        EnclosureChannels[F],
     sourceA:          TargetChannels[F],
@@ -501,11 +501,11 @@ object TcsEpicsSystem {
   )
 
   case class EnclosureChannels[F[_]](
-    ecsDomeMode:      Channel[F, DomeMode],
-    ecsShutterMode:   Channel[F, ShutterMode],
+    ecsDomeMode:      Channel[F, String],
+    ecsShutterMode:   Channel[F, String],
     ecsSlitHeight:    Channel[F, Double],
-    ecsDomeEnable:    Channel[F, BinaryOnOff],
-    ecsShutterEnable: Channel[F, BinaryOnOff],
+    ecsDomeEnable:    Channel[F, String],
+    ecsShutterEnable: Channel[F, String],
     ecsMoveAngle:     Channel[F, Double],
     ecsShutterTop:    Channel[F, Double],
     ecsShutterBottom: Channel[F, Double],
@@ -529,22 +529,22 @@ object TcsEpicsSystem {
   )
 
   case class SlewChannels[F[_]](
-    zeroChopThrow:            Channel[F, BinaryOnOff],
-    zeroSourceOffset:         Channel[F, BinaryOnOff],
-    zeroSourceDiffTrack:      Channel[F, BinaryOnOff],
-    zeroMountOffset:          Channel[F, BinaryOnOff],
-    zeroMountDiffTrack:       Channel[F, BinaryOnOff],
-    shortcircuitTargetFilter: Channel[F, BinaryOnOff],
-    shortcircuitMountFilter:  Channel[F, BinaryOnOff],
-    resetPointing:            Channel[F, BinaryOnOff],
-    stopGuide:                Channel[F, BinaryOnOff],
-    zeroGuideOffset:          Channel[F, BinaryOnOff],
-    zeroInstrumentOffset:     Channel[F, BinaryOnOff],
-    autoparkPwfs1:            Channel[F, BinaryOnOff],
-    autoparkPwfs2:            Channel[F, BinaryOnOff],
-    autoparkOiwfs:            Channel[F, BinaryOnOff],
-    autoparkGems:             Channel[F, BinaryOnOff],
-    autoparkAowfs:            Channel[F, BinaryOnOff]
+    zeroChopThrow:            Channel[F, String],
+    zeroSourceOffset:         Channel[F, String],
+    zeroSourceDiffTrack:      Channel[F, String],
+    zeroMountOffset:          Channel[F, String],
+    zeroMountDiffTrack:       Channel[F, String],
+    shortcircuitTargetFilter: Channel[F, String],
+    shortcircuitMountFilter:  Channel[F, String],
+    resetPointing:            Channel[F, String],
+    stopGuide:                Channel[F, String],
+    zeroGuideOffset:          Channel[F, String],
+    zeroInstrumentOffset:     Channel[F, String],
+    autoparkPwfs1:            Channel[F, String],
+    autoparkPwfs2:            Channel[F, String],
+    autoparkOiwfs:            Channel[F, String],
+    autoparkGems:             Channel[F, String],
+    autoparkAowfs:            Channel[F, String]
   )
 
   def buildEnclosureChannels[F[_]](
@@ -552,11 +552,11 @@ object TcsEpicsSystem {
     top:     String
   ): Resource[F, EnclosureChannels[F]] =
     for {
-      edm <- service.getChannel[DomeMode](top + "carouselMode.A")
-      esm <- service.getChannel[ShutterMode](top + "carouselMode.B")
+      edm <- service.getChannel[String](top + "carouselMode.A")
+      esm <- service.getChannel[String](top + "carouselMode.B")
       esh <- service.getChannel[Double](top + "carouselMode.C")
-      ede <- service.getChannel[BinaryOnOff](top + "carouselMode.D")
-      ese <- service.getChannel[BinaryOnOff](top + "carouselMode.E")
+      ede <- service.getChannel[String](top + "carouselMode.D")
+      ese <- service.getChannel[String](top + "carouselMode.E")
       ema <- service.getChannel[Double](top + "carousel.A")
       est <- service.getChannel[Double](top + "shutter.A")
       esb <- service.getChannel[Double](top + "shutter.B")
@@ -611,22 +611,22 @@ object TcsEpicsSystem {
     service: EpicsService[F],
     top:     String
   ): Resource[F, SlewChannels[F]] = for {
-    zct <- service.getChannel[BinaryOnOff](top + "slew.A")
-    zso <- service.getChannel[BinaryOnOff](top + "slew.B")
-    zsd <- service.getChannel[BinaryOnOff](top + "slew.C")
-    zmo <- service.getChannel[BinaryOnOff](top + "slew.D")
-    zmd <- service.getChannel[BinaryOnOff](top + "slew.E")
-    fl1 <- service.getChannel[BinaryOnOff](top + "slew.F")
-    fl2 <- service.getChannel[BinaryOnOff](top + "slew.G")
-    rp  <- service.getChannel[BinaryOnOff](top + "slew.H")
-    sg  <- service.getChannel[BinaryOnOff](top + "slew.I")
-    zgo <- service.getChannel[BinaryOnOff](top + "slew.J")
-    zio <- service.getChannel[BinaryOnOff](top + "slew.K")
-    ap1 <- service.getChannel[BinaryOnOff](top + "slew.L")
-    ap2 <- service.getChannel[BinaryOnOff](top + "slew.M")
-    aoi <- service.getChannel[BinaryOnOff](top + "slew.N")
-    agm <- service.getChannel[BinaryOnOff](top + "slew.O")
-    aao <- service.getChannel[BinaryOnOff](top + "slew.P")
+    zct <- service.getChannel[String](top + "slew.A")
+    zso <- service.getChannel[String](top + "slew.B")
+    zsd <- service.getChannel[String](top + "slew.C")
+    zmo <- service.getChannel[String](top + "slew.D")
+    zmd <- service.getChannel[String](top + "slew.E")
+    fl1 <- service.getChannel[String](top + "slew.F")
+    fl2 <- service.getChannel[String](top + "slew.G")
+    rp  <- service.getChannel[String](top + "slew.H")
+    sg  <- service.getChannel[String](top + "slew.I")
+    zgo <- service.getChannel[String](top + "slew.J")
+    zio <- service.getChannel[String](top + "slew.K")
+    ap1 <- service.getChannel[String](top + "slew.L")
+    ap2 <- service.getChannel[String](top + "slew.M")
+    aoi <- service.getChannel[String](top + "slew.N")
+    agm <- service.getChannel[String](top + "slew.O")
+    aao <- service.getChannel[String](top + "slew.P")
   } yield SlewChannels(
     zct,
     zso,
@@ -650,10 +650,10 @@ object TcsEpicsSystem {
     for {
       tt  <- service.getChannel[String](top + "sad:health.VAL").map(TelltaleChannel(sysName, _))
       tpd <- service.getChannel[CadDirective](top + "telpark" + DirSuffix)
-      mf  <- service.getChannel[BinaryOnOff](top + "mcFollow.A")
-      rsb <- service.getChannel[BinaryYesNo](top + "rotStop.B")
+      mf  <- service.getChannel[String](top + "mcFollow.A")
+      rsb <- service.getChannel[String](top + "rotStop.B")
       rpd <- service.getChannel[CadDirective](top + "rotPark" + DirSuffix)
-      rf  <- service.getChannel[BinaryOnOff](top + "crFollow.A")
+      rf  <- service.getChannel[String](top + "crFollow.A")
       rma <- service.getChannel[Double](top + "rotMove.A")
       ecs <- buildEnclosureChannels(service, top)
       sra <- buildTargetChannels(service, top + "sourceA")
@@ -693,13 +693,13 @@ object TcsEpicsSystem {
     override val mcsFollowCommand: FollowCommand[F, TcsCommands[F]] =
       (enable: Boolean) =>
         addParam(
-          tcsEpics.mountFollowCmd.setParam1(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+          tcsEpics.mountFollowCmd.setParam1(enable.fold(BinaryOnOff.On, BinaryOnOff.Off).tag)
         )
 
     override val rotStopCommand: RotStopCommand[F, TcsCommands[F]] =
       (enable: Boolean) =>
         addParam(
-          tcsEpics.rotStopCmd.setParam1(enable.fold(BinaryYesNo.Yes, BinaryYesNo.No))
+          tcsEpics.rotStopCmd.setParam1(enable.fold(BinaryYesNo.Yes, BinaryYesNo.No).tag)
         )
 
     override val rotParkCommand: BaseCommand[F, TcsCommands[F]] =
@@ -710,7 +710,7 @@ object TcsEpicsSystem {
     override val rotFollowCommand: FollowCommand[F, TcsCommands[F]] =
       (enable: Boolean) =>
         addParam(
-          tcsEpics.rotFollowCmd.setParam1(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+          tcsEpics.rotFollowCmd.setParam1(enable.fold(BinaryOnOff.On, BinaryOnOff.Off).tag)
         )
 
     override val rotMoveCommand: RotMoveCommand[F, TcsCommands[F]] =
@@ -722,11 +722,11 @@ object TcsEpicsSystem {
     override val ecsCarouselModeCmd: CarouselModeCommand[F, TcsCommands[F]] =
       new CarouselModeCommand[F, TcsCommands[F]] {
         override def setDomeMode(mode: DomeMode): TcsCommands[F] = addParam(
-          tcsEpics.carouselModeCmd.setParam1(mode)
+          tcsEpics.carouselModeCmd.setParam1(mode.tag)
         )
 
         override def setShutterMode(mode: ShutterMode): TcsCommands[F] = addParam(
-          tcsEpics.carouselModeCmd.setParam2(mode)
+          tcsEpics.carouselModeCmd.setParam2(mode.tag)
         )
 
         override def setSlitHeight(height: Double): TcsCommands[F] = addParam(
@@ -734,11 +734,11 @@ object TcsEpicsSystem {
         )
 
         override def setDomeEnable(enable: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.carouselModeCmd.setParam4(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+          tcsEpics.carouselModeCmd.setParam4(enable.fold(BinaryOnOff.On, BinaryOnOff.Off).tag)
         )
 
         override def setShutterEnable(enable: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.carouselModeCmd.setParam5(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+          tcsEpics.carouselModeCmd.setParam5(enable.fold(BinaryOnOff.On, BinaryOnOff.Off).tag)
         )
       }
 
@@ -826,67 +826,67 @@ object TcsEpicsSystem {
     override val slewOptionsCommand: SlewOptionsCommand[F, TcsCommands[F]] =
       new SlewOptionsCommand[F, TcsCommands[F]] {
         override def zeroChopThrow(enable: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.slewCmd.zeroChopThrow(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+          tcsEpics.slewCmd.zeroChopThrow(enable.fold(BinaryOnOff.On, BinaryOnOff.Off).tag)
         )
 
         override def zeroSourceOffset(enable: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.slewCmd.zeroSourceOffset(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+          tcsEpics.slewCmd.zeroSourceOffset(enable.fold(BinaryOnOff.On, BinaryOnOff.Off).tag)
         )
 
         override def zeroSourceDiffTrack(enable: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.slewCmd.zeroSourceDiffTrack(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+          tcsEpics.slewCmd.zeroSourceDiffTrack(enable.fold(BinaryOnOff.On, BinaryOnOff.Off).tag)
         )
 
         override def zeroMountOffset(enable: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.slewCmd.zeroMountOffset(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+          tcsEpics.slewCmd.zeroMountOffset(enable.fold(BinaryOnOff.On, BinaryOnOff.Off).tag)
         )
 
         override def zeroMountDiffTrack(enable: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.slewCmd.zeroMountDiffTrack(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+          tcsEpics.slewCmd.zeroMountDiffTrack(enable.fold(BinaryOnOff.On, BinaryOnOff.Off).tag)
         )
 
         override def shortcircuitTargetFilter(enable: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.slewCmd.shortcircuitTargetFilter(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+          tcsEpics.slewCmd.shortcircuitTargetFilter(enable.fold(BinaryOnOff.On, BinaryOnOff.Off).tag)
         )
 
         override def shortcircuitMountFilter(enable: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.slewCmd.shortcircuitMountFilter(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+          tcsEpics.slewCmd.shortcircuitMountFilter(enable.fold(BinaryOnOff.On, BinaryOnOff.Off).tag)
         )
 
         override def resetPointing(enable: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.slewCmd.resetPointing(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+          tcsEpics.slewCmd.resetPointing(enable.fold(BinaryOnOff.On, BinaryOnOff.Off).tag)
         )
 
         override def stopGuide(enable: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.slewCmd.stopGuide(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+          tcsEpics.slewCmd.stopGuide(enable.fold(BinaryOnOff.On, BinaryOnOff.Off).tag)
         )
 
         override def zeroGuideOffset(enable: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.slewCmd.zeroGuideOffset(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+          tcsEpics.slewCmd.zeroGuideOffset(enable.fold(BinaryOnOff.On, BinaryOnOff.Off).tag)
         )
 
         override def zeroInstrumentOffset(enable: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.slewCmd.zeroInstrumentOffset(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+          tcsEpics.slewCmd.zeroInstrumentOffset(enable.fold(BinaryOnOff.On, BinaryOnOff.Off).tag)
         )
 
         override def autoparkPwfs1(enable: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.slewCmd.autoparkPwfs1(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+          tcsEpics.slewCmd.autoparkPwfs1(enable.fold(BinaryOnOff.On, BinaryOnOff.Off).tag)
         )
 
         override def autoparkPwfs2(enable: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.slewCmd.autoparkPwfs2(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+          tcsEpics.slewCmd.autoparkPwfs2(enable.fold(BinaryOnOff.On, BinaryOnOff.Off).tag)
         )
 
         override def autoparkOiwfs(enable: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.slewCmd.autoparkOiwfs(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+          tcsEpics.slewCmd.autoparkOiwfs(enable.fold(BinaryOnOff.On, BinaryOnOff.Off).tag)
         )
 
         override def autoparkGems(enable: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.slewCmd.autoparkGems(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+          tcsEpics.slewCmd.autoparkGems(enable.fold(BinaryOnOff.On, BinaryOnOff.Off).tag)
         )
 
         override def autoparkAowfs(enable: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.slewCmd.autoparkAowfs(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+          tcsEpics.slewCmd.autoparkAowfs(enable.fold(BinaryOnOff.On, BinaryOnOff.Off).tag)
         )
       }
   }
@@ -906,23 +906,23 @@ object TcsEpicsSystem {
     override val mountParkCmd: ParameterlessCommandChannels[F] =
       ParameterlessCommandChannels(channels.telltale, channels.telescopeParkDir)
 
-    override val mountFollowCmd: Command1Channels[F, BinaryOnOff] =
+    override val mountFollowCmd: Command1Channels[F, String] =
       Command1Channels(channels.telltale, channels.mountFollow)
 
-    override val rotStopCmd: Command1Channels[F, BinaryYesNo] =
+    override val rotStopCmd: Command1Channels[F, String] =
       Command1Channels(channels.telltale, channels.rotStopBrake)
 
     override val rotParkCmd: ParameterlessCommandChannels[F] =
       ParameterlessCommandChannels(channels.telltale, channels.rotParkDir)
 
-    override val rotFollowCmd: Command1Channels[F, BinaryOnOff] =
+    override val rotFollowCmd: Command1Channels[F, String] =
       Command1Channels(channels.telltale, channels.rotFollow)
 
     override val rotMoveCmd: Command1Channels[F, Double] =
       Command1Channels(channels.telltale, channels.rotMoveAngle)
 
     override val carouselModeCmd
-      : Command5Channels[F, DomeMode, ShutterMode, Double, BinaryOnOff, BinaryOnOff] =
+      : Command5Channels[F, String, String, Double, String, String] =
       Command5Channels(
         channels.telltale,
         channels.enclosure.ecsDomeMode,
@@ -1069,40 +1069,40 @@ object TcsEpicsSystem {
     tt:           TelltaleChannel[F],
     slewChannels: SlewChannels[F]
   ) {
-    def zeroChopThrow(v: BinaryOnOff): VerifiedEpics[F, F, Unit]            =
-      writeChannel[F, BinaryOnOff](tt, slewChannels.zeroChopThrow)(Applicative[F].pure(v))
-    def zeroSourceOffset(v: BinaryOnOff): VerifiedEpics[F, F, Unit]         =
-      writeChannel[F, BinaryOnOff](tt, slewChannels.zeroSourceOffset)(Applicative[F].pure(v))
-    def zeroSourceDiffTrack(v: BinaryOnOff): VerifiedEpics[F, F, Unit]      =
-      writeChannel[F, BinaryOnOff](tt, slewChannels.zeroSourceDiffTrack)(Applicative[F].pure(v))
-    def zeroMountOffset(v: BinaryOnOff): VerifiedEpics[F, F, Unit]          =
-      writeChannel[F, BinaryOnOff](tt, slewChannels.zeroMountOffset)(Applicative[F].pure(v))
-    def zeroMountDiffTrack(v: BinaryOnOff): VerifiedEpics[F, F, Unit]       =
-      writeChannel[F, BinaryOnOff](tt, slewChannels.zeroMountDiffTrack)(Applicative[F].pure(v))
-    def shortcircuitTargetFilter(v: BinaryOnOff): VerifiedEpics[F, F, Unit] =
-      writeChannel[F, BinaryOnOff](tt, slewChannels.shortcircuitTargetFilter)(
+    def zeroChopThrow(v: String): VerifiedEpics[F, F, Unit]            =
+      writeChannel[F, String](tt, slewChannels.zeroChopThrow)(Applicative[F].pure(v))
+    def zeroSourceOffset(v: String): VerifiedEpics[F, F, Unit]         =
+      writeChannel[F, String](tt, slewChannels.zeroSourceOffset)(Applicative[F].pure(v))
+    def zeroSourceDiffTrack(v: String): VerifiedEpics[F, F, Unit]      =
+      writeChannel[F, String](tt, slewChannels.zeroSourceDiffTrack)(Applicative[F].pure(v))
+    def zeroMountOffset(v: String): VerifiedEpics[F, F, Unit]          =
+      writeChannel[F, String](tt, slewChannels.zeroMountOffset)(Applicative[F].pure(v))
+    def zeroMountDiffTrack(v: String): VerifiedEpics[F, F, Unit]       =
+      writeChannel[F, String](tt, slewChannels.zeroMountDiffTrack)(Applicative[F].pure(v))
+    def shortcircuitTargetFilter(v: String): VerifiedEpics[F, F, Unit] =
+      writeChannel[F, String](tt, slewChannels.shortcircuitTargetFilter)(
         Applicative[F].pure(v)
       )
-    def shortcircuitMountFilter(v: BinaryOnOff): VerifiedEpics[F, F, Unit]  =
-      writeChannel[F, BinaryOnOff](tt, slewChannels.shortcircuitMountFilter)(Applicative[F].pure(v))
-    def resetPointing(v: BinaryOnOff): VerifiedEpics[F, F, Unit]            =
-      writeChannel[F, BinaryOnOff](tt, slewChannels.resetPointing)(Applicative[F].pure(v))
-    def stopGuide(v: BinaryOnOff): VerifiedEpics[F, F, Unit]                =
-      writeChannel[F, BinaryOnOff](tt, slewChannels.stopGuide)(Applicative[F].pure(v))
-    def zeroGuideOffset(v: BinaryOnOff): VerifiedEpics[F, F, Unit]          =
-      writeChannel[F, BinaryOnOff](tt, slewChannels.zeroGuideOffset)(Applicative[F].pure(v))
-    def zeroInstrumentOffset(v: BinaryOnOff): VerifiedEpics[F, F, Unit]     =
-      writeChannel[F, BinaryOnOff](tt, slewChannels.zeroInstrumentOffset)(Applicative[F].pure(v))
-    def autoparkPwfs1(v: BinaryOnOff): VerifiedEpics[F, F, Unit]            =
-      writeChannel[F, BinaryOnOff](tt, slewChannels.autoparkPwfs1)(Applicative[F].pure(v))
-    def autoparkPwfs2(v: BinaryOnOff): VerifiedEpics[F, F, Unit]            =
-      writeChannel[F, BinaryOnOff](tt, slewChannels.autoparkPwfs2)(Applicative[F].pure(v))
-    def autoparkOiwfs(v: BinaryOnOff): VerifiedEpics[F, F, Unit]            =
-      writeChannel[F, BinaryOnOff](tt, slewChannels.autoparkOiwfs)(Applicative[F].pure(v))
-    def autoparkGems(v: BinaryOnOff): VerifiedEpics[F, F, Unit]             =
-      writeChannel[F, BinaryOnOff](tt, slewChannels.autoparkGems)(Applicative[F].pure(v))
-    def autoparkAowfs(v: BinaryOnOff): VerifiedEpics[F, F, Unit]            =
-      writeChannel[F, BinaryOnOff](tt, slewChannels.autoparkAowfs)(Applicative[F].pure(v))
+    def shortcircuitMountFilter(v: String): VerifiedEpics[F, F, Unit]  =
+      writeChannel[F, String](tt, slewChannels.shortcircuitMountFilter)(Applicative[F].pure(v))
+    def resetPointing(v: String): VerifiedEpics[F, F, Unit]            =
+      writeChannel[F, String](tt, slewChannels.resetPointing)(Applicative[F].pure(v))
+    def stopGuide(v: String): VerifiedEpics[F, F, Unit]                =
+      writeChannel[F, String](tt, slewChannels.stopGuide)(Applicative[F].pure(v))
+    def zeroGuideOffset(v: String): VerifiedEpics[F, F, Unit]          =
+      writeChannel[F, String](tt, slewChannels.zeroGuideOffset)(Applicative[F].pure(v))
+    def zeroInstrumentOffset(v: String): VerifiedEpics[F, F, Unit]     =
+      writeChannel[F, String](tt, slewChannels.zeroInstrumentOffset)(Applicative[F].pure(v))
+    def autoparkPwfs1(v: String): VerifiedEpics[F, F, Unit]            =
+      writeChannel[F, String](tt, slewChannels.autoparkPwfs1)(Applicative[F].pure(v))
+    def autoparkPwfs2(v: String): VerifiedEpics[F, F, Unit]            =
+      writeChannel[F, String](tt, slewChannels.autoparkPwfs2)(Applicative[F].pure(v))
+    def autoparkOiwfs(v: String): VerifiedEpics[F, F, Unit]            =
+      writeChannel[F, String](tt, slewChannels.autoparkOiwfs)(Applicative[F].pure(v))
+    def autoparkGems(v: String): VerifiedEpics[F, F, Unit]             =
+      writeChannel[F, String](tt, slewChannels.autoparkGems)(Applicative[F].pure(v))
+    def autoparkAowfs(v: String): VerifiedEpics[F, F, Unit]            =
+      writeChannel[F, String](tt, slewChannels.autoparkAowfs)(Applicative[F].pure(v))
   }
 
   trait BaseCommand[F[_], +S] {

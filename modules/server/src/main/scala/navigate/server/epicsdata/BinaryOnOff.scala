@@ -9,8 +9,8 @@ import lucuma.core.util.Enumerated
 abstract class BinaryOnOff(val tag: String) extends Product with Serializable
 
 object BinaryOnOff {
-  case object Off extends BinaryOnOff("off")
-  case object On  extends BinaryOnOff("on")
+  case object Off extends BinaryOnOff("Off")
+  case object On  extends BinaryOnOff("On")
 
   given Enumerated[BinaryOnOff] = Enumerated.from(Off, On).withTag(_.tag)
 

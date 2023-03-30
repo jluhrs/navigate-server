@@ -121,8 +121,8 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
         .compose[TcsCommands[F]](l.get(_).ephemerisFile(""))
     case t: SiderealTarget  =>
       { (x: TcsCommands[F]) => l.get(x).objectName(t.objectName) }
-        .compose[TcsCommands[F]](l.get(_).coordSystem("FK5/J2000"))
-        .compose[TcsCommands[F]](l.get(_).coord1(t.coordinates.ra.toAngle.toDoubleDegrees))
+        .compose[TcsCommands[F]](l.get(_).coordSystem("FK5"))
+        .compose[TcsCommands[F]](l.get(_).coord1(t.coordinates.ra.toAngle.toDoubleDegrees / 15.0))
         .compose[TcsCommands[F]](l.get(_).coord2(t.coordinates.dec.toAngle.toSignedDoubleDegrees))
         .compose[TcsCommands[F]](l.get(_).brightness(DefaultBrightness))
         .compose[TcsCommands[F]](l.get(_).epoch(t.epoch.epochYear))
