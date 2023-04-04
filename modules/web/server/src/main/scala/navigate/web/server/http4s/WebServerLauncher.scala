@@ -4,16 +4,16 @@
 package navigate.web.server.http4s
 
 import cats.Parallel
-import cats.effect._
+import cats.effect.*
 import cats.effect.std.Dispatcher
-import cats.syntax.all._
+import cats.syntax.all.*
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.Appender
 import fs2.Stream
 import fs2.concurrent.Topic
 import natchez.Trace.Implicits.noop
 import navigate.model.NavigateEvent
-import navigate.model.config._
+import navigate.model.config.*
 import navigate.server.CaServiceInit
 import navigate.server.NavigateEngine
 import navigate.server.NavigateFailure
@@ -22,7 +22,7 @@ import navigate.web.server.OcsBuildInfo
 import navigate.web.server.common.LogInitialization
 import navigate.web.server.common.RedirectToHttpsRoutes
 import navigate.web.server.common.StaticRoutes
-import navigate.web.server.config._
+import navigate.web.server.config.*
 import navigate.web.server.logging.AppenderForClients
 import navigate.web.server.logging.given
 import navigate.web.server.security.AuthenticationService
@@ -33,7 +33,7 @@ import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.server.Router
 import org.http4s.server.SSLKeyStoreSupport.StoreInfo
 import org.http4s.server.Server
-import org.http4s.server.middleware.{Logger => Http4sLogger}
+import org.http4s.server.middleware.Logger as Http4sLogger
 import org.http4s.server.websocket.WebSocketBuilder2
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
@@ -41,13 +41,15 @@ import pureconfig.ConfigObjectSource
 import pureconfig.ConfigSource
 
 import java.io.FileInputStream
-import java.nio.file.{Path => FilePath}
+import java.nio.file.Path as FilePath
 import java.security.KeyStore
 import java.security.Security
+import java.util.Locale
+import java.util.spi.LocaleServiceProvider
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManagerFactory
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 object WebServerLauncher extends IOApp with LogInitialization {
   private given Logger[IO] = Slf4jLogger.getLoggerFromName[IO]("navigate")
@@ -249,6 +251,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
 
     val navigate: Resource[IO, ExitCode] =
       for {
+        _      <- Resource.eval(IO.delay(Locale.setDefault(Locale.ENGLISH)))
         _      <- Resource.eval(configLog[IO]) // Initialize log before the engine is setup
         conf   <- Resource.eval(config[IO].flatMap(loadConfiguration[IO]))
         _      <- Resource.eval(printBanner(conf))
