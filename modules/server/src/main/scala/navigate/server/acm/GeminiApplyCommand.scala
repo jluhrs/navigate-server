@@ -106,7 +106,7 @@ object GeminiApplyCommand {
     ): F[ApplyCommandResult] = Stream.eval(avr.attempt.map(_.toOption)).flatMap { avo =>
       (Stream.eval(dw) *>
         Stream[F, Stream[F, Event]](
-          avs.flatMap {
+          avs.drop(avo.size).flatMap {
             case StreamEvent.ValueChanged(v) => Stream(ApplyValChange(v))
             case StreamEvent.Disconnected =>
               Stream.raiseError[F](new Throwable(s"Apply record ${apply.name} disconnected"))
@@ -121,19 +121,19 @@ object GeminiApplyCommand {
         ).parJoin(3))
         .mapAccumulate[PostState, F[Option[ApplyCommandResult]]](Processing(None, WaitingBusy)) { (s, ev) =>
           (s, ev) match {
-            case (Processing(None, x), ApplyValChange(v)) if avo.forall(_ =!= v) && v < 0 =>
+            case (Processing(None, x), ApplyValChange(v)) if v < 0 =>
               (Processing(None, x),
                 msr.flatMap(msg =>
                   new Throwable(s"Apply record ${apply.name} failed with error: $msg").raiseError
                 )
               )
-            case (Processing(None, x), ApplyValChange(v)) if avo.forall(_ =!= v) && v === 0 =>
+            case (Processing(None, x), ApplyValChange(v)) if v === 0 =>
               (Processing(None, x),
                 new Throwable(
                   s"Apply record ${apply.name} triggered externally while processing."
                 ).raiseError
               )
-            case (Processing(None, x), ApplyValChange(v)) if avo.forall(_ =!= v) && v > 0 =>
+            case (Processing(None, x), ApplyValChange(v)) if v > 0 =>
               (Processing(v.some, x), none[ApplyCommandResult].pure[F])
             case (Processing(v, _), CarValChange(CarState.Error)) =>
               (Processing(v, WaitingIdle),
