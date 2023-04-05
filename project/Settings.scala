@@ -14,7 +14,7 @@ object Settings {
     val scalajsReact            = "2.1.1"
     val booPickle               = "1.4.0"
     val javaTimeJS              = "2.5.0"
-    val javaLocales             = "1.2.1"
+    val javaLocales             = "1.5.1"
     val lucumaReact             = "0.25.0"
     val scalaJSSemanticUI       = "0.13.1"
     val scalaJSReactVirtualized = "0.13.1"
