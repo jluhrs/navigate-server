@@ -14,6 +14,7 @@ object Settings {
     val scalajsReact            = "2.1.1"
     val booPickle               = "1.4.0"
     val javaTimeJS              = "2.5.0"
+    val javaLocales             = "1.2.0"
     val lucumaReact             = "0.25.0"
     val scalaJSSemanticUI       = "0.13.1"
     val scalaJSReactVirtualized = "0.13.1"
@@ -231,6 +232,8 @@ object Settings {
     val BooPickle               = Def.setting("io.suzaku" %%% "boopickle" % LibraryVersions.booPickle)
     val JavaTimeJS              =
       Def.setting("io.github.cquiroz" %%% "scala-java-time" % LibraryVersions.javaTimeJS)
+    val JavaLocales             =
+      Def.setting("io.github.cquiroz" %%% "scala-java-locales" % LibraryVersions.javaLocales)
     val GeminiLocales           =
       Def.setting("edu.gemini" %%% "gemini-locales" % LibraryVersions.geminiLocales)
     val PPrint                  = Def.setting("com.lihaoyi" %%% "pprint" % LibraryVersions.pprint)

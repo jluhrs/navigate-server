@@ -101,7 +101,8 @@ lazy val navigate_web_server = project
       Http4sBoopickle,
       GrackleRoutes,
       Natchez,
-      LucumaSchemas
+      LucumaSchemas,
+      JavaLocales.value
     ) ++
       Http4sClient ++ Http4s ++ PureConfig ++ Logging.value ++ MUnit.value ++ Grackle.value,
     // Supports launching the server in the background
