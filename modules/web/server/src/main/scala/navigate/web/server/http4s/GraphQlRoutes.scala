@@ -5,6 +5,7 @@ package navigate.web.server.http4s
 
 import cats.effect.Async
 import cats.syntax.all.*
+import fs2.compression.Compression
 import lucuma.graphql.routes.GrackleGraphQLService
 import lucuma.graphql.routes.Routes
 import natchez.Trace
@@ -20,7 +21,7 @@ import org.http4s.server.middleware.GZip
 import org.http4s.server.websocket.WebSocketBuilder2
 import org.typelevel.log4cats.Logger
 
-class GraphQlRoutes[F[_]: Async: Logger: Trace](
+class GraphQlRoutes[F[_]: Async: Logger: Trace: Compression](
   eng: NavigateEngine[F]
 ) extends Http4sDsl[F] {
 

@@ -7,8 +7,10 @@ import cats.data.NonEmptyList
 import cats.effect.Async
 import cats.effect.Sync
 import cats.syntax.all.*
+import com.comcast.ip4s.Dns
 import fs2.Pipe
 import fs2.Stream
+import fs2.compression.Compression
 import fs2.concurrent.Topic
 import lucuma.core.enums.Site
 import navigate.model.ClientId
@@ -53,7 +55,7 @@ import scala.math.*
 /**
  * Rest Endpoints under the /api route
  */
-class NavigateUIApiRoutes[F[_]: Async](
+class NavigateUIApiRoutes[F[_]: Async: Dns: Compression](
   site:         Site,
   mode:         Mode,
   auth:         AuthenticationService[F],

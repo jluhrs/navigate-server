@@ -26,7 +26,7 @@ object Settings {
     val catsEffect   = "3.5.0"
     val cats         = "2.9.0"
     val mouse        = "1.2.1"
-    val fs2          = "3.6.1"
+    val fs2          = "3.7.0"
     val shapeless    = "2.3.7"
     val scalaParsers = "1.1.2"
     val scalaXml     = "1.2.0"
@@ -36,7 +36,7 @@ object Settings {
     val log4Cats         = "2.6.0"
     val log4CatsLogLevel = "0.3.1"
 
-    val http4s           = "0.23.18"
+    val http4s           = "0.23.19"
     val http4sBlaze      = "0.23.14"
     val http4sBoopickle  = "0.23.11"
     val http4sXml        = "0.23.12"
