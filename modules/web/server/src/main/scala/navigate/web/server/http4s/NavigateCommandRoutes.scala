@@ -5,6 +5,7 @@ package navigate.web.server.http4s
 
 import cats.effect.Async
 import cats.syntax.all._
+import fs2.compression.Compression
 import lucuma.core.model.Observation.{Id => ObsId}
 import navigate.model.security.UserDetails
 import navigate.server.NavigateEngine
@@ -17,7 +18,7 @@ import org.http4s.dsl.Http4sDsl
 import org.http4s.server.middleware.GZip
 import squants.space.AngleConversions._
 
-class NavigateCommandRoutes[F[_]: Async](
+class NavigateCommandRoutes[F[_]: Async: Compression](
   auth: AuthenticationService[F],
   eng:  NavigateEngine[F]
 ) extends Http4sDsl[F] {

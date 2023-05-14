@@ -9,7 +9,9 @@ import cats.effect.std.Dispatcher
 import cats.syntax.all.*
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.Appender
+import com.comcast.ip4s.Dns
 import fs2.Stream
+import fs2.compression.Compression
 import fs2.concurrent.Topic
 import natchez.Trace.Implicits.noop
 import navigate.model.NavigateEvent
@@ -107,7 +109,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
   }
 
   /** Resource that yields the running web server */
-  def webServer[F[_]: Logger: Async, I](
+  def webServer[F[_]: Logger: Async: Dns: Compression, I](
     conf:      NavigateConfiguration,
     as:        AuthenticationService[F],
     outputs:   Topic[F, NavigateEvent],
