@@ -37,7 +37,7 @@ object Settings {
     val log4CatsLogLevel = "0.3.1"
 
     val http4s           = "0.23.19"
-    val http4sBlaze      = "0.23.14"
+    val http4sBlaze      = "0.23.15"
     val http4sBoopickle  = "0.23.11"
     val http4sXml        = "0.23.12"
     val http4sPrometheus = "0.23.12"
