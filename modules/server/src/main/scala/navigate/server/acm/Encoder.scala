@@ -11,16 +11,16 @@ trait Encoder[A, B] {
 
 object Encoder {
 
-  given[A]: Encoder[A, A] = (a: A) => a
+  given [A]: Encoder[A, A] = (a: A) => a
 
   given Encoder[Int, String] = (a: Int) => s"$a"
 
   given Encoder[Double, String] = (a: Double) => s"$a"
 
-  given[A: Enumerated]: Encoder[A, String] = (a: A) => Enumerated[A].tag(a)
-  
+  given [A: Enumerated]: Encoder[A, String] = (a: A) => Enumerated[A].tag(a)
+
   extension [A](a: A) {
-    def encode[B](using enc: Encoder[A, B]): B = enc.encode(a) 
+    def encode[B](using enc: Encoder[A, B]): B = enc.encode(a)
   }
 
 }
