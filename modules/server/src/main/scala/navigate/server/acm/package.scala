@@ -13,9 +13,9 @@ import navigate.server.acm.Encoder.*
 package object acm {
 
   def writeCadParam[F[_]: Monad, A](
-      tt:            TelltaleChannel[F],
-      ch: Channel[F, String]
-    )(v: A)(using enc:Encoder[A, String]): VerifiedEpics[F, F, Unit] =
-    writeChannel[F, String](tt, ch)(enc.encode((v)).pure[F])
+    tt: TelltaleChannel[F],
+    ch: Channel[F, String]
+  )(v: A)(using enc: Encoder[A, String]): VerifiedEpics[F, F, Unit] =
+    writeChannel[F, String](tt, ch)(enc.encode(v).pure[F])
 
 }

@@ -13,7 +13,7 @@ import navigate.epics.VerifiedEpics.*
 import navigate.model.enums.{DomeMode, ShutterMode}
 import navigate.server.{ApplyCommandResult, tcs}
 import navigate.server.acm.ParameterList.*
-import navigate.server.acm.{CadDirective, GeminiApplyCommand, writeCadParam, Encoder}
+import navigate.server.acm.{CadDirective, Encoder, GeminiApplyCommand, writeCadParam}
 import navigate.server.epicsdata.{BinaryOnOff, BinaryYesNo, DirSuffix}
 import navigate.server.epicsdata.BinaryOnOff.given
 import navigate.server.epicsdata.BinaryYesNo.given
@@ -47,13 +47,7 @@ object TcsEpicsSystem {
 
     val rotMoveCmd: Command1Channels[F, Double]
 
-    val carouselModeCmd: Command5Channels[F,
-      String,
-      String,
-      Double,
-      BinaryOnOff,
-      BinaryOnOff
-    ]
+    val carouselModeCmd: Command5Channels[F, String, String, Double, BinaryOnOff, BinaryOnOff]
 
     val carouselMoveCmd: Command1Channels[F, Double]
 
@@ -737,7 +731,9 @@ object TcsEpicsSystem {
         )
 
         override def setDomeEnable(enable: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.carouselModeCmd.setParam4(enable.fold[BinaryOnOff](BinaryOnOff.On, BinaryOnOff.Off))
+          tcsEpics.carouselModeCmd.setParam4(
+            enable.fold[BinaryOnOff](BinaryOnOff.On, BinaryOnOff.Off)
+          )
         )
 
         override def setShutterEnable(enable: Boolean): TcsCommands[F] = addParam(
@@ -969,7 +965,7 @@ object TcsEpicsSystem {
       writeChannel[F, CadDirective](tt, dirChannel)(Applicative[F].pure(CadDirective.MARK))
   }
 
-  case class Command1Channels[F[_]: Monad, A: Encoder[*, String] ](
+  case class Command1Channels[F[_]: Monad, A: Encoder[*, String]](
     tt:            TelltaleChannel[F],
     param1Channel: Channel[F, String]
   ) {
@@ -988,7 +984,10 @@ object TcsEpicsSystem {
       writeCadParam[F, B](tt, param2Channel)(v)
   }
 
-  case class Command3Channels[F[_]: Monad, A: Encoder[*, String], B: Encoder[*, String], C: Encoder[*, String]](
+  case class Command3Channels[F[_]: Monad, A: Encoder[*, String], B: Encoder[*, String], C: Encoder[
+    *,
+    String
+  ]](
     tt:            TelltaleChannel[F],
     param1Channel: Channel[F, String],
     param2Channel: Channel[F, String],
@@ -1002,7 +1001,10 @@ object TcsEpicsSystem {
       writeCadParam[F, C](tt, param3Channel)(v)
   }
 
-  case class Command4Channels[F[_]: Monad, A: Encoder[*, String], B: Encoder[*, String], C: Encoder[*, String], D: Encoder[*, String]](
+  case class Command4Channels[F[_]: Monad, A: Encoder[*, String], B: Encoder[*, String], C: Encoder[
+    *,
+    String
+  ], D: Encoder[*, String]](
     tt:            TelltaleChannel[F],
     param1Channel: Channel[F, String],
     param2Channel: Channel[F, String],
@@ -1019,7 +1021,10 @@ object TcsEpicsSystem {
       writeCadParam[F, D](tt, param4Channel)(v)
   }
 
-  case class Command5Channels[F[_]: Monad, A: Encoder[*, String], B: Encoder[*, String], C: Encoder[*, String], D: Encoder[*, String], E: Encoder[*, String]](
+  case class Command5Channels[F[_]: Monad, A: Encoder[*, String], B: Encoder[*, String], C: Encoder[
+    *,
+    String
+  ], D: Encoder[*, String], E: Encoder[*, String]](
     tt:            TelltaleChannel[F],
     param1Channel: Channel[F, String],
     param2Channel: Channel[F, String],

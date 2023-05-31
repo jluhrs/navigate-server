@@ -22,9 +22,10 @@ import scala.concurrent.duration.FiniteDuration
 trait GeminiApplyCommand[F[_]] {
 
   /**
-   * Given a pair of apply and CAR records, this function produces a program that will trigger the apply record and then
-   * monitor the apply and CAR record to finally produce a command result. If the command takes longer than the <code>timeout</code>,
-   * it will produce an error. The program is contained in a <code>VerifiedEpics</code> that checks the connection to the channels.
+   * Given a pair of apply and CAR records, this function produces a program that will trigger the
+   * apply record and then monitor the apply and CAR record to finally produce a command result. If
+   * the command takes longer than the <code>timeout</code>, it will produce an error. The program
+   * is contained in a <code>VerifiedEpics</code> that checks the connection to the channels.
    * @param timeout
    *   The timeout for running the command
    * @return
@@ -78,22 +79,19 @@ object GeminiApplyCommand {
     }
 
     /**
-     * processCommand is the heart of the acm apply-car processing. It implements a state machine inside a Stream, that
-     * follows the algorithm described in Gemini ICD 1b, section 6.1.
-     * The events of the state machine are changes on the EPICS channels apply.VAL and car.VAL.
-     * The inputs are:
+     * processCommand is the heart of the acm apply-car processing. It implements a state machine
+     * inside a Stream, that follows the algorithm described in Gemini ICD 1b, section 6.1. The
+     * events of the state machine are changes on the EPICS channels apply.VAL and car.VAL. The
+     * inputs are:
      *
-     * avs: Stream of values from apply.VAL
-     * cvs: Stream of values from car.VAL
-     * dw: Effect that will write a START on apply.DIR when evaluated.
-     * msr: Effect to read apply.MESS
-     * omsr: Effect to read car.OMSS
-     * clidr: Effect to read car.CLID
-     * avr: Effect to read apply.VAL
+     * avs: Stream of values from apply.VAL cvs: Stream of values from car.VAL dw: Effect that will
+     * write a START on apply.DIR when evaluated. msr: Effect to read apply.MESS omsr: Effect to
+     * read car.OMSS clidr: Effect to read car.CLID avr: Effect to read apply.VAL
      *
-     * The monitors created by the CA library always give the current value as the first event (if there is a current
-     * value). That holds true for the Streams created from those monitors. That is the reason that apply.VAL is read at
-     * the beginning, to compare the initial value with the stream values and recognize actual changes.
+     * The monitors created by the CA library always give the current value as the first event (if
+     * there is a current value). That holds true for the Streams created from those monitors. That
+     * is the reason that apply.VAL is read at the beginning, to compare the initial value with the
+     * stream values and recognize actual changes.
      */
     private def processCommand(
       avs:   Stream[F, StreamEvent[Int]],
@@ -103,61 +101,65 @@ object GeminiApplyCommand {
       omsr:  F[String],
       clidr: F[Int],
       avr:   F[Int]
-    ): F[ApplyCommandResult] = Stream.eval(avr.attempt.map(_.toOption)).flatMap { avo =>
-      (Stream.eval(dw) *>
-        Stream[F, Stream[F, Event]](
-          avs.drop(avo.size).flatMap {
-            case StreamEvent.ValueChanged(v) => Stream(ApplyValChange(v))
-            case StreamEvent.Disconnected =>
-              Stream.raiseError[F](new Throwable(s"Apply record ${apply.name} disconnected"))
-            case _ => Stream.empty
-          },
-          cvs.flatMap {
-            case StreamEvent.ValueChanged(v) => Stream(CarValChange(v))
-            case StreamEvent.Disconnected =>
-              Stream.raiseError[F](new Throwable(s"CAR record ${apply.name} disconnected"))
-            case _ => Stream.empty
+    ): F[ApplyCommandResult] = Stream
+      .eval(avr.attempt.map(_.toOption))
+      .flatMap { avo =>
+        (Stream.eval(dw) *>
+          Stream[F, Stream[F, Event]](
+            avs.drop(avo.size).flatMap {
+              case StreamEvent.ValueChanged(v) => Stream(ApplyValChange(v))
+              case StreamEvent.Disconnected    =>
+                Stream.raiseError[F](new Throwable(s"Apply record ${apply.name} disconnected"))
+              case _                           => Stream.empty
+            },
+            cvs.flatMap {
+              case StreamEvent.ValueChanged(v) => Stream(CarValChange(v))
+              case StreamEvent.Disconnected    =>
+                Stream.raiseError[F](new Throwable(s"CAR record ${apply.name} disconnected"))
+              case _                           => Stream.empty
+            }
+          ).parJoin(3))
+          .mapAccumulate[PostState, F[Option[ApplyCommandResult]]](Processing(None, WaitingBusy)) {
+            (s, ev) =>
+              (s, ev) match {
+                case (Processing(None, x), ApplyValChange(v)) if v < 0               =>
+                  (Processing(None, x),
+                   msr.flatMap(msg =>
+                     new Throwable(s"Apply record ${apply.name} failed with error: $msg").raiseError
+                   )
+                  )
+                case (Processing(None, x), ApplyValChange(v)) if v === 0             =>
+                  (Processing(None, x),
+                   new Throwable(
+                     s"Apply record ${apply.name} triggered externally while processing."
+                   ).raiseError
+                  )
+                case (Processing(None, x), ApplyValChange(v)) if v > 0               =>
+                  (Processing(v.some, x), none[ApplyCommandResult].pure[F])
+                case (Processing(v, _), CarValChange(CarState.Error))                =>
+                  (Processing(v, WaitingIdle),
+                   omsr.flatMap(msg =>
+                     new Throwable(s"CAR record ${car.name} has error: $msg").raiseError
+                   )
+                  )
+                case (Processing(v, WaitingBusy), CarValChange(CarState.Busy))       =>
+                  (Processing(v, WaitingIdle), none[ApplyCommandResult].pure[F])
+                case (Processing(None, WaitingIdle), CarValChange(CarState.Idle))    =>
+                  (Processing(None, WaitingBusy), none[ApplyCommandResult].pure[F])
+                case (Processing(Some(v), WaitingIdle), CarValChange(CarState.Idle)) =>
+                  (Processing(Some(v), WaitingBusy),
+                   clidr.map(c => (c >= v).option(ApplyCommandResult.Completed))
+                  )
+                case (Processing(Some(v), _), CarValChange(CarState.Paused))         =>
+                  (Processing(Some(v), WaitingBusy),
+                   clidr.map(c => (c >= v).option(ApplyCommandResult.Paused))
+                  )
+                case (x, _)                                                          =>
+                  (x, none[ApplyCommandResult].pure[F])
+              }
           }
-        ).parJoin(3))
-        .mapAccumulate[PostState, F[Option[ApplyCommandResult]]](Processing(None, WaitingBusy)) { (s, ev) =>
-          (s, ev) match {
-            case (Processing(None, x), ApplyValChange(v)) if v < 0 =>
-              (Processing(None, x),
-                msr.flatMap(msg =>
-                  new Throwable(s"Apply record ${apply.name} failed with error: $msg").raiseError
-                )
-              )
-            case (Processing(None, x), ApplyValChange(v)) if v === 0 =>
-              (Processing(None, x),
-                new Throwable(
-                  s"Apply record ${apply.name} triggered externally while processing."
-                ).raiseError
-              )
-            case (Processing(None, x), ApplyValChange(v)) if v > 0 =>
-              (Processing(v.some, x), none[ApplyCommandResult].pure[F])
-            case (Processing(v, _), CarValChange(CarState.Error)) =>
-              (Processing(v, WaitingIdle),
-                omsr.flatMap(msg =>
-                  new Throwable(s"CAR record ${car.name} has error: $msg").raiseError
-                )
-              )
-            case (Processing(v, WaitingBusy), CarValChange(CarState.Busy)) =>
-              (Processing(v, WaitingIdle), none[ApplyCommandResult].pure[F])
-            case (Processing(None, WaitingIdle), CarValChange(CarState.Idle)) =>
-              (Processing(None, WaitingBusy), none[ApplyCommandResult].pure[F])
-            case (Processing(Some(v), WaitingIdle), CarValChange(CarState.Idle)) =>
-              (Processing(Some(v), WaitingBusy),
-                clidr.map(c => (c >= v).option(ApplyCommandResult.Completed))
-              )
-            case (Processing(Some(v), _), CarValChange(CarState.Paused)) =>
-              (Processing(Some(v), WaitingBusy),
-                clidr.map(c => (c >= v).option(ApplyCommandResult.Paused))
-              )
-            case (x, _) =>
-              (x, none[ApplyCommandResult].pure[F])
-          }
-        }
-    }.evalMap(_._2)
+      }
+      .evalMap(_._2)
       .flattenOption
       .take(1)
       .compile
