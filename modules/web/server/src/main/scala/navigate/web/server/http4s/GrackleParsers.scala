@@ -29,6 +29,7 @@ import lucuma.core.math.skycalc.solver.HourAngleSolver
 import lucuma.core.math.units.CentimetersPerSecond
 import lucuma.core.math.units.MetersPerSecond
 import lucuma.core.model.NonNegDuration
+import navigate.model.Distance
 
 import java.time.Duration
 
@@ -139,6 +140,36 @@ trait GrackleParsers {
       case Some(("milliarcseconds", n)) =>
         bigDecimalValue(n).map(Parallax.milliarcseconds.reverseGet)
       case _                            => None
+    }
+
+  def parseDistance(units: List[(String, Value)]): Option[Distance] =
+    units.find(_._2 != Value.AbsentValue) match {
+      case Some(("micrometers", n)) =>
+        longValue(n).map(Distance.fromLongMicrometers)
+      case Some(("millimeters", n)) =>
+        bigDecimalValue(n).map(Distance.fromBigDecimalMillimeter)
+      case _                        => None
+    }
+
+  def parseAngle(units: List[(String, Value)]): Option[Angle] =
+    units.find(_._2 != Value.AbsentValue) match {
+      case Some(("microarcseconds", n))  => longValue(n).map(Angle.fromMicroarcseconds)
+      case Some(("microseconds", n))     =>
+        bigDecimalValue(n).map(x => Angle.microarcseconds.reverseGet(x.toLong))
+      case Some(("milliarcseconds", n))  =>
+        bigDecimalValue(n).map(Angle.decimalMilliarcseconds.reverseGet)
+      case Some(("milliseconds", n))     =>
+        bigDecimalValue(n).map(Angle.decimalMilliarcseconds.reverseGet)
+      case Some(("arcseconds", n))       => bigDecimalValue(n).map(Angle.fromBigDecimalArcseconds)
+      case Some(("seconds", n))          => bigDecimalValue(n).map(Angle.fromBigDecimalArcseconds)
+      case Some(("arcminutes", n))       =>
+        bigDecimalValue(n).map(x => Angle.arcminutes.reverseGet(x.toInt))
+      case Some(("minutes", n))          => bigDecimalValue(n).map(x => Angle.arcminutes.reverseGet(x.toInt))
+      case Some(("degrees", n))          => bigDecimalValue(n).map(Angle.fromBigDecimalDegrees)
+      case Some(("hours", n))            => bigDecimalValue(n).map(x => HourAngle.hours.reverseGet(x.toInt))
+      case Some(("hms", StringValue(n))) => HourAngle.fromStringHMS.getOption(n)
+      case Some(("dms", StringValue(n))) => Angle.fromStringDMS.getOption(n)
+      case _                             => None
     }
 
 }

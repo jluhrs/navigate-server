@@ -6,10 +6,10 @@ package navigate.web.server.common
 import cats.data.NonEmptyList
 import cats.data.OptionT
 import cats.effect.Sync
-import cats.instances.string._
-import cats.syntax.eq._
+import cats.instances.string.*
+import cats.syntax.eq.*
 import fs2.compression.Compression
-import org.http4s.CacheDirective._
+import org.http4s.CacheDirective.*
 import org.http4s.HttpRoutes
 import org.http4s.Request
 import org.http4s.Response
@@ -17,7 +17,7 @@ import org.http4s.StaticFile
 import org.http4s.headers.`Cache-Control`
 import org.http4s.server.middleware.GZip
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 class StaticRoutes[F[_]: Sync: Compression](
   devMode:       Boolean,

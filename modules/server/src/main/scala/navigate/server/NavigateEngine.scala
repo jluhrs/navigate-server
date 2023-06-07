@@ -8,16 +8,7 @@ import cats.effect.{Async, Concurrent, Ref, Temporal}
 import cats.effect.kernel.Sync
 import cats.syntax.all.*
 import org.typelevel.log4cats.Logger
-import navigate.model.NavigateCommand.{
-  CrcsFollow,
-  CrcsMove,
-  CrcsPark,
-  CrcsStop,
-  EcsCarouselMode,
-  McsFollow,
-  McsPark,
-  Slew
-}
+import navigate.model.NavigateCommand.{CrcsFollow, CrcsMove, CrcsPark, CrcsStop, EcsCarouselMode, McsFollow, McsPark, Slew}
 import navigate.model.{NavigateCommand, NavigateEvent}
 import navigate.model.NavigateEvent.{CommandFailure, CommandPaused, CommandStart, CommandSuccess}
 import navigate.model.config.NavigateEngineConfiguration
@@ -27,8 +18,8 @@ import navigate.stateengine.StateEngine
 import NavigateEvent.NullEvent
 import fs2.{Pipe, Stream}
 import lucuma.core.enums.Site
+import lucuma.core.math.Angle
 import monocle.{Focus, Lens}
-import squants.Angle
 
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
@@ -173,7 +164,8 @@ object NavigateEngine {
     rotMoveInProgress:         Boolean,
     ecsDomeModeInProgress:     Boolean,
     ecsVentGateMoveInProgress: Boolean,
-    slewInProgress:            Boolean
+    slewInProgress:            Boolean,
+    rotIaaInProgress:          Boolean
   ) {
     lazy val tcsActionInProgress: Boolean =
       mcsParkInProgress ||
@@ -184,7 +176,8 @@ object NavigateEngine {
         rotMoveInProgress ||
         ecsDomeModeInProgress ||
         ecsVentGateMoveInProgress ||
-        slewInProgress
+        slewInProgress ||
+        rotIaaInProgress
   }
 
   val startState: State = State(
@@ -196,7 +189,8 @@ object NavigateEngine {
     rotMoveInProgress = false,
     ecsDomeModeInProgress = false,
     ecsVentGateMoveInProgress = false,
-    slewInProgress = false
+    slewInProgress = false,
+    rotIaaInProgress = false
   )
 
   private def command[F[_]: MonadThrow: Logger](

@@ -105,14 +105,14 @@ object SchemaStitcher {
 
     def asString(l: NonEmptySet[NonEmptyString]): String =
       Schema(src) match {
-        case Ior.Right(b)   =>
+        case Result.Success(b)   =>
           resolveTypes(b.types,
                        l.toList.map(x => b.types.find(_.name === x.toString)).flattenOption,
                        List.empty
           )
             .map(SchemaRenderer.renderTypeDefn)
             .mkString("\n")
-        case Ior.Both(_, b) =>
+        case Result.Warning(_, b) =>
           resolveTypes(b.types,
                        l.toList.map(x => b.types.find(_.name === x.toString)).flattenOption,
                        List.empty

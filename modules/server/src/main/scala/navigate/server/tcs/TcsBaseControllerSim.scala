@@ -4,9 +4,9 @@
 package navigate.server.tcs
 
 import cats.Applicative
+import lucuma.core.math.Angle
 import navigate.model.enums.{DomeMode, ShutterMode}
 import navigate.server.ApplyCommandResult
-import squants.Angle
 
 class TcsBaseControllerSim[F[_]: Applicative] extends TcsBaseController[F] {
   override def mcsPark: F[ApplyCommandResult] = Applicative[F].pure(ApplyCommandResult.Completed)
@@ -43,4 +43,6 @@ class TcsBaseControllerSim[F[_]: Applicative] extends TcsBaseController[F] {
 
   override def slew(config: SlewConfig): F[ApplyCommandResult] =
     Applicative[F].pure(ApplyCommandResult.Completed)
+
+  override def rotIaa(angle: Angle): F[ApplyCommandResult] = Applicative[F].pure(ApplyCommandResult.Completed)
 }

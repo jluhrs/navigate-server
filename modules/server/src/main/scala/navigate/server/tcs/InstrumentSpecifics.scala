@@ -4,9 +4,11 @@
 package navigate.server.tcs
 
 import lucuma.core.math.Angle
+import navigate.model.Distance
 
-case class SlewConfig(
-  slewOptions: SlewOptions,
-  baseTarget:  Target,
-  rotIaa: Angle
-)
+final case class InstrumentSpecifics(
+  iaa: Angle,
+  focusOffset: Distance,
+  agName: String,
+  pointOrigin: (Distance, Distance)
+                                    )

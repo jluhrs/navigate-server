@@ -6,7 +6,6 @@ package navigate.server.tcs
 import navigate.model.enums.{DomeMode, ShutterMode}
 import navigate.server.ApplyCommandResult
 import lucuma.core.math.{Angle, Coordinates, Epoch, Parallax, ProperMotion, RadialVelocity}
-import squants.{Angle => SAngle}
 
 trait TcsBaseController[F[_]] {
   import TcsBaseController._
@@ -15,7 +14,7 @@ trait TcsBaseController[F[_]] {
   def rotStop(useBrakes:         Boolean): F[ApplyCommandResult]
   def rotPark: F[ApplyCommandResult]
   def rotFollow(enable:          Boolean): F[ApplyCommandResult]
-  def rotMove(angle:             SAngle): F[ApplyCommandResult]
+  def rotMove(angle:             Angle): F[ApplyCommandResult]
   def ecsCarouselMode(
     domeMode:      DomeMode,
     shutterMode:   ShutterMode,
@@ -26,6 +25,7 @@ trait TcsBaseController[F[_]] {
   def ecsVentGatesMove(gateEast: Double, westGate: Double): F[ApplyCommandResult]
   def applyTcsConfig(config:     TcsConfig): F[ApplyCommandResult]
   def slew(config:               SlewConfig): F[ApplyCommandResult]
+  def rotIaa(angle: Angle): F[ApplyCommandResult]
 }
 
 object TcsBaseController {

@@ -11,9 +11,8 @@ import navigate.epics.VerifiedEpics._
 import navigate.model.enums.{DomeMode, ShutterMode}
 import navigate.server.tcs.Target._
 import navigate.server.tcs.TcsEpicsSystem.{TargetCommand, TcsCommands}
-import lucuma.core.math.{Parallax, ProperMotion, RadialVelocity, Wavelength}
+import lucuma.core.math.{Parallax, ProperMotion, RadialVelocity, Wavelength, Angle}
 import monocle.Getter
-import squants.Angle
 
 /* This class implements the common TCS commands */
 class TcsBaseControllerEpics[F[_]: Async: Parallel](
@@ -198,6 +197,9 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
         .autoparkGems(AutoparkGems.value(so.autoparkGems))
         .slewOptionsCommand
         .autoparkAowfs(AutoparkAowfs.value(so.autoparkAowfs))
+      
+  protected def setRotatorIaa(angle: Angle): TcsCommands[F] => TcsCommands[F] = (x: TcsCommands[F]) =>
+    x.rotatorCommand.iaa(angle)
 
   override def applyTcsConfig(config: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
     setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.sourceACmd),
@@ -210,10 +212,19 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
   override def slew(config: SlewConfig): F[ApplyCommandResult] =
     setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.sourceACmd),
               config.baseTarget
-    ).compose(setSourceAWalength(config.baseTarget.wavelength))
-      .compose(setSlewOptions(config.slewOptions))(
+    )
+      .compose(setSourceAWalength(config.baseTarget.wavelength))
+      .compose(setSlewOptions(config.slewOptions))
+      .compose(setRotatorIaa(config.rotIaa))(
         tcsEpics.startCommand(timeout)
       )
+      .post
+      .verifiedRun(ConnectionTimeout)
+
+  override def rotIaa(angle: Angle): F[ApplyCommandResult] =
+    setRotatorIaa(angle)(
+      tcsEpics.startCommand(timeout)
+    )
       .post
       .verifiedRun(ConnectionTimeout)
 }

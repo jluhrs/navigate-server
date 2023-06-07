@@ -1,4 +1,6 @@
-#import NonEmptyString, Sidereal, TargetId, Nonsidereal, SiderealInput, NonsiderealInput, WavelengthInput from "lucuma/schemas/ObservationDB.graphql"
+#import NonEmptyString, Sidereal, TargetId, Nonsidereal from "lucuma/schemas/ObservationDB.graphql"
+#import SiderealInput, NonsiderealInput, WavelengthInput, AngleInput from "lucuma/schemas/ObservationDB.graphql"
+#import Long, BigDecimal from "lucuma/schemas/ObservationDB.graphql"
 
 """Target properties input"""
 input TargetPropertiesInput {
@@ -7,6 +9,33 @@ input TargetPropertiesInput {
   sidereal: SiderealInput
   nonsidereal: NonsiderealInput
   wavelength: WavelengthInput!
+}
+
+type Distance {
+    micrometers: Long!
+    millimeters: BigDecimal!
+}
+
+input DistanceInput {
+    micrometers: Long
+    millimeters: BigDecimal
+}
+
+type PointOrigin {
+    x: Distance!
+    y: Distance!
+}
+
+input PointOriginInput {
+    x: DistanceInput!
+    y: DistanceInput!
+}
+
+input InstrumentSpecificsInput {
+    iaa: AngleInput!
+    focusOffset: DistanceInput!
+    agName: String!
+    origin: PointOriginInput!
 }
 
 """Slew Options input"""
@@ -51,6 +80,7 @@ type TelescopeStatus {
 input SlewInput {
     slewOptions: SlewOptionsInput!
     baseTarget: TargetPropertiesInput!
+    instParams: InstrumentSpecificsInput!
 }
 
 type Target {
