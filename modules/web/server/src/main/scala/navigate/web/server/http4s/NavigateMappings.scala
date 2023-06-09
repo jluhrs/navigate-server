@@ -45,6 +45,7 @@ import lucuma.core.math.ProperMotion
 import lucuma.core.math.RadialVelocity
 import lucuma.core.math.RightAscension
 import lucuma.core.math.Wavelength
+import navigate.model.Distance
 import navigate.server.NavigateEngine
 import navigate.server.tcs.AutoparkAowfs
 import navigate.server.tcs.AutoparkGems
@@ -52,6 +53,7 @@ import navigate.server.tcs.AutoparkOiwfs
 import navigate.server.tcs.AutoparkPwfs1
 import navigate.server.tcs.AutoparkPwfs2
 import navigate.server.tcs.FollowStatus
+import navigate.server.tcs.InstrumentSpecifics
 import navigate.server.tcs.ParkStatus
 import navigate.server.tcs.ResetPointing
 import navigate.server.tcs.ShortcircuitMountFilter
@@ -84,7 +86,9 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
   def mountPark(p: Path, env: Cursor.Env): F[Result[OperationOutcome]] =
     server.mcsPark.attempt
       .map(x =>
-        x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success).rightIor
+        Result.Success(
+          x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+        )
       )
 
   def mountFollow(p: Path, env: Cursor.Env): F[Result[OperationOutcome]] =
@@ -95,18 +99,21 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
           .mcsFollow(en)
           .attempt
           .map(x =>
-            x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
-              .rightIor
+            Result.success(
+              x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+            )
           )
       }
       .getOrElse(
-        Ior.Left(NonEmptyChain(Problem("mountFollow parameter could not be parsed."))).pure[F]
+        Result.failure[OperationOutcome]("mountFollow parameter could not be parsed.").pure[F]
       )
 
   def rotatorPark(p: Path, env: Cursor.Env): F[Result[OperationOutcome]] =
     server.rotPark.attempt
       .map(x =>
-        x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success).rightIor
+        Result.Success(
+          x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+        )
       )
 
   def rotatorFollow(p: Path, env: Cursor.Env): F[Result[OperationOutcome]] =
@@ -117,12 +124,13 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
           .rotFollow(en)
           .attempt
           .map(x =>
-            x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
-              .rightIor
+            Result.success(
+              x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+            )
           )
       }
       .getOrElse(
-        Ior.Left(NonEmptyChain(Problem("rotatorFollow parameter could not be parsed."))).pure[F]
+        Result.failure("rotatorFollow parameter could not be parsed.").pure[F]
       )
 
   def slew(p: Path, env: Cursor.Env): F[Result[OperationOutcome]] =
@@ -133,11 +141,12 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
           .slew(sc)
           .attempt
           .map(x =>
-            x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
-              .rightIor
+            Result.success(
+              x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+            )
           )
       }
-      .getOrElse(Ior.Left(NonEmptyChain(Problem("Slew parameters could not be parsed."))).pure[F])
+      .getOrElse(Result.failure[OperationOutcome]("Slew parameters could not be parsed.").pure[F])
 
   val MutationType: TypeRef         = schema.ref("Mutation")
   val ParkStatusType: TypeRef       = schema.ref("ParkStatus")
@@ -149,15 +158,19 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
     Map(
       MutationType -> {
         case Select("mountFollow", List(Binding("enable", BooleanValue(en))), child)   =>
-          Environment(
-            Cursor.Env("enable" -> en),
-            Select("mountFollow", Nil, child)
-          ).rightIor
+          Result.Success(
+            Environment(
+              Cursor.Env("enable" -> en),
+              Select("mountFollow", Nil, child)
+            )
+          )
         case Select("rotatorFollow", List(Binding("enable", BooleanValue(en))), child) =>
-          Environment(
-            Cursor.Env("enable" -> en),
-            Select("rotatorFollow", Nil, child)
-          ).rightIor
+          Result.Success(
+            Environment(
+              Cursor.Env("enable" -> en),
+              Select("rotatorFollow", Nil, child)
+            )
+          )
         case Select("slew", List(Binding("slewParams", ObjectValue(fields))), child)   =>
           Result.fromOption(
             parseSlewConfigInput(fields).map { x =>
@@ -192,14 +205,24 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
 
 object NavigateMappings extends GrackleParsers {
 
-  def loadSchema[F[_]: Sync]: F[Schema] = SchemaStitcher
+  def loadSchema[F[_]: Sync]: F[Result[Schema]] = SchemaStitcher
     .apply[F](JPath.of("NewTCC.graphql"), SourceResolver.fromResource(getClass.getClassLoader))
     .build
-    .map(_.right.get)
 
-  def apply[F[_]: Sync](server: NavigateEngine[F]): F[NavigateMappings[F]] = loadSchema.map {
-    schema =>
-      new NavigateMappings[F](server)(schema)
+  def apply[F[_]: Sync](server: NavigateEngine[F]): F[NavigateMappings[F]] = loadSchema.flatMap {
+    case Result.Success(schema)           => new NavigateMappings[F](server)(schema).pure[F]
+    case Result.Warning(problems, schema) => new NavigateMappings[F](server)(schema).pure[F]
+    case Result.Failure(problems)         =>
+      Sync[F].raiseError[NavigateMappings[F]](
+        new Throwable(
+          s"Unable to load schema because: ${problems.map(_.message).toList.mkString(",")}"
+        )
+      )
+    case Result.InternalError(error)      =>
+      Sync[F].raiseError[NavigateMappings[F]](
+        new Throwable(s"Unable to load schema because: ${error.getMessage}")
+      )
+
   }
 
   def parseSlewOptionsInput(l: List[(String, Value)]): Option[SlewOptions] = for {
@@ -294,11 +317,30 @@ object NavigateMappings extends GrackleParsers {
             )
   } yield bt
 
+  def parseOrigin(l: List[(String, Value)]): Option[(Distance, Distance)] = for {
+    x <- l.collectFirst { case ("x", ObjectValue(v)) => parseDistance(v) }.flatten
+    y <- l.collectFirst { case ("y", ObjectValue(v)) => parseDistance(v) }.flatten
+  } yield (x, y)
+
+  def parseInstrumentSpecificsInput(l: List[(String, Value)]): Option[InstrumentSpecifics] = for {
+    iaa       <- l.collectFirst { case ("iaa", ObjectValue(v)) => parseAngle(v) }.flatten
+    focOffset <- l.collectFirst { case ("focusOffset", ObjectValue(v)) => parseDistance(v) }.flatten
+    agName    <- l.collectFirst { case ("agName", StringValue(v)) => v }
+    origin    <- l.collectFirst { case ("origin", ObjectValue(v)) => parseOrigin(v) }.flatten
+  } yield InstrumentSpecifics(
+    iaa,
+    focOffset,
+    agName,
+    origin
+  )
+
   def parseSlewConfigInput(l: List[(String, Value)]): Option[SlewConfig] = for {
     sol <- l.collectFirst { case ("slewOptions", ObjectValue(v)) => v }
     so  <- parseSlewOptionsInput(sol)
     tl  <- l.collectFirst { case ("baseTarget", ObjectValue(v)) => v }
     t   <- parseBaseTarget(tl)
-  } yield SlewConfig(so, t)
+    inl <- l.collectFirst { case ("instParams", ObjectValue(v)) => v }
+    in  <- parseInstrumentSpecificsInput(inl)
+  } yield SlewConfig(so, t, in.iaa)
 
 }

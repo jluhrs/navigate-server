@@ -6,6 +6,7 @@ package navigate.server.tcs
 import cats.{Applicative, Monad, Parallel}
 import cats.effect.std.Dispatcher
 import cats.effect.{Resource, Temporal}
+import lucuma.core.math.Angle
 import mouse.all.*
 import navigate.epics.EpicsSystem.TelltaleChannel
 import navigate.epics.{Channel, EpicsService, given}
@@ -17,7 +18,6 @@ import navigate.server.acm.{CadDirective, Encoder, GeminiApplyCommand, writeCadP
 import navigate.server.epicsdata.{BinaryOnOff, BinaryYesNo, DirSuffix}
 import navigate.server.epicsdata.BinaryOnOff.given
 import navigate.server.epicsdata.BinaryYesNo.given
-import squants.Angle
 import navigate.server.acm.Encoder.{*, given}
 
 import scala.concurrent.duration.FiniteDuration
@@ -60,6 +60,8 @@ object TcsEpicsSystem {
     val wavelSourceA: Command1Channels[F, Double]
 
     val slewCmd: SlewCommandChannels[F]
+
+    val rotatorCmd: Command4Channels[F, Double, String, String, Double]
 
     /*  val m1GuideCmd: M1GuideCmd[F]
 
@@ -494,7 +496,8 @@ object TcsEpicsSystem {
     enclosure:        EnclosureChannels[F],
     sourceA:          TargetChannels[F],
     wavelSourceA:     Channel[F, String],
-    slew:             SlewChannels[F]
+    slew:             SlewChannels[F],
+    rotator:          RotatorChannels[F]
   )
 
   case class EnclosureChannels[F[_]](
@@ -543,6 +546,29 @@ object TcsEpicsSystem {
     autoparkGems:             Channel[F, String],
     autoparkAowfs:            Channel[F, String]
   )
+
+  case class RotatorChannels[F[_]](
+    ipa: Channel[F, String],
+    system: Channel[F, String],
+    equinox: Channel[F, String],
+    iaa: Channel[F, String]
+                          )
+
+  def buildRotatorChannels[F[_]](
+                                  service: EpicsService[F],
+                                  top: String
+                                ): Resource[F, RotatorChannels[F]] =
+    for {
+      ipa <- service.getChannel[String](top + "rotator.A")
+      system <- service.getChannel[String](top + "rotator.B")
+      equinox <- service.getChannel[String](top + "rotator.C")
+      iaa <- service.getChannel[String](top + "rotator.D")
+    } yield RotatorChannels(
+      ipa,
+      system,
+      equinox,
+      iaa
+    )
 
   def buildEnclosureChannels[F[_]](
     service: EpicsService[F],
@@ -656,6 +682,7 @@ object TcsEpicsSystem {
       sra <- buildTargetChannels(service, top + "sourceA")
       wva <- service.getChannel[String](top + "wavelSourceA.A")
       slw <- buildSlewChannels(service, top)
+      rot <- buildRotatorChannels(service, top)
     } yield TcsChannels[F](
       tt,
       tpd,
@@ -667,7 +694,8 @@ object TcsEpicsSystem {
       ecs,
       sra,
       wva,
-      slw
+      slw,
+      rot
     )
 
   case class TcsCommandsImpl[F[_]: Monad: Parallel](
@@ -713,7 +741,7 @@ object TcsEpicsSystem {
     override val rotMoveCommand: RotMoveCommand[F, TcsCommands[F]] =
       (angle: Angle) =>
         addParam(
-          tcsEpics.rotMoveCmd.setParam1(angle.toDegrees)
+          tcsEpics.rotMoveCmd.setParam1(angle.toDoubleDegrees)
         )
 
     override val ecsCarouselModeCmd: CarouselModeCommand[F, TcsCommands[F]] =
@@ -744,7 +772,7 @@ object TcsEpicsSystem {
     override val ecsCarouselMoveCmd: CarouselMoveCommand[F, TcsCommands[F]] =
       (angle: Angle) =>
         addParam(
-          tcsEpics.carouselMoveCmd.setParam1(angle.toDegrees)
+          tcsEpics.carouselMoveCmd.setParam1(angle.toDoubleDegrees)
         )
 
     override val ecsShuttersMoveCmd: ShuttersMoveCommand[F, TcsCommands[F]] =
@@ -889,6 +917,23 @@ object TcsEpicsSystem {
           tcsEpics.slewCmd.autoparkAowfs(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
         )
       }
+    override val rotatorCommand: RotatorCommand[F, TcsCommands[F]] = new RotatorCommand[F, TcsCommands[F]] {
+      override def ipa(v: Angle): TcsCommands[F] = addParam(
+        tcsEpics.rotatorCmd.setParam1(v.toDoubleDegrees)
+      )
+
+      override def system(v: String): TcsCommands[F] = addParam(
+        tcsEpics.rotatorCmd.setParam2(v)
+      )
+
+      override def equinox(v: String): TcsCommands[F] = addParam(
+        tcsEpics.rotatorCmd.setParam3(v)
+      )
+
+      override def iaa(v: Angle): TcsCommands[F] = addParam(
+        tcsEpics.rotatorCmd.setParam4(v.toDoubleDegrees)
+      )
+    }
   }
 
   class TcsEpicsSystemImpl[F[_]: Monad: Parallel](epics: TcsEpics[F]) extends TcsEpicsSystem[F] {
@@ -955,6 +1000,14 @@ object TcsEpicsSystem {
 
     override val slewCmd: SlewCommandChannels[F] =
       SlewCommandChannels(channels.telltale, channels.slew)
+
+    override val rotatorCmd: Command4Channels[F, Double, String, String, Double] = Command4Channels(
+      channels.telltale,
+      channels.rotator.ipa,
+      channels.rotator.system,
+      channels.rotator.equinox,
+      channels.rotator.iaa
+    )
   }
 
   case class ParameterlessCommandChannels[F[_]: Monad](
@@ -1188,6 +1241,13 @@ object TcsEpicsSystem {
     def autoparkAowfs(v:            Boolean): S
   }
 
+  trait RotatorCommand[F[_], +S] {
+    def ipa(v: Angle): S
+    def system(v: String): S
+    def equinox(v: String): S
+    def iaa(v: Angle): S
+  }
+
   trait TcsCommands[F[_]] {
     def post: VerifiedEpics[F, F, ApplyCommandResult]
 
@@ -1217,6 +1277,7 @@ object TcsEpicsSystem {
 
     val slewOptionsCommand: SlewOptionsCommand[F, TcsCommands[F]]
 
+    val rotatorCommand: RotatorCommand[F, TcsCommands[F]]
   }
   /*
   trait ProbeGuideCmd[F[_]] extends EpicsCommand[F] {

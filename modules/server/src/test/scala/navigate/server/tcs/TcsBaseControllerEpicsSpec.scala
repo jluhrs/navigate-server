@@ -4,16 +4,19 @@
 package navigate.server.tcs
 
 import cats.effect.{IO, Ref}
-import cats.effect.syntax.all._
-import cats.syntax.all._
+import cats.effect.syntax.all.*
+import cats.syntax.all.*
 import navigate.model.enums.{DomeMode, ShutterMode}
+import navigate.model.Distance
 import navigate.server.acm.CadDirective
 import navigate.server.epicsdata.{BinaryOnOff, BinaryYesNo}
 import navigate.server.tcs.Target.SiderealTarget
 import navigate.server.tcs.TcsBaseController.TcsConfig
-import lucuma.core.math.{Coordinates, Epoch, Wavelength}
+import lucuma.core.math.{Angle, Coordinates, Epoch, Wavelength}
+import lucuma.core.util.Enumerated
 import munit.CatsEffectSuite
-import squants.space.AngleConversions._
+import navigate.server.epicsdata
+import squants.space.AngleConversions.*
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
@@ -21,6 +24,9 @@ import scala.concurrent.duration.FiniteDuration
 class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
 
   private val DefaultTimeout: FiniteDuration = FiniteDuration(1, TimeUnit.SECONDS)
+
+  private val Tolerance: Double = 1e-6
+  private def compareDouble(a: Double, b: Double): Boolean = Math.abs(a - b) < Tolerance
 
   test("Mount commands") {
     for {
@@ -33,12 +39,12 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assert(rs.telescopeParkDir.connected)
       assertEquals(rs.telescopeParkDir.value.get, CadDirective.MARK)
       assert(rs.mountFollow.connected)
-      assertEquals(rs.mountFollow.value.get, BinaryOnOff.On)
+      assertEquals(rs.mountFollow.value.get, BinaryOnOff.On.tag)
     }
   }
 
   test("Rotator commands") {
-    val testAngle = 123.456.degrees
+    val testAngle = Angle.fromDoubleDegrees(123.456)
 
     for {
       x        <- createController
@@ -52,11 +58,11 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assert(rs.rotParkDir.connected)
       assertEquals(rs.rotParkDir.value.get, CadDirective.MARK)
       assert(rs.rotFollow.connected)
-      assertEquals(rs.rotFollow.value.get, BinaryOnOff.On)
+      assertEquals(Enumerated[BinaryOnOff].unsafeFromTag(rs.rotFollow.value.get), BinaryOnOff.On)
       assert(rs.rotStopBrake.connected)
-      assertEquals(rs.rotStopBrake.value.get, BinaryYesNo.Yes)
+      assertEquals(Enumerated[BinaryYesNo].unsafeFromTag(rs.rotStopBrake.value.get), BinaryYesNo.Yes)
       assert(rs.rotMoveAngle.connected)
-      assertEquals(rs.rotMoveAngle.value.get, testAngle.toDegrees)
+      assert(compareDouble(rs.rotMoveAngle.value.get.toDouble, testAngle.toDoubleDegrees))
     }
 
   }
@@ -85,13 +91,13 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assert(rs.enclosure.ecsShutterEnable.connected)
       assert(rs.enclosure.ecsVentGateEast.connected)
       assert(rs.enclosure.ecsVentGateWest.connected)
-      assertEquals(rs.enclosure.ecsDomeMode.value, DomeMode.MinVibration.some)
-      assertEquals(rs.enclosure.ecsShutterMode.value, ShutterMode.Tracking.some)
-      assertEquals(rs.enclosure.ecsSlitHeight.value, testHeight.some)
-      assertEquals(rs.enclosure.ecsDomeEnable.value, BinaryOnOff.On.some)
-      assertEquals(rs.enclosure.ecsShutterEnable.value, BinaryOnOff.On.some)
-      assertEquals(rs.enclosure.ecsVentGateEast.value, testVentEast.some)
-      assertEquals(rs.enclosure.ecsVentGateWest.value, testVentWest.some)
+      assertEquals(rs.enclosure.ecsDomeMode.value.map(Enumerated[DomeMode].unsafeFromTag), DomeMode.MinVibration.some)
+      assertEquals(rs.enclosure.ecsShutterMode.value.map(Enumerated[ShutterMode].unsafeFromTag), ShutterMode.Tracking.some)
+      assert(rs.enclosure.ecsSlitHeight.value.exists(x => compareDouble(x.toDouble, testHeight)))
+      assertEquals(rs.enclosure.ecsDomeEnable.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.On.some)
+      assertEquals(rs.enclosure.ecsShutterEnable.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.On.some)
+      assert(rs.enclosure.ecsVentGateEast.value.exists(x => compareDouble(x.toDouble, testVentEast)))
+      assert(rs.enclosure.ecsVentGateWest.value.exists(x => compareDouble(x.toDouble, testVentWest)))
     }
   }
 
@@ -125,10 +131,17 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       AutoparkAowfs(false)
     )
 
+    val instrumentSpecifics: InstrumentSpecifics = InstrumentSpecifics(
+      iaa = Angle.fromDoubleDegrees(123.45),
+      focusOffset = Distance.fromLongMicrometers(2344),
+      agName = "gmos",
+      pointOrigin = (Distance.fromLongMicrometers(4567), Distance.fromLongMicrometers(-8901))
+    )
+
     for {
       x        <- createController
       (st, ctr) = x
-      _        <- ctr.slew(SlewConfig(slewOptions, target))
+      _        <- ctr.slew(SlewConfig(slewOptions, target, instrumentSpecifics.iaa))
       rs       <- st.get
     } yield {
       assert(rs.sourceA.objectName.connected)
@@ -144,14 +157,14 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assert(rs.sourceA.coordSystem.connected)
       assert(rs.sourceA.ephemerisFile.connected)
       assertEquals(rs.sourceA.objectName.value, target.objectName.some)
-      assertEquals(rs.sourceA.coord1.value, target.coordinates.ra.toAngle.toDoubleDegrees.some)
-      assertEquals(rs.sourceA.coord2.value, target.coordinates.dec.toAngle.toDoubleDegrees.some)
-      assertEquals(rs.sourceA.properMotion1.value, 0.0.some)
-      assertEquals(rs.sourceA.properMotion2.value, 0.0.some)
-      assertEquals(rs.sourceA.epoch.value, target.epoch.epochYear.some)
-      assertEquals(rs.sourceA.parallax.value, 0.0.some)
-      assertEquals(rs.sourceA.radialVelocity.value, 0.0.some)
-      assertEquals(rs.sourceA.coordSystem.value, "FK5/J2000".some)
+      assert(rs.sourceA.coord1.value.exists(x => compareDouble(x.toDouble, target.coordinates.ra.toHourAngle.toDoubleHours)))
+      assert(rs.sourceA.coord2.value.exists(x => compareDouble(x.toDouble, target.coordinates.dec.toAngle.toDoubleDegrees)))
+      assert(rs.sourceA.properMotion1.value.exists(x => compareDouble(x.toDouble, 0.0)))
+      assert(rs.sourceA.properMotion2.value.exists(x => compareDouble(x.toDouble, 0.0)))
+      assert(rs.sourceA.epoch.value.exists(x => compareDouble(x.toDouble, target.epoch.epochYear)))
+      assert(rs.sourceA.parallax.value.exists(x => compareDouble(x.toDouble, 0.0)))
+      assert(rs.sourceA.radialVelocity.value.exists(x => compareDouble(x.toDouble, 0.0)))
+      assertEquals(rs.sourceA.coordSystem.value, "FK5".some)
       assertEquals(rs.sourceA.ephemerisFile.value, "".some)
       assert(rs.slew.zeroChopThrow.connected)
       assert(rs.slew.zeroSourceOffset.connected)
@@ -169,22 +182,23 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assert(rs.slew.autoparkOiwfs.connected)
       assert(rs.slew.autoparkGems.connected)
       assert(rs.slew.autoparkAowfs.connected)
-      assertEquals(rs.slew.zeroChopThrow.value, BinaryOnOff.On.some)
-      assertEquals(rs.slew.zeroSourceOffset.value, BinaryOnOff.Off.some)
-      assertEquals(rs.slew.zeroSourceDiffTrack.value, BinaryOnOff.On.some)
-      assertEquals(rs.slew.zeroMountOffset.value, BinaryOnOff.Off.some)
-      assertEquals(rs.slew.zeroMountDiffTrack.value, BinaryOnOff.On.some)
-      assertEquals(rs.slew.shortcircuitTargetFilter.value, BinaryOnOff.Off.some)
-      assertEquals(rs.slew.shortcircuitMountFilter.value, BinaryOnOff.On.some)
-      assertEquals(rs.slew.resetPointing.value, BinaryOnOff.Off.some)
-      assertEquals(rs.slew.stopGuide.value, BinaryOnOff.On.some)
-      assertEquals(rs.slew.zeroGuideOffset.value, BinaryOnOff.Off.some)
-      assertEquals(rs.slew.zeroInstrumentOffset.value, BinaryOnOff.On.some)
-      assertEquals(rs.slew.autoparkPwfs1.value, BinaryOnOff.Off.some)
-      assertEquals(rs.slew.autoparkPwfs2.value, BinaryOnOff.On.some)
-      assertEquals(rs.slew.autoparkOiwfs.value, BinaryOnOff.Off.some)
-      assertEquals(rs.slew.autoparkGems.value, BinaryOnOff.On.some)
-      assertEquals(rs.slew.autoparkAowfs.value, BinaryOnOff.Off.some)
+      assertEquals(rs.slew.zeroChopThrow.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.On.some)
+      assertEquals(rs.slew.zeroSourceOffset.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.Off.some)
+      assertEquals(rs.slew.zeroSourceDiffTrack.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.On.some)
+      assertEquals(rs.slew.zeroMountOffset.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.Off.some)
+      assertEquals(rs.slew.zeroMountDiffTrack.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.On.some)
+      assertEquals(rs.slew.shortcircuitTargetFilter.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.Off.some)
+      assertEquals(rs.slew.shortcircuitMountFilter.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.On.some)
+      assertEquals(rs.slew.resetPointing.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.Off.some)
+      assertEquals(rs.slew.stopGuide.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.On.some)
+      assertEquals(rs.slew.zeroGuideOffset.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.Off.some)
+      assertEquals(rs.slew.zeroInstrumentOffset.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.On.some)
+      assertEquals(rs.slew.autoparkPwfs1.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.Off.some)
+      assertEquals(rs.slew.autoparkPwfs2.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.On.some)
+      assertEquals(rs.slew.autoparkOiwfs.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.Off.some)
+      assertEquals(rs.slew.autoparkGems.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.On.some)
+      assertEquals(rs.slew.autoparkAowfs.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.Off.some)
+      assert(rs.rotator.iaa.value.exists(x => compareDouble(x.toDouble, instrumentSpecifics.iaa.toDoubleDegrees)))
     }
   }
 

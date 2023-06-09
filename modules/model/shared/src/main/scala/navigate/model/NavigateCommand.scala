@@ -4,9 +4,9 @@
 package navigate.model
 
 import cats.kernel.Eq
+import lucuma.core.math.Angle
 import navigate.model.enums.DomeMode
 import navigate.model.enums.ShutterMode
-import squants.space.Angle
 
 sealed trait NavigateCommand extends Product with Serializable
 

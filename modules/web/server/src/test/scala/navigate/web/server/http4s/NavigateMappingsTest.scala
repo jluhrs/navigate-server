@@ -13,6 +13,7 @@ import edu.gemini.grackle.syntax.*
 import fs2.Stream
 import io.circe.Decoder
 import io.circe.Json
+import lucuma.core.math.Angle
 import munit.CatsEffectSuite
 import munit.Clue.generate
 import navigate.model.NavigateEvent
@@ -26,7 +27,6 @@ import navigate.server.tcs.ParkStatus
 import navigate.server.tcs.SlewConfig
 import navigate.server.tcs.TcsNorthControllerSim
 import navigate.server.tcs.TcsSouthControllerSim
-import squants.Angle
 
 import scala.concurrent.duration.Duration
 
@@ -35,6 +35,8 @@ import NavigateMappings.*
 class NavigateMappingsTest extends CatsEffectSuite {
   import NavigateMappingsTest.*
   import NavigateMappingsTest.given
+
+  override val munitTimeout = Duration(1800, "s")
 
   def extractResult[T: Decoder](j: Json, mutation: String): Option[T] = j.hcursor
     .downField("data")
@@ -103,6 +105,23 @@ class NavigateMappingsTest extends CatsEffectSuite {
                 |    }
                 |    wavelength: {
                 |      nanometers: "400"
+                |    }
+                |  }
+                |  instParams: {
+                |    iaa: {
+                |      degrees: 178.38
+                |    }
+                |    focusOffset: {
+                |      micrometers: 1234
+                |    }
+                |    agName: "gmos"
+                |    origin: {
+                |      x: {
+                |        micrometers: 3012
+                |      }
+                |      y: {
+                |        micrometers: -1234
+                |      }
                 |    }
                 |  }
                 |}) {

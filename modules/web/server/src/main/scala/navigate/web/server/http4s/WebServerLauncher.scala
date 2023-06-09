@@ -109,7 +109,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
   }
 
   /** Resource that yields the running web server */
-  def webServer[F[_]: Logger: Async: Dns: Compression, I](
+  def webServer[F[_]: Logger: Async: Dns: Compression](
     conf:      NavigateConfiguration,
     as:        AuthenticationService[F],
     outputs:   Topic[F, NavigateEvent],
@@ -245,7 +245,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
     ): Resource[IO, Unit] =
       for {
         as <- Resource.eval(authService[IO](conf.mode, conf.authentication))
-        _  <- webServer[IO, I](conf, as, out, en, cs)
+        _  <- webServer[IO](conf, as, out, en, cs)
       } yield ()
 
     def publishStats[F[_]: Temporal](cs: ClientsSetDb[F]): Stream[F, Unit] =
