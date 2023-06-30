@@ -105,7 +105,7 @@ object SchemaStitcher {
 
     def asString(l: NonEmptySet[NonEmptyString]): String =
       Schema(src) match {
-        case Result.Success(b)   =>
+        case Result.Success(b)    =>
           resolveTypes(b.types,
                        l.toList.map(x => b.types.find(_.name === x.toString)).flattenOption,
                        List.empty
@@ -119,7 +119,7 @@ object SchemaStitcher {
           )
             .map(SchemaRenderer.renderTypeDefn)
             .mkString("\n")
-        case _              => ""
+        case _                    => ""
       }
 
     def resolveTypes(

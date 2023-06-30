@@ -25,7 +25,7 @@ trait TcsBaseController[F[_]] {
   def ecsVentGatesMove(gateEast: Double, westGate: Double): F[ApplyCommandResult]
   def applyTcsConfig(config:     TcsConfig): F[ApplyCommandResult]
   def slew(config:               SlewConfig): F[ApplyCommandResult]
-  def rotIaa(angle: Angle): F[ApplyCommandResult]
+  def rotIaa(angle:              Angle): F[ApplyCommandResult]
 }
 
 object TcsBaseController {

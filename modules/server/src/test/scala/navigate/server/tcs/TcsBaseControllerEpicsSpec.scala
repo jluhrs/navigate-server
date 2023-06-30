@@ -60,7 +60,9 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assert(rs.rotFollow.connected)
       assertEquals(Enumerated[BinaryOnOff].unsafeFromTag(rs.rotFollow.value.get), BinaryOnOff.On)
       assert(rs.rotStopBrake.connected)
-      assertEquals(Enumerated[BinaryYesNo].unsafeFromTag(rs.rotStopBrake.value.get), BinaryYesNo.Yes)
+      assertEquals(Enumerated[BinaryYesNo].unsafeFromTag(rs.rotStopBrake.value.get),
+                   BinaryYesNo.Yes
+      )
       assert(rs.rotMoveAngle.connected)
       assert(compareDouble(rs.rotMoveAngle.value.get.toDouble, testAngle.toDoubleDegrees))
     }
@@ -91,13 +93,25 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assert(rs.enclosure.ecsShutterEnable.connected)
       assert(rs.enclosure.ecsVentGateEast.connected)
       assert(rs.enclosure.ecsVentGateWest.connected)
-      assertEquals(rs.enclosure.ecsDomeMode.value.map(Enumerated[DomeMode].unsafeFromTag), DomeMode.MinVibration.some)
-      assertEquals(rs.enclosure.ecsShutterMode.value.map(Enumerated[ShutterMode].unsafeFromTag), ShutterMode.Tracking.some)
+      assertEquals(rs.enclosure.ecsDomeMode.value.map(Enumerated[DomeMode].unsafeFromTag),
+                   DomeMode.MinVibration.some
+      )
+      assertEquals(rs.enclosure.ecsShutterMode.value.map(Enumerated[ShutterMode].unsafeFromTag),
+                   ShutterMode.Tracking.some
+      )
       assert(rs.enclosure.ecsSlitHeight.value.exists(x => compareDouble(x.toDouble, testHeight)))
-      assertEquals(rs.enclosure.ecsDomeEnable.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.On.some)
-      assertEquals(rs.enclosure.ecsShutterEnable.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.On.some)
-      assert(rs.enclosure.ecsVentGateEast.value.exists(x => compareDouble(x.toDouble, testVentEast)))
-      assert(rs.enclosure.ecsVentGateWest.value.exists(x => compareDouble(x.toDouble, testVentWest)))
+      assertEquals(rs.enclosure.ecsDomeEnable.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+                   BinaryOnOff.On.some
+      )
+      assertEquals(rs.enclosure.ecsShutterEnable.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+                   BinaryOnOff.On.some
+      )
+      assert(
+        rs.enclosure.ecsVentGateEast.value.exists(x => compareDouble(x.toDouble, testVentEast))
+      )
+      assert(
+        rs.enclosure.ecsVentGateWest.value.exists(x => compareDouble(x.toDouble, testVentWest))
+      )
     }
   }
 
@@ -157,8 +171,16 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assert(rs.sourceA.coordSystem.connected)
       assert(rs.sourceA.ephemerisFile.connected)
       assertEquals(rs.sourceA.objectName.value, target.objectName.some)
-      assert(rs.sourceA.coord1.value.exists(x => compareDouble(x.toDouble, target.coordinates.ra.toHourAngle.toDoubleHours)))
-      assert(rs.sourceA.coord2.value.exists(x => compareDouble(x.toDouble, target.coordinates.dec.toAngle.toDoubleDegrees)))
+      assert(
+        rs.sourceA.coord1.value.exists(x =>
+          compareDouble(x.toDouble, target.coordinates.ra.toHourAngle.toDoubleHours)
+        )
+      )
+      assert(
+        rs.sourceA.coord2.value.exists(x =>
+          compareDouble(x.toDouble, target.coordinates.dec.toAngle.toDoubleDegrees)
+        )
+      )
       assert(rs.sourceA.properMotion1.value.exists(x => compareDouble(x.toDouble, 0.0)))
       assert(rs.sourceA.properMotion2.value.exists(x => compareDouble(x.toDouble, 0.0)))
       assert(rs.sourceA.epoch.value.exists(x => compareDouble(x.toDouble, target.epoch.epochYear)))
@@ -182,23 +204,60 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assert(rs.slew.autoparkOiwfs.connected)
       assert(rs.slew.autoparkGems.connected)
       assert(rs.slew.autoparkAowfs.connected)
-      assertEquals(rs.slew.zeroChopThrow.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.On.some)
-      assertEquals(rs.slew.zeroSourceOffset.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.Off.some)
-      assertEquals(rs.slew.zeroSourceDiffTrack.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.On.some)
-      assertEquals(rs.slew.zeroMountOffset.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.Off.some)
-      assertEquals(rs.slew.zeroMountDiffTrack.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.On.some)
-      assertEquals(rs.slew.shortcircuitTargetFilter.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.Off.some)
-      assertEquals(rs.slew.shortcircuitMountFilter.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.On.some)
-      assertEquals(rs.slew.resetPointing.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.Off.some)
-      assertEquals(rs.slew.stopGuide.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.On.some)
-      assertEquals(rs.slew.zeroGuideOffset.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.Off.some)
-      assertEquals(rs.slew.zeroInstrumentOffset.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.On.some)
-      assertEquals(rs.slew.autoparkPwfs1.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.Off.some)
-      assertEquals(rs.slew.autoparkPwfs2.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.On.some)
-      assertEquals(rs.slew.autoparkOiwfs.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.Off.some)
-      assertEquals(rs.slew.autoparkGems.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.On.some)
-      assertEquals(rs.slew.autoparkAowfs.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.Off.some)
-      assert(rs.rotator.iaa.value.exists(x => compareDouble(x.toDouble, instrumentSpecifics.iaa.toDoubleDegrees)))
+      assertEquals(rs.slew.zeroChopThrow.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+                   BinaryOnOff.On.some
+      )
+      assertEquals(rs.slew.zeroSourceOffset.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+                   BinaryOnOff.Off.some
+      )
+      assertEquals(rs.slew.zeroSourceDiffTrack.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+                   BinaryOnOff.On.some
+      )
+      assertEquals(rs.slew.zeroMountOffset.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+                   BinaryOnOff.Off.some
+      )
+      assertEquals(rs.slew.zeroMountDiffTrack.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+                   BinaryOnOff.On.some
+      )
+      assertEquals(
+        rs.slew.shortcircuitTargetFilter.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+        BinaryOnOff.Off.some
+      )
+      assertEquals(rs.slew.shortcircuitMountFilter.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+                   BinaryOnOff.On.some
+      )
+      assertEquals(rs.slew.resetPointing.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+                   BinaryOnOff.Off.some
+      )
+      assertEquals(rs.slew.stopGuide.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+                   BinaryOnOff.On.some
+      )
+      assertEquals(rs.slew.zeroGuideOffset.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+                   BinaryOnOff.Off.some
+      )
+      assertEquals(rs.slew.zeroInstrumentOffset.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+                   BinaryOnOff.On.some
+      )
+      assertEquals(rs.slew.autoparkPwfs1.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+                   BinaryOnOff.Off.some
+      )
+      assertEquals(rs.slew.autoparkPwfs2.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+                   BinaryOnOff.On.some
+      )
+      assertEquals(rs.slew.autoparkOiwfs.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+                   BinaryOnOff.Off.some
+      )
+      assertEquals(rs.slew.autoparkGems.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+                   BinaryOnOff.On.some
+      )
+      assertEquals(rs.slew.autoparkAowfs.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+                   BinaryOnOff.Off.some
+      )
+      assert(
+        rs.rotator.iaa.value.exists(x =>
+          compareDouble(x.toDouble, instrumentSpecifics.iaa.toDoubleDegrees)
+        )
+      )
     }
   }
 
