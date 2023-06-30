@@ -548,21 +548,21 @@ object TcsEpicsSystem {
   )
 
   case class RotatorChannels[F[_]](
-    ipa: Channel[F, String],
-    system: Channel[F, String],
+    ipa:     Channel[F, String],
+    system:  Channel[F, String],
     equinox: Channel[F, String],
-    iaa: Channel[F, String]
-                          )
+    iaa:     Channel[F, String]
+  )
 
   def buildRotatorChannels[F[_]](
-                                  service: EpicsService[F],
-                                  top: String
-                                ): Resource[F, RotatorChannels[F]] =
+    service: EpicsService[F],
+    top:     String
+  ): Resource[F, RotatorChannels[F]] =
     for {
-      ipa <- service.getChannel[String](top + "rotator.A")
-      system <- service.getChannel[String](top + "rotator.B")
+      ipa     <- service.getChannel[String](top + "rotator.A")
+      system  <- service.getChannel[String](top + "rotator.B")
       equinox <- service.getChannel[String](top + "rotator.C")
-      iaa <- service.getChannel[String](top + "rotator.D")
+      iaa     <- service.getChannel[String](top + "rotator.D")
     } yield RotatorChannels(
       ipa,
       system,
@@ -917,23 +917,24 @@ object TcsEpicsSystem {
           tcsEpics.slewCmd.autoparkAowfs(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
         )
       }
-    override val rotatorCommand: RotatorCommand[F, TcsCommands[F]] = new RotatorCommand[F, TcsCommands[F]] {
-      override def ipa(v: Angle): TcsCommands[F] = addParam(
-        tcsEpics.rotatorCmd.setParam1(v.toDoubleDegrees)
-      )
+    override val rotatorCommand: RotatorCommand[F, TcsCommands[F]]         =
+      new RotatorCommand[F, TcsCommands[F]] {
+        override def ipa(v: Angle): TcsCommands[F] = addParam(
+          tcsEpics.rotatorCmd.setParam1(v.toDoubleDegrees)
+        )
 
-      override def system(v: String): TcsCommands[F] = addParam(
-        tcsEpics.rotatorCmd.setParam2(v)
-      )
+        override def system(v: String): TcsCommands[F] = addParam(
+          tcsEpics.rotatorCmd.setParam2(v)
+        )
 
-      override def equinox(v: String): TcsCommands[F] = addParam(
-        tcsEpics.rotatorCmd.setParam3(v)
-      )
+        override def equinox(v: String): TcsCommands[F] = addParam(
+          tcsEpics.rotatorCmd.setParam3(v)
+        )
 
-      override def iaa(v: Angle): TcsCommands[F] = addParam(
-        tcsEpics.rotatorCmd.setParam4(v.toDoubleDegrees)
-      )
-    }
+        override def iaa(v: Angle): TcsCommands[F] = addParam(
+          tcsEpics.rotatorCmd.setParam4(v.toDoubleDegrees)
+        )
+      }
   }
 
   class TcsEpicsSystemImpl[F[_]: Monad: Parallel](epics: TcsEpics[F]) extends TcsEpicsSystem[F] {
@@ -1242,10 +1243,10 @@ object TcsEpicsSystem {
   }
 
   trait RotatorCommand[F[_], +S] {
-    def ipa(v: Angle): S
-    def system(v: String): S
+    def ipa(v:     Angle): S
+    def system(v:  String): S
     def equinox(v: String): S
-    def iaa(v: Angle): S
+    def iaa(v:     Angle): S
   }
 
   trait TcsCommands[F[_]] {

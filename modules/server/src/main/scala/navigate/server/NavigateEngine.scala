@@ -8,7 +8,16 @@ import cats.effect.{Async, Concurrent, Ref, Temporal}
 import cats.effect.kernel.Sync
 import cats.syntax.all.*
 import org.typelevel.log4cats.Logger
-import navigate.model.NavigateCommand.{CrcsFollow, CrcsMove, CrcsPark, CrcsStop, EcsCarouselMode, McsFollow, McsPark, Slew}
+import navigate.model.NavigateCommand.{
+  CrcsFollow,
+  CrcsMove,
+  CrcsPark,
+  CrcsStop,
+  EcsCarouselMode,
+  McsFollow,
+  McsPark,
+  Slew
+}
 import navigate.model.{NavigateCommand, NavigateEvent}
 import navigate.model.NavigateEvent.{CommandFailure, CommandPaused, CommandStart, CommandSuccess}
 import navigate.model.config.NavigateEngineConfiguration

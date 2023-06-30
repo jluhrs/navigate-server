@@ -7,8 +7,8 @@ import lucuma.core.math.Angle
 import navigate.model.Distance
 
 final case class InstrumentSpecifics(
-  iaa: Angle,
+  iaa:         Angle,
   focusOffset: Distance,
-  agName: String,
+  agName:      String,
   pointOrigin: (Distance, Distance)
-                                    )
+)

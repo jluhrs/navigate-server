@@ -10,7 +10,13 @@ import navigate.epics.{TestChannel, VerifiedEpics}
 import navigate.model.enums.{DomeMode, ShutterMode}
 import navigate.server.acm.{CadDirective, GeminiApplyCommand}
 import navigate.server.epicsdata.{BinaryOnOff, BinaryYesNo}
-import navigate.server.tcs.TcsEpicsSystem.{EnclosureChannels, RotatorChannels, SlewChannels, TargetChannels, TcsChannels}
+import navigate.server.tcs.TcsEpicsSystem.{
+  EnclosureChannels,
+  RotatorChannels,
+  SlewChannels,
+  TargetChannels,
+  TcsChannels
+}
 import navigate.server.ApplyCommandResult
 import monocle.{Focus, Lens}
 
@@ -71,11 +77,11 @@ object TestTcsEpicsSystem {
   )
 
   case class RotatorChannelState(
-    ipa: TestChannel.State[String],
-    system: TestChannel.State[String],
+    ipa:     TestChannel.State[String],
+    system:  TestChannel.State[String],
     equinox: TestChannel.State[String],
-    iaa: TestChannel.State[String]
-                                )
+    iaa:     TestChannel.State[String]
+  )
 
   case class State(
     telltale:         TestChannel.State[String],
@@ -159,8 +165,7 @@ object TestTcsEpicsSystem {
       ecsShutterMode =
         new TestChannel[F, State, String](s, Focus[State](_.enclosure.ecsShutterMode)),
       ecsSlitHeight = new TestChannel[F, State, String](s, Focus[State](_.enclosure.ecsSlitHeight)),
-      ecsDomeEnable =
-        new TestChannel[F, State, String](s, Focus[State](_.enclosure.ecsDomeEnable)),
+      ecsDomeEnable = new TestChannel[F, State, String](s, Focus[State](_.enclosure.ecsDomeEnable)),
       ecsShutterEnable =
         new TestChannel[F, State, String](s, Focus[State](_.enclosure.ecsShutterEnable)),
       ecsMoveAngle = new TestChannel[F, State, String](s, Focus[State](_.enclosure.ecsMoveAngle)),
@@ -238,8 +243,7 @@ object TestTcsEpicsSystem {
       ),
       resetPointing = new TestChannel[F, State, String](s, Focus[State](_.slew.resetPointing)),
       stopGuide = new TestChannel[F, State, String](s, Focus[State](_.slew.stopGuide)),
-      zeroGuideOffset =
-        new TestChannel[F, State, String](s, Focus[State](_.slew.zeroGuideOffset)),
+      zeroGuideOffset = new TestChannel[F, State, String](s, Focus[State](_.slew.zeroGuideOffset)),
       zeroInstrumentOffset = new TestChannel[F, State, String](
         s,
         Focus[State](_.slew.zeroInstrumentOffset)
@@ -251,12 +255,13 @@ object TestTcsEpicsSystem {
       autoparkAowfs = new TestChannel[F, State, String](s, Focus[State](_.slew.autoparkAowfs))
     )
 
-  def buildRotatorChannels[F[_] : Applicative](s: Ref[F, State]): RotatorChannels[F] = RotatorChannels(
-    new TestChannel[F, State, String](s, Focus[State](_.rotator.ipa)),
-    new TestChannel[F, State, String](s, Focus[State](_.rotator.system)),
-    new TestChannel[F, State, String](s, Focus[State](_.rotator.equinox)),
-    new TestChannel[F, State, String](s, Focus[State](_.rotator.iaa))
-  )
+  def buildRotatorChannels[F[_]: Applicative](s: Ref[F, State]): RotatorChannels[F] =
+    RotatorChannels(
+      new TestChannel[F, State, String](s, Focus[State](_.rotator.ipa)),
+      new TestChannel[F, State, String](s, Focus[State](_.rotator.system)),
+      new TestChannel[F, State, String](s, Focus[State](_.rotator.equinox)),
+      new TestChannel[F, State, String](s, Focus[State](_.rotator.iaa))
+    )
 
   def buildChannels[F[_]: Applicative](s: Ref[F, State]): TcsChannels[F] =
     TcsChannels(
