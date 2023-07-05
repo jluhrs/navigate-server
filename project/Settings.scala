@@ -23,7 +23,7 @@ object Settings {
     val scalaJSReactSortable    = "0.5.2"
 
     // Scala libraries
-    val catsEffect   = "3.5.0"
+    val catsEffect   = "3.5.1"
     val cats         = "2.9.0"
     val mouse        = "1.2.1"
     val fs2          = "3.7.0"
@@ -36,7 +36,7 @@ object Settings {
     val log4Cats         = "2.6.0"
     val log4CatsLogLevel = "0.3.1"
 
-    val http4s           = "0.23.20"
+    val http4s           = "0.23.22"
     val http4sBlaze      = "0.23.15"
     val http4sBoopickle  = "0.23.11"
     val http4sXml        = "0.23.12"
@@ -44,11 +44,11 @@ object Settings {
     val squants          = "1.8.3"
     val commonsHttp      = "2.0.2"
     val unboundId        = "3.2.1"
-    val jwt              = "9.3.0"
+    val jwt              = "9.4.0"
     val slf4j            = "2.0.7"
     val log4s            = "1.10.0"
-    val logback          = "1.4.7"
-    val janino           = "3.1.9"
+    val logback          = "1.4.8"
+    val janino           = "3.1.10"
     val logstash         = "7.0"
     val pureConfig       = "0.17.4"
     val monocle          = "3.2.0"
@@ -89,13 +89,13 @@ object Settings {
     val gppUI   = "0.0.3"
 
     // Lucuma
-    val lucumaCore    = "0.79.0"
+    val lucumaCore    = "0.80.1"
     val lucumaUI      = "0.66.0"
-    val lucumaSchemas = "0.52.1"
+    val lucumaSchemas = "0.53.1"
 
-    val grackle = "0.12.0"
+    val grackle = "0.13.0"
 
-    val graphQLRoutes = "0.6.4"
+    val graphQLRoutes = "0.6.5"
 
     val clue = "0.24.1"
 
@@ -105,7 +105,7 @@ object Settings {
     val fomanticUI = "2.8.7"
 
     // Natchez
-    val natchez = "0.3.2"
+    val natchez = "0.3.3"
 
   }
 
