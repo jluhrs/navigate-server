@@ -32,436 +32,241 @@ trait TcsEpicsSystem[F[_]] {
 object TcsEpicsSystem {
 
   trait TcsEpics[F[_]] {
-
     def post(timeout: FiniteDuration): VerifiedEpics[F, F, ApplyCommandResult]
-
     val mountParkCmd: ParameterlessCommandChannels[F]
-
     val mountFollowCmd: Command1Channels[F, BinaryOnOff]
-
     val rotStopCmd: Command1Channels[F, BinaryYesNo]
-
     val rotParkCmd: ParameterlessCommandChannels[F]
-
     val rotFollowCmd: Command1Channels[F, BinaryOnOff]
-
     val rotMoveCmd: Command1Channels[F, Double]
-
     val carouselModeCmd: Command5Channels[F, String, String, Double, BinaryOnOff, BinaryOnOff]
-
     val carouselMoveCmd: Command1Channels[F, Double]
-
     val shuttersMoveCmd: Command2Channels[F, Double, Double]
-
     val ventGatesMoveCmd: Command2Channels[F, Double, Double]
-
     val sourceACmd: TargetCommandChannels[F]
-
     val wavelSourceA: Command1Channels[F, Double]
-
     val slewCmd: SlewCommandChannels[F]
-
     val rotatorCmd: Command4Channels[F, Double, String, String, Double]
-
-    /*  val m1GuideCmd: M1GuideCmd[F]
-
-  val m2GuideCmd: M2GuideCmd[F]
-
-  val m2GuideModeCmd: M2GuideModeCmd[F]
-
-  val m2GuideConfigCmd: M2GuideConfigCmd[F]
-
-  val mountGuideCmd: MountGuideCmd[F]
-
-  val offsetACmd: OffsetCmd[F]
-
-  val offsetBCmd: OffsetCmd[F]
-
-
-  val wavelSourceB: TargetWavelengthCmd[F]
-
-  val m2Beam: M2Beam[F]
-
-  val pwfs1ProbeGuideCmd: ProbeGuideCmd[F]
-
-  val pwfs2ProbeGuideCmd: ProbeGuideCmd[F]
-
-  val oiwfsProbeGuideCmd: ProbeGuideCmd[F]
-
-  val pwfs1ProbeFollowCmd: ProbeFollowCmd[F]
-
-  val pwfs2ProbeFollowCmd: ProbeFollowCmd[F]
-
-  val oiwfsProbeFollowCmd: ProbeFollowCmd[F]
-
-  val aoProbeFollowCmd: ProbeFollowCmd[F]
-
-  val pwfs1Park: EpicsCommand[F]
-
-  val pwfs2Park: EpicsCommand[F]
-
-  val oiwfsPark: EpicsCommand[F]
-
-  val pwfs1StopObserveCmd: EpicsCommand[F]
-
-  val pwfs2StopObserveCmd: EpicsCommand[F]
-
-  val oiwfsStopObserveCmd: EpicsCommand[F]
-
-  val pwfs1ObserveCmd: WfsObserveCmd[F]
-
-  val pwfs2ObserveCmd: WfsObserveCmd[F]
-
-  val oiwfsObserveCmd: WfsObserveCmd[F]
-
-  val hrwfsParkCmd: EpicsCommand[F]
-
-  val hrwfsPosCmd: HrwfsPosCmd[F]
-
-  val scienceFoldParkCmd: EpicsCommand[F]
-
-  val scienceFoldPosCmd: ScienceFoldPosCmd[F]
-
-  val observe: EpicsCommand[F]
-
-  val endObserve: EpicsCommand[F]
-
-  val aoCorrect: AoCorrect[F]
-
-  val aoPrepareControlMatrix: AoPrepareControlMatrix[F]
-
-  val aoFlatten: EpicsCommand[F]
-
-  val aoStatistics: AoStatistics[F]
-
-  val targetFilter: TargetFilter[F]
-
-  def absorbTipTilt: F[Int]
-
-  def m1GuideSource: F[String]
-
-  def m1Guide: F[BinaryOnOff]
-
-  def m2p1Guide: F[String]
-
-  def m2p2Guide: F[String]
-
-  def m2oiGuide: F[String]
-
-  def m2aoGuide: F[String]
-
-  def comaCorrect: F[String]
-
-  def m2GuideState: F[BinaryOnOff]
-
-  def xoffsetPoA1: F[Double]
-
-  def yoffsetPoA1: F[Double]
-
-  def xoffsetPoB1: F[Double]
-
-  def yoffsetPoB1: F[Double]
-
-  def xoffsetPoC1: F[Double]
-
-  def yoffsetPoC1: F[Double]
-
-  def sourceAWavelength: F[Double]
-
-  def sourceBWavelength: F[Double]
-
-  def sourceCWavelength: F[Double]
-
-  def chopBeam: F[String]
-
-  def p1FollowS: F[String]
-
-  def p2FollowS: F[String]
-
-  def oiFollowS: F[String]
-
-  def aoFollowS: F[String]
-
-  def p1Parked: F[Boolean]
-
-  def p2Parked: F[Boolean]
-
-  def oiName: F[String]
-
-  def oiParked: F[Boolean]
-
-  def pwfs1On: F[BinaryYesNo]
-
-  def pwfs2On: F[BinaryYesNo]
-
-  def oiwfsOn: F[BinaryYesNo]
-
-  def sfName: F[String]
-
-  def sfParked: F[Int]
-
-  def agHwName: F[String]
-
-  def agHwParked: F[Int]
-
-  def instrAA: F[Double]
-
-  def inPosition: F[String]
-
-  def agInPosition: F[Double]
-
-  val pwfs1ProbeGuideConfig: ProbeGuideConfig[F]
-
-  val pwfs2ProbeGuideConfig: ProbeGuideConfig[F]
-
-  val oiwfsProbeGuideConfig: ProbeGuideConfig[F]
-
-  // This functions returns a F that, when run, first waits tcsSettleTime to absorb in-position transients, then waits
-  // for the in-position to change to true and stay true for stabilizationTime. It will wait up to `timeout`
-  // seconds for that to happen.
-  def waitInPosition(stabilizationTime: Duration, timeout: FiniteDuration)(using
-    T:                                  Timer[F]
-  ): F[Unit]
-
-  // `waitAGInPosition` works like `waitInPosition`, but for the AG in-position flag.
-  /* TODO: AG inposition can take up to 1[s] to react to a TCS command. If the value is read before that, it may induce
-     * an error. A better solution is to detect the edge, from not in position to in-position.
-     */
-  def waitAGInPosition(timeout: FiniteDuration)(using T: Timer[F]): F[Unit]
-
-  def hourAngle: F[String]
-
-  def localTime: F[String]
-
-  def trackingFrame: F[String]
-
-  def trackingEpoch: F[Double]
-
-  def equinox: F[Double]
-
-  def trackingEquinox: F[String]
-
-  def trackingDec: F[Double]
-
-  def trackingRA: F[Double]
-
-  def elevation: F[Double]
-
-  def azimuth: F[Double]
-
-  def crPositionAngle: F[Double]
-
-  def ut: F[String]
-
-  def date: F[String]
-
-  def m2Baffle: F[String]
-
-  def m2CentralBaffle: F[String]
-
-  def st: F[String]
-
-  def sfRotation: F[Double]
-
-  def sfTilt: F[Double]
-
-  def sfLinear: F[Double]
-
-  def instrPA: F[Double]
-
-  def targetA: F[List[Double]]
-
-  def aoFoldPosition: F[String]
-
-  def useAo: F[BinaryYesNo]
-
-  def airmass: F[Double]
-
-  def airmassStart: F[Double]
-
-  def airmassEnd: F[Double]
-
-  def carouselMode: F[String]
-
-  def crFollow: F[Int]
-
-  def crTrackingFrame: F[String]
-
-  def sourceATarget: Target[F]
-
-  val pwfs1Target: Target[F]
-
-  val pwfs2Target: Target[F]
-
-  val oiwfsTarget: Target[F]
-
-  def parallacticAngle: F[Angle]
-
-  def m2UserFocusOffset: F[Double]
-
-  def pwfs1IntegrationTime: F[Double]
-
-  def pwfs2IntegrationTime: F[Double]
-
-  // Attribute must be changed back to Double after EPICS channel is fixed.
-  def oiwfsIntegrationTime: F[Double]
-
-  def gsaoiPort: F[Int]
-
-  def gpiPort: F[Int]
-
-  def f2Port: F[Int]
-
-  def niriPort: F[Int]
-
-  def gnirsPort: F[Int]
-
-  def nifsPort: F[Int]
-
-  def gmosPort: F[Int]
-
-  def ghostPort: F[Int]
-
-  def aoGuideStarX: F[Double]
-
-  def aoGuideStarY: F[Double]
-
-  def aoPreparedCMX: F[Double]
-
-  def aoPreparedCMY: F[Double]
-
-  // GeMS Commands
-  import VirtualGemsTelescope._
-
-  val g1ProbeGuideCmd: ProbeGuideCmd[F]
-
-  val g2ProbeGuideCmd: ProbeGuideCmd[F]
-
-  val g3ProbeGuideCmd: ProbeGuideCmd[F]
-
-  val g4ProbeGuideCmd: ProbeGuideCmd[F]
-
-  def gemsProbeGuideCmd(g: VirtualGemsTelescope): ProbeGuideCmd[F] = g match {
-    case G1 => g1ProbeGuideCmd
-    case G2 => g2ProbeGuideCmd
-    case G3 => g3ProbeGuideCmd
-    case G4 => g4ProbeGuideCmd
-  }
-
-  val wavelG1: TargetWavelengthCmd[F]
-
-  val wavelG2: TargetWavelengthCmd[F]
-
-  val wavelG3: TargetWavelengthCmd[F]
-
-  val wavelG4: TargetWavelengthCmd[F]
-
-  def gemsWavelengthCmd(g: VirtualGemsTelescope): TargetWavelengthCmd[F] = g match {
-    case G1 => wavelG1
-    case G2 => wavelG2
-    case G3 => wavelG3
-    case G4 => wavelG4
-  }
-
-  def gwfs1Target: Target[F]
-
-  def gwfs2Target: Target[F]
-
-  def gwfs3Target: Target[F]
-
-  def gwfs4Target: Target[F]
-
-  def gemsTarget(g: VirtualGemsTelescope): Target[F] = g match {
-    case G1 => gwfs1Target
-    case G2 => gwfs2Target
-    case G3 => gwfs3Target
-    case G4 => gwfs4Target
-  }
-
-  val cwfs1ProbeFollowCmd: ProbeFollowCmd[F]
-
-  val cwfs2ProbeFollowCmd: ProbeFollowCmd[F]
-
-  val cwfs3ProbeFollowCmd: ProbeFollowCmd[F]
-
-  val odgw1FollowCmd: ProbeFollowCmd[F]
-
-  val odgw2FollowCmd: ProbeFollowCmd[F]
-
-  val odgw3FollowCmd: ProbeFollowCmd[F]
-
-  val odgw4FollowCmd: ProbeFollowCmd[F]
-
-  val odgw1ParkCmd: EpicsCommand[F]
-
-  val odgw2ParkCmd: EpicsCommand[F]
-
-  val odgw3ParkCmd: EpicsCommand[F]
-
-  val odgw4ParkCmd: EpicsCommand[F]
-
-  // GeMS statuses
-
-  def cwfs1Follow: F[Boolean]
-
-  def cwfs2Follow: F[Boolean]
-
-  def cwfs3Follow: F[Boolean]
-
-  def odgw1Follow: F[Boolean]
-
-  def odgw2Follow: F[Boolean]
-
-  def odgw3Follow: F[Boolean]
-
-  def odgw4Follow: F[Boolean]
-
-  def odgw1Parked: F[Boolean]
-
-  def odgw2Parked: F[Boolean]
-
-  def odgw3Parked: F[Boolean]
-
-  def odgw4Parked: F[Boolean]
-
-  def g1MapName: F[Option[GemsSource]]
-
-  def g2MapName: F[Option[GemsSource]]
-
-  def g3MapName: F[Option[GemsSource]]
-
-  def g4MapName: F[Option[GemsSource]]
-
-  def g1Wavelength: F[Double]
-
-  def g2Wavelength: F[Double]
-
-  def g3Wavelength: F[Double]
-
-  def g4Wavelength: F[Double]
-
-  def gemsWavelength(g: VirtualGemsTelescope): F[Double] = g match {
-    case G1 => g1Wavelength
-    case G2 => g2Wavelength
-    case G3 => g3Wavelength
-    case G4 => g4Wavelength
-  }
-
-  val g1GuideConfig: ProbeGuideConfig[F]
-
-  val g2GuideConfig: ProbeGuideConfig[F]
-
-  val g3GuideConfig: ProbeGuideConfig[F]
-
-  val g4GuideConfig: ProbeGuideConfig[F]
-
-  def gemsGuideConfig(g: VirtualGemsTelescope): ProbeGuideConfig[F] = g match {
-    case G1 => g1GuideConfig
-    case G2 => g2GuideConfig
-    case G3 => g3GuideConfig
-    case G4 => g4GuideConfig
-  }
-     */
+    val originCmd: Command6Channels[F, Double, Double, Double, Double, Double, Double]
+    val focusOffsetCmd: Command1Channels[F, Double]
+
+    // val m1GuideCmd: M1GuideCmd[F]
+    // val m2GuideCmd: M2GuideCmd[F]
+    // val m2GuideModeCmd: M2GuideModeCmd[F]
+    // val m2GuideConfigCmd: M2GuideConfigCmd[F]
+    // val mountGuideCmd: MountGuideCmd[F]
+    // val offsetACmd: OffsetCmd[F]
+    // val offsetBCmd: OffsetCmd[F]
+    // val wavelSourceB: TargetWavelengthCmd[F]
+    // val m2Beam: M2Beam[F]
+    // val pwfs1ProbeGuideCmd: ProbeGuideCmd[F]
+    // val pwfs2ProbeGuideCmd: ProbeGuideCmd[F]
+    // val oiwfsProbeGuideCmd: ProbeGuideCmd[F]
+    // val pwfs1ProbeFollowCmd: ProbeFollowCmd[F]
+    // val pwfs2ProbeFollowCmd: ProbeFollowCmd[F]
+    // val oiwfsProbeFollowCmd: ProbeFollowCmd[F]
+    // val aoProbeFollowCmd: ProbeFollowCmd[F]
+    // val pwfs1Park: EpicsCommand[F]
+    // val pwfs2Park: EpicsCommand[F]
+    // val oiwfsPark: EpicsCommand[F]
+    // val pwfs1StopObserveCmd: EpicsCommand[F]
+    // val pwfs2StopObserveCmd: EpicsCommand[F]
+    // val oiwfsStopObserveCmd: EpicsCommand[F]
+    // val pwfs1ObserveCmd: WfsObserveCmd[F]
+    // val pwfs2ObserveCmd: WfsObserveCmd[F]
+    // val oiwfsObserveCmd: WfsObserveCmd[F]
+    // val hrwfsParkCmd: EpicsCommand[F]
+    // val hrwfsPosCmd: HrwfsPosCmd[F]
+    // val scienceFoldParkCmd: EpicsCommand[F]
+    // val scienceFoldPosCmd: ScienceFoldPosCmd[F]
+    // val observe: EpicsCommand[F]
+    // val endObserve: EpicsCommand[F]
+    // val aoCorrect: AoCorrect[F]
+    // val aoPrepareControlMatrix: AoPrepareControlMatrix[F]
+    // val aoFlatten: EpicsCommand[F]
+    // val aoStatistics: AoStatistics[F]
+    // val targetFilter: TargetFilter[F]
+    // def absorbTipTilt: F[Int]
+    // def m1GuideSource: F[String]
+    // def m1Guide: F[BinaryOnOff]
+    // def m2p1Guide: F[String]
+    // def m2p2Guide: F[String]
+    // def m2oiGuide: F[String]
+    // def m2aoGuide: F[String]
+    // def comaCorrect: F[String]
+    // def m2GuideState: F[BinaryOnOff]
+    // def xoffsetPoA1: F[Double]
+    // def yoffsetPoA1: F[Double]
+    // def xoffsetPoB1: F[Double]
+    // def yoffsetPoB1: F[Double]
+    // def xoffsetPoC1: F[Double]
+    // def yoffsetPoC1: F[Double]
+    // def sourceAWavelength: F[Double]
+    // def sourceBWavelength: F[Double]
+    // def sourceCWavelength: F[Double]
+    // def chopBeam: F[String]
+    // def p1FollowS: F[String]
+    // def p2FollowS: F[String]
+    // def oiFollowS: F[String]
+    // def aoFollowS: F[String]
+    // def p1Parked: F[Boolean]
+    // def p2Parked: F[Boolean]
+    // def oiName: F[String]
+    // def oiParked: F[Boolean]
+    // def pwfs1On: F[BinaryYesNo]
+    // def pwfs2On: F[BinaryYesNo]
+    // def oiwfsOn: F[BinaryYesNo]
+    // def sfName: F[String]
+    // def sfParked: F[Int]
+    // def agHwName: F[String]
+    // def agHwParked: F[Int]
+    // def instrAA: F[Double]
+    // def inPosition: F[String]
+    // def agInPosition: F[Double]
+    // val pwfs1ProbeGuideConfig: ProbeGuideConfig[F]
+    // val pwfs2ProbeGuideConfig: ProbeGuideConfig[F]
+    // val oiwfsProbeGuideConfig: ProbeGuideConfig[F]
+    // // This functions returns a F that, when run, first waits tcsSettleTime to absorb in-position transients, then waits
+    // // for the in-position to change to true and stay true for stabilizationTime. It will wait up to `timeout`
+    // // seconds for that to happen.
+    // def waitInPosition(stabilizationTime: Duration, timeout: FiniteDuration)(using
+    //   T:                                  Timer[F]
+    // ): F[Unit]
+    // // `waitAGInPosition` works like `waitInPosition`, but for the AG in-position flag.
+    // /* TODO: AG inposition can take up to 1[s] to react to a TCS command. If the value is read before that, it may induce
+    //   * an error. A better solution is to detect the edge, from not in position to in-position.
+    //   */
+    // def waitAGInPosition(timeout: FiniteDuration)(using T: Timer[F]): F[Unit]
+    // def hourAngle: F[String]
+    // def localTime: F[String]
+    // def trackingFrame: F[String]
+    // def trackingEpoch: F[Double]
+    // def equinox: F[Double]
+    // def trackingEquinox: F[String]
+    // def trackingDec: F[Double]
+    // def trackingRA: F[Double]
+    // def elevation: F[Double]
+    // def azimuth: F[Double]
+    // def crPositionAngle: F[Double]
+    // def ut: F[String]
+    // def date: F[String]
+    // def m2Baffle: F[String]
+    // def m2CentralBaffle: F[String]
+    // def st: F[String]
+    // def sfRotation: F[Double]
+    // def sfTilt: F[Double]
+    // def sfLinear: F[Double]
+    // def instrPA: F[Double]
+    // def targetA: F[List[Double]]
+    // def aoFoldPosition: F[String]
+    // def useAo: F[BinaryYesNo]
+    // def airmass: F[Double]
+    // def airmassStart: F[Double]
+    // def airmassEnd: F[Double]
+    // def carouselMode: F[String]
+    // def crFollow: F[Int]
+    // def crTrackingFrame: F[String]
+    // def sourceATarget: Target[F]
+    // val pwfs1Target: Target[F]
+    // val pwfs2Target: Target[F]
+    // val oiwfsTarget: Target[F]
+    // def parallacticAngle: F[Angle]
+    // def m2UserFocusOffset: F[Double]
+    // def pwfs1IntegrationTime: F[Double]
+    // def pwfs2IntegrationTime: F[Double]
+    // // Attribute must be changed back to Double after EPICS channel is fixed.
+    // def oiwfsIntegrationTime: F[Double]
+    // def gsaoiPort: F[Int]
+    // def gpiPort: F[Int]
+    // def f2Port: F[Int]
+    // def niriPort: F[Int]
+    // def gnirsPort: F[Int]
+    // def nifsPort: F[Int]
+    // def gmosPort: F[Int]
+    // def ghostPort: F[Int]
+    // def aoGuideStarX: F[Double]
+    // def aoGuideStarY: F[Double]
+    // def aoPreparedCMX: F[Double]
+    // def aoPreparedCMY: F[Double]
+    // // GeMS Commands
+    // import VirtualGemsTelescope._
+    // val g1ProbeGuideCmd: ProbeGuideCmd[F]
+    // val g2ProbeGuideCmd: ProbeGuideCmd[F]
+    // val g3ProbeGuideCmd: ProbeGuideCmd[F]
+    // val g4ProbeGuideCmd: ProbeGuideCmd[F]
+    // def gemsProbeGuideCmd(g: VirtualGemsTelescope): ProbeGuideCmd[F] = g match {
+    //   case G1 => g1ProbeGuideCmd
+    //   case G2 => g2ProbeGuideCmd
+    //   case G3 => g3ProbeGuideCmd
+    //   case G4 => g4ProbeGuideCmd
+    // }
+    // val wavelG1: TargetWavelengthCmd[F]
+    // val wavelG2: TargetWavelengthCmd[F]
+    // val wavelG3: TargetWavelengthCmd[F]
+    // val wavelG4: TargetWavelengthCmd[F]
+    // def gemsWavelengthCmd(g: VirtualGemsTelescope): TargetWavelengthCmd[F] = g match {
+    //   case G1 => wavelG1
+    //   case G2 => wavelG2
+    //   case G3 => wavelG3
+    //   case G4 => wavelG4
+    // }
+    // def gwfs1Target: Target[F]
+    // def gwfs2Target: Target[F]
+    // def gwfs3Target: Target[F]
+    // def gwfs4Target: Target[F]
+    // def gemsTarget(g: VirtualGemsTelescope): Target[F] = g match {
+    //   case G1 => gwfs1Target
+    //   case G2 => gwfs2Target
+    //   case G3 => gwfs3Target
+    //   case G4 => gwfs4Target
+    // }
+    // val cwfs1ProbeFollowCmd: ProbeFollowCmd[F]
+    // val cwfs2ProbeFollowCmd: ProbeFollowCmd[F]
+    // val cwfs3ProbeFollowCmd: ProbeFollowCmd[F]
+    // val odgw1FollowCmd: ProbeFollowCmd[F]
+    // val odgw2FollowCmd: ProbeFollowCmd[F]
+    // val odgw3FollowCmd: ProbeFollowCmd[F]
+    // val odgw4FollowCmd: ProbeFollowCmd[F]
+    // val odgw1ParkCmd: EpicsCommand[F]
+    // val odgw2ParkCmd: EpicsCommand[F]
+    // val odgw3ParkCmd: EpicsCommand[F]
+    // val odgw4ParkCmd: EpicsCommand[F]
+    // // GeMS statuses
+    // def cwfs1Follow: F[Boolean]
+    // def cwfs2Follow: F[Boolean]
+    // def cwfs3Follow: F[Boolean]
+    // def odgw1Follow: F[Boolean]
+    // def odgw2Follow: F[Boolean]
+    // def odgw3Follow: F[Boolean]
+    // def odgw4Follow: F[Boolean]
+    // def odgw1Parked: F[Boolean]
+    // def odgw2Parked: F[Boolean]
+    // def odgw3Parked: F[Boolean]
+    // def odgw4Parked: F[Boolean]
+    // def g1MapName: F[Option[GemsSource]]
+    // def g2MapName: F[Option[GemsSource]]
+    // def g3MapName: F[Option[GemsSource]]
+    // def g4MapName: F[Option[GemsSource]]
+    // def g1Wavelength: F[Double]
+    // def g2Wavelength: F[Double]
+    // def g3Wavelength: F[Double]
+    // def g4Wavelength: F[Double]
+    // def gemsWavelength(g: VirtualGemsTelescope): F[Double] = g match {
+    //   case G1 => g1Wavelength
+    //   case G2 => g2Wavelength
+    //   case G3 => g3Wavelength
+    //   case G4 => g4Wavelength
+    // }
+    // val g1GuideConfig: ProbeGuideConfig[F]
+    // val g2GuideConfig: ProbeGuideConfig[F]
+    // val g3GuideConfig: ProbeGuideConfig[F]
+    // val g4GuideConfig: ProbeGuideConfig[F]
+    // def gemsGuideConfig(g: VirtualGemsTelescope): ProbeGuideConfig[F] = g match {
+    //   case G1 => g1GuideConfig
+    //   case G2 => g2GuideConfig
+    //   case G3 => g3GuideConfig
+    //   case G4 => g4GuideConfig
+    // }
   }
 
   val sysName: String = "TCS"
@@ -486,6 +291,9 @@ object TcsEpicsSystem {
   }
 
   case class TcsChannels[F[_]](
+    /**
+     * List of all TcsChannels Channel -> Defines a raw channel Other cases -> Group of channels
+     */
     telltale:         TelltaleChannel[F],
     telescopeParkDir: Channel[F, CadDirective],
     mountFollow:      Channel[F, String],
@@ -497,9 +305,12 @@ object TcsEpicsSystem {
     sourceA:          TargetChannels[F],
     wavelSourceA:     Channel[F, String],
     slew:             SlewChannels[F],
-    rotator:          RotatorChannels[F]
+    rotator:          RotatorChannels[F],
+    origin:           OriginChannels[F],
+    focusOffset:      Channel[F, String]
   )
 
+  // Next case clases are the group channels
   case class EnclosureChannels[F[_]](
     ecsDomeMode:      Channel[F, String],
     ecsShutterMode:   Channel[F, String],
@@ -548,28 +359,23 @@ object TcsEpicsSystem {
   )
 
   case class RotatorChannels[F[_]](
-    ipa: Channel[F, String],
-    system: Channel[F, String],
+    ipa:     Channel[F, String],
+    system:  Channel[F, String],
     equinox: Channel[F, String],
-    iaa: Channel[F, String]
-                          )
+    iaa:     Channel[F, String]
+  )
 
-  def buildRotatorChannels[F[_]](
-                                  service: EpicsService[F],
-                                  top: String
-                                ): Resource[F, RotatorChannels[F]] =
-    for {
-      ipa <- service.getChannel[String](top + "rotator.A")
-      system <- service.getChannel[String](top + "rotator.B")
-      equinox <- service.getChannel[String](top + "rotator.C")
-      iaa <- service.getChannel[String](top + "rotator.D")
-    } yield RotatorChannels(
-      ipa,
-      system,
-      equinox,
-      iaa
-    )
+  case class OriginChannels[F[_]](
+    xa: Channel[F, String],
+    ya: Channel[F, String],
+    xb: Channel[F, String],
+    yb: Channel[F, String],
+    xc: Channel[F, String],
+    yc: Channel[F, String]
+  )
 
+  // Build functions to construct each epics cannel for each
+  // channels group
   def buildEnclosureChannels[F[_]](
     service: EpicsService[F],
     top:     String
@@ -669,6 +475,50 @@ object TcsEpicsSystem {
     aao
   )
 
+  def buildRotatorChannels[F[_]](
+    service: EpicsService[F],
+    top:     String
+  ): Resource[F, RotatorChannels[F]] = for {
+    ipa     <- service.getChannel[String](top + "rotator.A")
+    system  <- service.getChannel[String](top + "rotator.B")
+    equinox <- service.getChannel[String](top + "rotator.C")
+    iaa     <- service.getChannel[String](top + "rotator.D")
+  } yield RotatorChannels(
+    ipa,
+    system,
+    equinox,
+    iaa
+  )
+
+  def buildOriginChannels[F[_]](
+    service: EpicsService[F],
+    top:     String
+  ): Resource[F, OriginChannels[F]] = for {
+    xa <- service.getChannel[String](top + "poriginA.A")
+    ya <- service.getChannel[String](top + "poriginA.B")
+    xb <- service.getChannel[String](top + "poriginB.A")
+    yb <- service.getChannel[String](top + "poriginB.B")
+    xc <- service.getChannel[String](top + "poriginC.A")
+    yc <- service.getChannel[String](top + "poriginC.B")
+  } yield OriginChannels(
+    xa,
+    ya,
+    xb,
+    yb,
+    xc,
+    yc
+  )
+
+  /**
+   * Build all TcsChannels It will construct the desired raw channel or call the build function for
+   * channels group
+   *
+   * @param service
+   *   Epics service to handle channels
+   * @param top
+   *   Prefix string of epics channel
+   * @return
+   */
   def buildChannels[F[_]](service: EpicsService[F], top: String): Resource[F, TcsChannels[F]] =
     for {
       tt  <- service.getChannel[String](top + "sad:health.VAL").map(TelltaleChannel(sysName, _))
@@ -683,6 +533,8 @@ object TcsEpicsSystem {
       wva <- service.getChannel[String](top + "wavelSourceA.A")
       slw <- buildSlewChannels(service, top)
       rot <- buildRotatorChannels(service, top)
+      org <- buildOriginChannels(service, top)
+      foc <- service.getChannel[String](top + "dtelFocus.A")
     } yield TcsChannels[F](
       tt,
       tpd,
@@ -695,7 +547,9 @@ object TcsEpicsSystem {
       sra,
       wva,
       slw,
-      rot
+      rot,
+      org,
+      foc
     )
 
   case class TcsCommandsImpl[F[_]: Monad: Parallel](
@@ -706,6 +560,9 @@ object TcsEpicsSystem {
 
     private def addParam(p: VerifiedEpics[F, F, Unit]): TcsCommands[F] =
       TcsCommandsImpl(tcsEpics, timeout, params :+ p)
+
+    private def addMultipleParams(c: ParameterList[F]): TcsCommands[F] =
+      TcsCommandsImpl(tcsEpics, timeout, params ++ c)
 
     override def post: VerifiedEpics[F, F, ApplyCommandResult] =
       params.compile *> tcsEpics.post(timeout)
@@ -917,23 +774,50 @@ object TcsEpicsSystem {
           tcsEpics.slewCmd.autoparkAowfs(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
         )
       }
-    override val rotatorCommand: RotatorCommand[F, TcsCommands[F]] = new RotatorCommand[F, TcsCommands[F]] {
-      override def ipa(v: Angle): TcsCommands[F] = addParam(
-        tcsEpics.rotatorCmd.setParam1(v.toDoubleDegrees)
-      )
+    override val rotatorCommand: RotatorCommand[F, TcsCommands[F]]         =
+      new RotatorCommand[F, TcsCommands[F]] {
+        override def ipa(v: Angle): TcsCommands[F] = addParam(
+          tcsEpics.rotatorCmd.setParam1(v.toDoubleDegrees)
+        )
 
-      override def system(v: String): TcsCommands[F] = addParam(
-        tcsEpics.rotatorCmd.setParam2(v)
-      )
+        override def system(v: String): TcsCommands[F] = addParam(
+          tcsEpics.rotatorCmd.setParam2(v)
+        )
 
-      override def equinox(v: String): TcsCommands[F] = addParam(
-        tcsEpics.rotatorCmd.setParam3(v)
-      )
+        override def equinox(v: String): TcsCommands[F] = addParam(
+          tcsEpics.rotatorCmd.setParam3(v)
+        )
 
-      override def iaa(v: Angle): TcsCommands[F] = addParam(
-        tcsEpics.rotatorCmd.setParam4(v.toDoubleDegrees)
-      )
-    }
+        override def iaa(v: Angle): TcsCommands[F] = addParam(
+          tcsEpics.rotatorCmd.setParam4(v.toDoubleDegrees)
+        )
+      }
+
+    override val originCommand: OriginCommand[F, TcsCommands[F]] =
+      new OriginCommand[F, TcsCommands[F]] {
+        override def originX(v: Double): TcsCommands[F] =
+          addMultipleParams(
+            List(tcsEpics.originCmd.setParam1(v),
+                 tcsEpics.originCmd.setParam3(v),
+                 tcsEpics.originCmd.setParam5(v)
+            )
+          )
+
+        override def originY(v: Double): TcsCommands[F] =
+          addMultipleParams(
+            List(tcsEpics.originCmd.setParam2(v),
+                 tcsEpics.originCmd.setParam4(v),
+                 tcsEpics.originCmd.setParam6(v)
+            )
+          )
+      }
+
+    override val focusOffsetCommand: FocusOffsetCommand[F, TcsCommands[F]] =
+      new FocusOffsetCommand[F, TcsCommands[F]] {
+        override def focusOffset(v: Double): TcsCommands[F] = addParam(
+          tcsEpics.focusOffsetCmd.setParam1(v)
+        )
+      }
   }
 
   class TcsEpicsSystemImpl[F[_]: Monad: Parallel](epics: TcsEpics[F]) extends TcsEpicsSystem[F] {
@@ -1007,6 +891,22 @@ object TcsEpicsSystem {
       channels.rotator.system,
       channels.rotator.equinox,
       channels.rotator.iaa
+    )
+
+    override val originCmd: Command6Channels[F, Double, Double, Double, Double, Double, Double] =
+      Command6Channels(
+        channels.telltale,
+        channels.origin.xa,
+        channels.origin.ya,
+        channels.origin.xb,
+        channels.origin.yb,
+        channels.origin.xc,
+        channels.origin.yc
+      )
+
+    override val focusOffsetCmd: Command1Channels[F, Double] = Command1Channels(
+      channels.telltale,
+      channels.focusOffset
     )
   }
 
@@ -1095,6 +995,32 @@ object TcsEpicsSystem {
       writeCadParam[F, D](tt, param4Channel)(v)
     def setParam5(v: E): VerifiedEpics[F, F, Unit] =
       writeCadParam[F, E](tt, param5Channel)(v)
+  }
+
+  case class Command6Channels[F[_]: Monad, A: Encoder[*, String], B: Encoder[*, String], C: Encoder[
+    *,
+    String
+  ], D: Encoder[*, String], E: Encoder[*, String], G: Encoder[*, String]](
+    tt:            TelltaleChannel[F],
+    param1Channel: Channel[F, String],
+    param2Channel: Channel[F, String],
+    param3Channel: Channel[F, String],
+    param4Channel: Channel[F, String],
+    param5Channel: Channel[F, String],
+    param6Channel: Channel[F, String]
+  ) {
+    def setParam1(v: A): VerifiedEpics[F, F, Unit] =
+      writeCadParam[F, A](tt, param1Channel)(v)
+    def setParam2(v: B): VerifiedEpics[F, F, Unit] =
+      writeCadParam[F, B](tt, param2Channel)(v)
+    def setParam3(v: C): VerifiedEpics[F, F, Unit] =
+      writeCadParam[F, C](tt, param3Channel)(v)
+    def setParam4(v: D): VerifiedEpics[F, F, Unit] =
+      writeCadParam[F, D](tt, param4Channel)(v)
+    def setParam5(v: E): VerifiedEpics[F, F, Unit] =
+      writeCadParam[F, E](tt, param5Channel)(v)
+    def setParam6(v: G): VerifiedEpics[F, F, Unit] =
+      writeCadParam[F, G](tt, param6Channel)(v)
   }
 
   case class TargetCommandChannels[F[_]: Monad](
@@ -1242,42 +1168,39 @@ object TcsEpicsSystem {
   }
 
   trait RotatorCommand[F[_], +S] {
-    def ipa(v: Angle): S
-    def system(v: String): S
+    def ipa(v:     Angle): S
+    def system(v:  String): S
     def equinox(v: String): S
-    def iaa(v: Angle): S
+    def iaa(v:     Angle): S
+  }
+
+  trait OriginCommand[F[_], +S] {
+    def originX(v: Double): S
+    def originY(v: Double): S
+  }
+
+  trait FocusOffsetCommand[F[_], +S] {
+    def focusOffset(v: Double): S
   }
 
   trait TcsCommands[F[_]] {
     def post: VerifiedEpics[F, F, ApplyCommandResult]
-
     val mcsParkCommand: BaseCommand[F, TcsCommands[F]]
-
     val mcsFollowCommand: FollowCommand[F, TcsCommands[F]]
-
     val rotStopCommand: RotStopCommand[F, TcsCommands[F]]
-
     val rotParkCommand: BaseCommand[F, TcsCommands[F]]
-
     val rotFollowCommand: FollowCommand[F, TcsCommands[F]]
-
     val rotMoveCommand: RotMoveCommand[F, TcsCommands[F]]
-
     val ecsCarouselModeCmd: CarouselModeCommand[F, TcsCommands[F]]
-
     val ecsCarouselMoveCmd: CarouselMoveCommand[F, TcsCommands[F]]
-
     val ecsShuttersMoveCmd: ShuttersMoveCommand[F, TcsCommands[F]]
-
     val ecsVenGatesMoveCmd: VentGatesMoveCommand[F, TcsCommands[F]]
-
     val sourceACmd: TargetCommand[F, TcsCommands[F]]
-
     val sourceAWavel: WavelengthCommand[F, TcsCommands[F]]
-
     val slewOptionsCommand: SlewOptionsCommand[F, TcsCommands[F]]
-
     val rotatorCommand: RotatorCommand[F, TcsCommands[F]]
+    val originCommand: OriginCommand[F, TcsCommands[F]]
+    val focusOffsetCommand: FocusOffsetCommand[F, TcsCommands[F]]
   }
   /*
   trait ProbeGuideCmd[F[_]] extends EpicsCommand[F] {

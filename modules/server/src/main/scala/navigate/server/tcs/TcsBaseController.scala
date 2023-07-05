@@ -10,11 +10,11 @@ import lucuma.core.math.{Angle, Coordinates, Epoch, Parallax, ProperMotion, Radi
 trait TcsBaseController[F[_]] {
   import TcsBaseController._
   def mcsPark: F[ApplyCommandResult]
-  def mcsFollow(enable:          Boolean): F[ApplyCommandResult]
-  def rotStop(useBrakes:         Boolean): F[ApplyCommandResult]
+  def mcsFollow(enable:           Boolean): F[ApplyCommandResult]
+  def rotStop(useBrakes:          Boolean): F[ApplyCommandResult]
   def rotPark: F[ApplyCommandResult]
-  def rotFollow(enable:          Boolean): F[ApplyCommandResult]
-  def rotMove(angle:             Angle): F[ApplyCommandResult]
+  def rotFollow(enable:           Boolean): F[ApplyCommandResult]
+  def rotMove(angle:              Angle): F[ApplyCommandResult]
   def ecsCarouselMode(
     domeMode:      DomeMode,
     shutterMode:   ShutterMode,
@@ -22,10 +22,11 @@ trait TcsBaseController[F[_]] {
     domeEnable:    Boolean,
     shutterEnable: Boolean
   ): F[ApplyCommandResult]
-  def ecsVentGatesMove(gateEast: Double, westGate: Double): F[ApplyCommandResult]
-  def applyTcsConfig(config:     TcsConfig): F[ApplyCommandResult]
-  def slew(config:               SlewConfig): F[ApplyCommandResult]
-  def rotIaa(angle: Angle): F[ApplyCommandResult]
+  def ecsVentGatesMove(gateEast:  Double, westGate: Double): F[ApplyCommandResult]
+  def applyTcsConfig(config:      TcsConfig): F[ApplyCommandResult]
+  def slew(config:                SlewConfig): F[ApplyCommandResult]
+  def instrumentSpecifics(config: InstrumentSpecifics): F[ApplyCommandResult]
+  def rotIaa(angle:               Angle): F[ApplyCommandResult]
 }
 
 object TcsBaseController {

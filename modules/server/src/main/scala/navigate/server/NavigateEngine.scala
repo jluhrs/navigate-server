@@ -8,7 +8,16 @@ import cats.effect.{Async, Concurrent, Ref, Temporal}
 import cats.effect.kernel.Sync
 import cats.syntax.all.*
 import org.typelevel.log4cats.Logger
-import navigate.model.NavigateCommand.{CrcsFollow, CrcsMove, CrcsPark, CrcsStop, EcsCarouselMode, McsFollow, McsPark, Slew}
+import navigate.model.NavigateCommand.{
+  CrcsFollow,
+  CrcsMove,
+  CrcsPark,
+  CrcsStop,
+  EcsCarouselMode,
+  McsFollow,
+  McsPark,
+  Slew
+}
 import navigate.model.{NavigateCommand, NavigateEvent}
 import navigate.model.NavigateEvent.{CommandFailure, CommandPaused, CommandStart, CommandSuccess}
 import navigate.model.config.NavigateEngineConfiguration
@@ -22,20 +31,18 @@ import lucuma.core.math.Angle
 import monocle.{Focus, Lens}
 
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import navigate.server.tcs.InstrumentSpecifics
+import navigate.model.NavigateCommand.InstSpecifics
 
 trait NavigateEngine[F[_]] {
   val systems: Systems[F]
-
   def eventStream: Stream[F, NavigateEvent]
-
   def mcsPark: F[Unit]
-
-  def mcsFollow(enable: Boolean): F[Unit]
-
-  def rotStop(useBrakes:         Boolean): F[Unit]
+  def mcsFollow(enable:                              Boolean): F[Unit]
+  def rotStop(useBrakes:                             Boolean): F[Unit]
   def rotPark: F[Unit]
-  def rotFollow(enable:          Boolean): F[Unit]
-  def rotMove(angle:             Angle): F[Unit]
+  def rotFollow(enable:                              Boolean): F[Unit]
+  def rotMove(angle:                                 Angle): F[Unit]
   def ecsCarouselMode(
     domeMode:      DomeMode,
     shutterMode:   ShutterMode,
@@ -43,9 +50,9 @@ trait NavigateEngine[F[_]] {
     domeEnable:    Boolean,
     shutterEnable: Boolean
   ): F[Unit]
-  def ecsVentGatesMove(gateEast: Double, westGate: Double): F[Unit]
-  def slew(slewConfig:           SlewConfig): F[Unit]
-
+  def ecsVentGatesMove(gateEast:                     Double, westGate: Double): F[Unit]
+  def slew(slewConfig:                               SlewConfig): F[Unit]
+  def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): F[Unit]
 }
 
 object NavigateEngine {
@@ -145,6 +152,14 @@ object NavigateEngine {
       systems.tcsSouth.slew(slewConfig),
       Focus[State](_.slewInProgress)
     )
+
+    override def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): F[Unit] =
+      command(
+        engine,
+        InstSpecifics,
+        systems.tcsSouth.instrumentSpecifics(instrumentSpecificsParams),
+        Focus[State](_.instrumentSpecificsInProgress)
+      )
   }
 
   def build[F[_]: Concurrent: Logger](
@@ -156,16 +171,17 @@ object NavigateEngine {
     .map(NavigateEngineImpl[F](site, systems, conf, _))
 
   case class State(
-    mcsParkInProgress:         Boolean,
-    mcsFollowInProgress:       Boolean,
-    rotStopInProgress:         Boolean,
-    rotParkInProgress:         Boolean,
-    rotFollowInProgress:       Boolean,
-    rotMoveInProgress:         Boolean,
-    ecsDomeModeInProgress:     Boolean,
-    ecsVentGateMoveInProgress: Boolean,
-    slewInProgress:            Boolean,
-    rotIaaInProgress:          Boolean
+    mcsParkInProgress:             Boolean,
+    mcsFollowInProgress:           Boolean,
+    rotStopInProgress:             Boolean,
+    rotParkInProgress:             Boolean,
+    rotFollowInProgress:           Boolean,
+    rotMoveInProgress:             Boolean,
+    ecsDomeModeInProgress:         Boolean,
+    ecsVentGateMoveInProgress:     Boolean,
+    slewInProgress:                Boolean,
+    instrumentSpecificsInProgress: Boolean,
+    rotIaaInProgress:              Boolean
   ) {
     lazy val tcsActionInProgress: Boolean =
       mcsParkInProgress ||
@@ -177,6 +193,7 @@ object NavigateEngine {
         ecsDomeModeInProgress ||
         ecsVentGateMoveInProgress ||
         slewInProgress ||
+        instrumentSpecificsInProgress ||
         rotIaaInProgress
   }
 
@@ -190,6 +207,7 @@ object NavigateEngine {
     ecsDomeModeInProgress = false,
     ecsVentGateMoveInProgress = false,
     slewInProgress = false,
+    instrumentSpecificsInProgress = false,
     rotIaaInProgress = false
   )
 

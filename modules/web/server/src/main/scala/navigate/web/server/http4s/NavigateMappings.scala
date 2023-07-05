@@ -54,6 +54,7 @@ import navigate.server.tcs.AutoparkPwfs1
 import navigate.server.tcs.AutoparkPwfs2
 import navigate.server.tcs.FollowStatus
 import navigate.server.tcs.InstrumentSpecifics
+import navigate.server.tcs.Origin
 import navigate.server.tcs.ParkStatus
 import navigate.server.tcs.ResetPointing
 import navigate.server.tcs.ShortcircuitMountFilter
@@ -133,6 +134,25 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
         Result.failure("rotatorFollow parameter could not be parsed.").pure[F]
       )
 
+  def instrumentSpecifics(p: Path, env: Cursor.Env): F[Result[OperationOutcome]] =
+    env
+      .get[InstrumentSpecifics]("instrumentSpecificsParams")(classTag[InstrumentSpecifics])
+      .map { isp =>
+        server
+          .instrumentSpecifics(isp)
+          .attempt
+          .map(x =>
+            Result.success(
+              x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+            )
+          )
+      }
+      .getOrElse(
+        Result
+          .failure[OperationOutcome]("InstrumentSpecifics parameters could not be parsed.")
+          .pure[F]
+      )
+
   def slew(p: Path, env: Cursor.Env): F[Result[OperationOutcome]] =
     env
       .get[SlewConfig]("slewParams")(classTag[SlewConfig])
@@ -181,6 +201,19 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
             },
             "Could not parse Slew parameters."
           )
+        case Select("instrumentSpecifics",
+                    List(Binding("instrumentSpecificsParams", ObjectValue(fields))),
+                    child
+            ) =>
+          Result.fromOption(
+            parseInstrumentSpecificsInput(fields).map { x =>
+              Environment(
+                Cursor.Env("instrumentSpecificsParams" -> x),
+                Select("instrumentSpecifics", Nil, child)
+              )
+            },
+            "Could not parse instrumentSpecifics parameters."
+          )
       }
     )
   )
@@ -193,7 +226,10 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
         RootEffect.computeEncodable("mountFollow")((_, p, env) => mountFollow(p, env)),
         RootEffect.computeEncodable("rotatorPark")((_, p, env) => rotatorPark(p, env)),
         RootEffect.computeEncodable("rotatorFollow")((_, p, env) => rotatorFollow(p, env)),
-        RootEffect.computeEncodable("slew")((_, p, env) => slew(p, env))
+        RootEffect.computeEncodable("slew")((_, p, env) => slew(p, env)),
+        RootEffect.computeEncodable("instrumentSpecifics")((_, p, env) =>
+          instrumentSpecifics(p, env)
+        )
       )
     ),
     LeafMapping[ParkStatus](ParkStatusType),
@@ -317,10 +353,10 @@ object NavigateMappings extends GrackleParsers {
             )
   } yield bt
 
-  def parseOrigin(l: List[(String, Value)]): Option[(Distance, Distance)] = for {
+  def parseOrigin(l: List[(String, Value)]): Option[Origin] = for {
     x <- l.collectFirst { case ("x", ObjectValue(v)) => parseDistance(v) }.flatten
     y <- l.collectFirst { case ("y", ObjectValue(v)) => parseDistance(v) }.flatten
-  } yield (x, y)
+  } yield Origin(x, y)
 
   def parseInstrumentSpecificsInput(l: List[(String, Value)]): Option[InstrumentSpecifics] = for {
     iaa       <- l.collectFirst { case ("iaa", ObjectValue(v)) => parseAngle(v) }.flatten
@@ -341,6 +377,6 @@ object NavigateMappings extends GrackleParsers {
     t   <- parseBaseTarget(tl)
     inl <- l.collectFirst { case ("instParams", ObjectValue(v)) => v }
     in  <- parseInstrumentSpecificsInput(inl)
-  } yield SlewConfig(so, t, in.iaa)
+  } yield SlewConfig(so, t, in)
 
 }
