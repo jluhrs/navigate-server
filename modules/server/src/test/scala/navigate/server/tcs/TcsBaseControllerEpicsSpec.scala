@@ -258,6 +258,41 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
           compareDouble(x.toDouble, instrumentSpecifics.iaa.toDoubleDegrees)
         )
       )
+      assert(
+        rs.focusOffset.value.exists(x =>
+          compareDouble(x.toDouble, instrumentSpecifics.focusOffset.toMicrometers.value.toDouble)
+        )
+      )
+      assert(
+        rs.origin.xa.value.exists(x =>
+          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMicrometers.value.toDouble)
+        )
+      )
+      assert(
+        rs.origin.xb.value.exists(x =>
+          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMicrometers.value.toDouble)
+        )
+      )
+      assert(
+        rs.origin.xc.value.exists(x =>
+          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMicrometers.value.toDouble)
+        )
+      )
+      assert(
+        rs.origin.ya.value.exists(x =>
+          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMicrometers.value.toDouble)
+        )
+      )
+      assert(
+        rs.origin.yb.value.exists(x =>
+          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMicrometers.value.toDouble)
+        )
+      )
+      assert(
+        rs.origin.yc.value.exists(x =>
+          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMicrometers.value.toDouble)
+        )
+      )
     }
   }
 

@@ -11,6 +11,7 @@ import mouse.all.*
 import navigate.epics.EpicsSystem.TelltaleChannel
 import navigate.epics.{Channel, EpicsService, given}
 import navigate.epics.VerifiedEpics.*
+import navigate.model.Distance
 import navigate.model.enums.{DomeMode, ShutterMode}
 import navigate.server.{ApplyCommandResult, tcs}
 import navigate.server.acm.ParameterList.*
@@ -795,27 +796,30 @@ object TcsEpicsSystem {
 
     override val originCommand: OriginCommand[F, TcsCommands[F]] =
       new OriginCommand[F, TcsCommands[F]] {
-        override def originX(v: Double): TcsCommands[F] =
+        override def originX(v: Distance): TcsCommands[F] =
           addMultipleParams(
-            List(tcsEpics.originCmd.setParam1(v),
-                 tcsEpics.originCmd.setParam3(v),
-                 tcsEpics.originCmd.setParam5(v)
+            List(
+              tcsEpics.originCmd.setParam1(v.toMillimeters.value.toDouble),
+              tcsEpics.originCmd.setParam3(v.toMillimeters.value.toDouble),
+              tcsEpics.originCmd.setParam5(v.toMillimeters.value.toDouble)
             )
           )
 
-        override def originY(v: Double): TcsCommands[F] =
+        override def originY(v: Distance): TcsCommands[F] =
           addMultipleParams(
-            List(tcsEpics.originCmd.setParam2(v),
-                 tcsEpics.originCmd.setParam4(v),
-                 tcsEpics.originCmd.setParam6(v)
+            List(
+              tcsEpics.originCmd.setParam2(v.toMillimeters.value.toDouble),
+              tcsEpics.originCmd.setParam4(v.toMillimeters.value.toDouble),
+              tcsEpics.originCmd.setParam6(v.toMillimeters.value.toDouble)
             )
           )
       }
 
     override val focusOffsetCommand: FocusOffsetCommand[F, TcsCommands[F]] =
       new FocusOffsetCommand[F, TcsCommands[F]] {
-        override def focusOffset(v: Double): TcsCommands[F] = addParam(
-          tcsEpics.focusOffsetCmd.setParam1(v)
+        override def focusOffset(v: Distance): TcsCommands[F] = addParam(
+          // En que formato recibe Epics este valor Milimetros, Metros, Micrometros????
+          tcsEpics.focusOffsetCmd.setParam1(v.toMillimeters.value.toDouble)
         )
       }
   }
@@ -1175,12 +1179,12 @@ object TcsEpicsSystem {
   }
 
   trait OriginCommand[F[_], +S] {
-    def originX(v: Double): S
-    def originY(v: Double): S
+    def originX(v: Distance): S
+    def originY(v: Distance): S
   }
 
   trait FocusOffsetCommand[F[_], +S] {
-    def focusOffset(v: Double): S
+    def focusOffset(v: Distance): S
   }
 
   trait TcsCommands[F[_]] {
