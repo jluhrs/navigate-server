@@ -22,8 +22,8 @@ import navigate.model.enums.ShutterMode
 import navigate.server.NavigateEngine
 import navigate.server.OdbProxy
 import navigate.server.Systems
-import navigate.server.tcs.InstrumentSpecifics
 import navigate.server.tcs.FollowStatus
+import navigate.server.tcs.InstrumentSpecifics
 import navigate.server.tcs.ParkStatus
 import navigate.server.tcs.SlewConfig
 import navigate.server.tcs.TcsNorthControllerSim
