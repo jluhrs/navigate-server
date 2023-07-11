@@ -204,7 +204,8 @@ object NavigateMappingsTest {
 
     override def slew(slewConfig: SlewConfig): IO[Unit] = IO.unit
 
-    def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): IO[Unit] = IO.unit
+    override def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): IO[Unit] =
+      IO.unit
 
   }.pure[IO]
 
