@@ -47,6 +47,9 @@ class TcsBaseControllerSim[F[_]: Applicative] extends TcsBaseController[F] {
   override def instrumentSpecifics(config: InstrumentSpecifics): F[ApplyCommandResult] =
     Applicative[F].pure(ApplyCommandResult.Completed)
 
+  override def oiwfsTarget(target: Target): F[ApplyCommandResult] =
+    Applicative[F].pure(ApplyCommandResult.Completed)
+
   override def rotIaa(angle: Angle): F[ApplyCommandResult] =
     Applicative[F].pure(ApplyCommandResult.Completed)
 }

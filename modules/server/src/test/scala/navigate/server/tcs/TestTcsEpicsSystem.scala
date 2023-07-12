@@ -103,6 +103,7 @@ object TestTcsEpicsSystem {
     rotMoveAngle:     TestChannel.State[String],
     enclosure:        EnclosureChannelsState,
     sourceA:          TargetChannelsState,
+    oiwfs:            TargetChannelsState,
     wavelSourceA:     TestChannel.State[String],
     slew:             SlewChannelsState,
     rotator:          RotatorChannelState,
@@ -131,6 +132,20 @@ object TestTcsEpicsSystem {
       ecsVentGateWest = TestChannel.State.default
     ),
     sourceA = TargetChannelsState(
+      objectName = TestChannel.State.default,
+      coordSystem = TestChannel.State.default,
+      coord1 = TestChannel.State.default,
+      coord2 = TestChannel.State.default,
+      epoch = TestChannel.State.default,
+      equinox = TestChannel.State.default,
+      parallax = TestChannel.State.default,
+      properMotion1 = TestChannel.State.default,
+      properMotion2 = TestChannel.State.default,
+      radialVelocity = TestChannel.State.default,
+      brightness = TestChannel.State.default,
+      ephemerisFile = TestChannel.State.default
+    ),
+    oiwfs = TargetChannelsState(
       objectName = TestChannel.State.default,
       coordSystem = TestChannel.State.default,
       coord1 = TestChannel.State.default,
@@ -307,6 +322,7 @@ object TestTcsEpicsSystem {
       rotMoveAngle = new TestChannel[F, State, String](s, Focus[State](_.rotMoveAngle)),
       enclosure = buildEnclosureChannels(s),
       sourceA = buildTargetChannels(s, Focus[State](_.sourceA)),
+      oiwfs = buildTargetChannels(s, Focus[State](_.oiwfs)),
       wavelSourceA = new TestChannel[F, State, String](s, Focus[State](_.rotMoveAngle)),
       slew = buildSlewChannels(s),
       rotator = buildRotatorChannels(s),

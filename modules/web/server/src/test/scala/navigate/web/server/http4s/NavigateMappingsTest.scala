@@ -26,6 +26,7 @@ import navigate.server.tcs.FollowStatus
 import navigate.server.tcs.InstrumentSpecifics
 import navigate.server.tcs.ParkStatus
 import navigate.server.tcs.SlewConfig
+import navigate.server.tcs.Target
 import navigate.server.tcs.TcsNorthControllerSim
 import navigate.server.tcs.TcsSouthControllerSim
 
@@ -125,6 +126,22 @@ class NavigateMappingsTest extends CatsEffectSuite {
                 |      }
                 |    }
                 |  }
+                |  oiwfsTarget: {
+                |    id: "T0002"
+                |    name: "OiwfsDummy"
+                |    sidereal: {
+                |      ra: {
+                |        hms: "10:11:12"
+                |      }
+                |      dec: {
+                |        dms: "-30:31:32"
+                |      }
+                |      epoch:"J2000.000"
+                |    }
+                |    wavelength: {
+                |      nanometers: "600"
+                |    }
+                |  }
                 |}) {
                 |  result
                 |} }
@@ -168,6 +185,37 @@ class NavigateMappingsTest extends CatsEffectSuite {
       )
     )
   }
+
+  test("Process oiwfsTarget command") {
+    for {
+      eng <- buildServer
+      mp  <- NavigateMappings[IO](eng)
+      r   <- mp.compileAndRun(
+               """
+                |mutation { oiwfsTarget (target: {
+                |  id: "T0001"
+                |  name: "Dummy"
+                |  sidereal: {
+                |    ra: {
+                |      hms: "21:15:33"
+                |    }
+                |    dec: {
+                |      dms: "-30:26:38"
+                |    }
+                |    epoch:"J2000.000"
+                |  }
+                |  wavelength: {
+                |    nanometers: "400"
+                |  }
+                |}) {
+                |  result
+                |} }
+                |""".stripMargin
+             )
+    } yield assert(
+      extractResult[OperationOutcome](r, "oiwfsTarget").exists(_ === OperationOutcome.success)
+    )
+  }
 }
 
 object NavigateMappingsTest {
@@ -206,6 +254,8 @@ object NavigateMappingsTest {
 
     override def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): IO[Unit] =
       IO.unit
+
+    override def oiwfsTarget(target: Target): IO[Unit] = IO.unit
 
   }.pure[IO]
 

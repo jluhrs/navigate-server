@@ -168,6 +168,23 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
       }
       .getOrElse(Result.failure[OperationOutcome]("Slew parameters could not be parsed.").pure[F])
 
+  def oiwfsTarget(p: Path, env: Cursor.Env): F[Result[OperationOutcome]] =
+    env
+      .get[Target]("target")(classTag[Target])
+      .map { oi =>
+        server
+          .oiwfsTarget(oi)
+          .attempt
+          .map(x =>
+            Result.success(
+              x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+            )
+          )
+      }
+      .getOrElse(
+        Result.failure[OperationOutcome]("oiwfsTarget parameters could not be parsed.").pure[F]
+      )
+
   val MutationType: TypeRef         = schema.ref("Mutation")
   val ParkStatusType: TypeRef       = schema.ref("ParkStatus")
   val FollowStatusType: TypeRef     = schema.ref("FollowStatus")
@@ -177,21 +194,21 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
   override val selectElaborator: SelectElaborator = new SelectElaborator(
     Map(
       MutationType -> {
-        case Select("mountFollow", List(Binding("enable", BooleanValue(en))), child)   =>
+        case Select("mountFollow", List(Binding("enable", BooleanValue(en))), child)    =>
           Result.Success(
             Environment(
               Cursor.Env("enable" -> en),
               Select("mountFollow", Nil, child)
             )
           )
-        case Select("rotatorFollow", List(Binding("enable", BooleanValue(en))), child) =>
+        case Select("rotatorFollow", List(Binding("enable", BooleanValue(en))), child)  =>
           Result.Success(
             Environment(
               Cursor.Env("enable" -> en),
               Select("rotatorFollow", Nil, child)
             )
           )
-        case Select("slew", List(Binding("slewParams", ObjectValue(fields))), child)   =>
+        case Select("slew", List(Binding("slewParams", ObjectValue(fields))), child)    =>
           Result.fromOption(
             parseSlewConfigInput(fields).map { x =>
               Environment(
@@ -214,6 +231,16 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
             },
             "Could not parse instrumentSpecifics parameters."
           )
+        case Select("oiwfsTarget", List(Binding("target", ObjectValue(fields))), child) =>
+          Result.fromOption(
+            parseTargetInput(fields).map { x =>
+              Environment(
+                Cursor.Env("target" -> x),
+                Select("oiwfsTarget", Nil, child)
+              )
+            },
+            "Could not parse oiwfsTarget parameters."
+          )
       }
     )
   )
@@ -229,7 +256,8 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
         RootEffect.computeEncodable("slew")((_, p, env) => slew(p, env)),
         RootEffect.computeEncodable("instrumentSpecifics")((_, p, env) =>
           instrumentSpecifics(p, env)
-        )
+        ),
+        RootEffect.computeEncodable("oiwfsTarget")((_, p, env) => oiwfsTarget(p, env))
       )
     ),
     LeafMapping[ParkStatus](ParkStatusType),
@@ -342,7 +370,7 @@ object NavigateMappings extends GrackleParsers {
     l:    List[(String, Value)]
   ): Option[Target.EphemerisTarget] = none
 
-  def parseBaseTarget(l: List[(String, Value)]): Option[Target] = for {
+  def parseTargetInput(l: List[(String, Value)]): Option[Target] = for {
     nm <- l.collectFirst { case ("name", StringValue(v)) => v }
     wv <- l.collectFirst { case ("wavelength", ObjectValue(v)) => parseWavelength(v) }.flatten
     bt <- l.collectFirst { case ("sidereal", ObjectValue(v)) => v }
@@ -374,9 +402,11 @@ object NavigateMappings extends GrackleParsers {
     sol <- l.collectFirst { case ("slewOptions", ObjectValue(v)) => v }
     so  <- parseSlewOptionsInput(sol)
     tl  <- l.collectFirst { case ("baseTarget", ObjectValue(v)) => v }
-    t   <- parseBaseTarget(tl)
+    t   <- parseTargetInput(tl)
     inl <- l.collectFirst { case ("instParams", ObjectValue(v)) => v }
     in  <- parseInstrumentSpecificsInput(inl)
-  } yield SlewConfig(so, t, in)
+    oil <- l.collectFirst { case ("oiwfsTarget", ObjectValue(v)) => v }
+    oi  <- parseTargetInput(tl)
+  } yield SlewConfig(so, t, in, oi)
 
 }

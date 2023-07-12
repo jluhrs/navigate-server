@@ -126,6 +126,16 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       parallax = none
     )
 
+    val oiwfsTarget = SiderealTarget(
+      objectName = "oiwfsDummy",
+      wavelength = Wavelength.unsafeFromIntPicometers(600 * 1000),
+      coordinates = Coordinates.unsafeFromRadians(-0.123, 0.321),
+      epoch = Epoch.J2000,
+      properMotion = none,
+      radialVelocity = none,
+      parallax = none
+    )
+
     val slewOptions = SlewOptions(
       ZeroChopThrow(true),
       ZeroSourceOffset(false),
@@ -155,9 +165,10 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
     for {
       x        <- createController
       (st, ctr) = x
-      _        <- ctr.slew(SlewConfig(slewOptions, target, instrumentSpecifics))
+      _        <- ctr.slew(SlewConfig(slewOptions, target, instrumentSpecifics, oiwfsTarget))
       rs       <- st.get
     } yield {
+      // Base Target
       assert(rs.sourceA.objectName.connected)
       assert(rs.sourceA.brightness.connected)
       assert(rs.sourceA.coord1.connected)
@@ -188,6 +199,42 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assert(rs.sourceA.radialVelocity.value.exists(x => compareDouble(x.toDouble, 0.0)))
       assertEquals(rs.sourceA.coordSystem.value, "FK5".some)
       assertEquals(rs.sourceA.ephemerisFile.value, "".some)
+
+      // OIWFS Target
+      assert(rs.oiwfs.objectName.connected)
+      assert(rs.oiwfs.brightness.connected)
+      assert(rs.oiwfs.coord1.connected)
+      assert(rs.oiwfs.coord2.connected)
+      assert(rs.oiwfs.properMotion1.connected)
+      assert(rs.oiwfs.properMotion2.connected)
+      assert(rs.oiwfs.epoch.connected)
+      assert(rs.oiwfs.equinox.connected)
+      assert(rs.oiwfs.parallax.connected)
+      assert(rs.oiwfs.radialVelocity.connected)
+      assert(rs.oiwfs.coordSystem.connected)
+      assert(rs.oiwfs.ephemerisFile.connected)
+      assertEquals(rs.oiwfs.objectName.value, oiwfsTarget.objectName.some)
+      assert(
+        rs.oiwfs.coord1.value.exists(x =>
+          compareDouble(x.toDouble, oiwfsTarget.coordinates.ra.toHourAngle.toDoubleHours)
+        )
+      )
+      assert(
+        rs.oiwfs.coord2.value.exists(x =>
+          compareDouble(x.toDouble, oiwfsTarget.coordinates.dec.toAngle.toDoubleDegrees)
+        )
+      )
+      assert(rs.oiwfs.properMotion1.value.exists(x => compareDouble(x.toDouble, 0.0)))
+      assert(rs.oiwfs.properMotion2.value.exists(x => compareDouble(x.toDouble, 0.0)))
+      assert(
+        rs.oiwfs.epoch.value.exists(x => compareDouble(x.toDouble, oiwfsTarget.epoch.epochYear))
+      )
+      assert(rs.oiwfs.parallax.value.exists(x => compareDouble(x.toDouble, 0.0)))
+      assert(rs.oiwfs.radialVelocity.value.exists(x => compareDouble(x.toDouble, 0.0)))
+      assertEquals(rs.oiwfs.coordSystem.value, "FK5".some)
+      assertEquals(rs.oiwfs.ephemerisFile.value, "".some)
+
+      // Slew Options
       assert(rs.slew.zeroChopThrow.connected)
       assert(rs.slew.zeroSourceOffset.connected)
       assert(rs.slew.zeroSourceDiffTrack.connected)
@@ -253,6 +300,8 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assertEquals(rs.slew.autoparkAowfs.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
                    BinaryOnOff.Off.some
       )
+
+      // Instrument Specifics
       assert(
         rs.rotator.iaa.value.exists(x =>
           compareDouble(x.toDouble, instrumentSpecifics.iaa.toDoubleDegrees)
@@ -350,6 +399,58 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
           compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMicrometers.value.toDouble)
         )
       )
+    }
+  }
+
+  test("oiwfsTarget command") {
+    val oiwfsTarget = SiderealTarget(
+      objectName = "oiwfsDummy",
+      wavelength = Wavelength.unsafeFromIntPicometers(600 * 1000),
+      coordinates = Coordinates.unsafeFromRadians(-0.123, 0.321),
+      epoch = Epoch.J2000,
+      properMotion = none,
+      radialVelocity = none,
+      parallax = none
+    )
+
+    for {
+      x        <- createController
+      (st, ctr) = x
+      _        <- ctr.oiwfsTarget(oiwfsTarget)
+      rs       <- st.get
+    } yield {
+      assert(rs.oiwfs.objectName.connected)
+      assert(rs.oiwfs.brightness.connected)
+      assert(rs.oiwfs.coord1.connected)
+      assert(rs.oiwfs.coord2.connected)
+      assert(rs.oiwfs.properMotion1.connected)
+      assert(rs.oiwfs.properMotion2.connected)
+      assert(rs.oiwfs.epoch.connected)
+      assert(rs.oiwfs.equinox.connected)
+      assert(rs.oiwfs.parallax.connected)
+      assert(rs.oiwfs.radialVelocity.connected)
+      assert(rs.oiwfs.coordSystem.connected)
+      assert(rs.oiwfs.ephemerisFile.connected)
+      assertEquals(rs.oiwfs.objectName.value, oiwfsTarget.objectName.some)
+      assert(
+        rs.oiwfs.coord1.value.exists(x =>
+          compareDouble(x.toDouble, oiwfsTarget.coordinates.ra.toHourAngle.toDoubleHours)
+        )
+      )
+      assert(
+        rs.oiwfs.coord2.value.exists(x =>
+          compareDouble(x.toDouble, oiwfsTarget.coordinates.dec.toAngle.toDoubleDegrees)
+        )
+      )
+      assert(rs.oiwfs.properMotion1.value.exists(x => compareDouble(x.toDouble, 0.0)))
+      assert(rs.oiwfs.properMotion2.value.exists(x => compareDouble(x.toDouble, 0.0)))
+      assert(
+        rs.oiwfs.epoch.value.exists(x => compareDouble(x.toDouble, oiwfsTarget.epoch.epochYear))
+      )
+      assert(rs.oiwfs.parallax.value.exists(x => compareDouble(x.toDouble, 0.0)))
+      assert(rs.oiwfs.radialVelocity.value.exists(x => compareDouble(x.toDouble, 0.0)))
+      assertEquals(rs.oiwfs.coordSystem.value, "FK5".some)
+      assertEquals(rs.oiwfs.ephemerisFile.value, "".some)
     }
   }
 

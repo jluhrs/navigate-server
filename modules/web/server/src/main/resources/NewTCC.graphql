@@ -81,6 +81,7 @@ input SlewInput {
     slewOptions: SlewOptionsInput!
     baseTarget: TargetPropertiesInput!
     instParams: InstrumentSpecificsInput!
+    oiwfsTarget: TargetPropertiesInput
 }
 
 type Target {
@@ -118,5 +119,6 @@ type Mutation {
     rotatorFollow(enable: Boolean!): OperationOutcome!
     slew(slewParams: SlewInput!): OperationOutcome!
     instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecificsInput!): OperationOutcome!
+    oiwfsTarget(target: TargetPropertiesInput!): OperationOutcome!
 }
 

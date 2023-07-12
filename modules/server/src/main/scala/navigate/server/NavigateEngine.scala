@@ -14,15 +14,17 @@ import navigate.model.NavigateCommand.{
   CrcsPark,
   CrcsStop,
   EcsCarouselMode,
+  InstSpecifics,
   McsFollow,
   McsPark,
+  OiwfsTarget,
   Slew
 }
 import navigate.model.{NavigateCommand, NavigateEvent}
 import navigate.model.NavigateEvent.{CommandFailure, CommandPaused, CommandStart, CommandSuccess}
 import navigate.model.config.NavigateEngineConfiguration
 import navigate.model.enums.{DomeMode, ShutterMode}
-import navigate.server.tcs.SlewConfig
+import navigate.server.tcs.{SlewConfig, Target}
 import navigate.stateengine.StateEngine
 import NavigateEvent.NullEvent
 import fs2.{Pipe, Stream}
@@ -32,7 +34,6 @@ import monocle.{Focus, Lens}
 
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import navigate.server.tcs.InstrumentSpecifics
-import navigate.model.NavigateCommand.InstSpecifics
 
 trait NavigateEngine[F[_]] {
   val systems: Systems[F]
@@ -53,6 +54,7 @@ trait NavigateEngine[F[_]] {
   def ecsVentGatesMove(gateEast:                     Double, westGate: Double): F[Unit]
   def slew(slewConfig:                               SlewConfig): F[Unit]
   def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): F[Unit]
+  def oiwfsTarget(target:                            Target): F[Unit]
 }
 
 object NavigateEngine {
@@ -160,6 +162,13 @@ object NavigateEngine {
         systems.tcsSouth.instrumentSpecifics(instrumentSpecificsParams),
         Focus[State](_.instrumentSpecificsInProgress)
       )
+
+    override def oiwfsTarget(target: Target): F[Unit] = command(
+      engine,
+      OiwfsTarget,
+      systems.tcsSouth.oiwfsTarget(target),
+      Focus[State](_.oiwfsInProgress)
+    )
   }
 
   def build[F[_]: Concurrent: Logger](
@@ -180,6 +189,7 @@ object NavigateEngine {
     ecsDomeModeInProgress:         Boolean,
     ecsVentGateMoveInProgress:     Boolean,
     slewInProgress:                Boolean,
+    oiwfsInProgress:               Boolean,
     instrumentSpecificsInProgress: Boolean,
     rotIaaInProgress:              Boolean
   ) {
@@ -193,6 +203,7 @@ object NavigateEngine {
         ecsDomeModeInProgress ||
         ecsVentGateMoveInProgress ||
         slewInProgress ||
+        oiwfsInProgress ||
         instrumentSpecificsInProgress ||
         rotIaaInProgress
   }
@@ -207,6 +218,7 @@ object NavigateEngine {
     ecsDomeModeInProgress = false,
     ecsVentGateMoveInProgress = false,
     slewInProgress = false,
+    oiwfsInProgress = false,
     instrumentSpecificsInProgress = false,
     rotIaaInProgress = false
   )

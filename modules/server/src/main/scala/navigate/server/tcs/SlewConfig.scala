@@ -8,5 +8,6 @@ import lucuma.core.math.Angle
 case class SlewConfig(
   slewOptions:         SlewOptions,
   baseTarget:          Target,
-  instrumentSpecifics: InstrumentSpecifics
+  instrumentSpecifics: InstrumentSpecifics,
+  oiwfsTarget:         Target
 )

@@ -55,6 +55,7 @@ object NavigateCommand {
   ) extends NavigateCommand
   case object Slew                        extends NavigateCommand
   case object InstSpecifics               extends NavigateCommand
+  case object OiwfsTarget                 extends NavigateCommand
 
   given Eq[NavigateCommand] = Eq.fromUniversalEquals
 
@@ -94,6 +95,7 @@ object NavigateCommand {
       case _: EcsVentGatesMove => "Ecs Vent Gates Move"
       case Slew                => "Slew"
       case InstSpecifics       => "Instrument Specifics"
+      case OiwfsTarget         => "OIWFS"
     }
   }
 
