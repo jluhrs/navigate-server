@@ -44,6 +44,9 @@ class TcsBaseControllerSim[F[_]: Applicative] extends TcsBaseController[F] {
   override def slew(config: SlewConfig): F[ApplyCommandResult] =
     Applicative[F].pure(ApplyCommandResult.Completed)
 
+  override def instrumentSpecifics(config: InstrumentSpecifics): F[ApplyCommandResult] =
+    Applicative[F].pure(ApplyCommandResult.Completed)
+
   override def rotIaa(angle: Angle): F[ApplyCommandResult] =
     Applicative[F].pure(ApplyCommandResult.Completed)
 }

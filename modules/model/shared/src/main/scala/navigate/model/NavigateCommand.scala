@@ -54,6 +54,7 @@ object NavigateCommand {
     gateWest: Double
   ) extends NavigateCommand
   case object Slew                        extends NavigateCommand
+  case object InstSpecifics               extends NavigateCommand
 
   given Eq[NavigateCommand] = Eq.fromUniversalEquals
 
@@ -92,6 +93,7 @@ object NavigateCommand {
       case _: EcsCarouselMode  => "Ecs Carousel Mode"
       case _: EcsVentGatesMove => "Ecs Vent Gates Move"
       case Slew                => "Slew"
+      case InstSpecifics       => "Instrument Specifics"
     }
   }
 

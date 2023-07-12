@@ -8,6 +8,7 @@ import navigate.server.{ApplyCommandResult, ConnectionTimeout}
 
 import scala.concurrent.duration.FiniteDuration
 import navigate.epics.VerifiedEpics._
+import navigate.model.Distance
 import navigate.model.enums.{DomeMode, ShutterMode}
 import navigate.server.tcs.Target._
 import navigate.server.tcs.TcsEpicsSystem.{TargetCommand, TcsCommands}
@@ -201,6 +202,12 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
   protected def setRotatorIaa(angle: Angle): TcsCommands[F] => TcsCommands[F] =
     (x: TcsCommands[F]) => x.rotatorCommand.iaa(angle)
 
+  protected def setFocusOffset(offset: Distance): TcsCommands[F] => TcsCommands[F] =
+    (x: TcsCommands[F]) => x.focusOffsetCommand.focusOffset(offset)
+
+  protected def setOrigin(origin: Origin): TcsCommands[F] => TcsCommands[F] =
+    (x: TcsCommands[F]) => x.originCommand.originX(origin.x).originCommand.originY(origin.y)
+
   override def applyTcsConfig(config: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
     setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.sourceACmd),
               config.sourceATarget
@@ -215,7 +222,18 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
     )
       .compose(setSourceAWalength(config.baseTarget.wavelength))
       .compose(setSlewOptions(config.slewOptions))
-      .compose(setRotatorIaa(config.rotIaa))(
+      .compose(setRotatorIaa(config.instrumentSpecifics.iaa))
+      .compose(setFocusOffset(config.instrumentSpecifics.focusOffset))
+      .compose(setOrigin(config.instrumentSpecifics.origin))(
+        tcsEpics.startCommand(timeout)
+      )
+      .post
+      .verifiedRun(ConnectionTimeout)
+
+  override def instrumentSpecifics(config: InstrumentSpecifics): F[ApplyCommandResult] =
+    setRotatorIaa(config.iaa)
+      .compose(setFocusOffset(config.focusOffset))
+      .compose(setOrigin(config.origin))(
         tcsEpics.startCommand(timeout)
       )
       .post

@@ -2,11 +2,9 @@
 // For license information see LICENSE or https://opensource.org/licenses/BSD-3-Clause
 
 package navigate.server.tcs
+import navigate.model.Distance
 
-import lucuma.core.math.Angle
-
-case class SlewConfig(
-  slewOptions:         SlewOptions,
-  baseTarget:          Target,
-  instrumentSpecifics: InstrumentSpecifics
+final case class Origin(
+  x: Distance,
+  y: Distance
 )

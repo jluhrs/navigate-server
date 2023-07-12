@@ -10,5 +10,5 @@ final case class InstrumentSpecifics(
   iaa:         Angle,
   focusOffset: Distance,
   agName:      String,
-  pointOrigin: (Distance, Distance)
+  origin:      Origin
 )

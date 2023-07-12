@@ -149,13 +149,13 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       iaa = Angle.fromDoubleDegrees(123.45),
       focusOffset = Distance.fromLongMicrometers(2344),
       agName = "gmos",
-      pointOrigin = (Distance.fromLongMicrometers(4567), Distance.fromLongMicrometers(-8901))
+      origin = Origin(Distance.fromLongMicrometers(4567), Distance.fromLongMicrometers(-8901))
     )
 
     for {
       x        <- createController
       (st, ctr) = x
-      _        <- ctr.slew(SlewConfig(slewOptions, target, instrumentSpecifics.iaa))
+      _        <- ctr.slew(SlewConfig(slewOptions, target, instrumentSpecifics))
       rs       <- st.get
     } yield {
       assert(rs.sourceA.objectName.connected)
@@ -256,6 +256,98 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assert(
         rs.rotator.iaa.value.exists(x =>
           compareDouble(x.toDouble, instrumentSpecifics.iaa.toDoubleDegrees)
+        )
+      )
+      assert(
+        rs.focusOffset.value.exists(x =>
+          compareDouble(x.toDouble, instrumentSpecifics.focusOffset.toMicrometers.value.toDouble)
+        )
+      )
+      assert(
+        rs.origin.xa.value.exists(x =>
+          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMicrometers.value.toDouble)
+        )
+      )
+      assert(
+        rs.origin.xb.value.exists(x =>
+          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMicrometers.value.toDouble)
+        )
+      )
+      assert(
+        rs.origin.xc.value.exists(x =>
+          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMicrometers.value.toDouble)
+        )
+      )
+      assert(
+        rs.origin.ya.value.exists(x =>
+          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMicrometers.value.toDouble)
+        )
+      )
+      assert(
+        rs.origin.yb.value.exists(x =>
+          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMicrometers.value.toDouble)
+        )
+      )
+      assert(
+        rs.origin.yc.value.exists(x =>
+          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMicrometers.value.toDouble)
+        )
+      )
+    }
+  }
+
+  test("InstrumentSpecifics command") {
+    val instrumentSpecifics: InstrumentSpecifics = InstrumentSpecifics(
+      iaa = Angle.fromDoubleDegrees(123.45),
+      focusOffset = Distance.fromLongMicrometers(2344),
+      agName = "gmos",
+      origin = Origin(Distance.fromLongMicrometers(4567), Distance.fromLongMicrometers(-8901))
+    )
+
+    for {
+      x        <- createController
+      (st, ctr) = x
+      _        <- ctr.instrumentSpecifics(instrumentSpecifics)
+      rs       <- st.get
+    } yield {
+      assert(
+        rs.rotator.iaa.value.exists(x =>
+          compareDouble(x.toDouble, instrumentSpecifics.iaa.toDoubleDegrees)
+        )
+      )
+      assert(
+        rs.focusOffset.value.exists(x =>
+          compareDouble(x.toDouble, instrumentSpecifics.focusOffset.toMicrometers.value.toDouble)
+        )
+      )
+      assert(
+        rs.origin.xa.value.exists(x =>
+          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMicrometers.value.toDouble)
+        )
+      )
+      assert(
+        rs.origin.xb.value.exists(x =>
+          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMicrometers.value.toDouble)
+        )
+      )
+      assert(
+        rs.origin.xc.value.exists(x =>
+          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMicrometers.value.toDouble)
+        )
+      )
+      assert(
+        rs.origin.ya.value.exists(x =>
+          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMicrometers.value.toDouble)
+        )
+      )
+      assert(
+        rs.origin.yb.value.exists(x =>
+          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMicrometers.value.toDouble)
+        )
+      )
+      assert(
+        rs.origin.yc.value.exists(x =>
+          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMicrometers.value.toDouble)
         )
       )
     }

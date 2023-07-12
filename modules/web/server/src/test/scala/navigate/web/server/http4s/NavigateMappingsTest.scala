@@ -23,6 +23,7 @@ import navigate.server.NavigateEngine
 import navigate.server.OdbProxy
 import navigate.server.Systems
 import navigate.server.tcs.FollowStatus
+import navigate.server.tcs.InstrumentSpecifics
 import navigate.server.tcs.ParkStatus
 import navigate.server.tcs.SlewConfig
 import navigate.server.tcs.TcsNorthControllerSim
@@ -74,22 +75,22 @@ class NavigateMappingsTest extends CatsEffectSuite {
                """
                 |mutation { slew (slewParams: {
                 |  slewOptions: {
-                |    zeroChopThrow:            true
-                |    zeroSourceOffset:         true
-                |    zeroSourceDiffTrack:      true
-                |    zeroMountOffset:          true
-                |    zeroMountDiffTrack:       true
+                |    zeroChopThrow: true
+                |    zeroSourceOffset: true
+                |    zeroSourceDiffTrack: true
+                |    zeroMountOffset: true
+                |    zeroMountDiffTrack: true
                 |    shortcircuitTargetFilter: true
-                |    shortcircuitMountFilter:  true
-                |    resetPointing:            true
-                |    stopGuide:                true
-                |    zeroGuideOffset:          true
-                |    zeroInstrumentOffset:     true
-                |    autoparkPwfs1:            true
-                |    autoparkPwfs2:            true
-                |    autoparkOiwfs:            true
-                |    autoparkGems:             true
-                |    autoparkAowfs:            true
+                |    shortcircuitMountFilter: true
+                |    resetPointing: true
+                |    stopGuide: true
+                |    zeroGuideOffset: true
+                |    zeroInstrumentOffset: true
+                |    autoparkPwfs1: true
+                |    autoparkPwfs2: true
+                |    autoparkOiwfs: true
+                |    autoparkGems: true
+                |    autoparkAowfs: true
                 |  }
                 |  baseTarget: {
                 |    id: "T0001"
@@ -134,6 +135,39 @@ class NavigateMappingsTest extends CatsEffectSuite {
     )
   }
 
+  test("Process instrumentSpecifics command") {
+    for {
+      eng <- buildServer
+      mp  <- NavigateMappings[IO](eng)
+      r   <- mp.compileAndRun(
+               """
+                |mutation { instrumentSpecifics (instrumentSpecificsParams: {
+                |  iaa: {
+                |      microarcseconds: 123.432
+                |    }
+                |    focusOffset: {
+                |      millimeters: 54.5432
+                |    }
+                |    agName: "Test"
+                |    origin: {
+                |      x: {
+                |        millimeters: 12.43
+                |      }
+                |      y: {
+                |        millimeters: 54.54
+                |      }
+                |    }
+                |}) {
+                |  result
+                |} }
+                |""".stripMargin
+             )
+    } yield assert(
+      extractResult[OperationOutcome](r, "instrumentSpecifics").exists(
+        _ === OperationOutcome.success
+      )
+    )
+  }
 }
 
 object NavigateMappingsTest {
@@ -169,6 +203,9 @@ object NavigateMappingsTest {
     override def ecsVentGatesMove(gateEast: Double, westGate: Double): IO[Unit] = IO.unit
 
     override def slew(slewConfig: SlewConfig): IO[Unit] = IO.unit
+
+    override def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): IO[Unit] =
+      IO.unit
 
   }.pure[IO]
 
