@@ -405,8 +405,12 @@ object NavigateMappings extends GrackleParsers {
     t   <- parseTargetInput(tl)
     inl <- l.collectFirst { case ("instParams", ObjectValue(v)) => v }
     in  <- parseInstrumentSpecificsInput(inl)
-    oil <- l.collectFirst { case ("oiwfsTarget", ObjectValue(v)) => v }
-    oi  <- parseTargetInput(tl)
+    oi  <-
+      l.collectFirst { case ("oiwfsTarget", ObjectValue(v)) => v }.map(parseTargetInput(_)) match {
+        case None       => Some(None)
+        case Some(None) => None
+        case Some(p)    => Some(p)
+      }
   } yield SlewConfig(so, t, in, oi)
 
 }

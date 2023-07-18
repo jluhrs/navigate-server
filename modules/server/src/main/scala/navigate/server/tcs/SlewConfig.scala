@@ -9,5 +9,5 @@ case class SlewConfig(
   slewOptions:         SlewOptions,
   baseTarget:          Target,
   instrumentSpecifics: InstrumentSpecifics,
-  oiwfsTarget:         Target
+  oiwfsTarget:         Option[Target]
 )
