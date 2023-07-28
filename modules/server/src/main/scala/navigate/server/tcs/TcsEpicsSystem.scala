@@ -45,7 +45,7 @@ object TcsEpicsSystem {
     val shuttersMoveCmd: Command2Channels[F, Double, Double]
     val ventGatesMoveCmd: Command2Channels[F, Double, Double]
     val sourceACmd: TargetCommandChannels[F]
-    val oiwfsCmd: TargetCommandChannels[F]
+    val oiwfsTargetCmd: TargetCommandChannels[F]
     val wavelSourceA: Command1Channels[F, Double]
     val slewCmd: SlewCommandChannels[F]
     val rotatorCmd: Command4Channels[F, Double, String, String, Double]
@@ -709,54 +709,54 @@ object TcsEpicsSystem {
         )
       }
 
-    override val oiwfsCmd: TargetCommand[F, TcsCommands[F]] =
+    override val oiwfsTargetCmd: TargetCommand[F, TcsCommands[F]] =
       new TargetCommand[F, TcsCommands[F]] {
         override def objectName(v: String): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsCmd.objectName(v)
+          tcsEpics.oiwfsTargetCmd.objectName(v)
         )
 
         override def coordSystem(v: String): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsCmd.coordSystem(v)
+          tcsEpics.oiwfsTargetCmd.coordSystem(v)
         )
 
         override def coord1(v: Double): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsCmd.coord1(v)
+          tcsEpics.oiwfsTargetCmd.coord1(v)
         )
 
         override def coord2(v: Double): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsCmd.coord2(v)
+          tcsEpics.oiwfsTargetCmd.coord2(v)
         )
 
         override def epoch(v: Double): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsCmd.epoch(v)
+          tcsEpics.oiwfsTargetCmd.epoch(v)
         )
 
         override def equinox(v: String): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsCmd.equinox(v)
+          tcsEpics.oiwfsTargetCmd.equinox(v)
         )
 
         override def parallax(v: Double): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsCmd.parallax(v)
+          tcsEpics.oiwfsTargetCmd.parallax(v)
         )
 
         override def properMotion1(v: Double): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsCmd.properMotion1(v)
+          tcsEpics.oiwfsTargetCmd.properMotion1(v)
         )
 
         override def properMotion2(v: Double): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsCmd.properMotion2(v)
+          tcsEpics.oiwfsTargetCmd.properMotion2(v)
         )
 
         override def radialVelocity(v: Double): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsCmd.radialVelocity(v)
+          tcsEpics.oiwfsTargetCmd.radialVelocity(v)
         )
 
         override def brightness(v: Double): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsCmd.brightness(v)
+          tcsEpics.oiwfsTargetCmd.brightness(v)
         )
 
         override def ephemerisFile(v: String): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsCmd.ephemerisFile(v)
+          tcsEpics.oiwfsTargetCmd.ephemerisFile(v)
         )
       }
 
@@ -938,7 +938,7 @@ object TcsEpicsSystem {
     override val sourceACmd: TargetCommandChannels[F] =
       TargetCommandChannels[F](channels.telltale, channels.sourceA)
 
-    override val oiwfsCmd: TargetCommandChannels[F] =
+    override val oiwfsTargetCmd: TargetCommandChannels[F] =
       TargetCommandChannels[F](channels.telltale, channels.oiwfs)
 
     override val wavelSourceA: Command1Channels[F, Double] =
@@ -1258,7 +1258,7 @@ object TcsEpicsSystem {
     val ecsShuttersMoveCmd: ShuttersMoveCommand[F, TcsCommands[F]]
     val ecsVenGatesMoveCmd: VentGatesMoveCommand[F, TcsCommands[F]]
     val sourceACmd: TargetCommand[F, TcsCommands[F]]
-    val oiwfsCmd: TargetCommand[F, TcsCommands[F]]
+    val oiwfsTargetCmd: TargetCommand[F, TcsCommands[F]]
     val sourceAWavel: WavelengthCommand[F, TcsCommands[F]]
     val slewOptionsCommand: SlewOptionsCommand[F, TcsCommands[F]]
     val rotatorCommand: RotatorCommand[F, TcsCommands[F]]

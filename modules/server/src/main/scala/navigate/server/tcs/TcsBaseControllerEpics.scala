@@ -228,7 +228,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
       .compose(
         config.oiwfsTarget
           .map(
-            setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.oiwfsCmd), _)
+            setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.oiwfsTargetCmd), _)
           )
           .getOrElse(identity[TcsCommands[F]])
       )(
@@ -247,7 +247,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
       .verifiedRun(ConnectionTimeout)
 
   override def oiwfsTarget(target: Target): F[ApplyCommandResult] =
-    setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.oiwfsCmd), target)(
+    setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.oiwfsTargetCmd), target)(
       tcsEpics.startCommand(timeout)
     ).post
       .verifiedRun(ConnectionTimeout)
