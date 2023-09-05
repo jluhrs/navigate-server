@@ -224,7 +224,14 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
       .compose(setSlewOptions(config.slewOptions))
       .compose(setRotatorIaa(config.instrumentSpecifics.iaa))
       .compose(setFocusOffset(config.instrumentSpecifics.focusOffset))
-      .compose(setOrigin(config.instrumentSpecifics.origin))(
+      .compose(setOrigin(config.instrumentSpecifics.origin))
+      .compose(
+        config.oiwfsTarget
+          .map(
+            setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.oiwfsTargetCmd), _)
+          )
+          .getOrElse(identity[TcsCommands[F]])
+      )(
         tcsEpics.startCommand(timeout)
       )
       .post
@@ -237,6 +244,12 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
         tcsEpics.startCommand(timeout)
       )
       .post
+      .verifiedRun(ConnectionTimeout)
+
+  override def oiwfsTarget(target: Target): F[ApplyCommandResult] =
+    setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.oiwfsTargetCmd), target)(
+      tcsEpics.startCommand(timeout)
+    ).post
       .verifiedRun(ConnectionTimeout)
 
   override def rotIaa(angle: Angle): F[ApplyCommandResult] =

@@ -26,6 +26,7 @@ trait TcsBaseController[F[_]] {
   def applyTcsConfig(config:      TcsConfig): F[ApplyCommandResult]
   def slew(config:                SlewConfig): F[ApplyCommandResult]
   def instrumentSpecifics(config: InstrumentSpecifics): F[ApplyCommandResult]
+  def oiwfsTarget(target:         Target): F[ApplyCommandResult]
   def rotIaa(angle:               Angle): F[ApplyCommandResult]
 }
 
