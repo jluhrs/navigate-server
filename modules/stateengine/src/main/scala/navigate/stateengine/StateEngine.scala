@@ -37,19 +37,23 @@ object StateEngine {
 
   final case class Event[F[_], S, A](handle: Handler[F, S, Event[F, S, A], Option[A]])
 
-  class StateEngineImpl[F[_]: Concurrent, S, O](inputQueue: Queue[F, Stream[F, Event[F, S, O]]])
-      extends StateEngine[F, S, O] {
-    override def process(s0: S): Stream[F, O] = Stream
-      .fromQueueUnterminated(inputQueue)
-      .parJoinUnbounded
-      .mapAccumulate(s0)((s, i) => i.handle.run.run(s).value)
-      .evalMap {
-        case (_, Handler.RetVal(o, Some(ss))) => inputQueue.offer(ss).as(o)
-        case (_, Handler.RetVal(o, None))     => o.pure[F]
-      }
-      .flattenOption
+  class StateEngineImpl[F[_]: Concurrent, S, O](
+    inputQueue:  Queue[F, Event[F, S, O]],
+    streamQueue: Queue[F, Stream[F, Event[F, S, O]]]
+  ) extends StateEngine[F, S, O] {
+    override def process(s0: S): Stream[F, O] =
+      Stream.exec(streamQueue.offer(Stream.fromQueueUnterminated(inputQueue))) ++
+        Stream
+          .fromQueueUnterminated(streamQueue)
+          .parJoinUnbounded
+          .mapAccumulate(s0)((s, i) => i.handle.run.run(s).value)
+          .evalMap {
+            case (_, Handler.RetVal(o, Some(ss))) => streamQueue.offer(ss).as(o)
+            case (_, Handler.RetVal(o, None))     => o.pure[F]
+          }
+          .flattenOption
 
-    override def offer(h: HandlerType): F[Unit] = inputQueue.offer(Stream.emit(Event(h)))
+    override def offer(h: HandlerType): F[Unit] = inputQueue.offer(Event(h))
 
     override def lift(ff: F[O]): Handler[F, S, Event[F, S, O], Option[O]] = Handler
       .fromStream[F, S, Event[F, S, O]](
@@ -61,7 +65,9 @@ object StateEngine {
 
   }
 
-  def build[F[_]: Concurrent, S, O]: F[StateEngine[F, S, O]] =
-    Queue.unbounded[F, Stream[F, Event[F, S, O]]].map(q => new StateEngineImpl[F, S, O](q))
+  def build[F[_]: Concurrent, S, O]: F[StateEngine[F, S, O]] = for {
+    sq <- Queue.unbounded[F, Stream[F, Event[F, S, O]]]
+    iq <- Queue.unbounded[F, Event[F, S, O]]
+  } yield new StateEngineImpl[F, S, O](iq, sq)
 
 }
