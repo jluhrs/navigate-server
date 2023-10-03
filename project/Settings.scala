@@ -89,9 +89,9 @@ object Settings {
     val gppUI   = "0.0.3"
 
     // Lucuma
-    val lucumaCore    = "0.80.1"
+    val lucumaCore    = "0.85.0"
     val lucumaUI      = "0.66.0"
-    val lucumaSchemas = "0.53.1"
+    val lucumaSchemas = "0.61.0"
 
     val grackle = "0.13.0"
 

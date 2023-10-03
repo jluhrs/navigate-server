@@ -74,11 +74,7 @@ import org.typelevel.log4cats.Logger
 import spire.math.Algebraic.Expr.Sub
 
 import java.nio.file.Path as JPath
-import scala.io.Source
-import scala.reflect.ClassTag
 import scala.reflect.classTag
-import scala.tools.nsc.doc.base.comment.ColumnOption
-import scala.util.Using
 
 class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schema: Schema)
     extends CirceMapping[F] {
