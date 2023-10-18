@@ -31,7 +31,7 @@ trait GpiSettings
  * @param ioTimeout
  *   Timeout to listen for EPICS events
  */
-final case class NavigateEngineConfiguration(
+case class NavigateEngineConfiguration(
   odb:                     Uri,
   systemControl:           SystemsControlConfiguration,
   odbNotifications:        Boolean,

@@ -24,27 +24,27 @@ import java.time
 import security.AuthenticationService.AuthResult
 
 package security {
-  sealed trait AuthenticationFailure            extends Product with Serializable
-  final case class UserNotFound(user: String)   extends AuthenticationFailure
-  final case class BadCredentials(user: String) extends AuthenticationFailure
-  case object NoAuthenticator                   extends AuthenticationFailure
-  final case class GenericFailure(msg: String)  extends AuthenticationFailure
-  final case class DecodingFailure(msg: String) extends AuthenticationFailure
-  case object MissingCookie                     extends AuthenticationFailure
+  sealed trait AuthenticationFailure      extends Product with Serializable
+  case class UserNotFound(user: String)   extends AuthenticationFailure
+  case class BadCredentials(user: String) extends AuthenticationFailure
+  case object NoAuthenticator             extends AuthenticationFailure
+  case class GenericFailure(msg: String)  extends AuthenticationFailure
+  case class DecodingFailure(msg: String) extends AuthenticationFailure
+  case object MissingCookie               extends AuthenticationFailure
 
   /**
    * Interface for implementations that can authenticate users from a username/pwd pair
    */
-  trait AuthService[F[_]]                                                                  {
+  trait AuthService[F[_]]                                                            {
     def authenticateUser(username: String, password: String): F[AuthResult]
   }
 
   // Intermediate class to decode the claim stored in the JWT token
-  final case class JwtUserClaim(exp: Int, iat: Int, username: String, displayName: String) {
+  case class JwtUserClaim(exp: Int, iat: Int, username: String, displayName: String) {
     def toUserDetails: UserDetails = UserDetails(username, displayName)
   }
 
-  final case class AuthenticationService[F[_]: Sync: Logger](
+  case class AuthenticationService[F[_]: Sync: Logger](
     mode:   Mode,
     config: AuthenticationConfig
   ) extends AuthService[F] {

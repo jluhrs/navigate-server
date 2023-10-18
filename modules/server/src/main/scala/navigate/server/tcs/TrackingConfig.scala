@@ -3,12 +3,9 @@
 
 package navigate.server.tcs
 
-import lucuma.core.math.Angle
-import navigate.model.Distance
-
-case class InstrumentSpecifics(
-  iaa:         Angle,
-  focusOffset: Distance,
-  agName:      String,
-  origin:      Origin
+case class TrackingConfig(
+  nodAchopA: Boolean,
+  nodAchopB: Boolean,
+  nodBchopA: Boolean,
+  nodBchopB: Boolean
 )

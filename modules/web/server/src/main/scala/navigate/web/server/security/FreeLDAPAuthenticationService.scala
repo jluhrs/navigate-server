@@ -24,11 +24,11 @@ object FreeLDAPAuthenticationService {
   // Operations on ldap
   object LdapOp {
     // Operation to authenticate a user, It returns true if it works
-    final case class AuthenticateOp(username: String, password: String) extends LdapOp[UID]
+    case class AuthenticateOp(username: String, password: String) extends LdapOp[UID]
     // Read the user display name
-    final case class UserDisplayNameOp(uid: UID)                        extends LdapOp[DisplayName]
+    case class UserDisplayNameOp(uid: UID)                        extends LdapOp[DisplayName]
     // Reads the name, groups and thumbnail
-    final case class DisplayNameGrpThumbOp(uid: UID)
+    case class DisplayNameGrpThumbOp(uid: UID)
         extends LdapOp[(DisplayName, Groups, Option[Thumbnail])]
   }
 

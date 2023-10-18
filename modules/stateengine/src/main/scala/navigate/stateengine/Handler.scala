@@ -19,7 +19,7 @@ import navigate.stateengine.Handler.RetVal
  * Its type parameters are: A: Type of the output (usually Unit) V: Type of the events D: Type of
  * the state machine state.
  */
-final case class Handler[F[_], D, V, A](run: State[D, RetVal[F, V, A]])
+case class Handler[F[_], D, V, A](run: State[D, RetVal[F, V, A]])
 
 object Handler {
   def fromStream[F[_], D, V](p: Stream[F, V]): Handler[F, D, V, Unit] =
@@ -117,6 +117,6 @@ object Handler {
     State.pure[D, RetVal[F, V, A]](RetVal(v, none))
   )
 
-  final case class RetVal[F[_], V, +A](v: A, s: Option[Stream[F, V]])
+  case class RetVal[F[_], V, +A](v: A, s: Option[Stream[F, V]])
 
 }

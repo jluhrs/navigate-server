@@ -15,7 +15,7 @@ import lucuma.core.enums.Site
 
 import scala.annotation.nowarn
 
-final case class Systems[F[_]](
+case class Systems[F[_]](
   odb:      OdbProxy[F],
   tcsSouth: TcsSouthController[F],
   tcsNorth: TcsNorthController[F]

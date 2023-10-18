@@ -14,7 +14,7 @@ import java.time.Instant
 sealed trait NavigateEvent
 
 object NavigateEvent {
-  final case class ServerLogMessage(level: ServerLogLevel, timestamp: Instant, msg: String)
+  case class ServerLogMessage(level: ServerLogLevel, timestamp: Instant, msg: String)
       extends NavigateEvent
   object ServerLogMessage {
     private given Order[Instant]  =
@@ -25,7 +25,7 @@ object NavigateEvent {
 
   case object NullEvent extends NavigateEvent
 
-  final case class ConnectionOpenEvent(
+  case class ConnectionOpenEvent(
     userDetails:   Option[UserDetails],
     clientId:      ClientId,
     serverVersion: String
@@ -36,22 +36,22 @@ object NavigateEvent {
       Eq.by(x => (x.userDetails, x.clientId, x.serverVersion))
   }
 
-  final case class CommandStart(cmd: NavigateCommand) extends NavigateEvent
+  case class CommandStart(cmd: NavigateCommand) extends NavigateEvent
   object CommandStart {
     given Eq[CommandStart] = Eq.by(_.cmd)
   }
 
-  final case class CommandSuccess(cmd: NavigateCommand) extends NavigateEvent
+  case class CommandSuccess(cmd: NavigateCommand) extends NavigateEvent
   object CommandSuccess {
     given Eq[CommandSuccess] = Eq.by(_.cmd)
   }
 
-  final case class CommandPaused(cmd: NavigateCommand) extends NavigateEvent
+  case class CommandPaused(cmd: NavigateCommand) extends NavigateEvent
   object CommandPaused {
     given Eq[CommandPaused] = Eq.by(_.cmd)
   }
 
-  final case class CommandFailure(cmd: NavigateCommand, msg: String) extends NavigateEvent
+  case class CommandFailure(cmd: NavigateCommand, msg: String) extends NavigateEvent
   object CommandFailure {
     given Eq[CommandFailure] = Eq.by(x => (x.cmd, x.msg))
   }

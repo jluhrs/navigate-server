@@ -23,7 +23,7 @@ import scala.concurrent.duration.FiniteDuration
  * @param ldap
  *   URL of the ldap servers
  */
-final case class AuthenticationConfig(
+case class AuthenticationConfig(
   sessionLifeHrs: FiniteDuration,
   cookieName:     String,
   secretKey:      String,

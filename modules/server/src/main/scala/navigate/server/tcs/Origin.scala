@@ -4,7 +4,7 @@
 package navigate.server.tcs
 import navigate.model.Distance
 
-final case class Origin(
+case class Origin(
   x: Distance,
   y: Distance
 )

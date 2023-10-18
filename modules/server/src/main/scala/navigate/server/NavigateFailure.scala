@@ -8,13 +8,13 @@ sealed trait NavigateFailure extends Exception with Product with Serializable
 object NavigateFailure {
 
   /** Something went wrong while applying a configuration. * */
-  final case class Execution(errMsg: String) extends NavigateFailure
+  case class Execution(errMsg: String) extends NavigateFailure
 
-  final case class Unexpected(msg: String) extends NavigateFailure
+  case class Unexpected(msg: String) extends NavigateFailure
 
-  final case class Timeout(msg: String) extends NavigateFailure
+  case class Timeout(msg: String) extends NavigateFailure
 
-  final case class NullEpicsError(channel: String) extends NavigateFailure
+  case class NullEpicsError(channel: String) extends NavigateFailure
 
   def explain(f: NavigateFailure): String = f match {
     case Execution(errMsg)       => s"Configuration action failed with error: $errMsg"

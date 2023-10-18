@@ -8,7 +8,7 @@ import cats._
 /**
  * Indicates how each subsystems is treated, e.g. full connection or simulated
  */
-final case class SystemsControlConfiguration(
+case class SystemsControlConfiguration(
   altair: ControlStrategy,
   gems:   ControlStrategy,
   gcal:   ControlStrategy,
