@@ -3,12 +3,12 @@
 
 package navigate.server.tcs
 
+import lucuma.core.math.Angle
 import navigate.model.enums.{DomeMode, ShutterMode}
 import navigate.server.ApplyCommandResult
-import lucuma.core.math.{Angle, Coordinates, Epoch, Parallax, ProperMotion, RadialVelocity}
 
 trait TcsBaseController[F[_]] {
-  import TcsBaseController._
+  import TcsBaseController.*
   def mcsPark: F[ApplyCommandResult]
   def mcsFollow(enable:           Boolean): F[ApplyCommandResult]
   def rotStop(useBrakes:          Boolean): F[ApplyCommandResult]
@@ -28,11 +28,12 @@ trait TcsBaseController[F[_]] {
   def instrumentSpecifics(config: InstrumentSpecifics): F[ApplyCommandResult]
   def oiwfsTarget(target:         Target): F[ApplyCommandResult]
   def rotIaa(angle:               Angle): F[ApplyCommandResult]
+  def oiwfsProbeTracking(config: TrackingConfig): F[ApplyCommandResult]
 }
 
 object TcsBaseController {
 
-  final case class TcsConfig(
+  case class TcsConfig(
     sourceATarget: Target
   )
 

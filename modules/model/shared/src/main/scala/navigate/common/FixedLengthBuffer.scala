@@ -14,7 +14,7 @@ import cats.syntax.all._
 import mouse.all._
 
 object FixedLengthBuffer {
-  private final case class FixedLengthBufferImpl[A](maxLength: Int, data: Chain[A])
+  private case class FixedLengthBufferImpl[A](maxLength: Int, data: Chain[A])
       extends FixedLengthBuffer[A] {
     // Sanity check
     require(maxLength >= data.length)

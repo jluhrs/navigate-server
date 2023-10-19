@@ -52,4 +52,7 @@ class TcsBaseControllerSim[F[_]: Applicative] extends TcsBaseController[F] {
 
   override def rotIaa(angle: Angle): F[ApplyCommandResult] =
     Applicative[F].pure(ApplyCommandResult.Completed)
+
+  override def oiwfsProbeTracking(config: TrackingConfig): F[ApplyCommandResult] =
+    Applicative[F].pure(ApplyCommandResult.Completed)
 }

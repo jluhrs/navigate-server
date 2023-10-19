@@ -6,7 +6,7 @@ package navigate.server.tcs
 import lucuma.core.math.Angle
 import navigate.model.Distance
 
-final case class InstrumentSpecifics(
+case class InstrumentSpecifics(
   iaa:         Angle,
   focusOffset: Distance,
   agName:      String,

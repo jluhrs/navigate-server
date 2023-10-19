@@ -10,7 +10,7 @@ import io.circe.Encoder
 
 import OperationResult.*
 
-final case class OperationOutcome(
+case class OperationOutcome(
   result: OperationResult,
   msg:    Option[String]
 ) derives Encoder.AsObject

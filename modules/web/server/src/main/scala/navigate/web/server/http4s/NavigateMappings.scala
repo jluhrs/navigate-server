@@ -53,6 +53,7 @@ import navigate.server.tcs.AutoparkOiwfs
 import navigate.server.tcs.AutoparkPwfs1
 import navigate.server.tcs.AutoparkPwfs2
 import navigate.server.tcs.FollowStatus
+import navigate.server.tcs.GuiderConfig
 import navigate.server.tcs.InstrumentSpecifics
 import navigate.server.tcs.Origin
 import navigate.server.tcs.ParkStatus
@@ -63,6 +64,7 @@ import navigate.server.tcs.SlewConfig
 import navigate.server.tcs.SlewOptions
 import navigate.server.tcs.StopGuide
 import navigate.server.tcs.Target
+import navigate.server.tcs.TrackingConfig
 import navigate.server.tcs.ZeroChopThrow
 import navigate.server.tcs.ZeroGuideOffset
 import navigate.server.tcs.ZeroInstrumentOffset
@@ -181,6 +183,25 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
         Result.failure[OperationOutcome]("oiwfsTarget parameters could not be parsed.").pure[F]
       )
 
+  def oiwfsProbeTracking(p: Path, env: Cursor.Env): F[Result[OperationOutcome]] =
+    env
+      .get[TrackingConfig]("config")(classTag[TrackingConfig])
+      .map { tc =>
+        server
+          .oiwfsProbeTracking(tc)
+          .attempt
+          .map(x =>
+            Result.success(
+              x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+            )
+          )
+      }
+      .getOrElse(
+        Result
+          .failure[OperationOutcome]("oiwfsProbeTracking parameters could not be parsed.")
+          .pure[F]
+      )
+
   val MutationType: TypeRef         = schema.ref("Mutation")
   val ParkStatusType: TypeRef       = schema.ref("ParkStatus")
   val FollowStatusType: TypeRef     = schema.ref("FollowStatus")
@@ -190,21 +211,21 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
   override val selectElaborator: SelectElaborator = new SelectElaborator(
     Map(
       MutationType -> {
-        case Select("mountFollow", List(Binding("enable", BooleanValue(en))), child)    =>
+        case Select("mountFollow", List(Binding("enable", BooleanValue(en))), child)           =>
           Result.Success(
             Environment(
               Cursor.Env("enable" -> en),
               Select("mountFollow", Nil, child)
             )
           )
-        case Select("rotatorFollow", List(Binding("enable", BooleanValue(en))), child)  =>
+        case Select("rotatorFollow", List(Binding("enable", BooleanValue(en))), child)         =>
           Result.Success(
             Environment(
               Cursor.Env("enable" -> en),
               Select("rotatorFollow", Nil, child)
             )
           )
-        case Select("slew", List(Binding("slewParams", ObjectValue(fields))), child)    =>
+        case Select("slew", List(Binding("slewParams", ObjectValue(fields))), child)           =>
           Result.fromOption(
             parseSlewConfigInput(fields).map { x =>
               Environment(
@@ -227,7 +248,7 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
             },
             "Could not parse instrumentSpecifics parameters."
           )
-        case Select("oiwfsTarget", List(Binding("target", ObjectValue(fields))), child) =>
+        case Select("oiwfsTarget", List(Binding("target", ObjectValue(fields))), child)        =>
           Result.fromOption(
             parseTargetInput(fields).map { x =>
               Environment(
@@ -236,6 +257,16 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
               )
             },
             "Could not parse oiwfsTarget parameters."
+          )
+        case Select("oiwfsProbeTracking", List(Binding("config", ObjectValue(fields))), child) =>
+          Result.fromOption(
+            parseTrackingInput(fields).map { x =>
+              Environment(
+                Cursor.Env("config" -> x),
+                Select("oiwfsProbeTracking", Nil, child)
+              )
+            },
+            "Could not parse oiwfsProbeTracking parameters."
           )
       }
     )
@@ -253,7 +284,8 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
         RootEffect.computeEncodable("instrumentSpecifics")((_, p, env) =>
           instrumentSpecifics(p, env)
         ),
-        RootEffect.computeEncodable("oiwfsTarget")((_, p, env) => oiwfsTarget(p, env))
+        RootEffect.computeEncodable("oiwfsTarget")((_, p, env) => oiwfsTarget(p, env)),
+        RootEffect.computeEncodable("oiwfsProbeTracking")((_, p, env) => oiwfsProbeTracking(p, env))
       )
     ),
     LeafMapping[ParkStatus](ParkStatusType),
@@ -377,6 +409,13 @@ object NavigateMappings extends GrackleParsers {
             )
   } yield bt
 
+  def parseTrackingInput(l: List[(String, Value)]): Option[TrackingConfig] = for {
+    aa <- l.collectFirst { case ("nodAchopA", BooleanValue(v)) => v }
+    ab <- l.collectFirst { case ("nodAchopB", BooleanValue(v)) => v }
+    ba <- l.collectFirst { case ("nodBchopA", BooleanValue(v)) => v }
+    bb <- l.collectFirst { case ("nodBchopB", BooleanValue(v)) => v }
+  } yield TrackingConfig(aa, ab, ba, bb)
+
   def parseOrigin(l: List[(String, Value)]): Option[Origin] = for {
     x <- l.collectFirst { case ("x", ObjectValue(v)) => parseDistance(v) }.flatten
     y <- l.collectFirst { case ("y", ObjectValue(v)) => parseDistance(v) }.flatten
@@ -394,6 +433,13 @@ object NavigateMappings extends GrackleParsers {
     origin
   )
 
+  def parseGuiderConfig(l: List[(String, Value)]): Option[GuiderConfig] = for {
+    target   <- l.collectFirst { case ("target", ObjectValue(v)) => parseTargetInput(v) }.flatten
+    tracking <- l.collectFirst { case ("tracking", ObjectValue(v)) =>
+                  parseTrackingInput(v)
+                }.flatten
+  } yield GuiderConfig(target, tracking)
+
   def parseSlewConfigInput(l: List[(String, Value)]): Option[SlewConfig] = for {
     sol <- l.collectFirst { case ("slewOptions", ObjectValue(v)) => v }
     so  <- parseSlewOptionsInput(sol)
@@ -402,11 +448,7 @@ object NavigateMappings extends GrackleParsers {
     inl <- l.collectFirst { case ("instParams", ObjectValue(v)) => v }
     in  <- parseInstrumentSpecificsInput(inl)
     oi  <-
-      l.collectFirst { case ("oiwfsTarget", ObjectValue(v)) => v }.map(parseTargetInput(_)) match {
-        case None       => Some(None)
-        case Some(None) => None
-        case Some(p)    => Some(p)
-      }
+      l.collectFirst { case ("oiwfs", ObjectValue(v)) => parseGuiderConfig(v) }.orElse(none.some)
   } yield SlewConfig(so, t, in, oi)
 
 }

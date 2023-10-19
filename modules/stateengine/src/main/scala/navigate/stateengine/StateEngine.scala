@@ -35,7 +35,7 @@ trait StateEngine[F[_], S, O] {
 
 object StateEngine {
 
-  final case class Event[F[_], S, A](handle: Handler[F, S, Event[F, S, A], Option[A]])
+  case class Event[F[_], S, A](handle: Handler[F, S, Event[F, S, A], Option[A]])
 
   class StateEngineImpl[F[_]: Concurrent, S, O](
     inputQueue:  Queue[F, Event[F, S, O]],

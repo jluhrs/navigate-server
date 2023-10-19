@@ -82,7 +82,7 @@ object SchemaStitcher {
 
   sealed trait Elements
   case object AllElements                                      extends Elements
-  final case class ElementList(l: NonEmptySet[NonEmptyString]) extends Elements
+  case class ElementList(l: NonEmptySet[NonEmptyString]) extends Elements
 
   extension (el: Elements) {
     def union(other: Elements): Elements = (el, other) match {

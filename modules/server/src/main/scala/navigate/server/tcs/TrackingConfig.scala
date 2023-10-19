@@ -3,9 +3,9 @@
 
 package navigate.server.tcs
 
-case class SlewConfig(
-  slewOptions:         SlewOptions,
-  baseTarget:          Target,
-  instrumentSpecifics: InstrumentSpecifics,
-  oiwfs:               Option[GuiderConfig]
+case class TrackingConfig(
+  nodAchopA: Boolean,
+  nodAchopB: Boolean,
+  nodBchopA: Boolean,
+  nodBchopB: Boolean
 )

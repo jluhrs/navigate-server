@@ -8,7 +8,7 @@ import cats.Eq
 import java.util.UUID
 
 package model {
-  final case class ClientId(self: UUID) extends AnyVal
+  case class ClientId(self: UUID) extends AnyVal
 }
 package object model {
 

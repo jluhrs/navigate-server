@@ -5,30 +5,24 @@ package navigate.web.server.http4s
 
 import cats.*
 import cats.effect.IO
-import cats.effect.Ref
-import cats.effect.unsafe.implicits.global
 import cats.syntax.all.*
-import edu.gemini.grackle.ValueMapping
-import edu.gemini.grackle.syntax.*
 import fs2.Stream
 import io.circe.Decoder
 import io.circe.Json
 import lucuma.core.math.Angle
 import munit.CatsEffectSuite
-import munit.Clue.generate
 import navigate.model.NavigateEvent
 import navigate.model.enums.DomeMode
 import navigate.model.enums.ShutterMode
 import navigate.server.NavigateEngine
 import navigate.server.OdbProxy
 import navigate.server.Systems
-import navigate.server.tcs.FollowStatus
 import navigate.server.tcs.InstrumentSpecifics
-import navigate.server.tcs.ParkStatus
 import navigate.server.tcs.SlewConfig
 import navigate.server.tcs.Target
 import navigate.server.tcs.TcsNorthControllerSim
 import navigate.server.tcs.TcsSouthControllerSim
+import navigate.server.tcs.TrackingConfig
 
 import scala.concurrent.duration.Duration
 
@@ -126,20 +120,28 @@ class NavigateMappingsTest extends CatsEffectSuite {
                 |      }
                 |    }
                 |  }
-                |  oiwfsTarget: {
-                |    id: "T0002"
-                |    name: "OiwfsDummy"
-                |    sidereal: {
-                |      ra: {
-                |        hms: "10:11:12"
+                |  oiwfs: {
+                |    target: {
+                |      id: "T0002"
+                |      name: "OiwfsDummy"
+                |      sidereal: {
+                |        ra: {
+                |          hms: "10:11:12"
+                |        }
+                |        dec: {
+                |          dms: "-30:31:32"
+                |        }
+                |        epoch:"J2000.000"
                 |      }
-                |      dec: {
-                |        dms: "-30:31:32"
+                |      wavelength: {
+                |        nanometers: "600"
                 |      }
-                |      epoch:"J2000.000"
                 |    }
-                |    wavelength: {
-                |      nanometers: "600"
+                |    tracking: {
+                |      nodAchopA: true
+                |      nodAchopB: false
+                |      nodBchopA: false
+                |      nodBchopB: true
                 |    }
                 |  }
                 |}) {
@@ -216,6 +218,30 @@ class NavigateMappingsTest extends CatsEffectSuite {
       extractResult[OperationOutcome](r, "oiwfsTarget").exists(_ === OperationOutcome.success)
     )
   }
+
+  test("Process oiwfsProbeTracking command") {
+    for {
+      eng <- buildServer
+      mp  <- NavigateMappings[IO](eng)
+      r   <- mp.compileAndRun(
+               """
+          |mutation { oiwfsProbeTracking (config: {
+          |  nodAchopA: true
+          |  nodAchopB: false
+          |  nodBchopA: false
+          |  nodBchopB: true
+          |}) {
+          |  result
+          |} }
+          |""".stripMargin
+             )
+    } yield assert(
+      extractResult[OperationOutcome](r, "oiwfsProbeTracking").exists(
+        _ === OperationOutcome.success
+      )
+    )
+  }
+
 }
 
 object NavigateMappingsTest {
@@ -256,6 +282,8 @@ object NavigateMappingsTest {
       IO.unit
 
     override def oiwfsTarget(target: Target): IO[Unit] = IO.unit
+
+    override def oiwfsProbeTracking(config: TrackingConfig): IO[Unit] = IO.unit
 
   }.pure[IO]
 

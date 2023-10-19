@@ -7,11 +7,11 @@ import cats.effect.Async
 import navigate.server.{ApplyCommandResult, ConnectionTimeout}
 
 import scala.concurrent.duration.FiniteDuration
-import navigate.epics.VerifiedEpics._
+import navigate.epics.VerifiedEpics.*
 import navigate.model.Distance
 import navigate.model.enums.{DomeMode, ShutterMode}
-import navigate.server.tcs.Target._
-import navigate.server.tcs.TcsEpicsSystem.{TargetCommand, TcsCommands}
+import navigate.server.tcs.Target.*
+import navigate.server.tcs.TcsEpicsSystem.{ProbeTrackingCommand, TargetCommand, TcsCommands}
 import lucuma.core.math.{Angle, Parallax, ProperMotion, RadialVelocity, Wavelength}
 import monocle.Getter
 
@@ -226,9 +226,10 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
       .compose(setFocusOffset(config.instrumentSpecifics.focusOffset))
       .compose(setOrigin(config.instrumentSpecifics.origin))
       .compose(
-        config.oiwfsTarget
-          .map(
-            setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.oiwfsTargetCmd), _)
+        config.oiwfs
+          .map( o =>
+            setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.oiwfsTargetCmd), o.target)
+              .compose(setProbeTracking(Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](_.oiwfsProbeTrackingCommand), o.tracking))
           )
           .getOrElse(identity[TcsCommands[F]])
       )(
@@ -257,4 +258,18 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
       tcsEpics.startCommand(timeout)
     ).post
       .verifiedRun(ConnectionTimeout)
+
+
+  def setProbeTracking(l: Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]], config: TrackingConfig): TcsCommands[F] => TcsCommands[F] =
+    { (x: TcsCommands[F]) => l.get(x).nodAchopA(config.nodAchopA) }
+        .compose[TcsCommands[F]](l.get(_).nodAchopB(config.nodAchopB))
+        .compose[TcsCommands[F]](l.get(_).nodBchopA(config.nodBchopA))
+        .compose[TcsCommands[F]](l.get(_).nodBchopB(config.nodBchopB))
+
+  override def oiwfsProbeTracking(config: TrackingConfig): F[ApplyCommandResult] =
+    setProbeTracking(Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](_.oiwfsProbeTrackingCommand), config)(
+      tcsEpics.startCommand(timeout)
+    ).post
+      .verifiedRun(ConnectionTimeout)
+
 }

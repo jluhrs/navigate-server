@@ -8,23 +8,12 @@ import cats.effect.{Async, Concurrent, Ref, Temporal}
 import cats.effect.kernel.Sync
 import cats.syntax.all.*
 import org.typelevel.log4cats.Logger
-import navigate.model.NavigateCommand.{
-  CrcsFollow,
-  CrcsMove,
-  CrcsPark,
-  CrcsStop,
-  EcsCarouselMode,
-  InstSpecifics,
-  McsFollow,
-  McsPark,
-  OiwfsTarget,
-  Slew
-}
+import navigate.model.NavigateCommand.{CrcsFollow, CrcsMove, CrcsPark, CrcsStop, EcsCarouselMode, InstSpecifics, McsFollow, McsPark, OiwfsProbeTracking, OiwfsTarget, Slew}
 import navigate.model.{NavigateCommand, NavigateEvent}
 import navigate.model.NavigateEvent.{CommandFailure, CommandPaused, CommandStart, CommandSuccess}
 import navigate.model.config.NavigateEngineConfiguration
 import navigate.model.enums.{DomeMode, ShutterMode}
-import navigate.server.tcs.{SlewConfig, Target}
+import navigate.server.tcs.{InstrumentSpecifics, SlewConfig, Target, TrackingConfig}
 import navigate.stateengine.StateEngine
 import NavigateEvent.NullEvent
 import fs2.{Pipe, Stream}
@@ -33,7 +22,6 @@ import lucuma.core.math.Angle
 import monocle.{Focus, Lens}
 
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
-import navigate.server.tcs.InstrumentSpecifics
 
 trait NavigateEngine[F[_]] {
   val systems: Systems[F]
@@ -55,6 +43,7 @@ trait NavigateEngine[F[_]] {
   def slew(slewConfig:                               SlewConfig): F[Unit]
   def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): F[Unit]
   def oiwfsTarget(target:                            Target): F[Unit]
+  def oiwfsProbeTracking(config: TrackingConfig): F[Unit]
 }
 
 object NavigateEngine {
@@ -169,6 +158,13 @@ object NavigateEngine {
       systems.tcsSouth.oiwfsTarget(target),
       Focus[State](_.oiwfsInProgress)
     )
+
+    override def oiwfsProbeTracking(config: TrackingConfig): F[Unit] = command(
+      engine,
+      OiwfsProbeTracking,
+      systems.tcsSouth.oiwfsProbeTracking(config),
+      Focus[State](_.oiwfsProbeTrackingInProgress)
+    )
   }
 
   def build[F[_]: Concurrent: Logger](
@@ -191,7 +187,8 @@ object NavigateEngine {
     slewInProgress:                Boolean,
     oiwfsInProgress:               Boolean,
     instrumentSpecificsInProgress: Boolean,
-    rotIaaInProgress:              Boolean
+    rotIaaInProgress:              Boolean,
+    oiwfsProbeTrackingInProgress:  Boolean
   ) {
     lazy val tcsActionInProgress: Boolean =
       mcsParkInProgress ||
@@ -205,7 +202,8 @@ object NavigateEngine {
         slewInProgress ||
         oiwfsInProgress ||
         instrumentSpecificsInProgress ||
-        rotIaaInProgress
+        rotIaaInProgress ||
+        oiwfsProbeTrackingInProgress
   }
 
   val startState: State = State(
@@ -220,7 +218,8 @@ object NavigateEngine {
     slewInProgress = false,
     oiwfsInProgress = false,
     instrumentSpecificsInProgress = false,
-    rotIaaInProgress = false
+    rotIaaInProgress = false,
+    oiwfsProbeTrackingInProgress = false
   )
 
   private def command[F[_]: MonadThrow: Logger](

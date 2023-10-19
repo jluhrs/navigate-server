@@ -20,7 +20,7 @@ sealed trait Target extends Product with Serializable {
 }
 
 object Target {
-  final case class SiderealTarget(
+  case class SiderealTarget(
     override val objectName: String,
     override val wavelength: Wavelength,
     coordinates:             Coordinates,
@@ -30,19 +30,19 @@ object Target {
     parallax:                Option[Parallax]
   ) extends Target
 
-  final case class Azimuth(toAngle: Angle)
+  case class Azimuth(toAngle: Angle)
 
-  final case class Elevation(toAngle: Angle)
+  case class Elevation(toAngle: Angle)
 
-  final case class AzElCoordinates(azimuth: Azimuth, elevation: Elevation)
+  case class AzElCoordinates(azimuth: Azimuth, elevation: Elevation)
 
-  final case class AzElTarget(
+  case class AzElTarget(
     override val objectName: String,
     override val wavelength: Wavelength,
     coordinates:             AzElCoordinates
   ) extends Target
 
-  final case class EphemerisTarget(
+  case class EphemerisTarget(
     override val objectName: String,
     override val wavelength: Wavelength,
     ephemerisFile:           String

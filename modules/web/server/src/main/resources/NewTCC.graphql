@@ -77,11 +77,23 @@ type TelescopeStatus {
     mount: MountStatus!
 }
 
+input GuiderConfig{
+    target: TargetPropertiesInput!
+    tracking: ProbeTrackingInput!
+}
+
 input SlewInput {
     slewOptions: SlewOptionsInput!
     baseTarget: TargetPropertiesInput!
     instParams: InstrumentSpecificsInput!
-    oiwfsTarget: TargetPropertiesInput
+    oiwfs: GuiderConfig
+}
+
+input ProbeTrackingInput {
+    nodAchopA: Boolean!
+    nodAchopB: Boolean!
+    nodBchopA: Boolean!
+    nodBchopB: Boolean!
 }
 
 type Target {
@@ -120,5 +132,6 @@ type Mutation {
     slew(slewParams: SlewInput!): OperationOutcome!
     instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecificsInput!): OperationOutcome!
     oiwfsTarget(target: TargetPropertiesInput!): OperationOutcome!
+    oiwfsProbeTracking(config: ProbeTrackingInput!): OperationOutcome!
 }
 

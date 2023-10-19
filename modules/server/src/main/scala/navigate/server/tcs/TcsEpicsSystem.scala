@@ -51,6 +51,7 @@ object TcsEpicsSystem {
     val rotatorCmd: Command4Channels[F, Double, String, String, Double]
     val originCmd: Command6Channels[F, Double, Double, Double, Double, Double, Double]
     val focusOffsetCmd: Command1Channels[F, Double]
+    val oiwfsProbeTrackingCmd: ProbeTrackingCommandChannels[F]
 
     // val m1GuideCmd: M1GuideCmd[F]
     // val m2GuideCmd: M2GuideCmd[F]
@@ -293,24 +294,27 @@ object TcsEpicsSystem {
   }
 
   case class TcsChannels[F[_]](
-    /**
-     * List of all TcsChannels Channel -> Defines a raw channel Other cases -> Group of channels
+                                /**
+     * List of all TcsChannels.
+     * Channel -> Defines a raw channel
+     * Other cases -> Group of channels
      */
-    telltale:         TelltaleChannel[F],
-    telescopeParkDir: Channel[F, CadDirective],
-    mountFollow:      Channel[F, String],
-    rotStopBrake:     Channel[F, String],
-    rotParkDir:       Channel[F, CadDirective],
-    rotFollow:        Channel[F, String],
-    rotMoveAngle:     Channel[F, String],
-    enclosure:        EnclosureChannels[F],
-    sourceA:          TargetChannels[F],
-    oiwfs:            TargetChannels[F],
-    wavelSourceA:     Channel[F, String],
-    slew:             SlewChannels[F],
-    rotator:          RotatorChannels[F],
-    origin:           OriginChannels[F],
-    focusOffset:      Channel[F, String]
+                                telltale:         TelltaleChannel[F],
+                                telescopeParkDir: Channel[F, CadDirective],
+                                mountFollow:      Channel[F, String],
+                                rotStopBrake:     Channel[F, String],
+                                rotParkDir:       Channel[F, CadDirective],
+                                rotFollow:        Channel[F, String],
+                                rotMoveAngle:     Channel[F, String],
+                                enclosure:        EnclosureChannels[F],
+                                sourceA:          TargetChannels[F],
+                                oiwfs:            TargetChannels[F],
+                                wavelSourceA:     Channel[F, String],
+                                slew:             SlewChannels[F],
+                                rotator:          RotatorChannels[F],
+                                origin:           OriginChannels[F],
+                                focusOffset:      Channel[F, String],
+                                oiProbeTracking:          ProbeTrackingChannels[F]
   )
 
   // Next case clases are the group channels
@@ -340,6 +344,13 @@ object TcsEpicsSystem {
     radialVelocity: Channel[F, String],
     brightness:     Channel[F, String],
     ephemerisFile:  Channel[F, String]
+  )
+
+  case class ProbeTrackingChannels[F[_]](
+    nodachopa: Channel[F, String],
+    nodachopb: Channel[F, String],
+    nodbchopa: Channel[F, String],
+    nodbchopb: Channel[F, String]
   )
 
   case class SlewChannels[F[_]](
@@ -438,6 +449,17 @@ object TcsEpicsSystem {
       br,
       eph
     )
+
+  def buildProbeTrackingChannels[F[_]](
+    service: EpicsService[F],
+    top: String,
+    name: String
+  ): Resource[F, ProbeTrackingChannels[F]] = for {
+    aa <- service.getChannel[String](s"${top}:config${name}.A")
+    ab <- service.getChannel[String](s"${top}:config${name}.B")
+    ba <- service.getChannel[String](s"${top}:config${name}.D")
+    bb <- service.getChannel[String](s"${top}:config${name}.E")
+  } yield ProbeTrackingChannels(aa, ab, ba, bb)
 
   def buildSlewChannels[F[_]](
     service: EpicsService[F],
@@ -539,6 +561,7 @@ object TcsEpicsSystem {
       rot <- buildRotatorChannels(service, top)
       org <- buildOriginChannels(service, top)
       foc <- service.getChannel[String](top + "dtelFocus.A")
+      oig <- buildProbeTrackingChannels(service, top, "Oiwfs")
     } yield TcsChannels[F](
       tt,
       tpd,
@@ -554,7 +577,8 @@ object TcsEpicsSystem {
       slw,
       rot,
       org,
-      foc
+      foc,
+      oig
     )
 
   case class TcsCommandsImpl[F[_]: Monad: Parallel](
@@ -877,6 +901,26 @@ object TcsEpicsSystem {
           tcsEpics.focusOffsetCmd.setParam1(v.toMillimeters.value.toDouble)
         )
       }
+
+    override val oiwfsProbeTrackingCommand: ProbeTrackingCommand[F, TcsCommands[F]] =
+      new ProbeTrackingCommand[F, TcsCommands[F ]]{
+        override def nodAchopA(v: Boolean): TcsCommands[F] = addParam(
+          tcsEpics.oiwfsProbeTrackingCmd.nodAchopA(v.fold(BinaryOnOff.On, BinaryOnOff.Off))
+        )
+
+        override def nodAchopB(v: Boolean): TcsCommands[F] = addParam(
+          tcsEpics.oiwfsProbeTrackingCmd.nodAchopB(v.fold(BinaryOnOff.On, BinaryOnOff.Off))
+        )
+
+        override def nodBchopA(v: Boolean): TcsCommands[F] = addParam(
+          tcsEpics.oiwfsProbeTrackingCmd.nodBchopA(v.fold(BinaryOnOff.On, BinaryOnOff.Off))
+        )
+
+        override def nodBchopB(v: Boolean): TcsCommands[F] = addParam(
+          tcsEpics.oiwfsProbeTrackingCmd.nodBchopB(v.fold(BinaryOnOff.On, BinaryOnOff.Off))
+        )
+      }
+
   }
 
   class TcsEpicsSystemImpl[F[_]: Monad: Parallel](epics: TcsEpics[F]) extends TcsEpicsSystem[F] {
@@ -969,6 +1013,11 @@ object TcsEpicsSystem {
     override val focusOffsetCmd: Command1Channels[F, Double] = Command1Channels(
       channels.telltale,
       channels.focusOffset
+    )
+
+    override val oiwfsProbeTrackingCmd: ProbeTrackingCommandChannels[F] = ProbeTrackingCommandChannels(
+      channels.telltale,
+      channels.oiProbeTracking
     )
   }
 
@@ -1153,6 +1202,23 @@ object TcsEpicsSystem {
       writeCadParam[F, BinaryOnOff](tt, slewChannels.autoparkAowfs)(v)
   }
 
+  case class ProbeTrackingCommandChannels[F[_] : Monad](
+    tt: TelltaleChannel[F],
+    probeGuideChannels: ProbeTrackingChannels[F]
+  ) {
+    def nodAchopA(v: BinaryOnOff): VerifiedEpics[F, F, Unit] =
+      writeCadParam[F, BinaryOnOff](tt, probeGuideChannels.nodachopa)(v)
+
+    def nodAchopB(v: BinaryOnOff): VerifiedEpics[F, F, Unit] =
+      writeCadParam[F, BinaryOnOff](tt, probeGuideChannels.nodachopb)(v)
+
+    def nodBchopA(v: BinaryOnOff): VerifiedEpics[F, F, Unit] =
+      writeCadParam[F, BinaryOnOff](tt, probeGuideChannels.nodbchopa)(v)
+
+    def nodBchopB(v: BinaryOnOff): VerifiedEpics[F, F, Unit] =
+      writeCadParam[F, BinaryOnOff](tt, probeGuideChannels.nodbchopb)(v)
+  }
+
   trait BaseCommand[F[_], +S] {
     def mark: S
   }
@@ -1245,6 +1311,13 @@ object TcsEpicsSystem {
     def focusOffset(v: Distance): S
   }
 
+  trait ProbeTrackingCommand[F[_], +S] {
+    def nodAchopA(v: Boolean): S
+    def nodAchopB(v: Boolean): S
+    def nodBchopA(v: Boolean): S
+    def nodBchopB(v: Boolean): S
+  }
+
   trait TcsCommands[F[_]] {
     def post: VerifiedEpics[F, F, ApplyCommandResult]
     val mcsParkCommand: BaseCommand[F, TcsCommands[F]]
@@ -1264,33 +1337,9 @@ object TcsEpicsSystem {
     val rotatorCommand: RotatorCommand[F, TcsCommands[F]]
     val originCommand: OriginCommand[F, TcsCommands[F]]
     val focusOffsetCommand: FocusOffsetCommand[F, TcsCommands[F]]
+    val oiwfsProbeTrackingCommand: ProbeTrackingCommand[F, TcsCommands[F]]
   }
   /*
-  trait ProbeGuideCmd[F[_]] extends EpicsCommand[F] {
-    def setNodachopa(v: String): F[Unit]
-    def setNodachopb(v: String): F[Unit]
-    def setNodbchopa(v: String): F[Unit]
-    def setNodbchopb(v: String): F[Unit]
-  }
-
-  final class ProbeGuideCmdImpl[F[_]: Async](csName: String, epicsService: CaService)
-      extends EpicsCommandBase[F](sysName)
-      with ProbeGuideCmd[F] {
-    override val cs: Option[CaCommandSender] = Option(epicsService.getCommandSender(csName))
-
-    private val nodachopa                         = cs.map(_.getString("nodachopa"))
-    override def setNodachopa(v: String): F[Unit] = setParameter(nodachopa, v)
-
-    private val nodachopb                         = cs.map(_.getString("nodachopb"))
-    override def setNodachopb(v: String): F[Unit] = setParameter(nodachopb, v)
-
-    private val nodbchopa                         = cs.map(_.getString("nodbchopa"))
-    override def setNodbchopa(v: String): F[Unit] = setParameter(nodbchopa, v)
-
-    private val nodbchopb                         = cs.map(_.getString("nodbchopb"))
-    override def setNodbchopb(v: String): F[Unit] = setParameter(nodbchopb, v)
-  }
-
   trait WfsObserveCmd[F[_]] extends EpicsCommand[F] {
     def setNoexp(v:  Integer): F[Unit]
     def setInt(v:    Double): F[Unit]
@@ -1355,39 +1404,6 @@ object TcsEpicsSystem {
     private val wavel = cs.map(_.getDouble("wavel"))
 
     override def setWavel(v: Double): F[Unit] = setParameter[F, java.lang.Double](wavel, v)
-  }
-
-  case class ProbeGuideChannels[F[_]](
-    val nodachopa: Channel[F, Int],
-    val nodachopb: Channel[F, Int],
-    val nodbchopa: Channel[F, Int],
-    val nodbchopb: Channel[F, Int]
-  )
-
-  trait ProbeGuideConfig[F[_]] {
-    def nodachopa: VerifiedEpics[F, F, Int]
-    def nodachopb: VerifiedEpics[F, F, Int]
-    def nodbchopa: VerifiedEpics[F, F, Int]
-    def nodbchopb: VerifiedEpics[F, F, Int]
-  }
-
-  final class ProbeGuideConfigImpl[F[_]: Sync](
-    protected val prefix:   String,
-    protected val service: EpicsService[F]
-  ) extends ProbeGuideConfig[F] {
-    private val aa = service.
-    override def nodachopa: VerifiedEpics[F, F, Int] = service.safeAttributeSIntF(
-      tcsState.getIntegerAttribute(prefix + "nodachopa")
-    )
-    override def nodachopb: VerifiedEpics[F, F, Int] = safeAttributeSIntF(
-      tcsState.getIntegerAttribute(prefix + "nodachopb")
-    )
-    override def nodbchopa: VerifiedEpics[F, F, Int] = safeAttributeSIntF(
-      tcsState.getIntegerAttribute(prefix + "nodbchopa")
-    )
-    override def nodbchopb: VerifiedEpics[F, F, Int] = safeAttributeSIntF(
-      tcsState.getIntegerAttribute(prefix + "nodbchopb")
-    )
   }
 
   trait Target[F[_]] {
