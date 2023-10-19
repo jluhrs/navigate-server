@@ -84,6 +84,13 @@ input SlewInput {
     oiwfsTarget: TargetPropertiesInput
 }
 
+input ProbeTrackingInput {
+    nodAchopA: Boolean!
+    nodAchopB: Boolean!
+    nodBchopA: Boolean!
+    nodBchopB: Boolean!
+}
+
 type Target {
   """Target ID"""
   id: TargetId!
@@ -120,5 +127,6 @@ type Mutation {
     slew(slewParams: SlewInput!): OperationOutcome!
     instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecificsInput!): OperationOutcome!
     oiwfsTarget(target: TargetPropertiesInput!): OperationOutcome!
+    oiwfsProbeTracking(config: ProbeTrackingInput!): OperationOutcome!
 }
 
