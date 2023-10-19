@@ -47,32 +47,31 @@ import lucuma.core.math.RightAscension
 import lucuma.core.math.Wavelength
 import navigate.model.Distance
 import navigate.server.NavigateEngine
-import navigate.server.tcs.{
-  AutoparkAowfs,
-  AutoparkGems,
-  AutoparkOiwfs,
-  AutoparkPwfs1,
-  AutoparkPwfs2,
-  FollowStatus,
-  InstrumentSpecifics,
-  Origin,
-  ParkStatus,
-  ResetPointing,
-  ShortcircuitMountFilter,
-  ShortcircuitTargetFilter,
-  SlewConfig,
-  SlewOptions,
-  StopGuide,
-  Target,
-  TrackingConfig,
-  ZeroChopThrow,
-  ZeroGuideOffset,
-  ZeroInstrumentOffset,
-  ZeroMountDiffTrack,
-  ZeroMountOffset,
-  ZeroSourceDiffTrack,
-  ZeroSourceOffset
-}
+import navigate.server.tcs.AutoparkAowfs
+import navigate.server.tcs.AutoparkGems
+import navigate.server.tcs.AutoparkOiwfs
+import navigate.server.tcs.AutoparkPwfs1
+import navigate.server.tcs.AutoparkPwfs2
+import navigate.server.tcs.FollowStatus
+import navigate.server.tcs.GuiderConfig
+import navigate.server.tcs.InstrumentSpecifics
+import navigate.server.tcs.Origin
+import navigate.server.tcs.ParkStatus
+import navigate.server.tcs.ResetPointing
+import navigate.server.tcs.ShortcircuitMountFilter
+import navigate.server.tcs.ShortcircuitTargetFilter
+import navigate.server.tcs.SlewConfig
+import navigate.server.tcs.SlewOptions
+import navigate.server.tcs.StopGuide
+import navigate.server.tcs.Target
+import navigate.server.tcs.TrackingConfig
+import navigate.server.tcs.ZeroChopThrow
+import navigate.server.tcs.ZeroGuideOffset
+import navigate.server.tcs.ZeroInstrumentOffset
+import navigate.server.tcs.ZeroMountDiffTrack
+import navigate.server.tcs.ZeroMountOffset
+import navigate.server.tcs.ZeroSourceDiffTrack
+import navigate.server.tcs.ZeroSourceOffset
 import org.typelevel.log4cats.Logger
 import spire.math.Algebraic.Expr.Sub
 
@@ -434,6 +433,13 @@ object NavigateMappings extends GrackleParsers {
     origin
   )
 
+  def parseGuiderConfig(l: List[(String, Value)]): Option[GuiderConfig] = for {
+    target   <- l.collectFirst { case ("target", ObjectValue(v)) => parseTargetInput(v) }.flatten
+    tracking <- l.collectFirst { case ("tracking", ObjectValue(v)) =>
+                  parseTrackingInput(v)
+                }.flatten
+  } yield GuiderConfig(target, tracking)
+
   def parseSlewConfigInput(l: List[(String, Value)]): Option[SlewConfig] = for {
     sol <- l.collectFirst { case ("slewOptions", ObjectValue(v)) => v }
     so  <- parseSlewOptionsInput(sol)
@@ -442,11 +448,7 @@ object NavigateMappings extends GrackleParsers {
     inl <- l.collectFirst { case ("instParams", ObjectValue(v)) => v }
     in  <- parseInstrumentSpecificsInput(inl)
     oi  <-
-      l.collectFirst { case ("oiwfsTarget", ObjectValue(v)) => v }.map(parseTargetInput(_)) match {
-        case None       => Some(None)
-        case Some(None) => None
-        case Some(p)    => Some(p)
-      }
+      l.collectFirst { case ("oiwfs", ObjectValue(v)) => parseGuiderConfig(v) }.orElse(none.some)
   } yield SlewConfig(so, t, in, oi)
 
 }

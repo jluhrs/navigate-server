@@ -226,9 +226,10 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
       .compose(setFocusOffset(config.instrumentSpecifics.focusOffset))
       .compose(setOrigin(config.instrumentSpecifics.origin))
       .compose(
-        config.oiwfsTarget
-          .map(
-            setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.oiwfsTargetCmd), _)
+        config.oiwfs
+          .map( o =>
+            setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.oiwfsTargetCmd), o.target)
+              .compose(setProbeTracking(Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](_.oiwfsProbeTrackingCommand), o.tracking))
           )
           .getOrElse(identity[TcsCommands[F]])
       )(

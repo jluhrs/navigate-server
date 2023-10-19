@@ -77,11 +77,16 @@ type TelescopeStatus {
     mount: MountStatus!
 }
 
+input GuiderConfig{
+    target: TargetPropertiesInput!
+    tracking: ProbeTrackingInput!
+}
+
 input SlewInput {
     slewOptions: SlewOptionsInput!
     baseTarget: TargetPropertiesInput!
     instParams: InstrumentSpecificsInput!
-    oiwfsTarget: TargetPropertiesInput
+    oiwfs: GuiderConfig
 }
 
 input ProbeTrackingInput {

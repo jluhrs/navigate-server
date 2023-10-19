@@ -17,16 +17,15 @@ import navigate.model.enums.ShutterMode
 import navigate.server.NavigateEngine
 import navigate.server.OdbProxy
 import navigate.server.Systems
-import navigate.server.tcs.{
-  InstrumentSpecifics,
-  SlewConfig,
-  Target,
-  TcsNorthControllerSim,
-  TcsSouthControllerSim,
-  TrackingConfig
-}
+import navigate.server.tcs.InstrumentSpecifics
+import navigate.server.tcs.SlewConfig
+import navigate.server.tcs.Target
+import navigate.server.tcs.TcsNorthControllerSim
+import navigate.server.tcs.TcsSouthControllerSim
+import navigate.server.tcs.TrackingConfig
 
 import scala.concurrent.duration.Duration
+
 import NavigateMappings.*
 
 class NavigateMappingsTest extends CatsEffectSuite {
@@ -121,20 +120,28 @@ class NavigateMappingsTest extends CatsEffectSuite {
                 |      }
                 |    }
                 |  }
-                |  oiwfsTarget: {
-                |    id: "T0002"
-                |    name: "OiwfsDummy"
-                |    sidereal: {
-                |      ra: {
-                |        hms: "10:11:12"
+                |  oiwfs: {
+                |    target: {
+                |      id: "T0002"
+                |      name: "OiwfsDummy"
+                |      sidereal: {
+                |        ra: {
+                |          hms: "10:11:12"
+                |        }
+                |        dec: {
+                |          dms: "-30:31:32"
+                |        }
+                |        epoch:"J2000.000"
                 |      }
-                |      dec: {
-                |        dms: "-30:31:32"
+                |      wavelength: {
+                |        nanometers: "600"
                 |      }
-                |      epoch:"J2000.000"
                 |    }
-                |    wavelength: {
-                |      nanometers: "600"
+                |    tracking: {
+                |      nodAchopA: true
+                |      nodAchopB: false
+                |      nodBchopA: false
+                |      nodBchopB: true
                 |    }
                 |  }
                 |}) {

@@ -6,6 +6,7 @@ package navigate.server.tcs
 import cats.effect.{IO, Ref}
 import cats.effect.syntax.all.*
 import cats.syntax.all.*
+import mouse.boolean.given
 import navigate.model.enums.{DomeMode, ShutterMode}
 import navigate.model.Distance
 import navigate.server.acm.CadDirective
@@ -136,6 +137,8 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       parallax = none
     )
 
+    val oiwfsTracking = TrackingConfig(true, false, false, true)
+
     val slewOptions = SlewOptions(
       ZeroChopThrow(true),
       ZeroSourceOffset(false),
@@ -165,7 +168,7 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
     for {
       x        <- createController
       (st, ctr) = x
-      _        <- ctr.slew(SlewConfig(slewOptions, target, instrumentSpecifics, oiwfsTarget))
+      _        <- ctr.slew(SlewConfig(slewOptions, target, instrumentSpecifics, GuiderConfig(oiwfsTarget, oiwfsTracking).some))
       rs       <- st.get
     } yield {
       // Base Target
@@ -233,6 +236,16 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assert(rs.oiwfs.radialVelocity.value.exists(x => compareDouble(x.toDouble, 0.0)))
       assertEquals(rs.oiwfs.coordSystem.value, "FK5".some)
       assertEquals(rs.oiwfs.ephemerisFile.value, "".some)
+
+      //OIWFS probe tracking
+      assert(rs.oiwfsTracking.nodAchopA.connected)
+      assert(rs.oiwfsTracking.nodAchopB.connected)
+      assert(rs.oiwfsTracking.nodBchopA.connected)
+      assert(rs.oiwfsTracking.nodBchopB.connected)
+      assertEquals(rs.oiwfsTracking.nodAchopA.value.map(Enumerated[BinaryOnOff].unsafeFromTag), oiwfsTracking.nodAchopA.fold(BinaryOnOff.On, BinaryOnOff.Off).some)
+      assertEquals(rs.oiwfsTracking.nodAchopB.value.map(Enumerated[BinaryOnOff].unsafeFromTag), oiwfsTracking.nodAchopB.fold(BinaryOnOff.On, BinaryOnOff.Off).some)
+      assertEquals(rs.oiwfsTracking.nodBchopA.value.map(Enumerated[BinaryOnOff].unsafeFromTag), oiwfsTracking.nodBchopA.fold(BinaryOnOff.On, BinaryOnOff.Off).some)
+      assertEquals(rs.oiwfsTracking.nodBchopB.value.map(Enumerated[BinaryOnOff].unsafeFromTag), oiwfsTracking.nodBchopB.fold(BinaryOnOff.On, BinaryOnOff.Off).some)
 
       // Slew Options
       assert(rs.slew.zeroChopThrow.connected)
@@ -309,37 +322,37 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       )
       assert(
         rs.focusOffset.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.focusOffset.toMicrometers.value.toDouble)
+          compareDouble(x.toDouble, instrumentSpecifics.focusOffset.toMillimeters.value.toDouble)
         )
       )
       assert(
         rs.origin.xa.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMicrometers.value.toDouble)
+          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMillimeters.value.toDouble)
         )
       )
       assert(
         rs.origin.xb.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMicrometers.value.toDouble)
+          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMillimeters.value.toDouble)
         )
       )
       assert(
         rs.origin.xc.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMicrometers.value.toDouble)
+          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMillimeters.value.toDouble)
         )
       )
       assert(
         rs.origin.ya.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMicrometers.value.toDouble)
+          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMillimeters.value.toDouble)
         )
       )
       assert(
         rs.origin.yb.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMicrometers.value.toDouble)
+          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMillimeters.value.toDouble)
         )
       )
       assert(
         rs.origin.yc.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMicrometers.value.toDouble)
+          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMillimeters.value.toDouble)
         )
       )
     }
@@ -366,37 +379,37 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       )
       assert(
         rs.focusOffset.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.focusOffset.toMicrometers.value.toDouble)
+          compareDouble(x.toDouble, instrumentSpecifics.focusOffset.toMillimeters.value.toDouble)
         )
       )
       assert(
         rs.origin.xa.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMicrometers.value.toDouble)
+          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMillimeters.value.toDouble)
         )
       )
       assert(
         rs.origin.xb.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMicrometers.value.toDouble)
+          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMillimeters.value.toDouble)
         )
       )
       assert(
         rs.origin.xc.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMicrometers.value.toDouble)
+          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMillimeters.value.toDouble)
         )
       )
       assert(
         rs.origin.ya.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMicrometers.value.toDouble)
+          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMillimeters.value.toDouble)
         )
       )
       assert(
         rs.origin.yb.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMicrometers.value.toDouble)
+          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMillimeters.value.toDouble)
         )
       )
       assert(
         rs.origin.yc.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMicrometers.value.toDouble)
+          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMillimeters.value.toDouble)
         )
       )
     }
@@ -452,6 +465,27 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assertEquals(rs.oiwfs.coordSystem.value, "FK5".some)
       assertEquals(rs.oiwfs.ephemerisFile.value, "".some)
     }
+  }
+
+  test("oiwfs probe tracking command") {
+    val trackingConfig = TrackingConfig(true, false, false, true)
+
+    for {
+      x <- createController
+      (st, ctr) = x
+      _ <- ctr.oiwfsProbeTracking(trackingConfig)
+      rs <- st.get
+    } yield {
+      assert(rs.oiwfsTracking.nodAchopA.connected)
+      assert(rs.oiwfsTracking.nodAchopB.connected)
+      assert(rs.oiwfsTracking.nodBchopA.connected)
+      assert(rs.oiwfsTracking.nodBchopB.connected)
+      assertEquals(rs.oiwfsTracking.nodAchopA.value.map(Enumerated[BinaryOnOff].unsafeFromTag), trackingConfig.nodAchopA.fold(BinaryOnOff.On, BinaryOnOff.Off).some)
+      assertEquals(rs.oiwfsTracking.nodAchopB.value.map(Enumerated[BinaryOnOff].unsafeFromTag), trackingConfig.nodAchopB.fold(BinaryOnOff.On, BinaryOnOff.Off).some)
+      assertEquals(rs.oiwfsTracking.nodBchopA.value.map(Enumerated[BinaryOnOff].unsafeFromTag), trackingConfig.nodBchopA.fold(BinaryOnOff.On, BinaryOnOff.Off).some)
+      assertEquals(rs.oiwfsTracking.nodBchopB.value.map(Enumerated[BinaryOnOff].unsafeFromTag), trackingConfig.nodBchopB.fold(BinaryOnOff.On, BinaryOnOff.Off).some)
+    }
+
   }
 
   def createController: IO[(Ref[IO, TestTcsEpicsSystem.State], TcsBaseControllerEpics[IO])] =
