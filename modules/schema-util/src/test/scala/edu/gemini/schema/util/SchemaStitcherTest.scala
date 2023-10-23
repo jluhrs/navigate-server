@@ -7,7 +7,8 @@ import cats.Eq
 import cats.data.Ior
 import cats.effect.{IO, Resource}
 import cats.syntax.all.*
-import edu.gemini.grackle.{Result, Schema}
+import grackle.Result.Success
+import grackle.{Result, Schema}
 import junit.framework.TestCase
 import munit.Assertions.*
 import munit.CatsEffectSuite
@@ -40,7 +41,7 @@ class SchemaStitcherTest extends CatsEffectSuite {
   test("SchemaStitcher should compose schema") {
     SchemaStitcher[IO](Path.of("baseSchema.graphql"), schemaResolver).build.map { x =>
       (x, expectedSchema) match {
-        case (Ior.Right(a), Ior.Right(b)) => assertEquals(a.toString, b.toString)
+        case (Success(a), Success(b)) => assertEquals(a.toString, b.toString)
         case _                            => fail("Error creating schema")
       }
     }

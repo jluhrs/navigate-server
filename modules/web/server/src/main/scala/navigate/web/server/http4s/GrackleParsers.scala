@@ -11,11 +11,11 @@ import coulomb.syntax.*
 import coulomb.units.si.*
 import coulomb.units.si.given
 import coulomb.units.si.prefixes.*
-import edu.gemini.grackle.Value
-import edu.gemini.grackle.Value.FloatValue
-import edu.gemini.grackle.Value.IntValue
-import edu.gemini.grackle.Value.ObjectValue
-import edu.gemini.grackle.Value.StringValue
+import grackle.Value
+import grackle.Value.FloatValue
+import grackle.Value.IntValue
+import grackle.Value.ObjectValue
+import grackle.Value.StringValue
 import lucuma.core.math.Angle
 import lucuma.core.math.Declination
 import lucuma.core.math.Epoch

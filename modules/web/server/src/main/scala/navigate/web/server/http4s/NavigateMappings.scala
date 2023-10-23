@@ -9,30 +9,32 @@ import cats.data.NonEmptyChain
 import cats.effect.Sync
 import cats.effect.syntax.all.*
 import cats.syntax.all.*
-import edu.gemini.grackle.Cursor
-import edu.gemini.grackle.Mapping
-import edu.gemini.grackle.Path
-import edu.gemini.grackle.Predicate.Eql
-import edu.gemini.grackle.Problem
-import edu.gemini.grackle.Query
-import edu.gemini.grackle.Query.Binding
-import edu.gemini.grackle.Query.Environment
-import edu.gemini.grackle.Query.Filter
-import edu.gemini.grackle.Query.Select
-import edu.gemini.grackle.Query.Unique
-import edu.gemini.grackle.QueryCompiler.SelectElaborator
-import edu.gemini.grackle.Result
-import edu.gemini.grackle.Schema
-import edu.gemini.grackle.TypeRef
-import edu.gemini.grackle.Value
-import edu.gemini.grackle.Value.BooleanValue
-import edu.gemini.grackle.Value.FloatValue
-import edu.gemini.grackle.Value.IntValue
-import edu.gemini.grackle.Value.ObjectValue
-import edu.gemini.grackle.Value.StringValue
-import edu.gemini.grackle.circe.CirceMapping
 import edu.gemini.schema.util.SchemaStitcher
 import edu.gemini.schema.util.SourceResolver
+import grackle.Cursor
+import grackle.Env
+import grackle.Mapping
+import grackle.Path
+import grackle.Predicate.Eql
+import grackle.Problem
+import grackle.Query
+import grackle.Query.Binding
+import grackle.Query.Environment
+import grackle.Query.Select
+import grackle.Query.Unique
+import grackle.QueryCompiler.Elab
+import grackle.QueryCompiler.SelectElaborator
+import grackle.Result
+import grackle.Schema
+import grackle.TypeRef
+import grackle.Value
+import grackle.Value.BooleanValue
+import grackle.Value.FloatValue
+import grackle.Value.IntValue
+import grackle.Value.ObjectValue
+import grackle.Value.StringValue
+import grackle.circe.CirceMapping
+import grackle.syntax.given
 import io.circe.Decoder
 import io.circe.Encoder
 import io.circe.Json
@@ -82,7 +84,7 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
     extends CirceMapping[F] {
   import NavigateMappings._
 
-  def mountPark(p: Path, env: Cursor.Env): F[Result[OperationOutcome]] =
+  def mountPark(p: Path, env: Env): F[Result[OperationOutcome]] =
     server.mcsPark.attempt
       .map(x =>
         Result.Success(
@@ -90,7 +92,7 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
         )
       )
 
-  def mountFollow(p: Path, env: Cursor.Env): F[Result[OperationOutcome]] =
+  def mountFollow(p: Path, env: Env): F[Result[OperationOutcome]] =
     env
       .get[Boolean]("enable")
       .map { en =>
@@ -107,7 +109,7 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
         Result.failure[OperationOutcome]("mountFollow parameter could not be parsed.").pure[F]
       )
 
-  def rotatorPark(p: Path, env: Cursor.Env): F[Result[OperationOutcome]] =
+  def rotatorPark(p: Path, env: Env): F[Result[OperationOutcome]] =
     server.rotPark.attempt
       .map(x =>
         Result.Success(
@@ -115,7 +117,7 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
         )
       )
 
-  def rotatorFollow(p: Path, env: Cursor.Env): F[Result[OperationOutcome]] =
+  def rotatorFollow(p: Path, env: Env): F[Result[OperationOutcome]] =
     env
       .get[Boolean]("enable")
       .map { en =>
@@ -132,7 +134,7 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
         Result.failure("rotatorFollow parameter could not be parsed.").pure[F]
       )
 
-  def instrumentSpecifics(p: Path, env: Cursor.Env): F[Result[OperationOutcome]] =
+  def instrumentSpecifics(p: Path, env: Env): F[Result[OperationOutcome]] =
     env
       .get[InstrumentSpecifics]("instrumentSpecificsParams")(classTag[InstrumentSpecifics])
       .map { isp =>
@@ -151,7 +153,7 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
           .pure[F]
       )
 
-  def slew(p: Path, env: Cursor.Env): F[Result[OperationOutcome]] =
+  def slew(p: Path, env: Env): F[Result[OperationOutcome]] =
     env
       .get[SlewConfig]("slewParams")(classTag[SlewConfig])
       .map { sc =>
@@ -166,7 +168,7 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
       }
       .getOrElse(Result.failure[OperationOutcome]("Slew parameters could not be parsed.").pure[F])
 
-  def oiwfsTarget(p: Path, env: Cursor.Env): F[Result[OperationOutcome]] =
+  def oiwfsTarget(p: Path, env: Env): F[Result[OperationOutcome]] =
     env
       .get[Target]("target")(classTag[Target])
       .map { oi =>
@@ -183,7 +185,7 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
         Result.failure[OperationOutcome]("oiwfsTarget parameters could not be parsed.").pure[F]
       )
 
-  def oiwfsProbeTracking(p: Path, env: Cursor.Env): F[Result[OperationOutcome]] =
+  def oiwfsProbeTracking(p: Path, env: Env): F[Result[OperationOutcome]] =
     env
       .get[TrackingConfig]("config")(classTag[TrackingConfig])
       .map { tc =>
@@ -208,84 +210,55 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
   val OperationOutcomeType: TypeRef = schema.ref("OperationOutcome")
   val OperationResultType: TypeRef  = schema.ref("OperationResult")
 
-  override val selectElaborator: SelectElaborator = new SelectElaborator(
-    Map(
-      MutationType -> {
-        case Select("mountFollow", List(Binding("enable", BooleanValue(en))), child)           =>
-          Result.Success(
-            Environment(
-              Cursor.Env("enable" -> en),
-              Select("mountFollow", Nil, child)
-            )
-          )
-        case Select("rotatorFollow", List(Binding("enable", BooleanValue(en))), child)         =>
-          Result.Success(
-            Environment(
-              Cursor.Env("enable" -> en),
-              Select("rotatorFollow", Nil, child)
-            )
-          )
-        case Select("slew", List(Binding("slewParams", ObjectValue(fields))), child)           =>
-          Result.fromOption(
-            parseSlewConfigInput(fields).map { x =>
-              Environment(
-                Cursor.Env("slewParams" -> x),
-                Select("slew", Nil, child)
-              )
-            },
-            "Could not parse Slew parameters."
-          )
-        case Select("instrumentSpecifics",
-                    List(Binding("instrumentSpecificsParams", ObjectValue(fields))),
-                    child
-            ) =>
-          Result.fromOption(
-            parseInstrumentSpecificsInput(fields).map { x =>
-              Environment(
-                Cursor.Env("instrumentSpecificsParams" -> x),
-                Select("instrumentSpecifics", Nil, child)
-              )
-            },
-            "Could not parse instrumentSpecifics parameters."
-          )
-        case Select("oiwfsTarget", List(Binding("target", ObjectValue(fields))), child)        =>
-          Result.fromOption(
-            parseTargetInput(fields).map { x =>
-              Environment(
-                Cursor.Env("target" -> x),
-                Select("oiwfsTarget", Nil, child)
-              )
-            },
-            "Could not parse oiwfsTarget parameters."
-          )
-        case Select("oiwfsProbeTracking", List(Binding("config", ObjectValue(fields))), child) =>
-          Result.fromOption(
-            parseTrackingInput(fields).map { x =>
-              Environment(
-                Cursor.Env("config" -> x),
-                Select("oiwfsProbeTracking", Nil, child)
-              )
-            },
-            "Could not parse oiwfsProbeTracking parameters."
-          )
-      }
-    )
-  )
+  override val selectElaborator: SelectElaborator = SelectElaborator {
+    case (MutationType, "mountFollow", List(Binding("enable", BooleanValue(en))))           =>
+      Elab.env("enable" -> en)
+    case (MutationType, "rotatorFollow", List(Binding("enable", BooleanValue(en))))         =>
+      Elab.env("enable" -> en)
+    case (MutationType, "slew", List(Binding("slewParams", ObjectValue(fields))))           =>
+      for {
+        x <- Elab.liftR(parseSlewConfigInput(fields).toResult("Could not parse Slew parameters."))
+        _ <- Elab.env("slewParams" -> x)
+      } yield ()
+    case (MutationType,
+          "instrumentSpecifics",
+          List(Binding("instrumentSpecificsParams", ObjectValue(fields)))
+        ) =>
+      for {
+        x <- Elab.liftR(
+               parseInstrumentSpecificsInput(fields).toResult(
+                 "Could not parse instrumentSpecifics parameters."
+               )
+             )
+        _ <- Elab.env("instrumentSpecificsParams" -> x)
+      } yield ()
+    case (MutationType, "oiwfsTarget", List(Binding("target", ObjectValue(fields))))        =>
+      for {
+        x <-
+          Elab.liftR(parseTargetInput(fields).toResult("Could not parse oiwfsTarget parameters."))
+        _ <- Elab.env("target" -> x)
+      } yield ()
+    case (MutationType, "oiwfsProbeTracking", List(Binding("config", ObjectValue(fields)))) =>
+      for {
+        x <- Elab.liftR(
+               parseTrackingInput(fields).toResult("Could not parse oiwfsProbeTracking parameters.")
+             )
+        _ <- Elab.env("config" -> x)
+      } yield ()
+  }
 
   override val typeMappings: List[TypeMapping] = List(
     ObjectMapping(
       tpe = MutationType,
       fieldMappings = List(
-        RootEffect.computeEncodable("mountPark")((_, p, env) => mountPark(p, env)),
-        RootEffect.computeEncodable("mountFollow")((_, p, env) => mountFollow(p, env)),
-        RootEffect.computeEncodable("rotatorPark")((_, p, env) => rotatorPark(p, env)),
-        RootEffect.computeEncodable("rotatorFollow")((_, p, env) => rotatorFollow(p, env)),
-        RootEffect.computeEncodable("slew")((_, p, env) => slew(p, env)),
-        RootEffect.computeEncodable("instrumentSpecifics")((_, p, env) =>
-          instrumentSpecifics(p, env)
-        ),
-        RootEffect.computeEncodable("oiwfsTarget")((_, p, env) => oiwfsTarget(p, env)),
-        RootEffect.computeEncodable("oiwfsProbeTracking")((_, p, env) => oiwfsProbeTracking(p, env))
+        RootEffect.computeEncodable("mountPark")((p, env) => mountPark(p, env)),
+        RootEffect.computeEncodable("mountFollow")((p, env) => mountFollow(p, env)),
+        RootEffect.computeEncodable("rotatorPark")((p, env) => rotatorPark(p, env)),
+        RootEffect.computeEncodable("rotatorFollow")((p, env) => rotatorFollow(p, env)),
+        RootEffect.computeEncodable("slew")((p, env) => slew(p, env)),
+        RootEffect.computeEncodable("instrumentSpecifics")((p, env) => instrumentSpecifics(p, env)),
+        RootEffect.computeEncodable("oiwfsTarget")((p, env) => oiwfsTarget(p, env)),
+        RootEffect.computeEncodable("oiwfsProbeTracking")((p, env) => oiwfsProbeTracking(p, env))
       )
     ),
     LeafMapping[ParkStatus](ParkStatusType),
