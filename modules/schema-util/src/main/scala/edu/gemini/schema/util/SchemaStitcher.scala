@@ -11,7 +11,7 @@ import cats.parse.Rfc5234.{alpha, digit, wsp}
 import cats.parse.{Parser, Parser0}
 import cats.syntax.all.*
 import cats.{Applicative, Eq, Monad}
-import edu.gemini.grackle.*
+import grackle.*
 import eu.timepit.refined.types.string.NonEmptyString
 import eu.timepit.refined.cats.given
 
@@ -134,8 +134,8 @@ object SchemaStitcher {
         val nextVals   = uniqueNews
           .flatMap {
             case fields: TypeWithFields                => fields.fields.map(_.tpe.underlying.asNamed).flattenOption
-            case UnionType(name, description, members) => members
-            case InputObjectType(_, _, inputFields)    =>
+            case UnionType(_, _, members, _)           => members
+            case InputObjectType(_, _, inputFields, _) =>
               inputFields.map(_.tpe.underlying.asNamed).flattenOption
             case _                                     => List.empty
           }

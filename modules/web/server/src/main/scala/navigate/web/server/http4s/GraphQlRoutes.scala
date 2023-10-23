@@ -6,7 +6,7 @@ package navigate.web.server.http4s
 import cats.effect.Async
 import cats.syntax.all.*
 import fs2.compression.Compression
-import lucuma.graphql.routes.GrackleGraphQLService
+import lucuma.graphql.routes.GraphQLService
 import lucuma.graphql.routes.Routes
 import natchez.Trace
 import navigate.model.security.UserDetails
@@ -26,10 +26,7 @@ class GraphQlRoutes[F[_]: Async: Logger: Trace: Compression](
 ) extends Http4sDsl[F] {
 
   private def commandServices(wsb: WebSocketBuilder2[F]): HttpRoutes[F] = GZip(
-    Routes.forService(_ => NavigateMappings(eng).map(GrackleGraphQLService[F](_).some),
-                      wsb,
-                      "navigate"
-    )
+    Routes.forService(_ => NavigateMappings(eng).map(GraphQLService[F](_).some), wsb, "navigate")
   )
 
   def service(wsb: WebSocketBuilder2[F]): HttpRoutes[F] =

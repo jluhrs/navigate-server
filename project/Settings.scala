@@ -93,9 +93,9 @@ object Settings {
     val lucumaUI      = "0.66.0"
     val lucumaSchemas = "0.62.0"
 
-    val grackle = "0.13.0"
+    val grackle = "0.15.0"
 
-    val graphQLRoutes = "0.6.6"
+    val graphQLRoutes = "0.8.0"
 
     val clue = "0.24.1"
 
@@ -289,14 +289,14 @@ object Settings {
 
     val Grackle = Def.setting(
       Seq(
-        "edu.gemini" %% "gsp-graphql-core"    % LibraryVersions.grackle,
-        "edu.gemini" %% "gsp-graphql-generic" % LibraryVersions.grackle,
-        "edu.gemini" %% "gsp-graphql-circe"   % LibraryVersions.grackle
+        "org.typelevel" %% "grackle-core"    % LibraryVersions.grackle,
+        "org.typelevel" %% "grackle-generic" % LibraryVersions.grackle,
+        "org.typelevel" %% "grackle-circe"   % LibraryVersions.grackle
       )
     )
 
     val GrackleRoutes =
-      "edu.gemini" %% "lucuma-graphql-routes-grackle" % LibraryVersions.graphQLRoutes
+      "edu.gemini" %% "lucuma-graphql-routes" % LibraryVersions.graphQLRoutes
 
     val Clue          = "edu.gemini" %% "clue-core"              % LibraryVersions.clue
     val ClueHttp4s    = "edu.gemini" %% "clue-http4s-jdk-client" % LibraryVersions.clue
