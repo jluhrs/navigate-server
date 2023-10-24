@@ -42,7 +42,7 @@ class SchemaStitcherTest extends CatsEffectSuite {
     SchemaStitcher[IO](Path.of("baseSchema.graphql"), schemaResolver).build.map { x =>
       (x, expectedSchema) match {
         case (Success(a), Success(b)) => assertEquals(a.toString, b.toString)
-        case _                            => fail("Error creating schema")
+        case _                        => fail("Error creating schema")
       }
     }
   }

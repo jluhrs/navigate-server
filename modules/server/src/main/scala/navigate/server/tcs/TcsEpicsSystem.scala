@@ -294,27 +294,25 @@ object TcsEpicsSystem {
   }
 
   case class TcsChannels[F[_]](
-                                /**
-     * List of all TcsChannels.
-     * Channel -> Defines a raw channel
-     * Other cases -> Group of channels
+    /**
+     * List of all TcsChannels. Channel -> Defines a raw channel Other cases -> Group of channels
      */
-                                telltale:         TelltaleChannel[F],
-                                telescopeParkDir: Channel[F, CadDirective],
-                                mountFollow:      Channel[F, String],
-                                rotStopBrake:     Channel[F, String],
-                                rotParkDir:       Channel[F, CadDirective],
-                                rotFollow:        Channel[F, String],
-                                rotMoveAngle:     Channel[F, String],
-                                enclosure:        EnclosureChannels[F],
-                                sourceA:          TargetChannels[F],
-                                oiwfs:            TargetChannels[F],
-                                wavelSourceA:     Channel[F, String],
-                                slew:             SlewChannels[F],
-                                rotator:          RotatorChannels[F],
-                                origin:           OriginChannels[F],
-                                focusOffset:      Channel[F, String],
-                                oiProbeTracking:          ProbeTrackingChannels[F]
+    telltale:         TelltaleChannel[F],
+    telescopeParkDir: Channel[F, CadDirective],
+    mountFollow:      Channel[F, String],
+    rotStopBrake:     Channel[F, String],
+    rotParkDir:       Channel[F, CadDirective],
+    rotFollow:        Channel[F, String],
+    rotMoveAngle:     Channel[F, String],
+    enclosure:        EnclosureChannels[F],
+    sourceA:          TargetChannels[F],
+    oiwfs:            TargetChannels[F],
+    wavelSourceA:     Channel[F, String],
+    slew:             SlewChannels[F],
+    rotator:          RotatorChannels[F],
+    origin:           OriginChannels[F],
+    focusOffset:      Channel[F, String],
+    oiProbeTracking:  ProbeTrackingChannels[F]
   )
 
   // Next case clases are the group channels
@@ -452,8 +450,8 @@ object TcsEpicsSystem {
 
   def buildProbeTrackingChannels[F[_]](
     service: EpicsService[F],
-    top: String,
-    name: String
+    top:     String,
+    name:    String
   ): Resource[F, ProbeTrackingChannels[F]] = for {
     aa <- service.getChannel[String](s"${top}:config${name}.A")
     ab <- service.getChannel[String](s"${top}:config${name}.B")
@@ -903,7 +901,7 @@ object TcsEpicsSystem {
       }
 
     override val oiwfsProbeTrackingCommand: ProbeTrackingCommand[F, TcsCommands[F]] =
-      new ProbeTrackingCommand[F, TcsCommands[F ]]{
+      new ProbeTrackingCommand[F, TcsCommands[F]] {
         override def nodAchopA(v: Boolean): TcsCommands[F] = addParam(
           tcsEpics.oiwfsProbeTrackingCmd.nodAchopA(v.fold(BinaryOnOff.On, BinaryOnOff.Off))
         )
@@ -1015,10 +1013,11 @@ object TcsEpicsSystem {
       channels.focusOffset
     )
 
-    override val oiwfsProbeTrackingCmd: ProbeTrackingCommandChannels[F] = ProbeTrackingCommandChannels(
-      channels.telltale,
-      channels.oiProbeTracking
-    )
+    override val oiwfsProbeTrackingCmd: ProbeTrackingCommandChannels[F] =
+      ProbeTrackingCommandChannels(
+        channels.telltale,
+        channels.oiProbeTracking
+      )
   }
 
   case class ParameterlessCommandChannels[F[_]: Monad](
@@ -1202,8 +1201,8 @@ object TcsEpicsSystem {
       writeCadParam[F, BinaryOnOff](tt, slewChannels.autoparkAowfs)(v)
   }
 
-  case class ProbeTrackingCommandChannels[F[_] : Monad](
-    tt: TelltaleChannel[F],
+  case class ProbeTrackingCommandChannels[F[_]: Monad](
+    tt:                 TelltaleChannel[F],
     probeGuideChannels: ProbeTrackingChannels[F]
   ) {
     def nodAchopA(v: BinaryOnOff): VerifiedEpics[F, F, Unit] =

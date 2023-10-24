@@ -227,9 +227,17 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
       .compose(setOrigin(config.instrumentSpecifics.origin))
       .compose(
         config.oiwfs
-          .map( o =>
-            setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.oiwfsTargetCmd), o.target)
-              .compose(setProbeTracking(Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](_.oiwfsProbeTrackingCommand), o.tracking))
+          .map(o =>
+            setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.oiwfsTargetCmd),
+                      o.target
+            )
+              .compose(
+                setProbeTracking(Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
+                                   _.oiwfsProbeTrackingCommand
+                                 ),
+                                 o.tracking
+                )
+              )
           )
           .getOrElse(identity[TcsCommands[F]])
       )(
@@ -259,15 +267,21 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
     ).post
       .verifiedRun(ConnectionTimeout)
 
-
-  def setProbeTracking(l: Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]], config: TrackingConfig): TcsCommands[F] => TcsCommands[F] =
-    { (x: TcsCommands[F]) => l.get(x).nodAchopA(config.nodAchopA) }
-        .compose[TcsCommands[F]](l.get(_).nodAchopB(config.nodAchopB))
-        .compose[TcsCommands[F]](l.get(_).nodBchopA(config.nodBchopA))
-        .compose[TcsCommands[F]](l.get(_).nodBchopB(config.nodBchopB))
+  def setProbeTracking(
+    l:      Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]],
+    config: TrackingConfig
+  ): TcsCommands[F] => TcsCommands[F] = { (x: TcsCommands[F]) =>
+    l.get(x).nodAchopA(config.nodAchopA)
+  }
+    .compose[TcsCommands[F]](l.get(_).nodAchopB(config.nodAchopB))
+    .compose[TcsCommands[F]](l.get(_).nodBchopA(config.nodBchopA))
+    .compose[TcsCommands[F]](l.get(_).nodBchopB(config.nodBchopB))
 
   override def oiwfsProbeTracking(config: TrackingConfig): F[ApplyCommandResult] =
-    setProbeTracking(Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](_.oiwfsProbeTrackingCommand), config)(
+    setProbeTracking(
+      Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](_.oiwfsProbeTrackingCommand),
+      config
+    )(
       tcsEpics.startCommand(timeout)
     ).post
       .verifiedRun(ConnectionTimeout)

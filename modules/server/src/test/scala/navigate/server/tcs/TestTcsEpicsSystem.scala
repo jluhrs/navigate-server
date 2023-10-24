@@ -10,7 +10,16 @@ import navigate.epics.{TestChannel, VerifiedEpics}
 import navigate.model.enums.{DomeMode, ShutterMode}
 import navigate.server.acm.{CadDirective, GeminiApplyCommand}
 import navigate.server.epicsdata.{BinaryOnOff, BinaryYesNo}
-import navigate.server.tcs.TcsEpicsSystem.{EnclosureChannels, OriginChannels, ProbeTrackingChannels, RotatorChannels, SlewChannels, TargetChannels, TcsChannels, buildProbeTrackingChannels}
+import navigate.server.tcs.TcsEpicsSystem.{
+  EnclosureChannels,
+  OriginChannels,
+  ProbeTrackingChannels,
+  RotatorChannels,
+  SlewChannels,
+  TargetChannels,
+  TcsChannels,
+  buildProbeTrackingChannels
+}
 import navigate.server.ApplyCommandResult
 import monocle.{Focus, Lens}
 
@@ -55,7 +64,7 @@ object TestTcsEpicsSystem {
     nodAchopA: TestChannel.State[String],
     nodAchopB: TestChannel.State[String],
     nodBchopA: TestChannel.State[String],
-    nodBchopB: TestChannel.State[String],
+    nodBchopB: TestChannel.State[String]
   )
 
   case class SlewChannelsState(
@@ -316,7 +325,7 @@ object TestTcsEpicsSystem {
       new TestChannel[F, State, String](s, Focus[State](_.origin.yc))
     )
 
-  def buildProbeTrackingChannels[F[_] : Applicative](
+  def buildProbeTrackingChannels[F[_]: Applicative](
     s: Ref[F, State],
     l: Lens[State, ProbeTrackingState]
   ): ProbeTrackingChannels[F] = ProbeTrackingChannels(

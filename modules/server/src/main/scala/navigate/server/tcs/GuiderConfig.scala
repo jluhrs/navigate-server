@@ -3,7 +3,7 @@
 
 package navigate.server.tcs
 
-case class GuiderConfig (
-  target: Target,
+case class GuiderConfig(
+  target:   Target,
   tracking: TrackingConfig
 )
