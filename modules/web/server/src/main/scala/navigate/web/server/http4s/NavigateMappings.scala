@@ -204,6 +204,31 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
           .pure[F]
       )
 
+  def oiwfsPark(p: Path, env: Env): F[Result[OperationOutcome]] =
+    server.oiwfsPark.attempt
+      .map(x =>
+        Result.Success(
+          x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+        )
+      )
+
+  def oiwfsFollow(p: Path, env: Env): F[Result[OperationOutcome]] =
+    env
+      .get[Boolean]("enable")
+      .map { en =>
+        server
+          .oiwfsFollow(en)
+          .attempt
+          .map(x =>
+            Result.success(
+              x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+            )
+          )
+      }
+      .getOrElse(
+        Result.failure[OperationOutcome]("oiwfsFollow parameter could not be parsed.").pure[F]
+      )
+
   val MutationType: TypeRef         = schema.ref("Mutation")
   val ParkStatusType: TypeRef       = schema.ref("ParkStatus")
   val FollowStatusType: TypeRef     = schema.ref("FollowStatus")
@@ -245,6 +270,8 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
              )
         _ <- Elab.env("config" -> x)
       } yield ()
+    case (MutationType, "oiwfsFollow", List(Binding("enable", BooleanValue(en))))           =>
+      Elab.env("enable" -> en)
   }
 
   override val typeMappings: List[TypeMapping] = List(
@@ -258,7 +285,9 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
         RootEffect.computeEncodable("slew")((p, env) => slew(p, env)),
         RootEffect.computeEncodable("instrumentSpecifics")((p, env) => instrumentSpecifics(p, env)),
         RootEffect.computeEncodable("oiwfsTarget")((p, env) => oiwfsTarget(p, env)),
-        RootEffect.computeEncodable("oiwfsProbeTracking")((p, env) => oiwfsProbeTracking(p, env))
+        RootEffect.computeEncodable("oiwfsProbeTracking")((p, env) => oiwfsProbeTracking(p, env)),
+        RootEffect.computeEncodable("oiwfsPark")((p, env) => oiwfsPark(p, env)),
+        RootEffect.computeEncodable("oiwfsFollow")((p, env) => oiwfsFollow(p, env))
       )
     ),
     LeafMapping[ParkStatus](ParkStatusType),
