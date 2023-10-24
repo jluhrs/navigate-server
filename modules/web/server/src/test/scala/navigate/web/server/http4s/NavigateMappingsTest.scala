@@ -285,6 +285,9 @@ object NavigateMappingsTest {
 
     override def oiwfsProbeTracking(config: TrackingConfig): IO[Unit] = IO.unit
 
+    override def oiwfsPark: IO[Unit] = IO.unit
+
+    override def oiwfsFollow(enable: Boolean): IO[Unit] = IO.unit
   }.pure[IO]
 
   given Decoder[OperationOutcome] = Decoder.instance(h =>

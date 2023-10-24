@@ -55,4 +55,8 @@ class TcsBaseControllerSim[F[_]: Applicative] extends TcsBaseController[F] {
 
   override def oiwfsProbeTracking(config: TrackingConfig): F[ApplyCommandResult] =
     Applicative[F].pure(ApplyCommandResult.Completed)
+
+  override def oiwfsPark: F[ApplyCommandResult] = Applicative[F].pure(ApplyCommandResult.Completed)
+
+  override def oiwfsFollow(enable: Boolean): F[ApplyCommandResult] = Applicative[F].pure(ApplyCommandResult.Completed)
 }

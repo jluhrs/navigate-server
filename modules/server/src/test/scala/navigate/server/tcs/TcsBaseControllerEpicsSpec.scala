@@ -510,6 +510,33 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
 
   }
 
+  test("oiwfs probe park command") {
+    for {
+      x <- createController
+      (st, ctr) = x
+      _ <- ctr.oiwfsPark
+      rs <- st.get
+    } yield {
+      assert(rs.oiwfsProbe.parkDir.connected)
+      assertEquals(rs.oiwfsProbe.parkDir.value, CadDirective.MARK.some)
+    }
+  }
+
+  test("oiwfs probe follow command") {
+    for {
+      x <- createController
+      (st, ctr) = x
+      _ <- ctr.oiwfsFollow(true)
+      r1 <- st.get
+      _ <- ctr.oiwfsFollow(false)
+      r2 <- st.get
+    } yield {
+      assert(r1.oiwfsProbe.follow.connected)
+      assertEquals(r1.oiwfsProbe.follow.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.On.some)
+      assertEquals(r2.oiwfsProbe.follow.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.Off.some)
+    }
+  }
+
   def createController: IO[(Ref[IO, TestTcsEpicsSystem.State], TcsBaseControllerEpics[IO])] =
     Ref.of[IO, TestTcsEpicsSystem.State](TestTcsEpicsSystem.defaultState).map { st =>
       val sys = TestTcsEpicsSystem.build(st)

@@ -10,16 +10,7 @@ import navigate.epics.{TestChannel, VerifiedEpics}
 import navigate.model.enums.{DomeMode, ShutterMode}
 import navigate.server.acm.{CadDirective, GeminiApplyCommand}
 import navigate.server.epicsdata.{BinaryOnOff, BinaryYesNo}
-import navigate.server.tcs.TcsEpicsSystem.{
-  EnclosureChannels,
-  OriginChannels,
-  ProbeTrackingChannels,
-  RotatorChannels,
-  SlewChannels,
-  TargetChannels,
-  TcsChannels,
-  buildProbeTrackingChannels
-}
+import navigate.server.tcs.TcsEpicsSystem.{EnclosureChannels, OriginChannels, ProbeChannels, ProbeTrackingChannels, RotatorChannels, SlewChannels, TargetChannels, TcsChannels, buildProbeTrackingChannels}
 import navigate.server.ApplyCommandResult
 import monocle.{Focus, Lens}
 
@@ -65,6 +56,11 @@ object TestTcsEpicsSystem {
     nodAchopB: TestChannel.State[String],
     nodBchopA: TestChannel.State[String],
     nodBchopB: TestChannel.State[String]
+  )
+
+  case class ProbeState(
+    parkDir: TestChannel.State[CadDirective],
+    follow: TestChannel.State[String]
   )
 
   case class SlewChannelsState(
@@ -118,7 +114,8 @@ object TestTcsEpicsSystem {
     rotator:          RotatorChannelState,
     origin:           OriginChannelState,
     focusOffset:      TestChannel.State[String],
-    oiwfsTracking:    ProbeTrackingState
+    oiwfsTracking:    ProbeTrackingState,
+    oiwfsProbe:       ProbeState
   )
 
   val defaultState: State = State(
@@ -208,7 +205,8 @@ object TestTcsEpicsSystem {
       nodAchopB = TestChannel.State.default,
       nodBchopA = TestChannel.State.default,
       nodBchopB = TestChannel.State.default
-    )
+    ),
+    oiwfsProbe = ProbeState(parkDir = TestChannel.State.default, follow = TestChannel.State.default)
   )
 
   def buildEnclosureChannels[F[_]: Applicative](s: Ref[F, State]): EnclosureChannels[F] =
@@ -335,6 +333,14 @@ object TestTcsEpicsSystem {
     new TestChannel[F, State, String](s, l.andThen(Focus[ProbeTrackingState](_.nodBchopB)))
   )
 
+  def buildProbeChannels[F[_]: Applicative](
+    s: Ref[F, State],
+    l: Lens[State, ProbeState]
+  ): ProbeChannels[F] = ProbeChannels(
+    new TestChannel[F, State, CadDirective](s, l.andThen(Focus[ProbeState](_.parkDir))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[ProbeState](_.follow)))
+  )
+
   def buildChannels[F[_]: Applicative](s: Ref[F, State]): TcsChannels[F] =
     TcsChannels(
       telltale =
@@ -354,7 +360,8 @@ object TestTcsEpicsSystem {
       rotator = buildRotatorChannels(s),
       origin = buildOriginChannels(s),
       focusOffset = new TestChannel[F, State, String](s, Focus[State](_.focusOffset)),
-      oiProbeTracking = buildProbeTrackingChannels(s, Focus[State](_.oiwfsTracking))
+      oiProbeTracking = buildProbeTrackingChannels(s, Focus[State](_.oiwfsTracking)),
+      oiProbe = buildProbeChannels(s, Focus[State](_.oiwfsProbe))
     )
 
   def build[F[_]: Monad: Parallel](s: Ref[F, State]): TcsEpicsSystem[F] =
