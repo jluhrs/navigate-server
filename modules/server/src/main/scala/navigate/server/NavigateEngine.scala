@@ -8,19 +8,7 @@ import cats.effect.{Async, Concurrent, Ref, Temporal}
 import cats.effect.kernel.Sync
 import cats.syntax.all.*
 import org.typelevel.log4cats.Logger
-import navigate.model.NavigateCommand.{
-  CrcsFollow,
-  CrcsMove,
-  CrcsPark,
-  CrcsStop,
-  EcsCarouselMode,
-  InstSpecifics,
-  McsFollow,
-  McsPark,
-  OiwfsProbeTracking,
-  OiwfsTarget,
-  Slew
-}
+import navigate.model.NavigateCommand.{CrcsFollow, CrcsMove, CrcsPark, CrcsStop, EcsCarouselMode, InstSpecifics, McsFollow, McsPark, OiwfsFollow, OiwfsPark, OiwfsProbeTracking, OiwfsTarget, Slew}
 import navigate.model.{NavigateCommand, NavigateEvent}
 import navigate.model.NavigateEvent.{CommandFailure, CommandPaused, CommandStart, CommandSuccess}
 import navigate.model.config.NavigateEngineConfiguration
@@ -55,7 +43,9 @@ trait NavigateEngine[F[_]] {
   def slew(slewConfig:                               SlewConfig): F[Unit]
   def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): F[Unit]
   def oiwfsTarget(target:                            Target): F[Unit]
-  def oiwfsProbeTracking(config:                     TrackingConfig): F[Unit]
+  def oiwfsProbeTracking(config: TrackingConfig): F[Unit]
+  def oiwfsPark: F[Unit]
+  def oiwfsFollow(enable: Boolean): F[Unit]
 }
 
 object NavigateEngine {
@@ -177,6 +167,20 @@ object NavigateEngine {
       systems.tcsSouth.oiwfsProbeTracking(config),
       Focus[State](_.oiwfsProbeTrackingInProgress)
     )
+
+    override def oiwfsPark: F[Unit] = command(
+      engine,
+      OiwfsPark,
+      systems.tcsSouth.oiwfsPark,
+      Focus[State](_.oiwfsParkInProgress)
+    )
+
+    override def oiwfsFollow(enable: Boolean): F[Unit] = command(
+      engine,
+      OiwfsFollow(enable),
+      systems.tcsSouth.oiwfsFollow(enable),
+      Focus[State](_.oiwfsFollowInProgress)
+    )
   }
 
   def build[F[_]: Concurrent: Logger](
@@ -200,7 +204,9 @@ object NavigateEngine {
     oiwfsInProgress:               Boolean,
     instrumentSpecificsInProgress: Boolean,
     rotIaaInProgress:              Boolean,
-    oiwfsProbeTrackingInProgress:  Boolean
+    oiwfsProbeTrackingInProgress:  Boolean,
+    oiwfsParkInProgress: Boolean,
+    oiwfsFollowInProgress: Boolean
   ) {
     lazy val tcsActionInProgress: Boolean =
       mcsParkInProgress ||
@@ -215,7 +221,9 @@ object NavigateEngine {
         oiwfsInProgress ||
         instrumentSpecificsInProgress ||
         rotIaaInProgress ||
-        oiwfsProbeTrackingInProgress
+        oiwfsProbeTrackingInProgress ||
+        oiwfsParkInProgress ||
+        oiwfsFollowInProgress
   }
 
   val startState: State = State(
@@ -231,7 +239,9 @@ object NavigateEngine {
     oiwfsInProgress = false,
     instrumentSpecificsInProgress = false,
     rotIaaInProgress = false,
-    oiwfsProbeTrackingInProgress = false
+    oiwfsProbeTrackingInProgress = false,
+    oiwfsParkInProgress = false,
+    oiwfsFollowInProgress = false
   )
 
   private def command[F[_]: MonadThrow: Logger](

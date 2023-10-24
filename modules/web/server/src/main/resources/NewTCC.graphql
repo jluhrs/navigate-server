@@ -133,5 +133,7 @@ type Mutation {
     instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecificsInput!): OperationOutcome!
     oiwfsTarget(target: TargetPropertiesInput!): OperationOutcome!
     oiwfsProbeTracking(config: ProbeTrackingInput!): OperationOutcome!
+    oiwfsPark: OperationOutcome!
+    oiwfsFollow(enable: Boolean!): OperationOutcome!
 }
 

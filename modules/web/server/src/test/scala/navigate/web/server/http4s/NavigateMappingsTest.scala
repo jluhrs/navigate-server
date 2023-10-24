@@ -242,6 +242,26 @@ class NavigateMappingsTest extends CatsEffectSuite {
     )
   }
 
+  test("Process oiwfs follow command") {
+    for {
+      eng <- buildServer
+      mp  <- NavigateMappings[IO](eng)
+      r   <- mp.compileAndRun("mutation { oiwfsFollow(enable: true) { result } }")
+    } yield assert(
+      extractResult[OperationOutcome](r, "oiwfsFollow").exists(_ === OperationOutcome.success)
+    )
+  }
+
+  test("Process oiwfs park command") {
+    for {
+      eng <- buildServer
+      mp  <- NavigateMappings[IO](eng)
+      r   <- mp.compileAndRun("mutation { oiwfsPark { result } }")
+    } yield assert(
+      extractResult[OperationOutcome](r, "oiwfsPark").exists(_ === OperationOutcome.success)
+    )
+  }
+
 }
 
 object NavigateMappingsTest {
@@ -285,6 +305,9 @@ object NavigateMappingsTest {
 
     override def oiwfsProbeTracking(config: TrackingConfig): IO[Unit] = IO.unit
 
+    override def oiwfsPark: IO[Unit] = IO.unit
+
+    override def oiwfsFollow(enable: Boolean): IO[Unit] = IO.unit
   }.pure[IO]
 
   given Decoder[OperationOutcome] = Decoder.instance(h =>

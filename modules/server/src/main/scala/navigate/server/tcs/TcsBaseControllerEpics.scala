@@ -286,4 +286,15 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
     ).post
       .verifiedRun(ConnectionTimeout)
 
+  override def oiwfsPark: F[ApplyCommandResult] =
+    tcsEpics.startCommand(timeout)
+      .oiwfsProbeCommands.park.mark
+      .post
+      .verifiedRun(ConnectionTimeout)
+
+  override def oiwfsFollow(enable: Boolean): F[ApplyCommandResult] =
+    tcsEpics.startCommand(timeout)
+      .oiwfsProbeCommands.follow.setFollow(enable)
+      .post
+      .verifiedRun(ConnectionTimeout)
 }
