@@ -28,7 +28,7 @@ trait TcsBaseController[F[_]] {
   def instrumentSpecifics(config: InstrumentSpecifics): F[ApplyCommandResult]
   def oiwfsTarget(target:         Target): F[ApplyCommandResult]
   def rotIaa(angle:               Angle): F[ApplyCommandResult]
-  def oiwfsProbeTracking(config: TrackingConfig): F[ApplyCommandResult]
+  def oiwfsProbeTracking(config:  TrackingConfig): F[ApplyCommandResult]
 }
 
 object TcsBaseController {

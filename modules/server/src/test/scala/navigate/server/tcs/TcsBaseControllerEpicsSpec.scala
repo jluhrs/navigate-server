@@ -168,7 +168,13 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
     for {
       x        <- createController
       (st, ctr) = x
-      _        <- ctr.slew(SlewConfig(slewOptions, target, instrumentSpecifics, GuiderConfig(oiwfsTarget, oiwfsTracking).some))
+      _        <- ctr.slew(
+                    SlewConfig(slewOptions,
+                               target,
+                               instrumentSpecifics,
+                               GuiderConfig(oiwfsTarget, oiwfsTracking).some
+                    )
+                  )
       rs       <- st.get
     } yield {
       // Base Target
@@ -237,15 +243,23 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assertEquals(rs.oiwfs.coordSystem.value, "FK5".some)
       assertEquals(rs.oiwfs.ephemerisFile.value, "".some)
 
-      //OIWFS probe tracking
+      // OIWFS probe tracking
       assert(rs.oiwfsTracking.nodAchopA.connected)
       assert(rs.oiwfsTracking.nodAchopB.connected)
       assert(rs.oiwfsTracking.nodBchopA.connected)
       assert(rs.oiwfsTracking.nodBchopB.connected)
-      assertEquals(rs.oiwfsTracking.nodAchopA.value.map(Enumerated[BinaryOnOff].unsafeFromTag), oiwfsTracking.nodAchopA.fold(BinaryOnOff.On, BinaryOnOff.Off).some)
-      assertEquals(rs.oiwfsTracking.nodAchopB.value.map(Enumerated[BinaryOnOff].unsafeFromTag), oiwfsTracking.nodAchopB.fold(BinaryOnOff.On, BinaryOnOff.Off).some)
-      assertEquals(rs.oiwfsTracking.nodBchopA.value.map(Enumerated[BinaryOnOff].unsafeFromTag), oiwfsTracking.nodBchopA.fold(BinaryOnOff.On, BinaryOnOff.Off).some)
-      assertEquals(rs.oiwfsTracking.nodBchopB.value.map(Enumerated[BinaryOnOff].unsafeFromTag), oiwfsTracking.nodBchopB.fold(BinaryOnOff.On, BinaryOnOff.Off).some)
+      assertEquals(rs.oiwfsTracking.nodAchopA.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+                   oiwfsTracking.nodAchopA.fold(BinaryOnOff.On, BinaryOnOff.Off).some
+      )
+      assertEquals(rs.oiwfsTracking.nodAchopB.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+                   oiwfsTracking.nodAchopB.fold(BinaryOnOff.On, BinaryOnOff.Off).some
+      )
+      assertEquals(rs.oiwfsTracking.nodBchopA.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+                   oiwfsTracking.nodBchopA.fold(BinaryOnOff.On, BinaryOnOff.Off).some
+      )
+      assertEquals(rs.oiwfsTracking.nodBchopB.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+                   oiwfsTracking.nodBchopB.fold(BinaryOnOff.On, BinaryOnOff.Off).some
+      )
 
       // Slew Options
       assert(rs.slew.zeroChopThrow.connected)
@@ -471,19 +485,27 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
     val trackingConfig = TrackingConfig(true, false, false, true)
 
     for {
-      x <- createController
+      x        <- createController
       (st, ctr) = x
-      _ <- ctr.oiwfsProbeTracking(trackingConfig)
-      rs <- st.get
+      _        <- ctr.oiwfsProbeTracking(trackingConfig)
+      rs       <- st.get
     } yield {
       assert(rs.oiwfsTracking.nodAchopA.connected)
       assert(rs.oiwfsTracking.nodAchopB.connected)
       assert(rs.oiwfsTracking.nodBchopA.connected)
       assert(rs.oiwfsTracking.nodBchopB.connected)
-      assertEquals(rs.oiwfsTracking.nodAchopA.value.map(Enumerated[BinaryOnOff].unsafeFromTag), trackingConfig.nodAchopA.fold(BinaryOnOff.On, BinaryOnOff.Off).some)
-      assertEquals(rs.oiwfsTracking.nodAchopB.value.map(Enumerated[BinaryOnOff].unsafeFromTag), trackingConfig.nodAchopB.fold(BinaryOnOff.On, BinaryOnOff.Off).some)
-      assertEquals(rs.oiwfsTracking.nodBchopA.value.map(Enumerated[BinaryOnOff].unsafeFromTag), trackingConfig.nodBchopA.fold(BinaryOnOff.On, BinaryOnOff.Off).some)
-      assertEquals(rs.oiwfsTracking.nodBchopB.value.map(Enumerated[BinaryOnOff].unsafeFromTag), trackingConfig.nodBchopB.fold(BinaryOnOff.On, BinaryOnOff.Off).some)
+      assertEquals(rs.oiwfsTracking.nodAchopA.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+                   trackingConfig.nodAchopA.fold(BinaryOnOff.On, BinaryOnOff.Off).some
+      )
+      assertEquals(rs.oiwfsTracking.nodAchopB.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+                   trackingConfig.nodAchopB.fold(BinaryOnOff.On, BinaryOnOff.Off).some
+      )
+      assertEquals(rs.oiwfsTracking.nodBchopA.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+                   trackingConfig.nodBchopA.fold(BinaryOnOff.On, BinaryOnOff.Off).some
+      )
+      assertEquals(rs.oiwfsTracking.nodBchopB.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+                   trackingConfig.nodBchopB.fold(BinaryOnOff.On, BinaryOnOff.Off).some
+      )
     }
 
   }

@@ -81,7 +81,7 @@ object SchemaStitcher {
   }
 
   sealed trait Elements
-  case object AllElements                                      extends Elements
+  case object AllElements                                extends Elements
   case class ElementList(l: NonEmptySet[NonEmptyString]) extends Elements
 
   extension (el: Elements) {
