@@ -48,7 +48,7 @@ object TcsEpicsSystem {
     val oiwfsTargetCmd: TargetCommandChannels[F]
     val wavelSourceA: Command1Channels[F, Double]
     val slewCmd: SlewCommandChannels[F]
-    val rotatorCmd: Command4Channels[F, Double, String, String, Double]
+    val rotatorConfigCmd: Command4Channels[F, Double, String, String, Double]
     val originCmd: Command6Channels[F, Double, Double, Double, Double, Double, Double]
     val focusOffsetCmd: Command1Channels[F, Double]
     val oiwfsProbeTrackingCmd: ProbeTrackingCommandChannels[F]
@@ -65,14 +65,11 @@ object TcsEpicsSystem {
     // val m2Beam: M2Beam[F]
     // val pwfs1ProbeGuideCmd: ProbeGuideCmd[F]
     // val pwfs2ProbeGuideCmd: ProbeGuideCmd[F]
-    // val oiwfsProbeGuideCmd: ProbeGuideCmd[F]
     // val pwfs1ProbeFollowCmd: ProbeFollowCmd[F]
     // val pwfs2ProbeFollowCmd: ProbeFollowCmd[F]
-    // val oiwfsProbeFollowCmd: ProbeFollowCmd[F]
     // val aoProbeFollowCmd: ProbeFollowCmd[F]
     // val pwfs1Park: EpicsCommand[F]
     // val pwfs2Park: EpicsCommand[F]
-    // val oiwfsPark: EpicsCommand[F]
     // val pwfs1StopObserveCmd: EpicsCommand[F]
     // val pwfs2StopObserveCmd: EpicsCommand[F]
     // val oiwfsStopObserveCmd: EpicsCommand[F]
@@ -699,7 +696,7 @@ object TcsEpicsSystem {
           tcsEpics.ventGatesMoveCmd.setParam2(pos)
         )
       }
-    override val sourceACmd: TargetCommand[F, TcsCommands[F]]                =
+    override val sourceACmd: TargetCommand[F, TcsCommands[F]] =
       new TargetCommand[F, TcsCommands[F]] {
         override def objectName(v: String): TcsCommands[F] = addParam(
           tcsEpics.sourceACmd.objectName(v)
@@ -871,22 +868,22 @@ object TcsEpicsSystem {
           tcsEpics.slewCmd.autoparkAowfs(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
         )
       }
-    override val rotatorCommand: RotatorCommand[F, TcsCommands[F]]         =
+    override val rotatorCommand: RotatorCommand[F, TcsCommands[F]] =
       new RotatorCommand[F, TcsCommands[F]] {
         override def ipa(v: Angle): TcsCommands[F] = addParam(
-          tcsEpics.rotatorCmd.setParam1(v.toDoubleDegrees)
+          tcsEpics.rotatorConfigCmd.setParam1(v.toDoubleDegrees)
         )
 
         override def system(v: String): TcsCommands[F] = addParam(
-          tcsEpics.rotatorCmd.setParam2(v)
+          tcsEpics.rotatorConfigCmd.setParam2(v)
         )
 
         override def equinox(v: String): TcsCommands[F] = addParam(
-          tcsEpics.rotatorCmd.setParam3(v)
+          tcsEpics.rotatorConfigCmd.setParam3(v)
         )
 
         override def iaa(v: Angle): TcsCommands[F] = addParam(
-          tcsEpics.rotatorCmd.setParam4(v.toDoubleDegrees)
+          tcsEpics.rotatorConfigCmd.setParam4(v.toDoubleDegrees)
         )
       }
 
@@ -1018,7 +1015,7 @@ object TcsEpicsSystem {
     override val slewCmd: SlewCommandChannels[F] =
       SlewCommandChannels(channels.telltale, channels.slew)
 
-    override val rotatorCmd: Command4Channels[F, Double, String, String, Double] = Command4Channels(
+    override val rotatorConfigCmd: Command4Channels[F, Double, String, String, Double] = Command4Channels(
       channels.telltale,
       channels.rotator.ipa,
       channels.rotator.system,
@@ -1437,50 +1434,6 @@ object TcsEpicsSystem {
 
     private val follow                              = cs.map(_.getString("followState"))
     override def setFollowState(v: String): F[Unit] = setParameter(follow, v)
-  }
-
-  trait TargetWavelengthCmd[F[_]] extends EpicsCommand[F] {
-    def setWavel(v: Double): F[Unit]
-  }
-
-  final class TargetWavelengthCmdImpl[F[_]: Async](csName: String, epicsService: CaService)
-      extends EpicsCommandBase[F](sysName)
-      with TargetWavelengthCmd[F] {
-    override val cs: Option[CaCommandSender] = Option(epicsService.getCommandSender(csName))
-
-    private val wavel = cs.map(_.getDouble("wavel"))
-
-    override def setWavel(v: Double): F[Unit] = setParameter[F, java.lang.Double](wavel, v)
-  }
-
-  trait Target[F[_]] {
-    def objectName: F[String]
-    def ra: F[Double]
-    def dec: F[Double]
-    def frame: F[String]
-    def equinox: F[String]
-    def epoch: F[String]
-    def properMotionRA: F[Double]
-    def properMotionDec: F[Double]
-    def centralWavelenght: F[Double]
-    def parallax: F[Double]
-    def radialVelocity: F[Double]
-  }
-
-  extension (val tio: Target[IO]) {
-    def to[F[_]: LiftIO]: Target[F] = new Target[F] {
-      def objectName: F[String]        = tio.objectName.to[F]
-      def ra: F[Double]                = tio.ra.to[F]
-      def dec: F[Double]               = tio.dec.to[F]
-      def frame: F[String]             = tio.frame.to[F]
-      def equinox: F[String]           = tio.equinox.to[F]
-      def epoch: F[String]             = tio.epoch.to[F]
-      def properMotionRA: F[Double]    = tio.properMotionRA.to[F]
-      def properMotionDec: F[Double]   = tio.properMotionDec.to[F]
-      def centralWavelenght: F[Double] = tio.centralWavelenght.to[F]
-      def parallax: F[Double]          = tio.parallax.to[F]
-      def radialVelocity: F[Double]    = tio.radialVelocity.to[F]
-    }
   }
 
   sealed trait VirtualGemsTelescope extends Product with Serializable

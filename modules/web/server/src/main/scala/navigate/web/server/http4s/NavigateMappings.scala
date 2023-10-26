@@ -29,6 +29,7 @@ import grackle.Schema
 import grackle.TypeRef
 import grackle.Value
 import grackle.Value.BooleanValue
+import grackle.Value.EnumValue
 import grackle.Value.FloatValue
 import grackle.Value.IntValue
 import grackle.Value.ObjectValue
@@ -47,6 +48,7 @@ import lucuma.core.math.ProperMotion
 import lucuma.core.math.RadialVelocity
 import lucuma.core.math.RightAscension
 import lucuma.core.math.Wavelength
+import lucuma.core.util.Enumerated
 import navigate.model.Distance
 import navigate.server.NavigateEngine
 import navigate.server.tcs.AutoparkAowfs
@@ -60,6 +62,8 @@ import navigate.server.tcs.InstrumentSpecifics
 import navigate.server.tcs.Origin
 import navigate.server.tcs.ParkStatus
 import navigate.server.tcs.ResetPointing
+import navigate.server.tcs.RotatorTrackConfig
+import navigate.server.tcs.RotatorTrackingMode
 import navigate.server.tcs.ShortcircuitMountFilter
 import navigate.server.tcs.ShortcircuitTargetFilter
 import navigate.server.tcs.SlewConfig
@@ -132,6 +136,23 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
       }
       .getOrElse(
         Result.failure("rotatorFollow parameter could not be parsed.").pure[F]
+      )
+
+  def rotatorConfig(p: Path, env: Env): F[Result[OperationOutcome]] =
+    env
+      .get[RotatorTrackConfig]("config")
+      .map { cfg =>
+        server
+          .rotTrackingConfig(cfg)
+          .attempt
+          .map(x =>
+            Result.success(
+              x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+            )
+          )
+      }
+      .getOrElse(
+        Result.failure("rotatorConfig parameter could not be parsed.").pure[F]
       )
 
   def instrumentSpecifics(p: Path, env: Env): F[Result[OperationOutcome]] =
@@ -229,17 +250,25 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
         Result.failure[OperationOutcome]("oiwfsFollow parameter could not be parsed.").pure[F]
       )
 
-  val MutationType: TypeRef         = schema.ref("Mutation")
-  val ParkStatusType: TypeRef       = schema.ref("ParkStatus")
-  val FollowStatusType: TypeRef     = schema.ref("FollowStatus")
-  val OperationOutcomeType: TypeRef = schema.ref("OperationOutcome")
-  val OperationResultType: TypeRef  = schema.ref("OperationResult")
+  val MutationType: TypeRef            = schema.ref("Mutation")
+  val ParkStatusType: TypeRef          = schema.ref("ParkStatus")
+  val FollowStatusType: TypeRef        = schema.ref("FollowStatus")
+  val OperationOutcomeType: TypeRef    = schema.ref("OperationOutcome")
+  val OperationResultType: TypeRef     = schema.ref("OperationResult")
+  val RotatorTrackingModeType: TypeRef = schema.ref("RotatorTrackingMode")
 
   override val selectElaborator: SelectElaborator = SelectElaborator {
     case (MutationType, "mountFollow", List(Binding("enable", BooleanValue(en))))           =>
       Elab.env("enable" -> en)
     case (MutationType, "rotatorFollow", List(Binding("enable", BooleanValue(en))))         =>
       Elab.env("enable" -> en)
+    case (MutationType, "rotatorConfig", List(Binding("config", ObjectValue(fields))))      =>
+      for {
+        x <- Elab.liftR(
+               parseRotatorConfig(fields).toResult("Could not parse rotatorConfig parameters.")
+             )
+        _ <- Elab.env("config", x)
+      } yield ()
     case (MutationType, "slew", List(Binding("slewParams", ObjectValue(fields))))           =>
       for {
         x <- Elab.liftR(parseSlewConfigInput(fields).toResult("Could not parse Slew parameters."))
@@ -282,6 +311,7 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
         RootEffect.computeEncodable("mountFollow")((p, env) => mountFollow(p, env)),
         RootEffect.computeEncodable("rotatorPark")((p, env) => rotatorPark(p, env)),
         RootEffect.computeEncodable("rotatorFollow")((p, env) => rotatorFollow(p, env)),
+        RootEffect.computeEncodable("rotatorConfig")((p, env) => rotatorConfig(p, env)),
         RootEffect.computeEncodable("slew")((p, env) => slew(p, env)),
         RootEffect.computeEncodable("instrumentSpecifics")((p, env) => instrumentSpecifics(p, env)),
         RootEffect.computeEncodable("oiwfsTarget")((p, env) => oiwfsTarget(p, env)),
@@ -293,7 +323,8 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
     LeafMapping[ParkStatus](ParkStatusType),
     LeafMapping[FollowStatus](FollowStatusType),
     LeafMapping[OperationOutcome](OperationOutcomeType),
-    LeafMapping[OperationResult](OperationResultType)
+    LeafMapping[OperationResult](OperationResultType),
+    LeafMapping[RotatorTrackingMode](RotatorTrackingModeType)
   )
 }
 
@@ -442,6 +473,13 @@ object NavigateMappings extends GrackleParsers {
                 }.flatten
   } yield GuiderConfig(target, tracking)
 
+  def parseRotatorConfig(l: List[(String, Value)]): Option[RotatorTrackConfig] = for {
+    ipa  <- l.collectFirst { case ("ipa", ObjectValue(v)) => parseAngle(v) }.flatten
+    mode <- l.collectFirst { case ("mode", EnumValue(v)) =>
+              parseEnumerated[RotatorTrackingMode](v)
+            }.flatten
+  } yield RotatorTrackConfig(ipa, mode)
+
   def parseSlewConfigInput(l: List[(String, Value)]): Option[SlewConfig] = for {
     sol <- l.collectFirst { case ("slewOptions", ObjectValue(v)) => v }
     so  <- parseSlewOptionsInput(sol)
@@ -451,6 +489,7 @@ object NavigateMappings extends GrackleParsers {
     in  <- parseInstrumentSpecificsInput(inl)
     oi  <-
       l.collectFirst { case ("oiwfs", ObjectValue(v)) => parseGuiderConfig(v) }.orElse(none.some)
-  } yield SlewConfig(so, t, in, oi)
+    rc  <- l.collectFirst { case ("rotator", ObjectValue(v)) => parseRotatorConfig(v) }.flatten
+  } yield SlewConfig(so, t, in, oi, rc)
 
 }

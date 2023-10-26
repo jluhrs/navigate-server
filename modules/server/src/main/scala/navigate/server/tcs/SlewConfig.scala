@@ -7,5 +7,6 @@ case class SlewConfig(
   slewOptions:         SlewOptions,
   baseTarget:          Target,
   instrumentSpecifics: InstrumentSpecifics,
-  oiwfs:               Option[GuiderConfig]
+  oiwfs:               Option[GuiderConfig],
+  rotatorTrackConfig:  RotatorTrackConfig
 )

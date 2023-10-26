@@ -11,8 +11,8 @@ import navigate.model.enums.{DomeMode, ShutterMode}
 import navigate.model.Distance
 import navigate.server.acm.CadDirective
 import navigate.server.epicsdata.{BinaryOnOff, BinaryYesNo}
-import navigate.server.tcs.Target.SiderealTarget
-import navigate.server.tcs.TcsBaseController.TcsConfig
+import Target.SiderealTarget
+import TcsBaseController.*
 import lucuma.core.math.{Angle, Coordinates, Epoch, Wavelength}
 import lucuma.core.util.Enumerated
 import munit.CatsEffectSuite
@@ -169,10 +169,12 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       x        <- createController
       (st, ctr) = x
       _        <- ctr.slew(
-                    SlewConfig(slewOptions,
-                               target,
-                               instrumentSpecifics,
-                               GuiderConfig(oiwfsTarget, oiwfsTracking).some
+                    SlewConfig(
+                      slewOptions,
+                      target,
+                      instrumentSpecifics,
+                      GuiderConfig(oiwfsTarget, oiwfsTracking).some,
+                      RotatorTrackConfig(Angle.Angle90, RotatorTrackConfig.Tracking)
                     )
                   )
       rs       <- st.get
@@ -206,7 +208,7 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assert(rs.sourceA.epoch.value.exists(x => compareDouble(x.toDouble, target.epoch.epochYear)))
       assert(rs.sourceA.parallax.value.exists(x => compareDouble(x.toDouble, 0.0)))
       assert(rs.sourceA.radialVelocity.value.exists(x => compareDouble(x.toDouble, 0.0)))
-      assertEquals(rs.sourceA.coordSystem.value, "FK5".some)
+      assertEquals(rs.sourceA.coordSystem.value, SystemDefault.some)
       assertEquals(rs.sourceA.ephemerisFile.value, "".some)
 
       // OIWFS Target
@@ -240,7 +242,7 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       )
       assert(rs.oiwfs.parallax.value.exists(x => compareDouble(x.toDouble, 0.0)))
       assert(rs.oiwfs.radialVelocity.value.exists(x => compareDouble(x.toDouble, 0.0)))
-      assertEquals(rs.oiwfs.coordSystem.value, "FK5".some)
+      assertEquals(rs.oiwfs.coordSystem.value, SystemDefault.some)
       assertEquals(rs.oiwfs.ephemerisFile.value, "".some)
 
       // OIWFS probe tracking
@@ -369,6 +371,14 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
           compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMillimeters.value.toDouble)
         )
       )
+
+      //Rotator configuration
+      assert(rs.rotator.ipa.connected)
+      assert(rs.rotator.system.connected)
+      assert(rs.rotator.equinox.connected)
+      assert(rs.rotator.ipa.value.exists(x => compareDouble(x.toDouble, Angle.Angle90.toDoubleDegrees)))
+      assert(rs.rotator.system.value.exists(_ === SystemDefault))
+      assert(rs.rotator.equinox.value.exists(_ === EquinoxDefault))
     }
   }
 
@@ -476,7 +486,7 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       )
       assert(rs.oiwfs.parallax.value.exists(x => compareDouble(x.toDouble, 0.0)))
       assert(rs.oiwfs.radialVelocity.value.exists(x => compareDouble(x.toDouble, 0.0)))
-      assertEquals(rs.oiwfs.coordSystem.value, "FK5".some)
+      assertEquals(rs.oiwfs.coordSystem.value, SystemDefault.some)
       assertEquals(rs.oiwfs.ephemerisFile.value, "".some)
     }
   }

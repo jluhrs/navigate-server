@@ -87,6 +87,17 @@ input SlewInput {
     baseTarget: TargetPropertiesInput!
     instParams: InstrumentSpecificsInput!
     oiwfs: GuiderConfig
+    rotator: RotatorTrackingInput!
+}
+
+enum RotatorTrackingMode {
+    TRACKING
+    FIXED
+}
+
+input RotatorTrackingInput {
+    ipa: AngleInput!
+    mode: RotatorTrackingMode!
 }
 
 input ProbeTrackingInput {
@@ -129,6 +140,7 @@ type Mutation {
     mountFollow(enable: Boolean!): OperationOutcome!
     rotatorPark: OperationOutcome!
     rotatorFollow(enable: Boolean!): OperationOutcome!
+    rotatorConfig(config: RotatorTrackingInput!): OperationOutcome!
     slew(slewParams: SlewInput!): OperationOutcome!
     instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecificsInput!): OperationOutcome!
     oiwfsTarget(target: TargetPropertiesInput!): OperationOutcome!

@@ -8,12 +8,12 @@ import cats.effect.{Async, Concurrent, Ref, Temporal}
 import cats.effect.kernel.Sync
 import cats.syntax.all.*
 import org.typelevel.log4cats.Logger
-import navigate.model.NavigateCommand.{CrcsFollow, CrcsMove, CrcsPark, CrcsStop, EcsCarouselMode, InstSpecifics, McsFollow, McsPark, OiwfsFollow, OiwfsPark, OiwfsProbeTracking, OiwfsTarget, Slew}
+import navigate.model.NavigateCommand.*
 import navigate.model.{NavigateCommand, NavigateEvent}
 import navigate.model.NavigateEvent.{CommandFailure, CommandPaused, CommandStart, CommandSuccess}
 import navigate.model.config.NavigateEngineConfiguration
 import navigate.model.enums.{DomeMode, ShutterMode}
-import navigate.server.tcs.{InstrumentSpecifics, SlewConfig, Target, TrackingConfig}
+import navigate.server.tcs.{InstrumentSpecifics, RotatorTrackConfig, SlewConfig, Target, TrackingConfig}
 import navigate.stateengine.StateEngine
 import NavigateEvent.NullEvent
 import fs2.{Pipe, Stream}
@@ -32,6 +32,7 @@ trait NavigateEngine[F[_]] {
   def rotPark: F[Unit]
   def rotFollow(enable:                              Boolean): F[Unit]
   def rotMove(angle:                                 Angle): F[Unit]
+  def rotTrackingConfig(cfg: RotatorTrackConfig): F[Unit]
   def ecsCarouselMode(
     domeMode:      DomeMode,
     shutterMode:   ShutterMode,
@@ -181,6 +182,13 @@ object NavigateEngine {
       systems.tcsSouth.oiwfsFollow(enable),
       Focus[State](_.oiwfsFollowInProgress)
     )
+
+    override def rotTrackingConfig(cfg: navigate.server.tcs.RotatorTrackConfig): F[Unit] = command(
+      engine,
+      RotatorTrackingConfig,
+      systems.tcsSouth.rotTrackingConfig(cfg),
+      Focus[State](_.rotTrackingConfigInProgress)
+    )
   }
 
   def build[F[_]: Concurrent: Logger](
@@ -198,15 +206,15 @@ object NavigateEngine {
     rotParkInProgress:             Boolean,
     rotFollowInProgress:           Boolean,
     rotMoveInProgress:             Boolean,
+    rotTrackingConfigInProgress:   Boolean,
     ecsDomeModeInProgress:         Boolean,
     ecsVentGateMoveInProgress:     Boolean,
     slewInProgress:                Boolean,
     oiwfsInProgress:               Boolean,
     instrumentSpecificsInProgress: Boolean,
-    rotIaaInProgress:              Boolean,
     oiwfsProbeTrackingInProgress:  Boolean,
     oiwfsParkInProgress: Boolean,
-    oiwfsFollowInProgress: Boolean
+    oiwfsFollowInProgress: Boolean,
   ) {
     lazy val tcsActionInProgress: Boolean =
       mcsParkInProgress ||
@@ -215,12 +223,12 @@ object NavigateEngine {
         rotParkInProgress ||
         rotFollowInProgress ||
         rotMoveInProgress ||
+        rotTrackingConfigInProgress ||
         ecsDomeModeInProgress ||
         ecsVentGateMoveInProgress ||
         slewInProgress ||
         oiwfsInProgress ||
-        instrumentSpecificsInProgress ||
-        rotIaaInProgress ||
+        instrumentSpecificsInProgress
         oiwfsProbeTrackingInProgress ||
         oiwfsParkInProgress ||
         oiwfsFollowInProgress
@@ -233,12 +241,12 @@ object NavigateEngine {
     rotParkInProgress = false,
     rotFollowInProgress = false,
     rotMoveInProgress = false,
+    rotTrackingConfigInProgress = false,
     ecsDomeModeInProgress = false,
     ecsVentGateMoveInProgress = false,
     slewInProgress = false,
     oiwfsInProgress = false,
     instrumentSpecificsInProgress = false,
-    rotIaaInProgress = false,
     oiwfsProbeTrackingInProgress = false,
     oiwfsParkInProgress = false,
     oiwfsFollowInProgress = false

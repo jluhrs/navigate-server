@@ -18,6 +18,7 @@ import navigate.server.NavigateEngine
 import navigate.server.OdbProxy
 import navigate.server.Systems
 import navigate.server.tcs.InstrumentSpecifics
+import navigate.server.tcs.RotatorTrackConfig
 import navigate.server.tcs.SlewConfig
 import navigate.server.tcs.Target
 import navigate.server.tcs.TcsNorthControllerSim
@@ -144,6 +145,12 @@ class NavigateMappingsTest extends CatsEffectSuite {
                 |      nodBchopB: true
                 |    }
                 |  }
+                |  rotator: {
+                |    ipa: {
+                |      microarcseconds: 89.76
+                |    }
+                |    mode: TRACKING
+                |  }
                 |}) {
                 |  result
                 |} }
@@ -262,6 +269,48 @@ class NavigateMappingsTest extends CatsEffectSuite {
     )
   }
 
+  test("Process rotator follow command") {
+    for {
+      eng <- buildServer
+      mp  <- NavigateMappings[IO](eng)
+      r   <- mp.compileAndRun("mutation { rotatorFollow(enable: true) { result } }")
+    } yield assert(
+      extractResult[OperationOutcome](r, "rotatorFollow").exists(_ === OperationOutcome.success)
+    )
+  }
+
+  test("Process rotator park command") {
+    for {
+      eng <- buildServer
+      mp  <- NavigateMappings[IO](eng)
+      r   <- mp.compileAndRun("mutation { rotatorPark { result } }")
+    } yield assert(
+      extractResult[OperationOutcome](r, "rotatorPark").exists(_ === OperationOutcome.success)
+    )
+  }
+
+  test("Process rotator tracking configuration command") {
+    for {
+      eng <- buildServer
+      mp  <- NavigateMappings[IO](eng)
+      r   <- mp.compileAndRun(
+               """
+          |mutation { rotatorConfig( config: {
+          |    ipa: {
+          |      microarcseconds: 89.76
+          |    }
+          |    mode: TRACKING
+          |  }
+          |) {
+          |  result
+          |} }
+          |""".stripMargin
+             )
+    } yield assert(
+      extractResult[OperationOutcome](r, "rotatorConfig").exists(_ === OperationOutcome.success)
+    )
+  }
+
 }
 
 object NavigateMappingsTest {
@@ -308,6 +357,8 @@ object NavigateMappingsTest {
     override def oiwfsPark: IO[Unit] = IO.unit
 
     override def oiwfsFollow(enable: Boolean): IO[Unit] = IO.unit
+
+    override def rotTrackingConfig(cfg: RotatorTrackConfig): IO[Unit] = IO.unit
   }.pure[IO]
 
   given Decoder[OperationOutcome] = Decoder.instance(h =>

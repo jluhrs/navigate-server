@@ -29,6 +29,7 @@ import lucuma.core.math.skycalc.solver.HourAngleSolver
 import lucuma.core.math.units.CentimetersPerSecond
 import lucuma.core.math.units.MetersPerSecond
 import lucuma.core.model.NonNegDuration
+import lucuma.core.util.Enumerated
 import navigate.model.Distance
 
 import java.time.Duration
@@ -171,5 +172,8 @@ trait GrackleParsers {
       case Some(("dms", StringValue(n))) => Angle.fromStringDMS.getOption(n)
       case _                             => None
     }
+
+  def parseEnumerated[T: Enumerated](tag: String): Option[T] =
+    Enumerated.fromTag[T].getOption(tag.toLowerCase.capitalize)
 
 }
