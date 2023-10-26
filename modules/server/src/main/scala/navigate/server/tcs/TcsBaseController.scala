@@ -28,6 +28,7 @@ trait TcsBaseController[F[_]] {
   def instrumentSpecifics(config: InstrumentSpecifics): F[ApplyCommandResult]
   def oiwfsTarget(target:         Target): F[ApplyCommandResult]
   def rotIaa(angle:               Angle): F[ApplyCommandResult]
+  def rotTrackingConfig(cfg: RotatorTrackConfig): F[ApplyCommandResult]
   def oiwfsProbeTracking(config: TrackingConfig): F[ApplyCommandResult]
   def oiwfsPark: F[ApplyCommandResult]
   def oiwfsFollow(enable: Boolean): F[ApplyCommandResult]
@@ -38,5 +39,9 @@ object TcsBaseController {
   case class TcsConfig(
     sourceATarget: Target
   )
+  
+  val SystemDefault: String = "FK5"
+  val EquinoxDefault: String = "J2000"
+  val FixedSystem: String = "Fixed"
 
 }

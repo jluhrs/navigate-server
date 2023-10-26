@@ -14,6 +14,7 @@ import navigate.server.tcs.Target.*
 import navigate.server.tcs.TcsEpicsSystem.{ProbeTrackingCommand, TargetCommand, TcsCommands}
 import lucuma.core.math.{Angle, Parallax, ProperMotion, RadialVelocity, Wavelength}
 import monocle.Getter
+import TcsBaseController.{EquinoxDefault, FixedSystem, SystemDefault}
 
 /* This class implements the common TCS commands */
 class TcsBaseControllerEpics[F[_]: Async: Parallel](
@@ -69,12 +70,12 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
       .verifiedRun(ConnectionTimeout)
 
   override def ecsCarouselMode(
-    domeMode:      DomeMode,
-    shutterMode:   ShutterMode,
-    slitHeight:    Double,
-    domeEnable:    Boolean,
-    shutterEnable: Boolean
-  ): F[ApplyCommandResult] =
+                                domeMode: DomeMode,
+                                shutterMode: ShutterMode,
+                                slitHeight: Double,
+                                domeEnable: Boolean,
+                                shutterEnable: Boolean
+                              ): F[ApplyCommandResult] =
     tcsEpics
       .startCommand(timeout)
       .ecsCarouselModeCmd
@@ -103,61 +104,58 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
   val DefaultBrightness: Double = 10.0
 
   protected def setTarget(
-    l:      Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]],
-    target: Target
-  ): TcsCommands[F] => TcsCommands[F] = target match {
-    case t: AzElTarget      =>
-      { (x: TcsCommands[F]) => l.get(x).objectName(t.objectName) }
-        .compose[TcsCommands[F]](l.get(_).coordSystem("AzEl"))
-        .compose[TcsCommands[F]](l.get(_).coord1(t.coordinates.azimuth.toAngle.toDoubleDegrees))
-        .compose[TcsCommands[F]](l.get(_).coord2(t.coordinates.elevation.toAngle.toDoubleDegrees))
-        .compose[TcsCommands[F]](l.get(_).brightness(DefaultBrightness))
-        .compose[TcsCommands[F]](l.get(_).epoch(2000.0))
-        .compose[TcsCommands[F]](l.get(_).equinox(""))
-        .compose[TcsCommands[F]](l.get(_).parallax(0.0))
-        .compose[TcsCommands[F]](l.get(_).radialVelocity(0.0))
-        .compose[TcsCommands[F]](l.get(_).properMotion1(0.0))
-        .compose[TcsCommands[F]](l.get(_).properMotion2(0.0))
-        .compose[TcsCommands[F]](l.get(_).ephemerisFile(""))
-    case t: SiderealTarget  =>
-      { (x: TcsCommands[F]) => l.get(x).objectName(t.objectName) }
-        .compose[TcsCommands[F]](l.get(_).coordSystem("FK5"))
-        .compose[TcsCommands[F]](l.get(_).coord1(t.coordinates.ra.toAngle.toDoubleDegrees / 15.0))
-        .compose[TcsCommands[F]](l.get(_).coord2(t.coordinates.dec.toAngle.toSignedDoubleDegrees))
-        .compose[TcsCommands[F]](l.get(_).brightness(DefaultBrightness))
-        .compose[TcsCommands[F]](l.get(_).epoch(t.epoch.epochYear))
-        .compose[TcsCommands[F]](l.get(_).equinox("J2000"))
-        .compose[TcsCommands[F]](
-          l.get(_).parallax(t.parallax.getOrElse(Parallax.Zero).mas.value.toDouble)
-        )
-        .compose[TcsCommands[F]](
-          l.get(_)
-            .radialVelocity(
-              t.radialVelocity.getOrElse(RadialVelocity.Zero).toDoubleKilometersPerSecond
-            )
-        )
-        .compose[TcsCommands[F]](
-          l.get(_)
-            .properMotion1(t.properMotion.getOrElse(ProperMotion.Zero).ra.masy.value.toDouble)
-        )
-        .compose[TcsCommands[F]](
-          l.get(_)
-            .properMotion2(t.properMotion.getOrElse(ProperMotion.Zero).dec.masy.value.toDouble)
-        )
-        .compose[TcsCommands[F]](l.get(_).ephemerisFile(""))
-    case t: EphemerisTarget =>
-      { (x: TcsCommands[F]) => l.get(x).objectName(t.objectName) }
-        .compose[TcsCommands[F]](l.get(_).coordSystem(""))
-        .compose[TcsCommands[F]](l.get(_).coord1(0.0))
-        .compose[TcsCommands[F]](l.get(_).coord2(0.0))
-        .compose[TcsCommands[F]](l.get(_).brightness(DefaultBrightness))
-        .compose[TcsCommands[F]](l.get(_).epoch(2000.0))
-        .compose[TcsCommands[F]](l.get(_).equinox(""))
-        .compose[TcsCommands[F]](l.get(_).parallax(0.0))
-        .compose[TcsCommands[F]](l.get(_).radialVelocity(0.0))
-        .compose[TcsCommands[F]](l.get(_).properMotion1(0.0))
-        .compose[TcsCommands[F]](l.get(_).properMotion2(0.0))
-        .compose[TcsCommands[F]](l.get(_).ephemerisFile(t.ephemerisFile))
+                           l: Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]],
+                           target: Target
+                         ): TcsCommands[F] => TcsCommands[F] = target match {
+    case t: AzElTarget => { (x: TcsCommands[F]) => l.get(x).objectName(t.objectName) }
+      .compose[TcsCommands[F]](l.get(_).coordSystem("AzEl"))
+      .compose[TcsCommands[F]](l.get(_).coord1(t.coordinates.azimuth.toAngle.toDoubleDegrees))
+      .compose[TcsCommands[F]](l.get(_).coord2(t.coordinates.elevation.toAngle.toDoubleDegrees))
+      .compose[TcsCommands[F]](l.get(_).brightness(DefaultBrightness))
+      .compose[TcsCommands[F]](l.get(_).epoch(2000.0))
+      .compose[TcsCommands[F]](l.get(_).equinox(""))
+      .compose[TcsCommands[F]](l.get(_).parallax(0.0))
+      .compose[TcsCommands[F]](l.get(_).radialVelocity(0.0))
+      .compose[TcsCommands[F]](l.get(_).properMotion1(0.0))
+      .compose[TcsCommands[F]](l.get(_).properMotion2(0.0))
+      .compose[TcsCommands[F]](l.get(_).ephemerisFile(""))
+    case t: SiderealTarget => { (x: TcsCommands[F]) => l.get(x).objectName(t.objectName) }
+      .compose[TcsCommands[F]](l.get(_).coordSystem(SystemDefault))
+      .compose[TcsCommands[F]](l.get(_).coord1(t.coordinates.ra.toAngle.toDoubleDegrees / 15.0))
+      .compose[TcsCommands[F]](l.get(_).coord2(t.coordinates.dec.toAngle.toSignedDoubleDegrees))
+      .compose[TcsCommands[F]](l.get(_).brightness(DefaultBrightness))
+      .compose[TcsCommands[F]](l.get(_).epoch(t.epoch.epochYear))
+      .compose[TcsCommands[F]](l.get(_).equinox(EquinoxDefault))
+      .compose[TcsCommands[F]](
+        l.get(_).parallax(t.parallax.getOrElse(Parallax.Zero).mas.value.toDouble)
+      )
+      .compose[TcsCommands[F]](
+        l.get(_)
+          .radialVelocity(
+            t.radialVelocity.getOrElse(RadialVelocity.Zero).toDoubleKilometersPerSecond
+          )
+      )
+      .compose[TcsCommands[F]](
+        l.get(_)
+          .properMotion1(t.properMotion.getOrElse(ProperMotion.Zero).ra.masy.value.toDouble)
+      )
+      .compose[TcsCommands[F]](
+        l.get(_)
+          .properMotion2(t.properMotion.getOrElse(ProperMotion.Zero).dec.masy.value.toDouble)
+      )
+      .compose[TcsCommands[F]](l.get(_).ephemerisFile(""))
+    case t: EphemerisTarget => { (x: TcsCommands[F]) => l.get(x).objectName(t.objectName) }
+      .compose[TcsCommands[F]](l.get(_).coordSystem(""))
+      .compose[TcsCommands[F]](l.get(_).coord1(0.0))
+      .compose[TcsCommands[F]](l.get(_).coord2(0.0))
+      .compose[TcsCommands[F]](l.get(_).brightness(DefaultBrightness))
+      .compose[TcsCommands[F]](l.get(_).epoch(2000.0))
+      .compose[TcsCommands[F]](l.get(_).equinox(""))
+      .compose[TcsCommands[F]](l.get(_).parallax(0.0))
+      .compose[TcsCommands[F]](l.get(_).radialVelocity(0.0))
+      .compose[TcsCommands[F]](l.get(_).properMotion1(0.0))
+      .compose[TcsCommands[F]](l.get(_).properMotion2(0.0))
+      .compose[TcsCommands[F]](l.get(_).ephemerisFile(t.ephemerisFile))
   }
 
   protected def setSourceAWalength(w: Wavelength): TcsCommands[F] => TcsCommands[F] =
@@ -210,15 +208,15 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
 
   override def applyTcsConfig(config: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
     setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.sourceACmd),
-              config.sourceATarget
+      config.sourceATarget
     ).compose(setSourceAWalength(config.sourceATarget.wavelength))(
-      tcsEpics.startCommand(timeout)
-    ).post
+        tcsEpics.startCommand(timeout)
+      ).post
       .verifiedRun(ConnectionTimeout)
 
   override def slew(config: SlewConfig): F[ApplyCommandResult] =
     setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.sourceACmd),
-              config.baseTarget
+      config.baseTarget
     )
       .compose(setSourceAWalength(config.baseTarget.wavelength))
       .compose(setSlewOptions(config.slewOptions))
@@ -229,18 +227,18 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
         config.oiwfs
           .map(o =>
             setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.oiwfsTargetCmd),
-                      o.target
+              o.target
             )
               .compose(
                 setProbeTracking(Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
-                                   _.oiwfsProbeTrackingCommand
-                                 ),
-                                 o.tracking
+                  _.oiwfsProbeTrackingCommand
+                ),
+                  o.tracking
                 )
               )
           )
           .getOrElse(identity[TcsCommands[F]])
-      )(
+      ).compose(setRotatorTrackingConfig(config.rotatorTrackConfig))(
         tcsEpics.startCommand(timeout)
       )
       .post
@@ -268,9 +266,9 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
       .verifiedRun(ConnectionTimeout)
 
   def setProbeTracking(
-    l:      Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]],
-    config: TrackingConfig
-  ): TcsCommands[F] => TcsCommands[F] = { (x: TcsCommands[F]) =>
+                        l: Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]],
+                        config: TrackingConfig
+                      ): TcsCommands[F] => TcsCommands[F] = { (x: TcsCommands[F]) =>
     l.get(x).nodAchopA(config.nodAchopA)
   }
     .compose[TcsCommands[F]](l.get(_).nodAchopB(config.nodAchopB))
@@ -297,4 +295,20 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
       .oiwfsProbeCommands.follow.setFollow(enable)
       .post
       .verifiedRun(ConnectionTimeout)
+
+  def setRotatorTrackingConfig(cfg: RotatorTrackConfig): TcsCommands[F] => TcsCommands[F] =
+    (x: TcsCommands[F]) => cfg.mode match {
+      case RotatorTrackingMode.Fixed => x.rotMoveCommand.setAngle(cfg.ipa)
+          .rotatorCommand.ipa(cfg.ipa)
+          .rotatorCommand.system(FixedSystem)
+      case RotatorTrackingMode.Tracking => x.rotatorCommand.ipa(cfg.ipa)
+        .rotatorCommand.system(SystemDefault)
+        .rotatorCommand.equinox(EquinoxDefault)
+    }
+
+  override def rotTrackingConfig(cfg: RotatorTrackConfig): F[ApplyCommandResult] =
+    setRotatorTrackingConfig(cfg)(tcsEpics.startCommand(timeout))
+      .post
+      .verifiedRun(ConnectionTimeout)
+
 }
