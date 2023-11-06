@@ -105,7 +105,7 @@ object Settings {
     val fomanticUI = "2.8.7"
 
     // Natchez
-    val natchez = "0.3.3"
+    val natchez = "0.3.4"
 
   }
 
