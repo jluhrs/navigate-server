@@ -1,6 +1,6 @@
 #import NonEmptyString, Sidereal, TargetId, Nonsidereal from "lucuma/schemas/ObservationDB.graphql"
 #import SiderealInput, NonsiderealInput, WavelengthInput, AngleInput from "lucuma/schemas/ObservationDB.graphql"
-#import Long, BigDecimal from "lucuma/schemas/ObservationDB.graphql"
+#import Long, BigDecimal, Timestamp from "lucuma/schemas/ObservationDB.graphql"
 
 """Target properties input"""
 input TargetPropertiesInput {
@@ -121,6 +121,21 @@ type Target {
   nonsidereal: Nonsidereal
 }
 
+enum LogLevel {
+    ERROR
+    WARN
+    INFO
+    DEBUG
+    TRACE
+}
+
+type LogMessage {
+    timestamp: Timestamp!
+    level: LogLevel!
+    thread: String!
+    message: String!
+}
+
 enum OperationResult {
     SUCCESS
     FAILURE
@@ -149,3 +164,6 @@ type Mutation {
     oiwfsFollow(enable: Boolean!): OperationOutcome!
 }
 
+type Subscription {
+    logMessage: LogMessage!
+}

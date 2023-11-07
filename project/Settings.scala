@@ -26,7 +26,7 @@ object Settings {
     val catsEffect   = "3.5.2"
     val cats         = "2.10.0"
     val mouse        = "1.2.1"
-    val fs2          = "3.9.2"
+    val fs2          = "3.9.3"
     val shapeless    = "2.3.7"
     val scalaParsers = "1.1.2"
     val scalaXml     = "1.2.0"
@@ -93,7 +93,7 @@ object Settings {
     val lucumaUI      = "0.66.0"
     val lucumaSchemas = "0.63.0"
 
-    val grackle = "0.15.0"
+    val grackle = "0.16.0"
 
     val graphQLRoutes = "0.8.0"
 
@@ -105,7 +105,7 @@ object Settings {
     val fomanticUI = "2.8.7"
 
     // Natchez
-    val natchez = "0.3.3"
+    val natchez = "0.3.4"
 
   }
 

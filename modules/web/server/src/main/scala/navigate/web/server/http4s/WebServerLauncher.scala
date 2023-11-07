@@ -25,7 +25,7 @@ import navigate.web.server.common.LogInitialization
 import navigate.web.server.common.RedirectToHttpsRoutes
 import navigate.web.server.common.StaticRoutes
 import navigate.web.server.config.*
-import navigate.web.server.logging.AppenderForClients
+import navigate.web.server.logging.SubscriptionAppender
 import navigate.web.server.logging.given
 import navigate.web.server.security.AuthenticationService
 import org.http4s.HttpRoutes
@@ -113,6 +113,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
     conf:      NavigateConfiguration,
     as:        AuthenticationService[F],
     outputs:   Topic[F, NavigateEvent],
+    logTopic:  Topic[F, ILoggingEvent],
     se:        NavigateEngine[F],
     clientsDb: ClientsSetDb[F]
   ): Resource[F, Server] = {
@@ -132,7 +133,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
       "/api/navigate/commands" -> new NavigateCommandRoutes(as, se).service,
       "/api"                   -> new NavigateUIApiRoutes(conf.site, conf.mode, as, clientsDb, outputs)
         .service(wsBuilder),
-      "/graphqlapi"            -> new GraphQlRoutes(se).service(wsBuilder)
+      "/graphqlapi"            -> new GraphQlRoutes(se, logTopic).service(wsBuilder)
     )
 
     val pingRouter = Router[F](
@@ -175,14 +176,14 @@ object WebServerLauncher extends IOApp with LogInitialization {
   // We need to manually update the configuration of the logging subsystem
   // to support capturing log messages and forward them to the clients
   def logToClients(
-    out:        Topic[IO, NavigateEvent],
+    out:        Topic[IO, ILoggingEvent],
     dispatcher: Dispatcher[IO]
   ): IO[Appender[ILoggingEvent]] = IO.apply {
     import ch.qos.logback.classic.{AsyncAppender, Logger, LoggerContext}
     import org.slf4j.LoggerFactory
 
     val asyncAppender = new AsyncAppender
-    val appender      = new AppenderForClients(out)(dispatcher)
+    val appender      = new SubscriptionAppender[IO](out)(using dispatcher)
     Option(LoggerFactory.getILoggerFactory)
       .collect { case lc: LoggerContext =>
         lc
@@ -240,12 +241,13 @@ object WebServerLauncher extends IOApp with LogInitialization {
     def webServerIO(
       conf: NavigateConfiguration,
       out:  Topic[IO, NavigateEvent],
+      log:  Topic[IO, ILoggingEvent],
       en:   NavigateEngine[IO],
       cs:   ClientsSetDb[IO]
     ): Resource[IO, Unit] =
       for {
         as <- Resource.eval(authService[IO](conf.mode, conf.authentication))
-        _  <- webServer[IO](conf, as, out, en, cs)
+        _  <- webServer[IO](conf, as, out, log, en, cs)
       } yield ()
 
     def publishStats[F[_]: Temporal](cs: ClientsSetDb[F]): Stream[F, Unit] =
@@ -259,14 +261,15 @@ object WebServerLauncher extends IOApp with LogInitialization {
         _      <- Resource.eval(printBanner(conf))
         cli    <- client(10.seconds)
         out    <- Resource.eval(Topic[IO, NavigateEvent])
+        log    <- Resource.eval(Topic[IO, ILoggingEvent])
         dsp    <- Dispatcher.sequential[IO]
-        _      <- Resource.eval(logToClients(out, dsp))
+        _      <- Resource.eval(logToClients(log, dsp))
         cs     <- Resource.eval(
                     Ref.of[IO, ClientsSetDb.ClientsSet](Map.empty).map(ClientsSetDb.apply[IO](_))
                   )
         _      <- Resource.eval(publishStats(cs).compile.drain.start)
         engine <- engineIO(conf, cli)
-        _      <- webServerIO(conf, out, engine, cs)
+        _      <- webServerIO(conf, out, log, engine, cs)
         _      <- Resource.eval(
                     out.subscribers
                       .evalMap(l => Logger[IO].debug(s"Subscribers amount: $l").whenA(l > 1))

@@ -5,11 +5,20 @@ package navigate.web.server.http4s
 
 import cats.*
 import cats.effect.IO
+import cats.effect.std.Dispatcher
 import cats.syntax.all.*
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.classic.spi.IThrowableProxy
+import ch.qos.logback.classic.spi.LoggerContextVO
+import ch.qos.logback.classic.spi.StackTraceElementProxy
 import fs2.Stream
+import fs2.concurrent.Topic
 import io.circe.Decoder
+import io.circe.Decoder.Result
 import io.circe.Json
 import lucuma.core.math.Angle
+import lucuma.core.util.Timestamp
 import munit.CatsEffectSuite
 import navigate.model.NavigateEvent
 import navigate.model.enums.DomeMode
@@ -24,8 +33,14 @@ import navigate.server.tcs.Target
 import navigate.server.tcs.TcsNorthControllerSim
 import navigate.server.tcs.TcsSouthControllerSim
 import navigate.server.tcs.TrackingConfig
+import org.slf4j.Marker
+import org.slf4j.event.KeyValuePair
+import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats.slf4j.Slf4jLogger
 
+import java.util
 import scala.concurrent.duration.Duration
+import scala.jdk.CollectionConverters.given
 
 import NavigateMappings.*
 
@@ -44,7 +59,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
   test("Process mount follow command") {
     for {
       eng <- buildServer
-      mp  <- NavigateMappings[IO](eng)
+      log <- Topic[IO, ILoggingEvent]
+      mp  <- NavigateMappings[IO](eng, log)
       r   <- mp.compileAndRun("mutation { mountFollow(enable: true) { result } }")
     } yield assert(
       extractResult[OperationOutcome](r, "mountFollow").exists(_ === OperationOutcome.success)
@@ -55,7 +71,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
   test("Process mount park command") {
     for {
       eng <- buildServer
-      mp  <- NavigateMappings[IO](eng)
+      log <- Topic[IO, ILoggingEvent]
+      mp  <- NavigateMappings[IO](eng, log)
       r   <- mp.compileAndRun("mutation { mountPark { result } }")
     } yield assert(
       extractResult[OperationOutcome](r, "mountPark").exists(_ === OperationOutcome.success)
@@ -66,7 +83,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
   test("Process slew command") {
     for {
       eng <- buildServer
-      mp  <- NavigateMappings[IO](eng)
+      log <- Topic[IO, ILoggingEvent]
+      mp  <- NavigateMappings[IO](eng, log)
       r   <- mp.compileAndRun(
                """
                 |mutation { slew (slewParams: {
@@ -164,7 +182,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
   test("Process instrumentSpecifics command") {
     for {
       eng <- buildServer
-      mp  <- NavigateMappings[IO](eng)
+      log <- Topic[IO, ILoggingEvent]
+      mp  <- NavigateMappings[IO](eng, log)
       r   <- mp.compileAndRun(
                """
                 |mutation { instrumentSpecifics (instrumentSpecificsParams: {
@@ -198,7 +217,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
   test("Process oiwfsTarget command") {
     for {
       eng <- buildServer
-      mp  <- NavigateMappings[IO](eng)
+      log <- Topic[IO, ILoggingEvent]
+      mp  <- NavigateMappings[IO](eng, log)
       r   <- mp.compileAndRun(
                """
                 |mutation { oiwfsTarget (target: {
@@ -229,7 +249,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
   test("Process oiwfsProbeTracking command") {
     for {
       eng <- buildServer
-      mp  <- NavigateMappings[IO](eng)
+      log <- Topic[IO, ILoggingEvent]
+      mp  <- NavigateMappings[IO](eng, log)
       r   <- mp.compileAndRun(
                """
           |mutation { oiwfsProbeTracking (config: {
@@ -252,7 +273,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
   test("Process oiwfs follow command") {
     for {
       eng <- buildServer
-      mp  <- NavigateMappings[IO](eng)
+      log <- Topic[IO, ILoggingEvent]
+      mp  <- NavigateMappings[IO](eng, log)
       r   <- mp.compileAndRun("mutation { oiwfsFollow(enable: true) { result } }")
     } yield assert(
       extractResult[OperationOutcome](r, "oiwfsFollow").exists(_ === OperationOutcome.success)
@@ -262,7 +284,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
   test("Process oiwfs park command") {
     for {
       eng <- buildServer
-      mp  <- NavigateMappings[IO](eng)
+      log <- Topic[IO, ILoggingEvent]
+      mp  <- NavigateMappings[IO](eng, log)
       r   <- mp.compileAndRun("mutation { oiwfsPark { result } }")
     } yield assert(
       extractResult[OperationOutcome](r, "oiwfsPark").exists(_ === OperationOutcome.success)
@@ -272,7 +295,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
   test("Process rotator follow command") {
     for {
       eng <- buildServer
-      mp  <- NavigateMappings[IO](eng)
+      log <- Topic[IO, ILoggingEvent]
+      mp  <- NavigateMappings[IO](eng, log)
       r   <- mp.compileAndRun("mutation { rotatorFollow(enable: true) { result } }")
     } yield assert(
       extractResult[OperationOutcome](r, "rotatorFollow").exists(_ === OperationOutcome.success)
@@ -282,7 +306,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
   test("Process rotator park command") {
     for {
       eng <- buildServer
-      mp  <- NavigateMappings[IO](eng)
+      log <- Topic[IO, ILoggingEvent]
+      mp  <- NavigateMappings[IO](eng, log)
       r   <- mp.compileAndRun("mutation { rotatorPark { result } }")
     } yield assert(
       extractResult[OperationOutcome](r, "rotatorPark").exists(_ === OperationOutcome.success)
@@ -292,7 +317,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
   test("Process rotator tracking configuration command") {
     for {
       eng <- buildServer
-      mp  <- NavigateMappings[IO](eng)
+      log <- Topic[IO, ILoggingEvent]
+      mp  <- NavigateMappings[IO](eng, log)
       r   <- mp.compileAndRun(
                """
           |mutation { rotatorConfig( config: {
@@ -309,6 +335,61 @@ class NavigateMappingsTest extends CatsEffectSuite {
     } yield assert(
       extractResult[OperationOutcome](r, "rotatorConfig").exists(_ === OperationOutcome.success)
     )
+  }
+
+  test("Provide logs subscription") {
+    val logger: Logger[IO] = Slf4jLogger.getLoggerFromName[IO]("navigate")
+    val debugMsg: String   = "debug message"
+    val infoMsg: String    = "info message"
+    val warningMsg: String = "warning message"
+    val errorMsg: String   = "error message"
+
+    def putLogs(topic: Topic[IO, ILoggingEvent]): Stream[IO, Option[Result[SimpleLoggingEvent]]] =
+      Stream
+        .emits(
+          List(
+            topic.publish1(SimpleLoggingEvent(Timestamp.Min, Level.DEBUG, "", debugMsg)).as(none),
+            topic.publish1(SimpleLoggingEvent(Timestamp.Min, Level.INFO, "", infoMsg)).as(none),
+            topic.publish1(SimpleLoggingEvent(Timestamp.Min, Level.WARN, "", warningMsg)).as(none),
+            topic.publish1(SimpleLoggingEvent(Timestamp.Min, Level.ERROR, "", errorMsg)).as(none)
+          )
+        )
+        .evalMap(a => a)
+
+    def s(dispatcher: Dispatcher[IO]): Stream[IO, Result[SimpleLoggingEvent]] = for {
+      eng  <- Stream.eval(buildServer)
+      log  <- Stream.eval(Topic[IO, ILoggingEvent])
+      mp   <- Stream.eval(NavigateMappings[IO](eng, log))
+      logs <-
+        putLogs(log)
+          .merge(
+            mp.compileAndRunSubscription(
+              """
+          | subscription {
+          |   logMessage {
+          |     timestamp
+          |     level
+          |     thread
+          |     message
+          |   }
+          | }
+          |""".stripMargin
+            ).map(_.hcursor.downField("data").downField("logMessage").as[SimpleLoggingEvent].some)
+          )
+          .flattenOption
+    } yield logs
+
+    Dispatcher.sequential[IO].use { d =>
+      s(d).take(3).compile.toList.timeout(Duration.fromNanos(5e9)).map { l =>
+        val g: List[SimpleLoggingEvent] = l.collect { case Right(a) => a }
+        assertEquals(g.length, l.length)
+        assert(g.forall(_.message =!= debugMsg))
+        assert(g.exists(_.message === infoMsg))
+        assert(g.exists(_.message === warningMsg))
+        assert(g.exists(_.message === errorMsg))
+      }
+    }
+
   }
 
 }
@@ -366,4 +447,56 @@ object NavigateMappingsTest {
       .as[OperationResult]
       .map(r => OperationOutcome(r, h.downField("msg").as[String].toOption))
   )
+
+  case class SimpleLoggingEvent(
+    timestamp: Timestamp,
+    level:     Level,
+    thread:    String,
+    message:   String
+  ) extends ILoggingEvent {
+
+    override def getThreadName: String = thread
+
+    override def getLevel: Level = level
+
+    override def getMessage: String = message
+
+    override def getArgumentArray: Array[AnyRef] = Array.empty
+
+    override def getFormattedMessage: String = message
+
+    override def getLoggerName: String = ""
+
+    override def getLoggerContextVO: LoggerContextVO = new LoggerContextVO("", Map.empty.asJava, 0)
+
+    override def getThrowableProxy: IThrowableProxy = null
+
+    override def getCallerData: Array[StackTraceElement] = Array.empty
+
+    override def hasCallerData: Boolean = false
+
+    override def getMarkerList: util.List[Marker] = List.empty.asJava
+
+    override def getMDCPropertyMap: util.Map[String, String] = Map.empty.asJava
+
+    override def getMdc: util.Map[String, String] = Map.empty.asJava
+
+    override def getTimeStamp: Long = timestamp.toEpochMilli
+
+    override def getNanoseconds: Int = 0
+
+    override def getSequenceNumber: Long = 0
+
+    override def getKeyValuePairs: util.List[KeyValuePair] = List.empty.asJava
+
+    override def prepareForDeferredProcessing(): Unit = ()
+  }
+
+  given Decoder[SimpleLoggingEvent] = h =>
+    for {
+      ts <- h.downField("timestamp").as[Timestamp]
+      l  <- h.downField("level").as[String].map(Level.toLevel)
+      th <- h.downField("thread").as[String]
+      ms <- h.downField("message").as[String]
+    } yield SimpleLoggingEvent(ts, l, th, ms)
 }
