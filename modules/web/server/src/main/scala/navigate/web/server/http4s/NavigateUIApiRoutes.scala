@@ -18,14 +18,12 @@ import navigate.model.NavigateEvent
 import navigate.model.NavigateEvent.ConnectionOpenEvent
 import navigate.model.NavigateEvent.ForClient
 import navigate.model.NavigateEvent.NullEvent
-import navigate.model.NavigateEvent.given
 import navigate.model.boopickle.*
 import navigate.model.config.*
 import navigate.model.given
 import navigate.model.security.UserLoginRequest
 import navigate.server.NavigateEngine
 import navigate.web.server.OcsBuildInfo
-import navigate.web.server.http4s.encoder.*
 import navigate.web.server.security.AuthenticationService
 import navigate.web.server.security.AuthenticationService.AuthResult
 import navigate.web.server.security.Http4sAuthentication
@@ -34,7 +32,6 @@ import org.http4s.*
 import org.http4s.circe.CirceEntityDecoder.*
 import org.http4s.circe.CirceEntityEncoder.*
 import org.http4s.dsl.*
-import org.http4s.headers.Origin
 import org.http4s.headers.`User-Agent`
 import org.http4s.headers.`WWW-Authenticate`
 import org.http4s.server.middleware.CORS

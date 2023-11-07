@@ -12,7 +12,6 @@ import lucuma.core.math.{
   RadialVelocity,
   Wavelength
 }
-import lucuma.core.model.Target.Sidereal
 
 sealed trait Target extends Product with Serializable {
   val objectName: String

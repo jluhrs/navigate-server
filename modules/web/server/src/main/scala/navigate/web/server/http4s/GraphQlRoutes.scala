@@ -11,12 +11,7 @@ import fs2.concurrent.Topic
 import lucuma.graphql.routes.GraphQLService
 import lucuma.graphql.routes.Routes
 import natchez.Trace
-import navigate.model.security.UserDetails
 import navigate.server.NavigateEngine
-import navigate.web.server.security.AuthenticationService
-import navigate.web.server.security.Http4sAuthentication
-import navigate.web.server.security.TokenRefresher
-import org.http4s.AuthedRoutes
 import org.http4s.HttpRoutes
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.middleware.GZip

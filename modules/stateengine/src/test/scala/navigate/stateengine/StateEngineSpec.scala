@@ -11,8 +11,6 @@ import munit.CatsEffectSuite
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
 
-import Handler._
-
 class StateEngineSpec extends CatsEffectSuite {
 
   test("StateEngine should process commands") {

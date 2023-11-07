@@ -3,19 +3,16 @@
 
 package edu.gemini.schema.util
 
-import cats.data.{Ior, NonEmptySet}
+import cats.data.NonEmptySet
 import cats.effect.Sync
-import cats.kernel.Order
 import cats.parse.Parser.*
 import cats.parse.Rfc5234.{alpha, digit, wsp}
-import cats.parse.{Parser, Parser0}
+import cats.parse.Parser
 import cats.syntax.all.*
-import cats.{Applicative, Eq, Monad}
 import grackle.*
 import eu.timepit.refined.types.string.NonEmptyString
 import eu.timepit.refined.cats.given
 
-import scala.io.Source
 import java.nio.file.Path
 
 // SchemaStitcher can build a grackle Schema from schema files that contains import statements of the form:

@@ -3,7 +3,6 @@
 
 package navigate.server.tcs
 
-import cats.Eq
 import lucuma.core.math.Angle
 
 case class RotatorTrackConfig (

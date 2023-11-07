@@ -6,7 +6,6 @@ package navigate.stateengine
 import cats.Applicative
 import cats.Monad
 import cats.data.State
-import cats.data.StateT
 import cats.syntax.all.*
 import fs2.Stream
 import navigate.stateengine.Handler.RetVal

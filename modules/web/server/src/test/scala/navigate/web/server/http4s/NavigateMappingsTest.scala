@@ -11,7 +11,6 @@ import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.classic.spi.IThrowableProxy
 import ch.qos.logback.classic.spi.LoggerContextVO
-import ch.qos.logback.classic.spi.StackTraceElementProxy
 import fs2.Stream
 import fs2.concurrent.Topic
 import io.circe.Decoder
@@ -35,8 +34,6 @@ import navigate.server.tcs.TcsSouthControllerSim
 import navigate.server.tcs.TrackingConfig
 import org.slf4j.Marker
 import org.slf4j.event.KeyValuePair
-import org.typelevel.log4cats.Logger
-import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 import java.util
 import scala.concurrent.duration.Duration
@@ -338,7 +335,6 @@ class NavigateMappingsTest extends CatsEffectSuite {
   }
 
   test("Provide logs subscription") {
-    val logger: Logger[IO] = Slf4jLogger.getLoggerFromName[IO]("navigate")
     val debugMsg: String   = "debug message"
     val infoMsg: String    = "info message"
     val warningMsg: String = "warning message"

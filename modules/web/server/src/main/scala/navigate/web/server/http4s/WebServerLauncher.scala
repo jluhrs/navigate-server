@@ -26,7 +26,6 @@ import navigate.web.server.common.RedirectToHttpsRoutes
 import navigate.web.server.common.StaticRoutes
 import navigate.web.server.config.*
 import navigate.web.server.logging.SubscriptionAppender
-import navigate.web.server.logging.given
 import navigate.web.server.security.AuthenticationService
 import org.http4s.HttpRoutes
 import org.http4s.blaze.server.BlazeServerBuilder
@@ -47,7 +46,6 @@ import java.nio.file.Path as FilePath
 import java.security.KeyStore
 import java.security.Security
 import java.util.Locale
-import java.util.spi.LocaleServiceProvider
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManagerFactory

@@ -7,7 +7,6 @@ import scala.io.Source
 import java.nio.file.Path
 import cats.effect.Resource
 import cats.effect.Sync
-import cats.effect.syntax.all.*
 import cats.syntax.all.*
 import cats.ApplicativeThrow
 
