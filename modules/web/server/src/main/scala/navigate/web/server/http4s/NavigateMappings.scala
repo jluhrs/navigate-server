@@ -3,27 +3,16 @@
 
 package navigate.web.server.http4s
 
-import cats.Applicative
-import cats.data.Ior
-import cats.data.NonEmptyChain
 import cats.effect.Sync
-import cats.effect.syntax.all.*
 import cats.syntax.all.*
 import ch.qos.logback.classic.spi.ILoggingEvent
 import edu.gemini.schema.util.SchemaStitcher
 import edu.gemini.schema.util.SourceResolver
 import fs2.concurrent.Topic
-import grackle.Cursor
 import grackle.Env
-import grackle.Mapping
 import grackle.Path
-import grackle.Predicate.Eql
-import grackle.Problem
 import grackle.Query
 import grackle.Query.Binding
-import grackle.Query.Environment
-import grackle.Query.Select
-import grackle.Query.Unique
 import grackle.QueryCompiler.Elab
 import grackle.QueryCompiler.SelectElaborator
 import grackle.Result
@@ -32,15 +21,10 @@ import grackle.TypeRef
 import grackle.Value
 import grackle.Value.BooleanValue
 import grackle.Value.EnumValue
-import grackle.Value.FloatValue
-import grackle.Value.IntValue
 import grackle.Value.ObjectValue
 import grackle.Value.StringValue
 import grackle.circe.CirceMapping
 import grackle.syntax.given
-import io.circe.Decoder
-import io.circe.Encoder
-import io.circe.Json
 import io.circe.syntax.*
 import lucuma.core.math.Coordinates
 import lucuma.core.math.Declination
@@ -50,7 +34,6 @@ import lucuma.core.math.ProperMotion
 import lucuma.core.math.RadialVelocity
 import lucuma.core.math.RightAscension
 import lucuma.core.math.Wavelength
-import lucuma.core.util.Enumerated
 import navigate.model.Distance
 import navigate.server.NavigateEngine
 import navigate.server.tcs.AutoparkAowfs
@@ -80,8 +63,6 @@ import navigate.server.tcs.ZeroMountDiffTrack
 import navigate.server.tcs.ZeroMountOffset
 import navigate.server.tcs.ZeroSourceDiffTrack
 import navigate.server.tcs.ZeroSourceOffset
-import org.typelevel.log4cats.Logger
-import spire.math.Algebraic.Expr.Sub
 
 import java.nio.file.Path as JPath
 import scala.reflect.classTag

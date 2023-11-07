@@ -4,7 +4,6 @@
 package navigate.web.server.http4s
 
 import cats.Eq
-import cats.syntax.eq.*
 import cats.syntax.option.*
 import io.circe.Encoder
 

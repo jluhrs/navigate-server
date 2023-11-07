@@ -8,7 +8,6 @@ import cats.syntax.all.*
 import navigate.epics.Channel
 import navigate.epics.EpicsSystem.TelltaleChannel
 import navigate.epics.VerifiedEpics.{VerifiedEpics, writeChannel}
-import navigate.server.acm.Encoder.*
 
 package object acm {
 

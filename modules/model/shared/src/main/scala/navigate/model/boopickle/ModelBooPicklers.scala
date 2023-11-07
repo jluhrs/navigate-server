@@ -23,7 +23,6 @@ import navigate.model.NavigateEvent._
 import navigate.model._
 import navigate.model.enums.ServerLogLevel
 import navigate.model.security.UserDetails
-import navigate.model.security.UserLoginRequest
 import squants.time.Time
 import squants.time.TimeConversions._
 
