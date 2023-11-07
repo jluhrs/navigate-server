@@ -9,8 +9,10 @@ import cats.data.NonEmptyChain
 import cats.effect.Sync
 import cats.effect.syntax.all.*
 import cats.syntax.all.*
+import ch.qos.logback.classic.spi.ILoggingEvent
 import edu.gemini.schema.util.SchemaStitcher
 import edu.gemini.schema.util.SourceResolver
+import fs2.concurrent.Topic
 import grackle.Cursor
 import grackle.Env
 import grackle.Mapping
@@ -84,8 +86,11 @@ import spire.math.Algebraic.Expr.Sub
 import java.nio.file.Path as JPath
 import scala.reflect.classTag
 
-class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schema: Schema)
-    extends CirceMapping[F] {
+import encoder.given
+
+class NavigateMappings[F[_]: Sync](server: NavigateEngine[F], logTopic: Topic[F, ILoggingEvent])(
+  override val schema: Schema
+) extends CirceMapping[F] {
   import NavigateMappings._
 
   def mountPark(p: Path, env: Env): F[Result[OperationOutcome]] =
@@ -251,6 +256,7 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
       )
 
   val MutationType: TypeRef            = schema.ref("Mutation")
+  val SubscriptionType: TypeRef        = schema.ref("Subscription")
   val ParkStatusType: TypeRef          = schema.ref("ParkStatus")
   val FollowStatusType: TypeRef        = schema.ref("FollowStatus")
   val OperationOutcomeType: TypeRef    = schema.ref("OperationOutcome")
@@ -320,6 +326,18 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F])(override val schem
         RootEffect.computeEncodable("oiwfsFollow")((p, env) => oiwfsFollow(p, env))
       )
     ),
+    ObjectMapping(
+      tpe = SubscriptionType,
+      List(
+        RootStream.computeCursor("logMessage") { (p, env) =>
+          logTopic
+            .subscribe(10)
+            .map(_.asJson)
+            .map(circeCursor(p, env, _))
+            .map(Result.success)
+        }
+      )
+    ),
     LeafMapping[ParkStatus](ParkStatusType),
     LeafMapping[FollowStatus](FollowStatusType),
     LeafMapping[OperationOutcome](OperationOutcomeType),
@@ -334,9 +352,13 @@ object NavigateMappings extends GrackleParsers {
     .apply[F](JPath.of("NewTCC.graphql"), SourceResolver.fromResource(getClass.getClassLoader))
     .build
 
-  def apply[F[_]: Sync](server: NavigateEngine[F]): F[NavigateMappings[F]] = loadSchema.flatMap {
-    case Result.Success(schema)           => new NavigateMappings[F](server)(schema).pure[F]
-    case Result.Warning(problems, schema) => new NavigateMappings[F](server)(schema).pure[F]
+  def apply[F[_]: Sync](
+    server:   NavigateEngine[F],
+    logTopic: Topic[F, ILoggingEvent]
+  ): F[NavigateMappings[F]] = loadSchema.flatMap {
+    case Result.Success(schema)           => new NavigateMappings[F](server, logTopic)(schema).pure[F]
+    case Result.Warning(problems, schema) =>
+      new NavigateMappings[F](server, logTopic)(schema).pure[F]
     case Result.Failure(problems)         =>
       Sync[F].raiseError[NavigateMappings[F]](
         new Throwable(
