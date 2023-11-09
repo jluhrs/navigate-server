@@ -5,10 +5,10 @@ package navigate.web.server.security
 
 import com.unboundid.ldap.sdk.SearchRequest
 import com.unboundid.ldap.sdk.SearchScope
-import com.unboundid.ldap.sdk._
-import navigate.model.security.UserDetails._
+import com.unboundid.ldap.sdk.*
+import navigate.model.security.UserDetails.*
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 object LdapConnectionOps {
   // Extension methods for ldap connection

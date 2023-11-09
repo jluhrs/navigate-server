@@ -4,7 +4,7 @@
 package navigate.epics
 
 import cats.effect.IO
-import cats.implicits._
+import cats.implicits.*
 import munit.CatsEffectSuite
 import navigate.epics.EpicsSystem.TelltaleChannel
 import org.epics.ca.ConnectionState

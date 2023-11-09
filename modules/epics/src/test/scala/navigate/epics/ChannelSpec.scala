@@ -8,7 +8,7 @@ import cats.effect.IO
 import cats.effect.SyncIO
 import cats.effect.kernel.Resource
 import cats.effect.std.Dispatcher
-import cats.syntax.all._
+import cats.syntax.all.*
 import gov.aps.jca.cas.ServerContext
 import munit.CatsEffectSuite
 

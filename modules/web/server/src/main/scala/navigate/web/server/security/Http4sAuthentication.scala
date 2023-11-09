@@ -3,14 +3,14 @@
 
 package navigate.web.server.security
 
-import cats._
+import cats.*
 import cats.data.Kleisli
 import cats.data.OptionT
 import cats.effect.Sync
-import cats.syntax.all._
+import cats.syntax.all.*
 import navigate.model.security.UserDetails
-import org.http4s._
-import org.http4s.dsl._
+import org.http4s.*
+import org.http4s.dsl.*
 import org.http4s.server.AuthMiddleware
 
 import java.time.Instant

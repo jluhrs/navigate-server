@@ -5,7 +5,7 @@ package navigate.web.server.http4s
 
 import cats.effect.Ref
 import cats.effect.Sync
-import cats.syntax.all._
+import cats.syntax.all.*
 import navigate.model.ClientId
 import org.http4s.headers.`User-Agent`
 import org.typelevel.log4cats.Logger

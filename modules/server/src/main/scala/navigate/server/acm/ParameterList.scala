@@ -4,7 +4,7 @@
 package navigate.server.acm
 
 import cats.{Applicative, Parallel}
-import cats.syntax.all._
+import cats.syntax.all.*
 import navigate.epics.{EpicsSystem, RemoteChannel}
 import navigate.epics.VerifiedEpics.VerifiedEpics
 

@@ -5,7 +5,7 @@ package navigate.model
 
 import cats.Eq
 import cats.Order
-import cats.syntax.all._
+import cats.syntax.all.*
 import navigate.model.enums.ServerLogLevel
 import navigate.model.security.UserDetails
 

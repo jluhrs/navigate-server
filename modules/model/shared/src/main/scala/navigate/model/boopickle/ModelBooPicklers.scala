@@ -14,19 +14,19 @@ import boopickle.Default.optionPickler
 import boopickle.Default.stringPickler
 import boopickle.Default.transformPickler
 import boopickle.Pickler
-import cats._
-import cats.syntax.all._
+import cats.*
+import cats.syntax.all.*
 import eu.timepit.refined.api.RefType
 import eu.timepit.refined.types.numeric.PosLong
 import lucuma.core.util.Enumerated
-import navigate.model.NavigateEvent._
-import navigate.model._
+import navigate.model.NavigateEvent.*
+import navigate.model.*
 import navigate.model.enums.ServerLogLevel
 import navigate.model.security.UserDetails
 import squants.time.Time
-import squants.time.TimeConversions._
+import squants.time.TimeConversions.*
 
-import java.time._
+import java.time.*
 
 /**
  * Contains boopickle given picklers of model objects Boopickle can auto derive encoders but it is

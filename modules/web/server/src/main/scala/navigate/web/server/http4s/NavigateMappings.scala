@@ -21,6 +21,7 @@ import grackle.TypeRef
 import grackle.Value
 import grackle.Value.BooleanValue
 import grackle.Value.EnumValue
+import grackle.Value.ListValue
 import grackle.Value.ObjectValue
 import grackle.Value.StringValue
 import grackle.circe.CirceMapping
@@ -34,7 +35,10 @@ import lucuma.core.math.ProperMotion
 import lucuma.core.math.RadialVelocity
 import lucuma.core.math.RightAscension
 import lucuma.core.math.Wavelength
+import mouse.boolean.given
 import navigate.model.Distance
+import navigate.model.enums.M1Source
+import navigate.model.enums.TipTiltSource
 import navigate.server.NavigateEngine
 import navigate.server.tcs.AutoparkAowfs
 import navigate.server.tcs.AutoparkGems
@@ -44,6 +48,9 @@ import navigate.server.tcs.AutoparkPwfs2
 import navigate.server.tcs.FollowStatus
 import navigate.server.tcs.GuiderConfig
 import navigate.server.tcs.InstrumentSpecifics
+import navigate.server.tcs.M1GuideConfig
+import navigate.server.tcs.M1GuideConfig.M1GuideOn
+import navigate.server.tcs.M2GuideConfig
 import navigate.server.tcs.Origin
 import navigate.server.tcs.ParkStatus
 import navigate.server.tcs.ResetPointing
@@ -55,6 +62,7 @@ import navigate.server.tcs.SlewConfig
 import navigate.server.tcs.SlewOptions
 import navigate.server.tcs.StopGuide
 import navigate.server.tcs.Target
+import navigate.server.tcs.TelescopeGuideConfig
 import navigate.server.tcs.TrackingConfig
 import navigate.server.tcs.ZeroChopThrow
 import navigate.server.tcs.ZeroGuideOffset
@@ -236,6 +244,31 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F], logTopic: Topic[F,
         Result.failure[OperationOutcome]("oiwfsFollow parameter could not be parsed.").pure[F]
       )
 
+  def guideEnable(p: Path, env: Env): F[Result[OperationOutcome]] =
+    env
+      .get[TelescopeGuideConfig]("config")
+      .map { cfg =>
+        server
+          .enableGuide(cfg)
+          .attempt
+          .map(x =>
+            Result.success(
+              x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+            )
+          )
+      }
+      .getOrElse(
+        Result.failure[OperationOutcome]("guideEnable parameters could not be parsed.").pure[F]
+      )
+
+  def guideDisable(p: Path, env: Env): F[Result[OperationOutcome]] =
+    server.disableGuide.attempt
+      .map(x =>
+        Result.Success(
+          x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+        )
+      )
+
   val MutationType: TypeRef            = schema.ref("Mutation")
   val SubscriptionType: TypeRef        = schema.ref("Subscription")
   val ParkStatusType: TypeRef          = schema.ref("ParkStatus")
@@ -243,6 +276,8 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F], logTopic: Topic[F,
   val OperationOutcomeType: TypeRef    = schema.ref("OperationOutcome")
   val OperationResultType: TypeRef     = schema.ref("OperationResult")
   val RotatorTrackingModeType: TypeRef = schema.ref("RotatorTrackingMode")
+  val M1CorrectionSourceType: TypeRef  = schema.ref("M1CorrectionSource")
+  val M2CorrectionSourceType: TypeRef  = schema.ref("M2CorrectionSource")
 
   override val selectElaborator: SelectElaborator = SelectElaborator {
     case (MutationType, "mountFollow", List(Binding("enable", BooleanValue(en))))           =>
@@ -288,6 +323,15 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F], logTopic: Topic[F,
       } yield ()
     case (MutationType, "oiwfsFollow", List(Binding("enable", BooleanValue(en))))           =>
       Elab.env("enable" -> en)
+    case (MutationType, "guideEnable", List(Binding("config", ObjectValue(fields))))        =>
+      for {
+        x <- Elab.liftR(
+               parseGuideConfig(fields).toResult(
+                 "Could not parse guideEnable parameters."
+               )
+             )
+        _ <- Elab.env("config" -> x)
+      } yield ()
   }
 
   override val typeMappings: List[TypeMapping] = List(
@@ -304,7 +348,9 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F], logTopic: Topic[F,
         RootEffect.computeEncodable("oiwfsTarget")((p, env) => oiwfsTarget(p, env)),
         RootEffect.computeEncodable("oiwfsProbeTracking")((p, env) => oiwfsProbeTracking(p, env)),
         RootEffect.computeEncodable("oiwfsPark")((p, env) => oiwfsPark(p, env)),
-        RootEffect.computeEncodable("oiwfsFollow")((p, env) => oiwfsFollow(p, env))
+        RootEffect.computeEncodable("oiwfsFollow")((p, env) => oiwfsFollow(p, env)),
+        RootEffect.computeEncodable("guideEnable")((p, env) => guideEnable(p, env)),
+        RootEffect.computeEncodable("guideDisable")((p, env) => guideDisable(p, env))
       )
     ),
     ObjectMapping(
@@ -323,7 +369,9 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F], logTopic: Topic[F,
     LeafMapping[FollowStatus](FollowStatusType),
     LeafMapping[OperationOutcome](OperationOutcomeType),
     LeafMapping[OperationResult](OperationResultType),
-    LeafMapping[RotatorTrackingMode](RotatorTrackingModeType)
+    LeafMapping[RotatorTrackingMode](RotatorTrackingModeType),
+    LeafMapping[M1Source](M1CorrectionSourceType),
+    LeafMapping[TipTiltSource](M2CorrectionSourceType)
   )
 }
 
@@ -494,5 +542,29 @@ object NavigateMappings extends GrackleParsers {
       l.collectFirst { case ("oiwfs", ObjectValue(v)) => parseGuiderConfig(v) }.orElse(none.some)
     rc  <- l.collectFirst { case ("rotator", ObjectValue(v)) => parseRotatorConfig(v) }.flatten
   } yield SlewConfig(so, t, in, oi, rc)
+
+  def parseGuideConfig(l: List[(String, Value)]): Option[TelescopeGuideConfig] = {
+    val m2: List[TipTiltSource] = l.collectFirst { case ("m2Inputs", ListValue(v)) =>
+      v.collect { case EnumValue(v) => parseEnumerated[TipTiltSource](v) }.flattenOption
+    }.orEmpty
+
+    val m1: Option[M1Source] = l.collectFirst { case ("m1Input", EnumValue(v)) =>
+      parseEnumerated[M1Source](v)
+    }.flatten
+
+    val coma = l.collectFirst { case ("m2coma", BooleanValue(v)) => v }.exists(identity)
+
+    l.collectFirst { case ("mountOffload", BooleanValue(v)) => v }
+      .map { mount =>
+        TelescopeGuideConfig(
+          mount,
+          m1.map(M1GuideConfig.M1GuideOn(_)).getOrElse(M1GuideConfig.M1GuideOff),
+          m2.isEmpty.fold(
+            M2GuideConfig.M2GuideOff,
+            M2GuideConfig.M2GuideOn(coma && m1.isDefined, m2.toSet)
+          )
+        )
+      }
+  }
 
 }

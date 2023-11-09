@@ -8,7 +8,7 @@ import cats.effect.std.Dispatcher
 import munit.CatsEffectSuite
 import navigate.epics.Channel.StreamEvent
 import navigate.epics.EpicsSystem.TelltaleChannel
-import navigate.epics.VerifiedEpics._
+import navigate.epics.VerifiedEpics.*
 import org.epics.ca.ConnectionState
 
 import java.util.concurrent.TimeUnit

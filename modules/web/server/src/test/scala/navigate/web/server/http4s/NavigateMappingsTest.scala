@@ -31,6 +31,7 @@ import navigate.server.tcs.SlewConfig
 import navigate.server.tcs.Target
 import navigate.server.tcs.TcsNorthControllerSim
 import navigate.server.tcs.TcsSouthControllerSim
+import navigate.server.tcs.TelescopeGuideConfig
 import navigate.server.tcs.TrackingConfig
 import org.slf4j.Marker
 import org.slf4j.event.KeyValuePair
@@ -388,6 +389,40 @@ class NavigateMappingsTest extends CatsEffectSuite {
 
   }
 
+  test("Process guide disable command") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      mp  <- NavigateMappings[IO](eng, log)
+      r   <- mp.compileAndRun("mutation { guideDisable { result } }")
+    } yield assert(
+      extractResult[OperationOutcome](r, "guideDisable").exists(_ === OperationOutcome.success)
+    )
+  }
+
+  test("Process guide enable command") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      mp  <- NavigateMappings[IO](eng, log)
+      r   <- mp.compileAndRun(
+               """
+          |mutation { guideEnable( config: {
+          |    m2Inputs: [ OIWFS ]
+          |    m2Coma: true
+          |    m1Input: OIWFS
+          |    mountOffload: true
+          |  }
+          |) {
+          |  result
+          |} }
+          |""".stripMargin
+             )
+    } yield assert(
+      extractResult[OperationOutcome](r, "guideEnable").exists(_ === OperationOutcome.success)
+    )
+  }
+
 }
 
 object NavigateMappingsTest {
@@ -436,6 +471,10 @@ object NavigateMappingsTest {
     override def oiwfsFollow(enable: Boolean): IO[Unit] = IO.unit
 
     override def rotTrackingConfig(cfg: RotatorTrackConfig): IO[Unit] = IO.unit
+
+    override def enableGuide(config: TelescopeGuideConfig): IO[Unit] = IO.unit
+
+    override def disableGuide: IO[Unit] = IO.unit
   }.pure[IO]
 
   given Decoder[OperationOutcome] = Decoder.instance(h =>

@@ -3,7 +3,7 @@
 
 package navigate.web.server
 
-import cats.syntax.all._
+import cats.syntax.all.*
 import lucuma.core.util.Enumerated
 import navigate.model.ClientId
 import navigate.model.enums.DomeMode

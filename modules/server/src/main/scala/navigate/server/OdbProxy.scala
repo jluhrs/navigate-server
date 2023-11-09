@@ -4,7 +4,7 @@
 package navigate.server
 
 import cats.Applicative
-import cats.syntax.all._
+import cats.syntax.all.*
 
 trait OdbProxy[F[_]] {}
 

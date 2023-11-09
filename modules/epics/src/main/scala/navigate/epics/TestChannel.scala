@@ -8,10 +8,10 @@ import cats.effect.Concurrent
 import cats.effect.Ref
 import cats.effect.Resource
 import cats.effect.std.Dispatcher
-import cats.syntax.all._
+import cats.syntax.all.*
 import fs2.Stream
 import monocle.Lens
-import mouse.all._
+import mouse.all.*
 import navigate.epics.TestChannel.State
 import org.epics.ca.AccessRights
 import org.epics.ca.ConnectionState

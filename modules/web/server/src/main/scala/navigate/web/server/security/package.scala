@@ -3,15 +3,15 @@
 
 package navigate.web.server
 
-import cats._
-import cats.effect._
-import cats.syntax.all._
+import cats.*
+import cats.effect.*
+import cats.syntax.all.*
 import com.unboundid.ldap.sdk.LDAPURL
-import io.circe._
+import io.circe.*
 import io.circe.generic.semiauto.deriveCodec
 import io.circe.jawn.decode
-import io.circe.syntax._
-import navigate.model.config._
+import io.circe.syntax.*
+import navigate.model.config.*
 import navigate.model.security.UserDetails
 import org.typelevel.log4cats.Logger
 import pdi.jwt.Jwt

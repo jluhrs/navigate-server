@@ -5,7 +5,7 @@ package navigate.stateengine
 
 import cats.effect.IO
 import cats.effect.std.Semaphore
-import cats.syntax.all._
+import cats.syntax.all.*
 import munit.CatsEffectSuite
 
 import java.util.concurrent.TimeUnit

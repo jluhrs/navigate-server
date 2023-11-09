@@ -13,7 +13,7 @@ import navigate.model.{NavigateCommand, NavigateEvent}
 import navigate.model.NavigateEvent.{CommandFailure, CommandPaused, CommandStart, CommandSuccess}
 import navigate.model.config.NavigateEngineConfiguration
 import navigate.model.enums.{DomeMode, ShutterMode}
-import navigate.server.tcs.{InstrumentSpecifics, RotatorTrackConfig, SlewConfig, Target, TrackingConfig}
+import navigate.server.tcs.{InstrumentSpecifics, RotatorTrackConfig, SlewConfig, Target, TelescopeGuideConfig, TrackingConfig}
 import navigate.stateengine.StateEngine
 import NavigateEvent.NullEvent
 import fs2.{Pipe, Stream}
@@ -47,6 +47,8 @@ trait NavigateEngine[F[_]] {
   def oiwfsProbeTracking(config: TrackingConfig): F[Unit]
   def oiwfsPark: F[Unit]
   def oiwfsFollow(enable: Boolean): F[Unit]
+  def enableGuide(config: TelescopeGuideConfig): F[Unit]
+  def disableGuide: F[Unit]
 }
 
 object NavigateEngine {
@@ -189,6 +191,20 @@ object NavigateEngine {
       systems.tcsSouth.rotTrackingConfig(cfg),
       Focus[State](_.rotTrackingConfigInProgress)
     )
+
+    override def enableGuide(config: TelescopeGuideConfig): F[Unit] = command(
+      engine,
+      EnableGuide,
+      systems.tcsSouth.enableGuide(config),
+      Focus[State](_.enableGuide)
+    )
+
+    override def disableGuide: F[Unit] = command(
+      engine,
+      DisableGuide,
+      systems.tcsSouth.disableGuide,
+      Focus[State](_.disableGuide)
+    )
   }
 
   def build[F[_]: Concurrent: Logger](
@@ -215,6 +231,8 @@ object NavigateEngine {
     oiwfsProbeTrackingInProgress:  Boolean,
     oiwfsParkInProgress: Boolean,
     oiwfsFollowInProgress: Boolean,
+    enableGuide: Boolean,
+    disableGuide: Boolean
   ) {
     lazy val tcsActionInProgress: Boolean =
       mcsParkInProgress ||
@@ -231,7 +249,9 @@ object NavigateEngine {
         instrumentSpecificsInProgress
         oiwfsProbeTrackingInProgress ||
         oiwfsParkInProgress ||
-        oiwfsFollowInProgress
+        oiwfsFollowInProgress ||
+        enableGuide ||
+        disableGuide
   }
 
   val startState: State = State(
@@ -249,7 +269,9 @@ object NavigateEngine {
     instrumentSpecificsInProgress = false,
     oiwfsProbeTrackingInProgress = false,
     oiwfsParkInProgress = false,
-    oiwfsFollowInProgress = false
+    oiwfsFollowInProgress = false,
+    enableGuide = false,
+    disableGuide = false
   )
 
   private def command[F[_]: MonadThrow: Logger](

@@ -6,11 +6,11 @@ package navigate.server
 import cats.effect.std.Dispatcher
 import cats.effect.{Async, Resource}
 import cats.Parallel
-import cats.syntax.all._
+import cats.syntax.all.*
 import navigate.epics.EpicsService
 import navigate.model.config.{ControlStrategy, NavigateEngineConfiguration}
 import org.http4s.client.Client
-import navigate.server.tcs._
+import navigate.server.tcs.*
 import lucuma.core.enums.Site
 
 import scala.annotation.nowarn

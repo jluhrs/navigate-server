@@ -5,7 +5,7 @@ package navigate.stateengine
 
 import cats.effect.Concurrent
 import cats.effect.std.Queue
-import cats.syntax.all._
+import cats.syntax.all.*
 import fs2.Stream
 
 trait StateEngine[F[_], S, O] {
