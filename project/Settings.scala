@@ -89,17 +89,17 @@ object Settings {
     val gppUI   = "0.0.3"
 
     // Lucuma
-    val lucumaCore    = "0.88.0"
+    val lucumaCore    = "0.88.2"
     val lucumaUI      = "0.66.0"
     val lucumaSchemas = "0.63.0"
 
     val grackle = "0.16.0"
 
-    val graphQLRoutes = "0.8.1"
+    val graphQLRoutes = "0.8.2"
 
     val clue = "0.24.1"
 
-    val sttp = "3.9.0"
+    val sttp = "3.9.1"
 
     // Pure JS libraries
     val fomanticUI = "2.8.7"
