@@ -7,10 +7,8 @@ import cats.{Applicative, Monad, Parallel}
 import navigate.epics.EpicsSystem.TelltaleChannel
 import navigate.epics.VerifiedEpics.VerifiedEpics
 import navigate.epics.{TestChannel, VerifiedEpics}
-import navigate.model.enums.{DomeMode, ShutterMode}
 import navigate.server.acm.{CadDirective, GeminiApplyCommand}
-import navigate.server.epicsdata.{BinaryOnOff, BinaryYesNo}
-import navigate.server.tcs.TcsEpicsSystem.{EnclosureChannels, OriginChannels, ProbeChannels, ProbeTrackingChannels, RotatorChannels, SlewChannels, TargetChannels, TcsChannels, buildProbeTrackingChannels}
+import navigate.server.tcs.TcsEpicsSystem.{EnclosureChannels, M1GuideConfigChannels, M2GuideConfigChannels, MountGuideChannels, OriginChannels, ProbeChannels, ProbeTrackingChannels, RotatorChannels, SlewChannels, TargetChannels, TcsChannels}
 import navigate.server.ApplyCommandResult
 import monocle.{Focus, Lens}
 
@@ -115,7 +113,14 @@ object TestTcsEpicsSystem {
     origin:           OriginChannelState,
     focusOffset:      TestChannel.State[String],
     oiwfsTracking:    ProbeTrackingState,
-    oiwfsProbe:       ProbeState
+    oiwfsProbe:       ProbeState,
+    m1Guide: TestChannel.State[String],
+    m1GuideConfig: M1GuideConfigState,
+    m2Guide: TestChannel.State[String],
+    m2GuideMode: TestChannel.State[String],
+    m2GuideConfig: M2GuideConfigState,
+    m2GuideReset: TestChannel.State[CadDirective],
+    mountGuide: MountGuideState
   )
 
   val defaultState: State = State(
@@ -206,7 +211,14 @@ object TestTcsEpicsSystem {
       nodBchopA = TestChannel.State.default,
       nodBchopB = TestChannel.State.default
     ),
-    oiwfsProbe = ProbeState(parkDir = TestChannel.State.default, follow = TestChannel.State.default)
+    oiwfsProbe = ProbeState(parkDir = TestChannel.State.default, follow = TestChannel.State.default),
+    m1Guide = TestChannel.State.default,
+    m1GuideConfig = M1GuideConfigState.default,
+    m2Guide = TestChannel.State.default,
+    m2GuideMode = TestChannel.State.default,
+    m2GuideConfig = M2GuideConfigState.default,
+    m2GuideReset = TestChannel.State.default,
+    mountGuide = MountGuideState.default
   )
 
   def buildEnclosureChannels[F[_]: Applicative](s: Ref[F, State]): EnclosureChannels[F] =
@@ -341,6 +353,93 @@ object TestTcsEpicsSystem {
     new TestChannel[F, State, String](s, l.andThen(Focus[ProbeState](_.follow)))
   )
 
+  case class M1GuideConfigState(
+    weighting: TestChannel.State[String],
+    source: TestChannel.State[String],
+    frames: TestChannel.State[String],
+    filename: TestChannel.State[String]
+  )
+
+  object M1GuideConfigState {
+    val default:M1GuideConfigState = M1GuideConfigState(
+      TestChannel.State.default,
+      TestChannel.State.default,
+      TestChannel.State.default,
+      TestChannel.State.default
+    )
+  }
+
+  def buildM1GuideConfigChannels[F[_]: Applicative](
+    s: Ref[F, State],
+    l: Lens[State, M1GuideConfigState]
+  ): M1GuideConfigChannels[F] = M1GuideConfigChannels(
+    new TestChannel[F, State, String](s, l.andThen(Focus[M1GuideConfigState](_.weighting))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[M1GuideConfigState](_.source))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[M1GuideConfigState](_.frames))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[M1GuideConfigState](_.filename)))
+  )
+
+  case class M2GuideConfigState(
+    source: TestChannel.State[String],
+    samplefreq: TestChannel.State[String],
+    filter: TestChannel.State[String],
+    freq1: TestChannel.State[String],
+    freq2: TestChannel.State[String],
+    beam: TestChannel.State[String],
+    reset: TestChannel.State[String]
+  )
+
+  object M2GuideConfigState {
+    val default: M2GuideConfigState = M2GuideConfigState(
+      TestChannel.State.default,
+      TestChannel.State.default,
+      TestChannel.State.default,
+      TestChannel.State.default,
+      TestChannel.State.default,
+      TestChannel.State.default,
+      TestChannel.State.default
+    )
+  }
+
+  def buildM2GuideConfigChannels[F[_]: Applicative](
+    s: Ref[F, State],
+    l: Lens[State, M2GuideConfigState]
+  ): M2GuideConfigChannels[F] = M2GuideConfigChannels(
+    new TestChannel[F, State, String](s, l.andThen(Focus[M2GuideConfigState](_.source))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[M2GuideConfigState](_.samplefreq))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[M2GuideConfigState](_.filter))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[M2GuideConfigState](_.freq1))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[M2GuideConfigState](_.freq2))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[M2GuideConfigState](_.beam))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[M2GuideConfigState](_.reset)))
+  )
+
+  case class MountGuideState(
+    mode: TestChannel.State[String],
+    source: TestChannel.State[String],
+    p1weight: TestChannel.State[String],
+    p2weight: TestChannel.State[String]
+  )
+
+  object MountGuideState{
+    val default: MountGuideState = MountGuideState(
+      TestChannel.State.default,
+      TestChannel.State.default,
+      TestChannel.State.default,
+      TestChannel.State.default
+    )
+  }
+
+  def buildMountGuideChannels[F[_]: Applicative](
+    s: Ref[F, State],
+    l: Lens[State, MountGuideState]
+  ): MountGuideChannels[F] = MountGuideChannels(
+    new TestChannel[F, State, String](s, l.andThen(Focus[MountGuideState](_.mode))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[MountGuideState](_.source))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[MountGuideState](_.p1weight))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[MountGuideState](_.p2weight)))
+  )
+
   def buildChannels[F[_]: Applicative](s: Ref[F, State]): TcsChannels[F] =
     TcsChannels(
       telltale =
@@ -361,7 +460,14 @@ object TestTcsEpicsSystem {
       origin = buildOriginChannels(s),
       focusOffset = new TestChannel[F, State, String](s, Focus[State](_.focusOffset)),
       oiProbeTracking = buildProbeTrackingChannels(s, Focus[State](_.oiwfsTracking)),
-      oiProbe = buildProbeChannels(s, Focus[State](_.oiwfsProbe))
+      oiProbe = buildProbeChannels(s, Focus[State](_.oiwfsProbe)),
+      m1Guide = new TestChannel[F, State, String](s, Focus[State](_.m1Guide)),
+      m1GuideConfig = buildM1GuideConfigChannels(s, Focus[State](_.m1GuideConfig)),
+      m2Guide = new TestChannel[F, State, String](s, Focus[State](_.m2Guide)),
+      m2GuideMode = new TestChannel[F, State, String](s, Focus[State](_.m2GuideMode)),
+      m2GuideConfig = buildM2GuideConfigChannels(s, Focus[State](_.m2GuideConfig)),
+      m2GuideReset = new TestChannel[F, State, CadDirective](s, Focus[State](_.m2GuideReset)),
+      mountGuide = buildMountGuideChannels(s, Focus[State](_.mountGuide))
     )
 
   def build[F[_]: Monad: Parallel](s: Ref[F, State]): TcsEpicsSystem[F] =
