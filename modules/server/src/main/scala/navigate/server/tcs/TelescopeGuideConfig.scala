@@ -4,17 +4,11 @@
 package navigate.server.tcs
 
 import cats.{Eq, Show}
+import cats.derived.*
 
 /** Data type for guide config. */
-final case class TelescopeGuideConfig(
+case class TelescopeGuideConfig(
   mountGuide: Boolean,
   m1Guide:    M1GuideConfig,
   m2Guide:    M2GuideConfig
-)
-
-object TelescopeGuideConfig {
-  implicit val eq: Eq[TelescopeGuideConfig] =
-    Eq.by(x => (x.mountGuide, x.m1Guide, x.m2Guide))
-
-  implicit val show: Show[TelescopeGuideConfig] = Show.fromToString[TelescopeGuideConfig]
-}
+) derives Eq, Show

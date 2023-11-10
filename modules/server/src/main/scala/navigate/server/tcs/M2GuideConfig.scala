@@ -5,29 +5,19 @@ package navigate.server.tcs
 
 import cats.{Show, Eq}
 import cats.syntax.all.*
+import cats.derived.*
 import navigate.model.enums.TipTiltSource
 
 /** Data type for M2 guide config. */
-sealed trait M2GuideConfig extends Product with Serializable {
+sealed trait M2GuideConfig extends Product with Serializable derives Eq, Show {
   def uses(s: TipTiltSource): Boolean
 }
 
 object M2GuideConfig {
-  case object M2GuideOff                                                    extends M2GuideConfig {
+  case object M2GuideOff extends M2GuideConfig derives Eq, Show {
     override def uses(s: TipTiltSource): Boolean = false
   }
-  final case class M2GuideOn(coma: Boolean, sources: Set[TipTiltSource]) extends M2GuideConfig {
+  case class M2GuideOn(coma: Boolean, sources: Set[TipTiltSource]) extends M2GuideConfig derives Eq, Show {
     override def uses(s: TipTiltSource): Boolean = sources.contains(s)
-  }
-
-  object M2GuideOn {
-    implicit val eq: Eq[M2GuideOn] = Eq.by(x => (x.coma, x.sources))
-  }
-
-  implicit val show: Show[M2GuideConfig] = Show.fromToString
-  implicit val eq: Eq[M2GuideConfig]     = Eq.instance {
-    case (M2GuideOff, M2GuideOff)                   => true
-    case (a @ M2GuideOn(_, _), b @ M2GuideOn(_, _)) => a === b
-    case _                                          => false
   }
 }

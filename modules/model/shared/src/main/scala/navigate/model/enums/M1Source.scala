@@ -9,6 +9,7 @@ import lucuma.core.util.Enumerated
 sealed abstract class M1Source(val tag: String) extends Product with Serializable
 
 object M1Source {
+// Commented values will be restored when implementing support for each guider
 //  case object PWFS1 extends M1Source("PWFS1")
 //  case object PWFS2 extends M1Source("PWFS2")
   case object OIWFS extends M1Source("OIWFS")
