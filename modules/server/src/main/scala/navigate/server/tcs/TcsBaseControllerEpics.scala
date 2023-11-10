@@ -3,7 +3,9 @@
 
 package navigate.server.tcs
 import cats.Parallel
+import cats.syntax.all.*
 import cats.effect.Async
+import mouse.boolean.given
 import navigate.server.{ApplyCommandResult, ConnectionTimeout}
 
 import scala.concurrent.duration.FiniteDuration
@@ -310,5 +312,72 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
     setRotatorTrackingConfig(cfg)(tcsEpics.startCommand(timeout))
       .post
       .verifiedRun(ConnectionTimeout)
+
+  override def enableGuide(config: TelescopeGuideConfig): F[ApplyCommandResult] = {
+    val m1 = (x: TcsCommands[F]) => config.m1Guide match {
+      case M1GuideConfig.M1GuideOff => x.m1GuideCommand.state(false)
+      case M1GuideConfig.M1GuideOn(source) => x.m1GuideCommand.state(true)
+        .m1GuideConfigCommand.source(source.tag)
+        .m1GuideConfigCommand.weighting("none")
+        .m1GuideConfigCommand.frames(1)
+        .m1GuideConfigCommand.filename("")
+    }
+
+    config.m2Guide match {
+      case M2GuideConfig.M2GuideOff => m1(tcsEpics.startCommand(timeout))
+        .m2GuideCommand.state(false)
+        .m2GuideModeCommand.coma(false)
+        .mountGuideCommand.mode(config.mountGuide)
+        .mountGuideCommand.source("SCS")
+        .post
+        .verifiedRun(ConnectionTimeout)
+      case M2GuideConfig.M2GuideOn(coma, sources) =>
+        val requireReset: Boolean = true // Use current state
+        val beams = List("A", "B")
+        sources.flatMap(x => beams.map(y => (x, y))).foldLeft(
+          requireReset.fold(
+            tcsEpics.startCommand(timeout)
+              .m2GuideResetCommand.mark
+              .post
+              .verifiedRun(ConnectionTimeout),
+            ApplyCommandResult.Completed.pure[F]
+          )
+        ) { case (t, (src, beam)) =>
+          t.flatMap { r =>
+            // Set tip-tilt guide for each source on each beam
+            // TCC adds a delay between each call. Is it necessary?
+            (r === ApplyCommandResult.Completed).fold(
+              tcsEpics.startCommand(timeout)
+                .m2GuideConfigCommand.source(src.tag)
+                .m2GuideConfigCommand.sampleFreq(200.0)
+                .m2GuideConfigCommand.filter("raw")
+                .m2GuideConfigCommand.beam(beam)
+                .m2GuideConfigCommand.reset(false)
+                .post
+                .verifiedRun(ConnectionTimeout),
+              r.pure[F]
+            )
+          }.flatMap { r =>
+            (r === ApplyCommandResult.Completed).fold(
+              m1(tcsEpics.startCommand(timeout))
+                .m2GuideCommand.state(true)
+                .m2GuideModeCommand.coma(coma)
+                .mountGuideCommand.mode(config.mountGuide)
+                .mountGuideCommand.source("SCS")
+                .post
+                .verifiedRun(ConnectionTimeout),
+              ApplyCommandResult.Completed.pure[F]
+            )
+          }
+        }
+    }
+  }
+
+  override def disableGuide: F[ApplyCommandResult] = tcsEpics.startCommand(timeout)
+    .m1GuideCommand.state(false)
+    .m2GuideCommand.state(false)
+    .mountGuideCommand.mode(false)
+    .post
+    .verifiedRun(ConnectionTimeout)
 
 }

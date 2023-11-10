@@ -5,7 +5,7 @@ package navigate.epics
 
 import cats.effect.Async
 import cats.effect.Resource
-import cats.syntax.option._
+import cats.syntax.option.*
 import org.epics.ca.Context
 import org.epics.ca.impl.LibraryConfiguration.PropertyNames.CA_REPEATER_DISABLE
 import org.epics.ca.impl.ProtocolConfiguration.PropertyNames.EPICS_CA_ADDR_LIST

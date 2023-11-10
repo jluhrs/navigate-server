@@ -6,15 +6,15 @@ package navigate.server.acm
 import cats.{Applicative, Monad}
 import cats.effect.{Resource, Temporal}
 import cats.effect.std.Dispatcher
-import cats.effect.syntax.temporal._
-import cats.syntax.all._
+import cats.effect.syntax.temporal.*
+import cats.syntax.all.*
 import navigate.epics.Channel.StreamEvent
-import navigate.epics.VerifiedEpics._
+import navigate.epics.VerifiedEpics.*
 import navigate.server.ApplyCommandResult
 import navigate.epics.{Channel, EpicsService, VerifiedEpics}
 import navigate.epics.EpicsSystem.TelltaleChannel
 import fs2.Stream
-import fs2.RaiseThrowable._
+import fs2.RaiseThrowable.*
 import mouse.all.booleanSyntaxMouse
 
 import scala.concurrent.duration.FiniteDuration

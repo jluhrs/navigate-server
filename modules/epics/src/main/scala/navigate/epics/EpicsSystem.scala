@@ -5,8 +5,8 @@ package navigate.epics
 
 import cats.Parallel
 import cats.effect.Async
-import cats.syntax.all._
-import mouse.all._
+import cats.syntax.all.*
+import mouse.all.*
 import navigate.epics.EpicsSystem.TelltaleChannel
 import org.epics.ca.ConnectionState
 

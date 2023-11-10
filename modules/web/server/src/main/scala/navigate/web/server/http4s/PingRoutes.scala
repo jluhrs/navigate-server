@@ -4,11 +4,11 @@
 package navigate.web.server.http4s
 
 import cats.effect.Sync
-import cats.syntax.all._
+import cats.syntax.all.*
 import navigate.web.server.security.AuthenticationService
 import navigate.web.server.security.Http4sAuthentication
-import org.http4s._
-import org.http4s.dsl._
+import org.http4s.*
+import org.http4s.dsl.*
 
 import AuthenticationService.AuthResult
 

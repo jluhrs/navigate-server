@@ -3,7 +3,7 @@
 
 package navigate.model.config
 
-import cats.syntax.all._
+import cats.syntax.all.*
 import lucuma.core.util.Enumerated
 
 sealed abstract class ControlStrategy(val tag: String) extends Product with Serializable

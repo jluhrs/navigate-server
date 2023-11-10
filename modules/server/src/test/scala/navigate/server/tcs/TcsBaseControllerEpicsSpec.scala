@@ -4,10 +4,9 @@
 package navigate.server.tcs
 
 import cats.effect.{IO, Ref}
-import cats.effect.syntax.all.*
 import cats.syntax.all.*
 import mouse.boolean.given
-import navigate.model.enums.{DomeMode, ShutterMode}
+import navigate.model.enums.{DomeMode, M1Source, ShutterMode, TipTiltSource}
 import navigate.model.Distance
 import navigate.server.acm.CadDirective
 import navigate.server.epicsdata.{BinaryOnOff, BinaryYesNo}
@@ -17,7 +16,7 @@ import lucuma.core.math.{Angle, Coordinates, Epoch, Wavelength}
 import lucuma.core.util.Enumerated
 import munit.CatsEffectSuite
 import navigate.server.epicsdata
-import squants.space.AngleConversions.*
+import navigate.server.tcs.M2GuideConfig.M2GuideOn
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
@@ -94,17 +93,17 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assert(rs.enclosure.ecsShutterEnable.connected)
       assert(rs.enclosure.ecsVentGateEast.connected)
       assert(rs.enclosure.ecsVentGateWest.connected)
-      assertEquals(rs.enclosure.ecsDomeMode.value.map(Enumerated[DomeMode].unsafeFromTag),
+      assertEquals(rs.enclosure.ecsDomeMode.value.flatMap(Enumerated[DomeMode].fromTag),
                    DomeMode.MinVibration.some
       )
-      assertEquals(rs.enclosure.ecsShutterMode.value.map(Enumerated[ShutterMode].unsafeFromTag),
+      assertEquals(rs.enclosure.ecsShutterMode.value.flatMap(Enumerated[ShutterMode].fromTag),
                    ShutterMode.Tracking.some
       )
       assert(rs.enclosure.ecsSlitHeight.value.exists(x => compareDouble(x.toDouble, testHeight)))
-      assertEquals(rs.enclosure.ecsDomeEnable.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+      assertEquals(rs.enclosure.ecsDomeEnable.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.On.some
       )
-      assertEquals(rs.enclosure.ecsShutterEnable.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+      assertEquals(rs.enclosure.ecsShutterEnable.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.On.some
       )
       assert(
@@ -174,7 +173,7 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
                       target,
                       instrumentSpecifics,
                       GuiderConfig(oiwfsTarget, oiwfsTracking).some,
-                      RotatorTrackConfig(Angle.Angle90, RotatorTrackConfig.Tracking)
+                      RotatorTrackConfig(Angle.Angle90, RotatorTrackingMode.Tracking)
                     )
                   )
       rs       <- st.get
@@ -250,16 +249,16 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assert(rs.oiwfsTracking.nodAchopB.connected)
       assert(rs.oiwfsTracking.nodBchopA.connected)
       assert(rs.oiwfsTracking.nodBchopB.connected)
-      assertEquals(rs.oiwfsTracking.nodAchopA.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+      assertEquals(rs.oiwfsTracking.nodAchopA.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    oiwfsTracking.nodAchopA.fold(BinaryOnOff.On, BinaryOnOff.Off).some
       )
-      assertEquals(rs.oiwfsTracking.nodAchopB.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+      assertEquals(rs.oiwfsTracking.nodAchopB.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    oiwfsTracking.nodAchopB.fold(BinaryOnOff.On, BinaryOnOff.Off).some
       )
-      assertEquals(rs.oiwfsTracking.nodBchopA.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+      assertEquals(rs.oiwfsTracking.nodBchopA.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    oiwfsTracking.nodBchopA.fold(BinaryOnOff.On, BinaryOnOff.Off).some
       )
-      assertEquals(rs.oiwfsTracking.nodBchopB.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+      assertEquals(rs.oiwfsTracking.nodBchopB.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    oiwfsTracking.nodBchopB.fold(BinaryOnOff.On, BinaryOnOff.Off).some
       )
 
@@ -280,53 +279,53 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assert(rs.slew.autoparkOiwfs.connected)
       assert(rs.slew.autoparkGems.connected)
       assert(rs.slew.autoparkAowfs.connected)
-      assertEquals(rs.slew.zeroChopThrow.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+      assertEquals(rs.slew.zeroChopThrow.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.On.some
       )
-      assertEquals(rs.slew.zeroSourceOffset.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+      assertEquals(rs.slew.zeroSourceOffset.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.Off.some
       )
-      assertEquals(rs.slew.zeroSourceDiffTrack.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+      assertEquals(rs.slew.zeroSourceDiffTrack.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.On.some
       )
-      assertEquals(rs.slew.zeroMountOffset.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+      assertEquals(rs.slew.zeroMountOffset.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.Off.some
       )
-      assertEquals(rs.slew.zeroMountDiffTrack.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+      assertEquals(rs.slew.zeroMountDiffTrack.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.On.some
       )
       assertEquals(
-        rs.slew.shortcircuitTargetFilter.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+        rs.slew.shortcircuitTargetFilter.value.flatMap(Enumerated[BinaryOnOff].fromTag),
         BinaryOnOff.Off.some
       )
-      assertEquals(rs.slew.shortcircuitMountFilter.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+      assertEquals(rs.slew.shortcircuitMountFilter.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.On.some
       )
-      assertEquals(rs.slew.resetPointing.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+      assertEquals(rs.slew.resetPointing.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.Off.some
       )
-      assertEquals(rs.slew.stopGuide.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+      assertEquals(rs.slew.stopGuide.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.On.some
       )
-      assertEquals(rs.slew.zeroGuideOffset.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+      assertEquals(rs.slew.zeroGuideOffset.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.Off.some
       )
-      assertEquals(rs.slew.zeroInstrumentOffset.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+      assertEquals(rs.slew.zeroInstrumentOffset.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.On.some
       )
-      assertEquals(rs.slew.autoparkPwfs1.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+      assertEquals(rs.slew.autoparkPwfs1.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.Off.some
       )
-      assertEquals(rs.slew.autoparkPwfs2.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+      assertEquals(rs.slew.autoparkPwfs2.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.On.some
       )
-      assertEquals(rs.slew.autoparkOiwfs.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+      assertEquals(rs.slew.autoparkOiwfs.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.Off.some
       )
-      assertEquals(rs.slew.autoparkGems.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+      assertEquals(rs.slew.autoparkGems.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.On.some
       )
-      assertEquals(rs.slew.autoparkAowfs.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+      assertEquals(rs.slew.autoparkAowfs.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.Off.some
       )
 
@@ -504,16 +503,16 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assert(rs.oiwfsTracking.nodAchopB.connected)
       assert(rs.oiwfsTracking.nodBchopA.connected)
       assert(rs.oiwfsTracking.nodBchopB.connected)
-      assertEquals(rs.oiwfsTracking.nodAchopA.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+      assertEquals(rs.oiwfsTracking.nodAchopA.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    trackingConfig.nodAchopA.fold(BinaryOnOff.On, BinaryOnOff.Off).some
       )
-      assertEquals(rs.oiwfsTracking.nodAchopB.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+      assertEquals(rs.oiwfsTracking.nodAchopB.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    trackingConfig.nodAchopB.fold(BinaryOnOff.On, BinaryOnOff.Off).some
       )
-      assertEquals(rs.oiwfsTracking.nodBchopA.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+      assertEquals(rs.oiwfsTracking.nodBchopA.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    trackingConfig.nodBchopA.fold(BinaryOnOff.On, BinaryOnOff.Off).some
       )
-      assertEquals(rs.oiwfsTracking.nodBchopB.value.map(Enumerated[BinaryOnOff].unsafeFromTag),
+      assertEquals(rs.oiwfsTracking.nodBchopB.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    trackingConfig.nodBchopB.fold(BinaryOnOff.On, BinaryOnOff.Off).some
       )
     }
@@ -542,8 +541,61 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       r2 <- st.get
     } yield {
       assert(r1.oiwfsProbe.follow.connected)
-      assertEquals(r1.oiwfsProbe.follow.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.On.some)
-      assertEquals(r2.oiwfsProbe.follow.value.map(Enumerated[BinaryOnOff].unsafeFromTag), BinaryOnOff.Off.some)
+      assertEquals(r1.oiwfsProbe.follow.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
+      assertEquals(r2.oiwfsProbe.follow.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.Off.some)
+    }
+  }
+
+  test("enable and disable guiding") {
+    val guideCfg = TelescopeGuideConfig(
+      mountGuide = true,
+      m1Guide = M1GuideConfig.M1GuideOn(M1Source.OIWFS),
+      m2Guide = M2GuideOn(true, Set(TipTiltSource.OIWFS))
+    )
+
+    for {
+      x <- createController
+      (st, ctr) = x
+      _ <- ctr.enableGuide(guideCfg)
+      r1 <- st.get
+      _ <- ctr.disableGuide
+      r2 <- st.get
+    } yield {
+      assert(r1.m1Guide.connected)
+      assert(r1.m1GuideConfig.source.connected)
+      assert(r1.m1GuideConfig.frames.connected)
+      assert(r1.m1GuideConfig.weighting.connected)
+      assert(r1.m1GuideConfig.filename.connected)
+      assert(r1.m2Guide.connected)
+      assert(r1.m2GuideConfig.source.connected)
+      assert(r1.m2GuideConfig.beam.connected)
+      assert(r1.m2GuideConfig.filter.connected)
+      assert(r1.m2GuideConfig.samplefreq.connected)
+      assert(r1.m2GuideConfig.reset.connected)
+      assert(r1.m2GuideMode.connected)
+      assert(r1.m2GuideReset.connected)
+      assert(r1.mountGuide.mode.connected)
+      assert(r1.mountGuide.source.connected)
+
+      assertEquals(r1.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
+      assertEquals(r1.m1GuideConfig.source.value.flatMap(Enumerated[M1Source].fromTag), M1Source.OIWFS.some)
+      assertEquals(r1.m1GuideConfig.frames.value.flatMap(_.toIntOption), 1.some)
+      assertEquals(r1.m1GuideConfig.weighting.value, "none".some)
+      assertEquals(r1.m1GuideConfig.filename.value, "".some)
+      assertEquals(r1.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
+      assertEquals(r1.m2GuideConfig.source.value.flatMap(Enumerated[TipTiltSource].fromTag), TipTiltSource.OIWFS.some)
+      assertEquals(r1.m2GuideConfig.beam.value, "B".some)
+      assertEquals(r1.m2GuideConfig.filter.value, "raw".some)
+      assertEquals(r1.m2GuideConfig.samplefreq.value.flatMap(_.toDoubleOption), 200.0.some)
+      assertEquals(r1.m2GuideConfig.reset.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.Off.some)
+      assertEquals(r1.m2GuideMode.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
+      assertEquals(r1.m2GuideReset.value, CadDirective.MARK.some)
+      assertEquals(r1.mountGuide.mode.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
+      assertEquals(r1.mountGuide.source.value, "SCS".some)
+
+      assertEquals(r2.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.Off.some)
+      assertEquals(r2.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.Off.some)
+      assertEquals(r2.mountGuide.mode.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.Off.some)
     }
   }
 

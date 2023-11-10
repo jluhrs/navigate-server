@@ -3,8 +3,8 @@
 
 package navigate
 
-import cats.syntax.foldable._
-import cats.syntax.option._
+import cats.syntax.foldable.*
+import cats.syntax.option.*
 import lucuma.core.util.Enumerated
 
 import java.lang.{Boolean => JBoolean}

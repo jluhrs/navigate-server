@@ -4,7 +4,7 @@
 package navigate.web.server.security
 
 import cats.Applicative
-import cats.syntax.all._
+import cats.syntax.all.*
 import navigate.model.security.UserDetails
 
 import AuthenticationService.AuthResult

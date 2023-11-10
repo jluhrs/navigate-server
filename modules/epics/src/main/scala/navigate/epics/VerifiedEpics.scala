@@ -11,9 +11,9 @@ import cats.effect.Async
 import cats.effect.Concurrent
 import cats.effect.Resource
 import cats.effect.std.Dispatcher
-import cats.syntax.all._
+import cats.syntax.all.*
 import fs2.Stream
-import mouse.boolean._
+import mouse.boolean.*
 import navigate.epics.Channel.StreamEvent
 import navigate.epics.EpicsSystem.TelltaleChannel
 

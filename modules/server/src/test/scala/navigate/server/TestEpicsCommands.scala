@@ -4,7 +4,7 @@
 package navigate.server
 
 import cats.data.State
-import cats.syntax.all._
+import cats.syntax.all.*
 import navigate.server.tcs.TcsEpicsSystem.BaseCommand
 import monocle.Lens
 

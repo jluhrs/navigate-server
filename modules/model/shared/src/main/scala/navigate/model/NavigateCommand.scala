@@ -58,6 +58,8 @@ object NavigateCommand {
   case object OiwfsTarget                 extends NavigateCommand
   case object OiwfsProbeTracking          extends NavigateCommand
   case object RotatorTrackingConfig       extends NavigateCommand
+  case object EnableGuide                 extends NavigateCommand
+  case object DisableGuide                extends NavigateCommand
 
   given Eq[NavigateCommand] = Eq.fromUniversalEquals
 
@@ -100,6 +102,8 @@ object NavigateCommand {
       case OiwfsTarget           => "OIWFS"
       case OiwfsProbeTracking    => "OIWFS Probe Tracking"
       case RotatorTrackingConfig => "CR Tracking Configuration"
+      case EnableGuide           => "Guide Enable"
+      case DisableGuide          => "Guide Disable"
     }
   }
 

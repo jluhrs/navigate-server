@@ -13,7 +13,7 @@ import scala.concurrent.TimeoutException
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.duration.SECONDS
 
-import TestEnumerated._
+import TestEnumerated.*
 
 class EpicsServiceSpec extends CatsEffectSuite {
 

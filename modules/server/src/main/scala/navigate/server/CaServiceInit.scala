@@ -4,7 +4,7 @@
 package navigate.server
 
 import cats.effect.{Async, Resource}
-import cats.syntax.all._
+import cats.syntax.all.*
 import navigate.epics.EpicsService
 import navigate.model.config.NavigateEngineConfiguration
 import org.typelevel.log4cats.Logger

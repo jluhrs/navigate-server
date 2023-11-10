@@ -7,12 +7,12 @@ import cats.Eq
 import cats.effect.Async
 import cats.effect.Concurrent
 import cats.effect.Resource
-import cats.effect.implicits._
+import cats.effect.implicits.*
 import cats.effect.std.Dispatcher
 import cats.effect.std.Queue
-import cats.implicits._
+import cats.implicits.*
 import fs2.Stream
-import mouse.all._
+import mouse.all.*
 import navigate.epics.Channel.StreamEvent
 import navigate.epics.RemoteChannel.RemoteChannelImpl
 import org.epics.ca.Severity

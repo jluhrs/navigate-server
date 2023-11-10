@@ -32,6 +32,8 @@ trait TcsBaseController[F[_]] {
   def oiwfsProbeTracking(config: TrackingConfig): F[ApplyCommandResult]
   def oiwfsPark: F[ApplyCommandResult]
   def oiwfsFollow(enable: Boolean): F[ApplyCommandResult]
+  def enableGuide(config: TelescopeGuideConfig): F[ApplyCommandResult]
+  def disableGuide: F[ApplyCommandResult]
 }
 
 object TcsBaseController {

@@ -3,8 +3,8 @@
 
 package navigate.epics
 import cats.effect.Async
-import cats.effect.implicits._
-import cats.implicits._
+import cats.effect.implicits.*
+import cats.implicits.*
 import cats.kernel.Eq
 import org.epics.ca.AccessRights
 import org.epics.ca.ConnectionState

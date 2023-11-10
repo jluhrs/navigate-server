@@ -61,4 +61,8 @@ class TcsBaseControllerSim[F[_]: Applicative] extends TcsBaseController[F] {
   override def oiwfsFollow(enable: Boolean): F[ApplyCommandResult] = Applicative[F].pure(ApplyCommandResult.Completed)
 
   override def rotTrackingConfig(cfg: RotatorTrackConfig): F[ApplyCommandResult] = Applicative[F].pure(ApplyCommandResult.Completed)
+
+  override def enableGuide(config: TelescopeGuideConfig): F[ApplyCommandResult] = Applicative[F].pure(ApplyCommandResult.Completed)
+
+  override def disableGuide: F[ApplyCommandResult] = Applicative[F].pure(ApplyCommandResult.Completed)
 }

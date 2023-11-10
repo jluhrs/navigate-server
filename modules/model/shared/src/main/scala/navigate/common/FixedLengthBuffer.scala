@@ -9,9 +9,9 @@ import cats.Eval
 import cats.Order
 import cats.Traverse
 import cats.data.Chain
-import cats.data.Chain._
-import cats.syntax.all._
-import mouse.all._
+import cats.data.Chain.*
+import cats.syntax.all.*
+import mouse.all.*
 
 object FixedLengthBuffer {
   private case class FixedLengthBufferImpl[A](maxLength: Int, data: Chain[A])

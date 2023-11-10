@@ -1,7 +1,7 @@
-import Settings.Libraries._
-import sbt.Keys._
-import sbt._
-import com.timushev.sbt.updates.UpdatesPlugin.autoImport._
+import Settings.Libraries.*
+import sbt.Keys.*
+import sbt.*
+import com.timushev.sbt.updates.UpdatesPlugin.autoImport.*
 
 /**
  * Define tasks and settings used by module definitions
