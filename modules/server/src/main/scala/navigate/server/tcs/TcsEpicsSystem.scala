@@ -57,7 +57,15 @@ object TcsEpicsSystem {
     val m1GuideCmd: Command1Channels[F, BinaryOnOff]
     val m2GuideCmd: Command1Channels[F, BinaryOnOff]
     val m2GuideModeCmd: Command1Channels[F, BinaryOnOff]
-    val m2GuideConfigCmd: Command7Channels[F, String, Double, String, Double, Double, String, BinaryOnOff]
+    val m2GuideConfigCmd: Command7Channels[F,
+                                           String,
+                                           Double,
+                                           String,
+                                           Double,
+                                           Double,
+                                           String,
+                                           BinaryOnOff
+    ]
     val m2GuideResetCmd: ParameterlessCommandChannels[F]
     val mountGuideCmd: Command4Channels[F, BinaryOnOff, String, Double, Double]
 
@@ -295,9 +303,7 @@ object TcsEpicsSystem {
 
   case class TcsChannels[F[_]](
     /**
-     * List of all TcsChannels.
-     * Channel -> Defines a raw channel
-     * Other cases -> Group of channels
+     * List of all TcsChannels. Channel -> Defines a raw channel Other cases -> Group of channels
      */
     telltale:         TelltaleChannel[F],
     telescopeParkDir: Channel[F, CadDirective],
@@ -328,15 +334,15 @@ object TcsEpicsSystem {
   // Next case classes are the channel groups
   case class M1GuideConfigChannels[F[_]](
     weighting: Channel[F, String],
-    source: Channel[F, String],
-    frames: Channel[F, String],
-    filename: Channel[F, String]
+    source:    Channel[F, String],
+    frames:    Channel[F, String],
+    filename:  Channel[F, String]
   )
 
   object M1GuideConfigChannels {
     def build[F[_]](
       service: EpicsService[F],
-      top: String
+      top:     String
     ): Resource[F, M1GuideConfigChannels[F]] = for {
       w <- service.getChannel[String](s"${top}m1GuideConfig.A")
       s <- service.getChannel[String](s"${top}m1GuideConfig.B")
@@ -346,19 +352,19 @@ object TcsEpicsSystem {
   }
 
   case class M2GuideConfigChannels[F[_]](
-    source: Channel[F, String],
+    source:     Channel[F, String],
     samplefreq: Channel[F, String],
-    filter: Channel[F, String],
-    freq1: Channel[F, String],
-    freq2: Channel[F, String],
-    beam: Channel[F, String],
-    reset: Channel[F, String]
+    filter:     Channel[F, String],
+    freq1:      Channel[F, String],
+    freq2:      Channel[F, String],
+    beam:       Channel[F, String],
+    reset:      Channel[F, String]
   )
 
   object M2GuideConfigChannels {
     def build[F[_]](
       service: EpicsService[F],
-      top: String
+      top:     String
     ): Resource[F, M2GuideConfigChannels[F]] = for {
       sr <- service.getChannel[String](s"${top}m2GuideConfig.A")
       sf <- service.getChannel[String](s"${top}m2GuideConfig.B")
@@ -371,16 +377,16 @@ object TcsEpicsSystem {
   }
 
   case class MountGuideChannels[F[_]](
-    mode: Channel[F, String],
-    source: Channel[F, String],
+    mode:     Channel[F, String],
+    source:   Channel[F, String],
     p1weight: Channel[F, String],
     p2weight: Channel[F, String]
   )
 
-  object MountGuideChannels{
+  object MountGuideChannels {
     def build[F[_]](
       service: EpicsService[F],
-      top: String
+      top:     String
     ): Resource[F, MountGuideChannels[F]] = for {
       mn <- service.getChannel[String](s"${top}mountGuideMode.A")
       sr <- service.getChannel[String](s"${top}mountGuideMode.B")
@@ -461,7 +467,7 @@ object TcsEpicsSystem {
 
   case class ProbeChannels[F[_]](
     parkDir: Channel[F, CadDirective],
-    follow: Channel[F, String]
+    follow:  Channel[F, String]
   )
 
   // Build functions to construct each epics cannel for each
@@ -612,7 +618,7 @@ object TcsEpicsSystem {
 
   def buildProbeChannels[F[_]](
     service: EpicsService[F],
-    prefix: String
+    prefix:  String
   ): Resource[F, ProbeChannels[F]] = for {
     pd <- service.getChannel[CadDirective](s"${prefix}Park${DirSuffix}")
     fl <- service.getChannel[String](s"${prefix}Follow.A")
@@ -630,30 +636,30 @@ object TcsEpicsSystem {
    */
   def buildChannels[F[_]](service: EpicsService[F], top: String): Resource[F, TcsChannels[F]] =
     for {
-      tt  <- service.getChannel[String](s"${top}sad:health.VAL").map(TelltaleChannel(sysName, _))
-      tpd <- service.getChannel[CadDirective](s"${top}telpark$DirSuffix")
-      mf  <- service.getChannel[String](s"${top}mcFollow.A")
-      rsb <- service.getChannel[String](s"${top}rotStop.B")
-      rpd <- service.getChannel[CadDirective](s"${top}rotPark$DirSuffix")
-      rf  <- service.getChannel[String](s"${top}crFollow.A")
-      rma <- service.getChannel[String](s"${top}rotMove.A")
-      ecs <- buildEnclosureChannels(service, top)
-      sra <- buildTargetChannels(service, s"${top}sourceA")
-      oiw <- buildTargetChannels(service, s"${top}oiwfs")
-      wva <- service.getChannel[String](s"${top}wavelSourceA.A")
-      slw <- buildSlewChannels(service, top)
-      rot <- buildRotatorChannels(service, top)
-      org <- buildOriginChannels(service, top)
-      foc <- service.getChannel[String](s"${top}dtelFocus.A")
-      oig <- buildProbeTrackingChannels(service, top, "Oiwfs")
-      op  <- buildProbeChannels(service, s"${top}oiwfs")
-      m1g <- service.getChannel[String](s"${top}m1GuideMode.A")
+      tt   <- service.getChannel[String](s"${top}sad:health.VAL").map(TelltaleChannel(sysName, _))
+      tpd  <- service.getChannel[CadDirective](s"${top}telpark$DirSuffix")
+      mf   <- service.getChannel[String](s"${top}mcFollow.A")
+      rsb  <- service.getChannel[String](s"${top}rotStop.B")
+      rpd  <- service.getChannel[CadDirective](s"${top}rotPark$DirSuffix")
+      rf   <- service.getChannel[String](s"${top}crFollow.A")
+      rma  <- service.getChannel[String](s"${top}rotMove.A")
+      ecs  <- buildEnclosureChannels(service, top)
+      sra  <- buildTargetChannels(service, s"${top}sourceA")
+      oiw  <- buildTargetChannels(service, s"${top}oiwfs")
+      wva  <- service.getChannel[String](s"${top}wavelSourceA.A")
+      slw  <- buildSlewChannels(service, top)
+      rot  <- buildRotatorChannels(service, top)
+      org  <- buildOriginChannels(service, top)
+      foc  <- service.getChannel[String](s"${top}dtelFocus.A")
+      oig  <- buildProbeTrackingChannels(service, top, "Oiwfs")
+      op   <- buildProbeChannels(service, s"${top}oiwfs")
+      m1g  <- service.getChannel[String](s"${top}m1GuideMode.A")
       m1gc <- M1GuideConfigChannels.build(service, top)
-      m2g <- service.getChannel[String](s"${top}m2GuideControl.A")
+      m2g  <- service.getChannel[String](s"${top}m2GuideControl.A")
       m2gm <- service.getChannel[String](s"${top}m2GuideMode.A")
       m2gc <- M2GuideConfigChannels.build(service, top)
       m2gr <- service.getChannel[CadDirective](s"${top}m2GuideReset$DirSuffix")
-      mng <- MountGuideChannels.build(service, top)
+      mng  <- MountGuideChannels.build(service, top)
     } yield TcsChannels[F](
       tt,
       tpd,
@@ -782,7 +788,7 @@ object TcsEpicsSystem {
           tcsEpics.ventGatesMoveCmd.setParam2(pos)
         )
       }
-    override val sourceACmd: TargetCommand[F, TcsCommands[F]] =
+    override val sourceACmd: TargetCommand[F, TcsCommands[F]]                =
       new TargetCommand[F, TcsCommands[F]] {
         override def objectName(v: String): TcsCommands[F] = addParam(
           tcsEpics.sourceACmd.objectName(v)
@@ -954,7 +960,7 @@ object TcsEpicsSystem {
           tcsEpics.slewCmd.autoparkAowfs(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
         )
       }
-    override val rotatorCommand: RotatorCommand[F, TcsCommands[F]] =
+    override val rotatorCommand: RotatorCommand[F, TcsCommands[F]]         =
       new RotatorCommand[F, TcsCommands[F]] {
         override def ipa(v: Angle): TcsCommands[F] = addParam(
           tcsEpics.rotatorConfigCmd.setParam1(v.toDoubleDegrees)
@@ -1020,17 +1026,18 @@ object TcsEpicsSystem {
           tcsEpics.oiwfsProbeTrackingCmd.nodBchopB(v.fold(BinaryOnOff.On, BinaryOnOff.Off))
         )
       }
-    override val oiwfsProbeCommands: ProbeCommands[F, TcsCommands[F]] = new ProbeCommands[F, TcsCommands[F]] {
-      override val park: BaseCommand[F, TcsCommands[F]] = new BaseCommand[F, TcsCommands[F]] {
-        override def mark: TcsCommands[F] = addParam(tcsEpics.oiwfsProbeCmds.park.mark)
-      }
+    override val oiwfsProbeCommands: ProbeCommands[F, TcsCommands[F]]               =
+      new ProbeCommands[F, TcsCommands[F]] {
+        override val park: BaseCommand[F, TcsCommands[F]] = new BaseCommand[F, TcsCommands[F]] {
+          override def mark: TcsCommands[F] = addParam(tcsEpics.oiwfsProbeCmds.park.mark)
+        }
 
-      override val follow: FollowCommand[F, TcsCommands[F]] =
-        (enable: Boolean) =>
-          addParam(
-            tcsEpics.oiwfsProbeCmds.follow.setParam1(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
-          )
-    }
+        override val follow: FollowCommand[F, TcsCommands[F]] =
+          (enable: Boolean) =>
+            addParam(
+              tcsEpics.oiwfsProbeCmds.follow.setParam1(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+            )
+      }
 
     override val m1GuideCommand: GuideCommand[F, TcsCommands[F]] =
       (enable: Boolean) =>
@@ -1040,13 +1047,21 @@ object TcsEpicsSystem {
 
     override val m1GuideConfigCommand: M1GuideConfigCommand[F, TcsCommands[F]] =
       new M1GuideConfigCommand[F, TcsCommands[F]] {
-        override def weighting(v: String): TcsCommands[F] = addParam(tcsEpics.m1GuideConfigCmd.setParam1(v))
+        override def weighting(v: String): TcsCommands[F] = addParam(
+          tcsEpics.m1GuideConfigCmd.setParam1(v)
+        )
 
-        override def source(v: String): TcsCommands[F] = addParam(tcsEpics.m1GuideConfigCmd.setParam2(v))
+        override def source(v: String): TcsCommands[F] = addParam(
+          tcsEpics.m1GuideConfigCmd.setParam2(v)
+        )
 
-        override def frames(v: Int): TcsCommands[F] = addParam(tcsEpics.m1GuideConfigCmd.setParam3(v))
+        override def frames(v: Int): TcsCommands[F] = addParam(
+          tcsEpics.m1GuideConfigCmd.setParam3(v)
+        )
 
-        override def filename(v: String): TcsCommands[F] = addParam(tcsEpics.m1GuideConfigCmd.setParam4(v))
+        override def filename(v: String): TcsCommands[F] = addParam(
+          tcsEpics.m1GuideConfigCmd.setParam4(v)
+        )
       }
 
     override val m2GuideCommand: GuideCommand[F, TcsCommands[F]] =
@@ -1063,34 +1078,57 @@ object TcsEpicsSystem {
 
     override val m2GuideConfigCommand: M2GuideConfigCommand[F, TcsCommands[F]] =
       new M2GuideConfigCommand[F, TcsCommands[F]] {
-        override def source(v: String): TcsCommands[F] = addParam(tcsEpics.m2GuideConfigCmd.setParam1(v))
+        override def source(v: String): TcsCommands[F] = addParam(
+          tcsEpics.m2GuideConfigCmd.setParam1(v)
+        )
 
-        override def sampleFreq(v: Double): TcsCommands[F] = addParam(tcsEpics.m2GuideConfigCmd.setParam2(v))
+        override def sampleFreq(v: Double): TcsCommands[F] = addParam(
+          tcsEpics.m2GuideConfigCmd.setParam2(v)
+        )
 
-        override def filter(v: String): TcsCommands[F] = addParam(tcsEpics.m2GuideConfigCmd.setParam3(v))
+        override def filter(v: String): TcsCommands[F] = addParam(
+          tcsEpics.m2GuideConfigCmd.setParam3(v)
+        )
 
-        override def freq1(v: Double): TcsCommands[F] = addParam(tcsEpics.m2GuideConfigCmd.setParam4(v))
+        override def freq1(v: Double): TcsCommands[F] = addParam(
+          tcsEpics.m2GuideConfigCmd.setParam4(v)
+        )
 
-        override def freq2(v: Double): TcsCommands[F] = addParam(tcsEpics.m2GuideConfigCmd.setParam5(v))
+        override def freq2(v: Double): TcsCommands[F] = addParam(
+          tcsEpics.m2GuideConfigCmd.setParam5(v)
+        )
 
-        override def beam(v: String): TcsCommands[F] = addParam(tcsEpics.m2GuideConfigCmd.setParam6(v))
+        override def beam(v: String): TcsCommands[F] = addParam(
+          tcsEpics.m2GuideConfigCmd.setParam6(v)
+        )
 
-        override def reset(v: Boolean): TcsCommands[F] = addParam(tcsEpics.m2GuideConfigCmd.setParam7(v.fold(BinaryOnOff.On, BinaryOnOff.Off)))
+        override def reset(v: Boolean): TcsCommands[F] = addParam(
+          tcsEpics.m2GuideConfigCmd.setParam7(v.fold(BinaryOnOff.On, BinaryOnOff.Off))
+        )
       }
 
-    override val m2GuideResetCommand: BaseCommand[F, TcsCommands[F]] = new BaseCommand[F, TcsCommands[F]] {
-      override def mark: TcsCommands[F] = addParam(tcsEpics.m2GuideResetCmd.mark)
-    }
+    override val m2GuideResetCommand: BaseCommand[F, TcsCommands[F]] =
+      new BaseCommand[F, TcsCommands[F]] {
+        override def mark: TcsCommands[F] = addParam(tcsEpics.m2GuideResetCmd.mark)
+      }
 
     override val mountGuideCommand: MountGuideCommand[F, TcsCommands[F]] =
       new MountGuideCommand[F, TcsCommands[F]] {
-        override def mode(v: Boolean): TcsCommands[F] = addParam(tcsEpics.mountGuideCmd.setParam1(v.fold(BinaryOnOff.On, BinaryOnOff.Off)))
+        override def mode(v: Boolean): TcsCommands[F] = addParam(
+          tcsEpics.mountGuideCmd.setParam1(v.fold(BinaryOnOff.On, BinaryOnOff.Off))
+        )
 
-        override def source(v: String): TcsCommands[F] = addParam(tcsEpics.mountGuideCmd.setParam2(v))
+        override def source(v: String): TcsCommands[F] = addParam(
+          tcsEpics.mountGuideCmd.setParam2(v)
+        )
 
-        override def p1Weight(v: Double): TcsCommands[F] = addParam(tcsEpics.mountGuideCmd.setParam3(v))
+        override def p1Weight(v: Double): TcsCommands[F] = addParam(
+          tcsEpics.mountGuideCmd.setParam3(v)
+        )
 
-        override def p2Weight(v: Double): TcsCommands[F] = addParam(tcsEpics.mountGuideCmd.setParam4(v))
+        override def p2Weight(v: Double): TcsCommands[F] = addParam(
+          tcsEpics.mountGuideCmd.setParam4(v)
+        )
       }
 
   }
@@ -1163,13 +1201,14 @@ object TcsEpicsSystem {
     override val slewCmd: SlewCommandChannels[F] =
       SlewCommandChannels(channels.telltale, channels.slew)
 
-    override val rotatorConfigCmd: Command4Channels[F, Double, String, String, Double] = Command4Channels(
-      channels.telltale,
-      channels.rotator.ipa,
-      channels.rotator.system,
-      channels.rotator.equinox,
-      channels.rotator.iaa
-    )
+    override val rotatorConfigCmd: Command4Channels[F, Double, String, String, Double] =
+      Command4Channels(
+        channels.telltale,
+        channels.rotator.ipa,
+        channels.rotator.system,
+        channels.rotator.equinox,
+        channels.rotator.iaa
+      )
 
     override val originCmd: Command6Channels[F, Double, Double, Double, Double, Double, Double] =
       Command6Channels(
@@ -1187,27 +1226,34 @@ object TcsEpicsSystem {
       channels.focusOffset
     )
 
-    override val oiwfsProbeTrackingCmd: ProbeTrackingCommandChannels[F] = ProbeTrackingCommandChannels(
-      channels.telltale,
-      channels.oiProbeTracking
-    )
-    override val oiwfsProbeCmds: ProbeCommandsChannels[F] = buildProbeCommandsChannels(channels.telltale, channels.oiProbe)
+    override val oiwfsProbeTrackingCmd: ProbeTrackingCommandChannels[F] =
+      ProbeTrackingCommandChannels(
+        channels.telltale,
+        channels.oiProbeTracking
+      )
+    override val oiwfsProbeCmds: ProbeCommandsChannels[F]               =
+      buildProbeCommandsChannels(channels.telltale, channels.oiProbe)
 
-    override val m1GuideConfigCmd: Command4Channels[F, String, String, Int, String] = Command4Channels(
-      channels.telltale,
-      channels.m1GuideConfig.weighting,
-      channels.m1GuideConfig.source,
-      channels.m1GuideConfig.frames,
-      channels.m1GuideConfig.filename,
-    )
+    override val m1GuideConfigCmd: Command4Channels[F, String, String, Int, String] =
+      Command4Channels(
+        channels.telltale,
+        channels.m1GuideConfig.weighting,
+        channels.m1GuideConfig.source,
+        channels.m1GuideConfig.frames,
+        channels.m1GuideConfig.filename
+      )
 
-    override val m1GuideCmd: Command1Channels[F, BinaryOnOff] = Command1Channels(channels.telltale, channels.m1Guide)
+    override val m1GuideCmd: Command1Channels[F, BinaryOnOff] =
+      Command1Channels(channels.telltale, channels.m1Guide)
 
-    override val m2GuideCmd: Command1Channels[F, BinaryOnOff] = Command1Channels(channels.telltale, channels.m2Guide)
+    override val m2GuideCmd: Command1Channels[F, BinaryOnOff] =
+      Command1Channels(channels.telltale, channels.m2Guide)
 
-    override val m2GuideModeCmd: Command1Channels[F, BinaryOnOff] = Command1Channels(channels.telltale, channels.m2GuideMode)
+    override val m2GuideModeCmd: Command1Channels[F, BinaryOnOff] =
+      Command1Channels(channels.telltale, channels.m2GuideMode)
 
-    override val m2GuideConfigCmd: Command7Channels[F, String, Double, String, Double, Double, String, BinaryOnOff] =
+    override val m2GuideConfigCmd
+      : Command7Channels[F, String, Double, String, Double, Double, String, BinaryOnOff] =
       Command7Channels(
         channels.telltale,
         channels.m2GuideConfig.source,
@@ -1348,19 +1394,19 @@ object TcsEpicsSystem {
       writeCadParam[F, G](tt, param6Channel)(v)
   }
 
-  case class Command7Channels[F[_] : Monad, A: Encoder[*, String], B: Encoder[*, String], C: Encoder[
+  case class Command7Channels[F[_]: Monad, A: Encoder[*, String], B: Encoder[*, String], C: Encoder[
     *,
     String
   ], D: Encoder[*, String], E: Encoder[*, String], G: Encoder[*, String], H: Encoder[*, String]](
-                                                                           tt: TelltaleChannel[F],
-                                                                           param1Channel: Channel[F, String],
-                                                                           param2Channel: Channel[F, String],
-                                                                           param3Channel: Channel[F, String],
-                                                                           param4Channel: Channel[F, String],
-                                                                           param5Channel: Channel[F, String],
-                                                                           param6Channel: Channel[F, String],
-                                                                           param7Channel: Channel[F, String]
-                                                                         ) {
+    tt:            TelltaleChannel[F],
+    param1Channel: Channel[F, String],
+    param2Channel: Channel[F, String],
+    param3Channel: Channel[F, String],
+    param4Channel: Channel[F, String],
+    param5Channel: Channel[F, String],
+    param6Channel: Channel[F, String],
+    param7Channel: Channel[F, String]
+  ) {
     def setParam1(v: A): VerifiedEpics[F, F, Unit] =
       writeCadParam[F, A](tt, param1Channel)(v)
 
@@ -1452,7 +1498,7 @@ object TcsEpicsSystem {
   }
 
   case class ProbeTrackingCommandChannels[F[_]: Monad](
-    tt: TelltaleChannel[F],
+    tt:                 TelltaleChannel[F],
     probeGuideChannels: ProbeTrackingChannels[F]
   ) {
     def nodAchopA(v: BinaryOnOff): VerifiedEpics[F, F, Unit] =
@@ -1469,12 +1515,12 @@ object TcsEpicsSystem {
   }
 
   case class ProbeCommandsChannels[F[_]: Monad](
-    park: ParameterlessCommandChannels[F],
+    park:   ParameterlessCommandChannels[F],
     follow: Command1Channels[F, BinaryOnOff]
   )
 
   def buildProbeCommandsChannels[F[_]: Monad](
-    tt: TelltaleChannel[F],
+    tt:            TelltaleChannel[F],
     probeChannels: ProbeChannels[F]
   ): ProbeCommandsChannels[F] = ProbeCommandsChannels(
     ParameterlessCommandChannels(tt, probeChannels.parkDir),
@@ -1591,9 +1637,9 @@ object TcsEpicsSystem {
 
   trait M1GuideConfigCommand[F[_], +S] {
     def weighting(v: String): S
-    def source(v: String): S
-    def frames(v: Int): S
-    def filename(v: String): S
+    def source(v:    String): S
+    def frames(v:    Int): S
+    def filename(v:  String): S
   }
 
   trait M2GuideModeCommand[F[_], +S] {
@@ -1601,18 +1647,18 @@ object TcsEpicsSystem {
   }
 
   trait M2GuideConfigCommand[F[_], +S] {
-    def source(v: String): S
+    def source(v:     String): S
     def sampleFreq(v: Double): S
-    def filter(v: String): S
-    def freq1(v: Double): S
-    def freq2(v: Double): S
-    def beam(v: String): S
-    def reset(v: Boolean): S
+    def filter(v:     String): S
+    def freq1(v:      Double): S
+    def freq2(v:      Double): S
+    def beam(v:       String): S
+    def reset(v:      Boolean): S
   }
 
   trait MountGuideCommand[F[_], +S] {
-    def mode(v: Boolean): S
-    def source(v: String): S
+    def mode(v:     Boolean): S
+    def source(v:   String): S
     def p1Weight(v: Double): S
     def p2Weight(v: Double): S
   }

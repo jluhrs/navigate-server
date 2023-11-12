@@ -13,7 +13,14 @@ import navigate.model.{NavigateCommand, NavigateEvent}
 import navigate.model.NavigateEvent.{CommandFailure, CommandPaused, CommandStart, CommandSuccess}
 import navigate.model.config.NavigateEngineConfiguration
 import navigate.model.enums.{DomeMode, ShutterMode}
-import navigate.server.tcs.{InstrumentSpecifics, RotatorTrackConfig, SlewConfig, Target, TelescopeGuideConfig, TrackingConfig}
+import navigate.server.tcs.{
+  InstrumentSpecifics,
+  RotatorTrackConfig,
+  SlewConfig,
+  Target,
+  TelescopeGuideConfig,
+  TrackingConfig
+}
 import navigate.stateengine.StateEngine
 import NavigateEvent.NullEvent
 import fs2.{Pipe, Stream}
@@ -32,7 +39,7 @@ trait NavigateEngine[F[_]] {
   def rotPark: F[Unit]
   def rotFollow(enable:                              Boolean): F[Unit]
   def rotMove(angle:                                 Angle): F[Unit]
-  def rotTrackingConfig(cfg: RotatorTrackConfig): F[Unit]
+  def rotTrackingConfig(cfg:                         RotatorTrackConfig): F[Unit]
   def ecsCarouselMode(
     domeMode:      DomeMode,
     shutterMode:   ShutterMode,
@@ -44,10 +51,10 @@ trait NavigateEngine[F[_]] {
   def slew(slewConfig:                               SlewConfig): F[Unit]
   def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): F[Unit]
   def oiwfsTarget(target:                            Target): F[Unit]
-  def oiwfsProbeTracking(config: TrackingConfig): F[Unit]
+  def oiwfsProbeTracking(config:                     TrackingConfig): F[Unit]
   def oiwfsPark: F[Unit]
-  def oiwfsFollow(enable: Boolean): F[Unit]
-  def enableGuide(config: TelescopeGuideConfig): F[Unit]
+  def oiwfsFollow(enable:                            Boolean): F[Unit]
+  def enableGuide(config:                            TelescopeGuideConfig): F[Unit]
   def disableGuide: F[Unit]
 }
 
@@ -229,10 +236,10 @@ object NavigateEngine {
     oiwfsInProgress:               Boolean,
     instrumentSpecificsInProgress: Boolean,
     oiwfsProbeTrackingInProgress:  Boolean,
-    oiwfsParkInProgress: Boolean,
-    oiwfsFollowInProgress: Boolean,
-    enableGuide: Boolean,
-    disableGuide: Boolean
+    oiwfsParkInProgress:           Boolean,
+    oiwfsFollowInProgress:         Boolean,
+    enableGuide:                   Boolean,
+    disableGuide:                  Boolean
   ) {
     lazy val tcsActionInProgress: Boolean =
       mcsParkInProgress ||
@@ -247,11 +254,11 @@ object NavigateEngine {
         slewInProgress ||
         oiwfsInProgress ||
         instrumentSpecificsInProgress
-        oiwfsProbeTrackingInProgress ||
-        oiwfsParkInProgress ||
-        oiwfsFollowInProgress ||
-        enableGuide ||
-        disableGuide
+      oiwfsProbeTrackingInProgress ||
+      oiwfsParkInProgress ||
+      oiwfsFollowInProgress ||
+      enableGuide ||
+      disableGuide
   }
 
   val startState: State = State(

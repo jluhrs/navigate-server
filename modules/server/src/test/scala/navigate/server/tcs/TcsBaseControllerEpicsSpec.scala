@@ -371,11 +371,13 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
         )
       )
 
-      //Rotator configuration
+      // Rotator configuration
       assert(rs.rotator.ipa.connected)
       assert(rs.rotator.system.connected)
       assert(rs.rotator.equinox.connected)
-      assert(rs.rotator.ipa.value.exists(x => compareDouble(x.toDouble, Angle.Angle90.toDoubleDegrees)))
+      assert(
+        rs.rotator.ipa.value.exists(x => compareDouble(x.toDouble, Angle.Angle90.toDoubleDegrees))
+      )
       assert(rs.rotator.system.value.exists(_ === SystemDefault))
       assert(rs.rotator.equinox.value.exists(_ === EquinoxDefault))
     }
@@ -521,10 +523,10 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
 
   test("oiwfs probe park command") {
     for {
-      x <- createController
+      x        <- createController
       (st, ctr) = x
-      _ <- ctr.oiwfsPark
-      rs <- st.get
+      _        <- ctr.oiwfsPark
+      rs       <- st.get
     } yield {
       assert(rs.oiwfsProbe.parkDir.connected)
       assertEquals(rs.oiwfsProbe.parkDir.value, CadDirective.MARK.some)
@@ -533,16 +535,20 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
 
   test("oiwfs probe follow command") {
     for {
-      x <- createController
+      x        <- createController
       (st, ctr) = x
-      _ <- ctr.oiwfsFollow(true)
-      r1 <- st.get
-      _ <- ctr.oiwfsFollow(false)
-      r2 <- st.get
+      _        <- ctr.oiwfsFollow(true)
+      r1       <- st.get
+      _        <- ctr.oiwfsFollow(false)
+      r2       <- st.get
     } yield {
       assert(r1.oiwfsProbe.follow.connected)
-      assertEquals(r1.oiwfsProbe.follow.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
-      assertEquals(r2.oiwfsProbe.follow.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.Off.some)
+      assertEquals(r1.oiwfsProbe.follow.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.On.some
+      )
+      assertEquals(r2.oiwfsProbe.follow.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.Off.some
+      )
     }
   }
 
@@ -554,12 +560,12 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
     )
 
     for {
-      x <- createController
+      x        <- createController
       (st, ctr) = x
-      _ <- ctr.enableGuide(guideCfg)
-      r1 <- st.get
-      _ <- ctr.disableGuide
-      r2 <- st.get
+      _        <- ctr.enableGuide(guideCfg)
+      r1       <- st.get
+      _        <- ctr.disableGuide
+      r2       <- st.get
     } yield {
       assert(r1.m1Guide.connected)
       assert(r1.m1GuideConfig.source.connected)
@@ -578,24 +584,36 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assert(r1.mountGuide.source.connected)
 
       assertEquals(r1.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
-      assertEquals(r1.m1GuideConfig.source.value.flatMap(Enumerated[M1Source].fromTag), M1Source.OIWFS.some)
+      assertEquals(r1.m1GuideConfig.source.value.flatMap(Enumerated[M1Source].fromTag),
+                   M1Source.OIWFS.some
+      )
       assertEquals(r1.m1GuideConfig.frames.value.flatMap(_.toIntOption), 1.some)
       assertEquals(r1.m1GuideConfig.weighting.value, "none".some)
       assertEquals(r1.m1GuideConfig.filename.value, "".some)
       assertEquals(r1.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
-      assertEquals(r1.m2GuideConfig.source.value.flatMap(Enumerated[TipTiltSource].fromTag), TipTiltSource.OIWFS.some)
+      assertEquals(r1.m2GuideConfig.source.value.flatMap(Enumerated[TipTiltSource].fromTag),
+                   TipTiltSource.OIWFS.some
+      )
       assertEquals(r1.m2GuideConfig.beam.value, "B".some)
       assertEquals(r1.m2GuideConfig.filter.value, "raw".some)
       assertEquals(r1.m2GuideConfig.samplefreq.value.flatMap(_.toDoubleOption), 200.0.some)
-      assertEquals(r1.m2GuideConfig.reset.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.Off.some)
-      assertEquals(r1.m2GuideMode.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
+      assertEquals(r1.m2GuideConfig.reset.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.Off.some
+      )
+      assertEquals(r1.m2GuideMode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.On.some
+      )
       assertEquals(r1.m2GuideReset.value, CadDirective.MARK.some)
-      assertEquals(r1.mountGuide.mode.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
+      assertEquals(r1.mountGuide.mode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.On.some
+      )
       assertEquals(r1.mountGuide.source.value, "SCS".some)
 
       assertEquals(r2.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.Off.some)
       assertEquals(r2.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.Off.some)
-      assertEquals(r2.mountGuide.mode.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.Off.some)
+      assertEquals(r2.mountGuide.mode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.Off.some
+      )
     }
   }
 

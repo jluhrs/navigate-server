@@ -3,7 +3,7 @@
 
 package navigate.server.tcs
 
-import cats.{Show, Eq}
+import cats.{Eq, Show}
 import cats.syntax.all.*
 import cats.derived.*
 import navigate.model.enums.M1Source
@@ -14,10 +14,10 @@ sealed trait M1GuideConfig extends Product with Serializable derives Eq, Show {
 }
 
 object M1GuideConfig {
-  case object M1GuideOff                       extends M1GuideConfig  derives Eq, Show  {
+  case object M1GuideOff                       extends M1GuideConfig derives Eq, Show {
     override def uses(s: M1Source): Boolean = false
   }
-   final case class M1GuideOn(source: M1Source) extends M1GuideConfig derives Eq, Show {
+  final case class M1GuideOn(source: M1Source) extends M1GuideConfig derives Eq, Show {
     override def uses(s: M1Source): Boolean = source === s
   }
 
