@@ -8,7 +8,19 @@ import navigate.epics.EpicsSystem.TelltaleChannel
 import navigate.epics.VerifiedEpics.VerifiedEpics
 import navigate.epics.{TestChannel, VerifiedEpics}
 import navigate.server.acm.{CadDirective, GeminiApplyCommand}
-import navigate.server.tcs.TcsEpicsSystem.{EnclosureChannels, M1GuideConfigChannels, M2GuideConfigChannels, MountGuideChannels, OriginChannels, ProbeChannels, ProbeTrackingChannels, RotatorChannels, SlewChannels, TargetChannels, TcsChannels}
+import navigate.server.tcs.TcsEpicsSystem.{
+  EnclosureChannels,
+  M1GuideConfigChannels,
+  M2GuideConfigChannels,
+  MountGuideChannels,
+  OriginChannels,
+  ProbeChannels,
+  ProbeTrackingChannels,
+  RotatorChannels,
+  SlewChannels,
+  TargetChannels,
+  TcsChannels
+}
 import navigate.server.ApplyCommandResult
 import monocle.{Focus, Lens}
 
@@ -58,7 +70,7 @@ object TestTcsEpicsSystem {
 
   case class ProbeState(
     parkDir: TestChannel.State[CadDirective],
-    follow: TestChannel.State[String]
+    follow:  TestChannel.State[String]
   )
 
   case class SlewChannelsState(
@@ -114,13 +126,13 @@ object TestTcsEpicsSystem {
     focusOffset:      TestChannel.State[String],
     oiwfsTracking:    ProbeTrackingState,
     oiwfsProbe:       ProbeState,
-    m1Guide: TestChannel.State[String],
-    m1GuideConfig: M1GuideConfigState,
-    m2Guide: TestChannel.State[String],
-    m2GuideMode: TestChannel.State[String],
-    m2GuideConfig: M2GuideConfigState,
-    m2GuideReset: TestChannel.State[CadDirective],
-    mountGuide: MountGuideState
+    m1Guide:          TestChannel.State[String],
+    m1GuideConfig:    M1GuideConfigState,
+    m2Guide:          TestChannel.State[String],
+    m2GuideMode:      TestChannel.State[String],
+    m2GuideConfig:    M2GuideConfigState,
+    m2GuideReset:     TestChannel.State[CadDirective],
+    mountGuide:       MountGuideState
   )
 
   val defaultState: State = State(
@@ -211,7 +223,8 @@ object TestTcsEpicsSystem {
       nodBchopA = TestChannel.State.default,
       nodBchopB = TestChannel.State.default
     ),
-    oiwfsProbe = ProbeState(parkDir = TestChannel.State.default, follow = TestChannel.State.default),
+    oiwfsProbe =
+      ProbeState(parkDir = TestChannel.State.default, follow = TestChannel.State.default),
     m1Guide = TestChannel.State.default,
     m1GuideConfig = M1GuideConfigState.default,
     m2Guide = TestChannel.State.default,
@@ -355,13 +368,13 @@ object TestTcsEpicsSystem {
 
   case class M1GuideConfigState(
     weighting: TestChannel.State[String],
-    source: TestChannel.State[String],
-    frames: TestChannel.State[String],
-    filename: TestChannel.State[String]
+    source:    TestChannel.State[String],
+    frames:    TestChannel.State[String],
+    filename:  TestChannel.State[String]
   )
 
   object M1GuideConfigState {
-    val default:M1GuideConfigState = M1GuideConfigState(
+    val default: M1GuideConfigState = M1GuideConfigState(
       TestChannel.State.default,
       TestChannel.State.default,
       TestChannel.State.default,
@@ -380,13 +393,13 @@ object TestTcsEpicsSystem {
   )
 
   case class M2GuideConfigState(
-    source: TestChannel.State[String],
+    source:     TestChannel.State[String],
     samplefreq: TestChannel.State[String],
-    filter: TestChannel.State[String],
-    freq1: TestChannel.State[String],
-    freq2: TestChannel.State[String],
-    beam: TestChannel.State[String],
-    reset: TestChannel.State[String]
+    filter:     TestChannel.State[String],
+    freq1:      TestChannel.State[String],
+    freq2:      TestChannel.State[String],
+    beam:       TestChannel.State[String],
+    reset:      TestChannel.State[String]
   )
 
   object M2GuideConfigState {
@@ -415,13 +428,13 @@ object TestTcsEpicsSystem {
   )
 
   case class MountGuideState(
-    mode: TestChannel.State[String],
-    source: TestChannel.State[String],
+    mode:     TestChannel.State[String],
+    source:   TestChannel.State[String],
     p1weight: TestChannel.State[String],
     p2weight: TestChannel.State[String]
   )
 
-  object MountGuideState{
+  object MountGuideState {
     val default: MountGuideState = MountGuideState(
       TestChannel.State.default,
       TestChannel.State.default,

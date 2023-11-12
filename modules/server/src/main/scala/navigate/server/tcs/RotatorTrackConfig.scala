@@ -5,7 +5,7 @@ package navigate.server.tcs
 
 import lucuma.core.math.Angle
 
-case class RotatorTrackConfig (
-  ipa: Angle,
+case class RotatorTrackConfig(
+  ipa:  Angle,
   mode: RotatorTrackingMode
 )

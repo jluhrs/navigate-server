@@ -11,4 +11,5 @@ case class TelescopeGuideConfig(
   mountGuide: Boolean,
   m1Guide:    M1GuideConfig,
   m2Guide:    M2GuideConfig
-) derives Eq, Show
+) derives Eq,
+      Show

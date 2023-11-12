@@ -8,10 +8,10 @@ import lucuma.core.util.Enumerated
 sealed abstract class RotatorTrackingMode(val tag: String) extends Product with Serializable
 
 object RotatorTrackingMode {
-  
+
   case object Tracking extends RotatorTrackingMode("Tracking")
-  case object Fixed extends RotatorTrackingMode("Fixed")
-  
+  case object Fixed    extends RotatorTrackingMode("Fixed")
+
   given Enumerated[RotatorTrackingMode] = Enumerated.from(Tracking, Fixed).withTag(_.tag)
 
 }
