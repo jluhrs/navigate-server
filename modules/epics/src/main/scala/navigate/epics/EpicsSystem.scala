@@ -68,9 +68,9 @@ case class EpicsSystem[F[_]: Async: Parallel](
    * @return
    *   <code>true</code> if all the channels are connected.
    */
-  def connectionCheck(
+  def connectionsCheck(
     connectionTimeout: FiniteDuration = FiniteDuration(5, TimeUnit.SECONDS)
-  ): F[Boolean] = telltaleConnectionCheck(connectionTimeout)
+  ): F[(Boolean, List[(String, Boolean)])] = telltaleConnectionCheck(connectionTimeout)
     .flatMap(
       _.fold(
         channelList
@@ -81,14 +81,23 @@ case class EpicsSystem[F[_]: Async: Parallel](
                   true.pure[F],
                   ch.connect(connectionTimeout).attempt.map(_.isRight)
                 )
+                .flatMap(t => ch.getName.map((_, t)))
             )
           )
           .toList
           .parSequence
-          .map(_.forall(x => x)),
-        false.pure[F]
+          .map { a =>
+            val r = a.filter(!_._2)
+            (r.isEmpty, r)
+          },
+        (false, List.empty).pure[F]
       )
     )
+
+  def connectionCheck(
+    connectionTimeout: FiniteDuration = FiniteDuration(5, TimeUnit.SECONDS)
+  ): F[Boolean] = connectionsCheck(connectionTimeout).map(_._1)
+
 }
 
 object EpicsSystem {
