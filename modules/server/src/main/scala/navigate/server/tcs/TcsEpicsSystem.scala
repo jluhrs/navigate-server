@@ -537,10 +537,10 @@ object TcsEpicsSystem {
     top:     String,
     name:    String
   ): Resource[F, ProbeTrackingChannels[F]] = for {
-    aa <- service.getChannel[String](s"${top}:config${name}.A")
-    ab <- service.getChannel[String](s"${top}:config${name}.B")
-    ba <- service.getChannel[String](s"${top}:config${name}.D")
-    bb <- service.getChannel[String](s"${top}:config${name}.E")
+    aa <- service.getChannel[String](s"${top}config${name}.A")
+    ab <- service.getChannel[String](s"${top}config${name}.B")
+    ba <- service.getChannel[String](s"${top}config${name}.D")
+    bb <- service.getChannel[String](s"${top}config${name}.E")
   } yield ProbeTrackingChannels(aa, ab, ba, bb)
 
   def buildSlewChannels[F[_]](
