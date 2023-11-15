@@ -127,11 +127,8 @@ object WebServerLauncher extends IOApp with LogInitialization {
     }.flatten
 
     def router(wsBuilder: WebSocketBuilder2[F]) = Router[F](
-      "/"                      -> new StaticRoutes(conf.mode === Mode.Development, OcsBuildInfo.builtAtMillis).service,
-      "/api/navigate/commands" -> new NavigateCommandRoutes(as, se).service,
-      "/api"                   -> new NavigateUIApiRoutes(conf.site, conf.mode, as, clientsDb, outputs)
-        .service(wsBuilder),
-      "/graphqlapi"            -> new GraphQlRoutes(se, logTopic).service(wsBuilder)
+      "/"           -> new StaticRoutes(conf.mode === Mode.Development, OcsBuildInfo.builtAtMillis).service,
+      "/graphqlapi" -> new GraphQlRoutes(se, logTopic).service(wsBuilder)
     )
 
     val pingRouter = Router[F](
