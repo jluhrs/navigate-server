@@ -24,10 +24,7 @@ class GraphQlRoutes[F[_]: Async: Logger: Trace: Compression](
 ) extends Http4sDsl[F] {
 
   private def commandServices(wsb: WebSocketBuilder2[F]): HttpRoutes[F] = GZip(
-    Routes.forService(_ => NavigateMappings(eng, logTopic).map(GraphQLService[F](_).some),
-                      wsb,
-                      "navigate"
-    )
+    Routes.forService(_ => NavigateMappings(eng, logTopic).map(GraphQLService[F](_).some), wsb)
   )
 
   def service(wsb: WebSocketBuilder2[F]): HttpRoutes[F] =
