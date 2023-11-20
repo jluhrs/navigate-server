@@ -58,10 +58,10 @@ import navigate.server.tcs.RotatorTrackConfig
 import navigate.server.tcs.RotatorTrackingMode
 import navigate.server.tcs.ShortcircuitMountFilter
 import navigate.server.tcs.ShortcircuitTargetFilter
-import navigate.server.tcs.SlewConfig
 import navigate.server.tcs.SlewOptions
 import navigate.server.tcs.StopGuide
 import navigate.server.tcs.Target
+import navigate.server.tcs.TcsBaseController.TcsConfig
 import navigate.server.tcs.TelescopeGuideConfig
 import navigate.server.tcs.TrackingConfig
 import navigate.server.tcs.ZeroChopThrow
@@ -168,12 +168,24 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F], logTopic: Topic[F,
           .pure[F]
       )
 
-  def slew(p: Path, env: Env): F[Result[OperationOutcome]] =
+  def slew(p: Path, env: Env): F[Result[OperationOutcome]] = (for {
+    so <- env.get[SlewOptions]("slewOptions")(classTag[SlewOptions])
+    tc <- env.get[TcsConfig]("config")(classTag[TcsConfig])
+  } yield server
+    .slew(so, tc)
+    .attempt
+    .map(x =>
+      Result.success(
+        x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+      )
+    )).getOrElse(Result.failure[OperationOutcome]("Slew parameters could not be parsed.").pure[F])
+
+  def tcsConfig(p: Path, env: Env): F[Result[OperationOutcome]] =
     env
-      .get[SlewConfig]("slewParams")(classTag[SlewConfig])
-      .map { sc =>
+      .get[TcsConfig]("config")(classTag[TcsConfig])
+      .map { tc =>
         server
-          .slew(sc)
+          .tcsConfig(tc)
           .attempt
           .map(x =>
             Result.success(
@@ -181,7 +193,11 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F], logTopic: Topic[F,
             )
           )
       }
-      .getOrElse(Result.failure[OperationOutcome]("Slew parameters could not be parsed.").pure[F])
+      .getOrElse(
+        Result
+          .failure[OperationOutcome]("oiwfsProbeTracking parameters could not be parsed.")
+          .pure[F]
+      )
 
   def oiwfsTarget(p: Path, env: Env): F[Result[OperationOutcome]] =
     env
@@ -291,10 +307,22 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F], logTopic: Topic[F,
              )
         _ <- Elab.env("config", x)
       } yield ()
-    case (MutationType, "slew", List(Binding("slewParams", ObjectValue(fields))))           =>
+    case (MutationType, "tcsConfig", List(Binding("config", ObjectValue(fields))))          =>
       for {
-        x <- Elab.liftR(parseSlewConfigInput(fields).toResult("Could not parse Slew parameters."))
-        _ <- Elab.env("slewParams" -> x)
+        x <-
+          Elab.liftR(parseTcsConfigInput(fields).toResult("Could not parse TCS config parameters."))
+        _ <- Elab.env("config", x)
+      } yield ()
+    case (MutationType,
+          "slew",
+          List(Binding("slewOptions", ObjectValue(so)), Binding("config", ObjectValue(cf)))
+        ) =>
+      for {
+        x <-
+          Elab.liftR(parseSlewOptionsInput(so).toResult("Could not parse Slew options parameters."))
+        _ <- Elab.env("slewOptions" -> x)
+        y <- Elab.liftR(parseTcsConfigInput(cf).toResult("Could not parse TCS config parameters."))
+        _ <- Elab.env("config" -> y)
       } yield ()
     case (MutationType,
           "instrumentSpecifics",
@@ -343,6 +371,7 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F], logTopic: Topic[F,
         RootEffect.computeEncodable("rotatorPark")((p, env) => rotatorPark(p, env)),
         RootEffect.computeEncodable("rotatorFollow")((p, env) => rotatorFollow(p, env)),
         RootEffect.computeEncodable("rotatorConfig")((p, env) => rotatorConfig(p, env)),
+        RootEffect.computeEncodable("tcsConfig")((p, env) => tcsConfig(p, env)),
         RootEffect.computeEncodable("slew")((p, env) => slew(p, env)),
         RootEffect.computeEncodable("instrumentSpecifics")((p, env) => instrumentSpecifics(p, env)),
         RootEffect.computeEncodable("oiwfsTarget")((p, env) => oiwfsTarget(p, env)),
@@ -453,7 +482,7 @@ object NavigateMappings extends GrackleParsers {
 
   def parseSiderealTarget(
     name:         String,
-    centralWavel: Wavelength,
+    centralWavel: Option[Wavelength],
     l:            List[(String, Value)]
   ): Option[Target.SiderealTarget] = for {
     ra    <- l.collectFirst { case ("ra", ObjectValue(v)) => parseRightAscension(v) }.flatten
@@ -472,19 +501,23 @@ object NavigateMappings extends GrackleParsers {
 
   def parseNonSiderealTarget(
     name: String,
-    w:    Wavelength,
+    w:    Option[Wavelength],
     l:    List[(String, Value)]
   ): Option[Target.SiderealTarget] = none
 
   def parseEphemerisTarget(
     name: String,
-    w:    Wavelength,
+    w:    Option[Wavelength],
     l:    List[(String, Value)]
   ): Option[Target.EphemerisTarget] = none
 
   def parseTargetInput(l: List[(String, Value)]): Option[Target] = for {
     nm <- l.collectFirst { case ("name", StringValue(v)) => v }
-    wv <- l.collectFirst { case ("wavelength", ObjectValue(v)) => parseWavelength(v) }.flatten
+    wv <- l.collectFirst { case ("wavelength", ObjectValue(v)) => parseWavelength(v) } match {
+            case Some(None) => None
+            case None       => Some(None)
+            case x          => x
+          }
     bt <- l.collectFirst { case ("sidereal", ObjectValue(v)) => v }
             .flatMap[Target](parseSiderealTarget(nm, wv, _))
             .orElse(
@@ -531,17 +564,19 @@ object NavigateMappings extends GrackleParsers {
             }.flatten
   } yield RotatorTrackConfig(ipa, mode)
 
-  def parseSlewConfigInput(l: List[(String, Value)]): Option[SlewConfig] = for {
-    sol <- l.collectFirst { case ("slewOptions", ObjectValue(v)) => v }
-    so  <- parseSlewOptionsInput(sol)
-    tl  <- l.collectFirst { case ("baseTarget", ObjectValue(v)) => v }
-    t   <- parseTargetInput(tl)
-    inl <- l.collectFirst { case ("instParams", ObjectValue(v)) => v }
-    in  <- parseInstrumentSpecificsInput(inl)
-    oi  <-
-      l.collectFirst { case ("oiwfs", ObjectValue(v)) => parseGuiderConfig(v) }.orElse(none.some)
-    rc  <- l.collectFirst { case ("rotator", ObjectValue(v)) => parseRotatorConfig(v) }.flatten
-  } yield SlewConfig(so, t, in, oi, rc)
+  def parseTcsConfigInput(l: List[(String, Value)]): Option[TcsConfig] = for {
+    t  <- l.collectFirst { case ("sourceATarget", ObjectValue(v)) => parseTargetInput(v) }.flatten
+    in <- l.collectFirst { case ("instParams", ObjectValue(v)) =>
+            parseInstrumentSpecificsInput(v)
+          }.flatten
+    oi <-
+      l.collectFirst { case ("oiwfs", ObjectValue(v)) => parseGuiderConfig(v) } match {
+        case Some(None) => None
+        case None       => Some(None)
+        case x          => x
+      }
+    rc <- l.collectFirst { case ("rotator", ObjectValue(v)) => parseRotatorConfig(v) }.flatten
+  } yield TcsConfig(t, in, oi, rc)
 
   def parseGuideConfig(l: List[(String, Value)]): Option[TelescopeGuideConfig] = {
     val m2: List[TipTiltSource] = l.collectFirst { case ("m2Inputs", ListValue(v)) =>

@@ -13,20 +13,14 @@ import navigate.model.{NavigateCommand, NavigateEvent}
 import navigate.model.NavigateEvent.{CommandFailure, CommandPaused, CommandStart, CommandSuccess}
 import navigate.model.config.NavigateEngineConfiguration
 import navigate.model.enums.{DomeMode, ShutterMode}
-import navigate.server.tcs.{
-  InstrumentSpecifics,
-  RotatorTrackConfig,
-  SlewConfig,
-  Target,
-  TelescopeGuideConfig,
-  TrackingConfig
-}
+import navigate.server.tcs.{InstrumentSpecifics, RotatorTrackConfig, Target, TelescopeGuideConfig, TrackingConfig, SlewOptions}
 import navigate.stateengine.StateEngine
 import NavigateEvent.NullEvent
 import fs2.{Pipe, Stream}
 import lucuma.core.enums.Site
 import lucuma.core.math.Angle
 import monocle.{Focus, Lens}
+import navigate.server.tcs.TcsBaseController.TcsConfig
 
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
@@ -34,12 +28,12 @@ trait NavigateEngine[F[_]] {
   val systems: Systems[F]
   def eventStream: Stream[F, NavigateEvent]
   def mcsPark: F[Unit]
-  def mcsFollow(enable:                              Boolean): F[Unit]
-  def rotStop(useBrakes:                             Boolean): F[Unit]
+  def mcsFollow(enable: Boolean): F[Unit]
+  def rotStop(useBrakes: Boolean): F[Unit]
   def rotPark: F[Unit]
-  def rotFollow(enable:                              Boolean): F[Unit]
-  def rotMove(angle:                                 Angle): F[Unit]
-  def rotTrackingConfig(cfg:                         RotatorTrackConfig): F[Unit]
+  def rotFollow(enable: Boolean): F[Unit]
+  def rotMove(angle: Angle): F[Unit]
+  def rotTrackingConfig(cfg: RotatorTrackConfig): F[Unit]
   def ecsCarouselMode(
     domeMode:      DomeMode,
     shutterMode:   ShutterMode,
@@ -47,14 +41,15 @@ trait NavigateEngine[F[_]] {
     domeEnable:    Boolean,
     shutterEnable: Boolean
   ): F[Unit]
-  def ecsVentGatesMove(gateEast:                     Double, westGate: Double): F[Unit]
-  def slew(slewConfig:                               SlewConfig): F[Unit]
+  def ecsVentGatesMove(gateEast: Double, westGate: Double): F[Unit]
+  def tcsConfig(config: TcsConfig): F[Unit]
+  def slew(slewOptions: SlewOptions, tcsConfig: TcsConfig): F[Unit]
   def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): F[Unit]
-  def oiwfsTarget(target:                            Target): F[Unit]
-  def oiwfsProbeTracking(config:                     TrackingConfig): F[Unit]
+  def oiwfsTarget(target: Target): F[Unit]
+  def oiwfsProbeTracking(config: TrackingConfig): F[Unit]
   def oiwfsPark: F[Unit]
-  def oiwfsFollow(enable:                            Boolean): F[Unit]
-  def enableGuide(config:                            TelescopeGuideConfig): F[Unit]
+  def oiwfsFollow(enable: Boolean): F[Unit]
+  def enableGuide(config: TelescopeGuideConfig): F[Unit]
   def disableGuide: F[Unit]
 }
 
@@ -149,10 +144,17 @@ object NavigateEngine {
     // TODO
     override def ecsVentGatesMove(gateEast: Double, westGate: Double): F[Unit] = Applicative[F].unit
 
-    override def slew(slewConfig: SlewConfig): F[Unit] = command(
+    override def tcsConfig(config: TcsConfig): F[Unit] = command(
+      engine,
+      TcsConfigure,
+      systems.tcsSouth.tcsConfig(config),
+      Focus[State](_.tcsConfigInProgress)
+    )
+
+    override def slew(slewOptions: SlewOptions, tcsConfig: TcsConfig): F[Unit] = command(
       engine,
       Slew,
-      systems.tcsSouth.slew(slewConfig),
+      systems.tcsSouth.slew(slewOptions, tcsConfig),
       Focus[State](_.slewInProgress)
     )
 
@@ -232,6 +234,7 @@ object NavigateEngine {
     rotTrackingConfigInProgress:   Boolean,
     ecsDomeModeInProgress:         Boolean,
     ecsVentGateMoveInProgress:     Boolean,
+    tcsConfigInProgress:           Boolean,
     slewInProgress:                Boolean,
     oiwfsInProgress:               Boolean,
     instrumentSpecificsInProgress: Boolean,
@@ -251,14 +254,15 @@ object NavigateEngine {
         rotTrackingConfigInProgress ||
         ecsDomeModeInProgress ||
         ecsVentGateMoveInProgress ||
+        tcsConfigInProgress ||
         slewInProgress ||
         oiwfsInProgress ||
-        instrumentSpecificsInProgress
-      oiwfsProbeTrackingInProgress ||
-      oiwfsParkInProgress ||
-      oiwfsFollowInProgress ||
-      enableGuide ||
-      disableGuide
+        instrumentSpecificsInProgress ||
+        oiwfsProbeTrackingInProgress ||
+        oiwfsParkInProgress ||
+        oiwfsFollowInProgress ||
+        enableGuide ||
+        disableGuide
   }
 
   val startState: State = State(
@@ -271,6 +275,7 @@ object NavigateEngine {
     rotTrackingConfigInProgress = false,
     ecsDomeModeInProgress = false,
     ecsVentGateMoveInProgress = false,
+    tcsConfigInProgress = false,
     slewInProgress = false,
     oiwfsInProgress = false,
     instrumentSpecificsInProgress = false,

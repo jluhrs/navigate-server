@@ -211,25 +211,35 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
   protected def setOrigin(origin: Origin): TcsCommands[F] => TcsCommands[F] =
     (x: TcsCommands[F]) => x.originCommand.originX(origin.x).originCommand.originY(origin.y)
 
-  override def applyTcsConfig(config: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
+  protected def applyTcsConfig(config: TcsBaseController.TcsConfig): VerifiedEpics[F, F, ApplyCommandResult] =
+    setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.sourceACmd),
+      config.sourceATarget
+    ).compose(config.sourceATarget.wavelength.map(setSourceAWalength).getOrElse(identity))
+      .compose(setRotatorTrackingConfig(config.rotatorTrackConfig))
+      .compose(setInstrumentSpecifics(config.instrumentSpecifics))(
+        tcsEpics.startCommand(timeout)
+      )
+      .post
+
+  override def tcsConfig(config: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
     setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.sourceACmd),
               config.sourceATarget
-    ).compose(setSourceAWalength(config.sourceATarget.wavelength))(
+    ).compose(config.sourceATarget.wavelength.map(setSourceAWalength).getOrElse(identity))(
       tcsEpics.startCommand(timeout)
     ).post
       .verifiedRun(ConnectionTimeout)
 
-  override def slew(config: SlewConfig): F[ApplyCommandResult] =
+  override def slew(slewOptions: SlewOptions, tcsConfig: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
     setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.sourceACmd),
-              config.baseTarget
+      tcsConfig.sourceATarget
     )
-      .compose(setSourceAWalength(config.baseTarget.wavelength))
-      .compose(setSlewOptions(config.slewOptions))
-      .compose(setRotatorIaa(config.instrumentSpecifics.iaa))
-      .compose(setFocusOffset(config.instrumentSpecifics.focusOffset))
-      .compose(setOrigin(config.instrumentSpecifics.origin))
+      .compose(tcsConfig.sourceATarget.wavelength.map(setSourceAWalength).getOrElse(identity))
+      .compose(setSlewOptions(slewOptions))
+      .compose(setRotatorIaa(tcsConfig.instrumentSpecifics.iaa))
+      .compose(setFocusOffset(tcsConfig.instrumentSpecifics.focusOffset))
+      .compose(setOrigin(tcsConfig.instrumentSpecifics.origin))
       .compose(
-        config.oiwfs
+        tcsConfig.oiwfs
           .map(o =>
             setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.oiwfsTargetCmd),
                       o.target
@@ -244,19 +254,21 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
           )
           .getOrElse(identity[TcsCommands[F]])
       )
-      .compose(setRotatorTrackingConfig(config.rotatorTrackConfig))(
+      .compose(setRotatorTrackingConfig(tcsConfig.rotatorTrackConfig))(
         tcsEpics.startCommand(timeout)
       )
       .post
       .verifiedRun(ConnectionTimeout)
 
-  override def instrumentSpecifics(config: InstrumentSpecifics): F[ApplyCommandResult] =
+  protected def setInstrumentSpecifics(config: InstrumentSpecifics): TcsCommands[F] => TcsCommands[F] =
     setRotatorIaa(config.iaa)
       .compose(setFocusOffset(config.focusOffset))
-      .compose(setOrigin(config.origin))(
-        tcsEpics.startCommand(timeout)
-      )
-      .post
+      .compose(setOrigin(config.origin))
+
+  override def instrumentSpecifics(config: InstrumentSpecifics): F[ApplyCommandResult] =
+    setInstrumentSpecifics(config)(
+      tcsEpics.startCommand(timeout)
+    ).post
       .verifiedRun(ConnectionTimeout)
 
   override def oiwfsTarget(target: Target): F[ApplyCommandResult] =
@@ -271,7 +283,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
     ).post
       .verifiedRun(ConnectionTimeout)
 
-  def setProbeTracking(
+  protected def setProbeTracking(
     l:      Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]],
     config: TrackingConfig
   ): TcsCommands[F] => TcsCommands[F] = { (x: TcsCommands[F]) =>

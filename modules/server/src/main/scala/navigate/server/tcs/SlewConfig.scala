@@ -5,8 +5,5 @@ package navigate.server.tcs
 
 case class SlewConfig(
   slewOptions:         SlewOptions,
-  baseTarget:          Target,
-  instrumentSpecifics: InstrumentSpecifics,
-  oiwfs:               Option[GuiderConfig],
-  rotatorTrackConfig:  RotatorTrackConfig
+  
 )

@@ -27,8 +27,9 @@ import navigate.server.OdbProxy
 import navigate.server.Systems
 import navigate.server.tcs.InstrumentSpecifics
 import navigate.server.tcs.RotatorTrackConfig
-import navigate.server.tcs.SlewConfig
+import navigate.server.tcs.SlewOptions
 import navigate.server.tcs.Target
+import navigate.server.tcs.TcsBaseController.TcsConfig
 import navigate.server.tcs.TcsNorthControllerSim
 import navigate.server.tcs.TcsSouthControllerSim
 import navigate.server.tcs.TelescopeGuideConfig
@@ -85,7 +86,7 @@ class NavigateMappingsTest extends CatsEffectSuite {
       mp  <- NavigateMappings[IO](eng, log)
       r   <- mp.compileAndRun(
                """
-                |mutation { slew (slewParams: {
+                |mutation { slew (
                 |  slewOptions: {
                 |    zeroChopThrow: true
                 |    zeroSourceOffset: true
@@ -103,77 +104,154 @@ class NavigateMappingsTest extends CatsEffectSuite {
                 |    autoparkOiwfs: true
                 |    autoparkGems: true
                 |    autoparkAowfs: true
-                |  }
-                |  baseTarget: {
-                |    id: "T0001"
-                |    name: "Dummy"
-                |    sidereal: {
-                |      ra: {
-                |        hms: "21:15:33"
-                |      }
-                |      dec: {
-                |        dms: "-30:26:38"
-                |      }
-                |      epoch:"J2000.000"
-                |    }
-                |    wavelength: {
-                |      nanometers: "400"
-                |    }
-                |  }
-                |  instParams: {
-                |    iaa: {
-                |      degrees: 178.38
-                |    }
-                |    focusOffset: {
-                |      micrometers: 1234
-                |    }
-                |    agName: "gmos"
-                |    origin: {
-                |      x: {
-                |        micrometers: 3012
-                |      }
-                |      y: {
-                |        micrometers: -1234
-                |      }
-                |    }
-                |  }
-                |  oiwfs: {
-                |    target: {
-                |      id: "T0002"
-                |      name: "OiwfsDummy"
+                |  },
+                |  config: {
+                |    sourceATarget: {
+                |      id: "T0001"
+                |      name: "Dummy"
                 |      sidereal: {
                 |        ra: {
-                |          hms: "10:11:12"
+                |          hms: "21:15:33"
                 |        }
                 |        dec: {
-                |          dms: "-30:31:32"
+                |          dms: "-30:26:38"
                 |        }
                 |        epoch:"J2000.000"
-                |      }
+                |     }
                 |      wavelength: {
-                |        nanometers: "600"
+                |        nanometers: "400"
                 |      }
                 |    }
-                |    tracking: {
-                |      nodAchopA: true
-                |      nodAchopB: false
-                |      nodBchopA: false
-                |      nodBchopB: true
+                |    instParams: {
+                |      iaa: {
+                |        degrees: 178.38
+                |      }
+                |      focusOffset: {
+                |         micrometers: 1234
+                |      }
+                |      agName: "gmos"
+                |      origin: {
+                |        x: {
+                |          micrometers: 3012
+                |        }
+                |        y: {
+                |          micrometers: -1234
+                |        }
+                |      }
+                |    }
+                |    oiwfs: {
+                |      target: {
+                |        id: "T0002"
+                |        name: "OiwfsDummy"
+                |        sidereal: {
+                |          ra: {
+                |            hms: "10:11:12"
+                |          }
+                |          dec: {
+                |            dms: "-30:31:32"
+                |          }
+                |          epoch:"J2000.000"
+                |        }
+                |      }
+                |      tracking: {
+                |        nodAchopA: true
+                |        nodAchopB: false
+                |        nodBchopA: false
+                |        nodBchopB: true
+                |      }
+                |    }
+                |    rotator: {
+                |      ipa: {
+                |        microarcseconds: 89.76
+                |      }
+                |      mode: TRACKING
                 |    }
                 |  }
-                |  rotator: {
-                |    ipa: {
-                |      microarcseconds: 89.76
-                |    }
-                |    mode: TRACKING
-                |  }
-                |}) {
+                |) {
                 |  result
                 |} }
                 |""".stripMargin
              )
     } yield assert(
       extractResult[OperationOutcome](r, "slew").exists(_ === OperationOutcome.success)
+    )
+  }
+
+  test("Process TCS configure command") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      mp  <- NavigateMappings[IO](eng, log)
+      r   <- mp.compileAndRun(
+               """
+          |mutation { tcsConfig ( config: {
+          |  sourceATarget: {
+          |    id: "T0001"
+          |    name: "Dummy"
+          |    sidereal: {
+          |      ra: {
+          |        hms: "21:15:33"
+          |      }
+          |      dec: {
+          |        dms: "-30:26:38"
+          |      }
+          |      epoch:"J2000.000"
+          |   }
+          |    wavelength: {
+          |      nanometers: "400"
+          |    }
+          |  }
+          |  instParams: {
+          |    iaa: {
+          |      degrees: 178.38
+          |    }
+          |    focusOffset: {
+          |       micrometers: 1234
+          |    }
+          |    agName: "gmos"
+          |    origin: {
+          |      x: {
+          |        micrometers: 3012
+          |      }
+          |      y: {
+          |        micrometers: -1234
+          |      }
+          |    }
+          |  }
+          |  oiwfs: {
+          |    target: {
+          |      id: "T0002"
+          |      name: "OiwfsDummy"
+          |      sidereal: {
+          |        ra: {
+          |          hms: "10:11:12"
+          |        }
+          |        dec: {
+          |          dms: "-30:31:32"
+          |        }
+          |        epoch:"J2000.000"
+          |      }
+          |    }
+          |    tracking: {
+          |      nodAchopA: true
+          |      nodAchopB: false
+          |      nodBchopA: false
+          |      nodBchopB: true
+          |    }
+          |  }
+          |  rotator: {
+          |    ipa: {
+          |      microarcseconds: 89.76
+          |    }
+          |    mode: TRACKING
+          |  }
+          |} ) {
+          |  result
+          |} }
+          |""".stripMargin
+             )
+    } yield assert(
+      extractResult[OperationOutcome](r, "tcsConfig").exists(_ === OperationOutcome.success)
     )
   }
 
@@ -457,7 +535,7 @@ object NavigateMappingsTest {
 
     override def ecsVentGatesMove(gateEast: Double, westGate: Double): IO[Unit] = IO.unit
 
-    override def slew(slewConfig: SlewConfig): IO[Unit] = IO.unit
+    override def slew(slewOptions: SlewOptions, config: TcsConfig): IO[Unit] = IO.unit
 
     override def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): IO[Unit] =
       IO.unit
@@ -475,6 +553,8 @@ object NavigateMappingsTest {
     override def enableGuide(config: TelescopeGuideConfig): IO[Unit] = IO.unit
 
     override def disableGuide: IO[Unit] = IO.unit
+
+    override def tcsConfig(config: TcsConfig): IO[Unit] = IO.unit
   }.pure[IO]
 
   given Decoder[OperationOutcome] = Decoder.instance(h =>

@@ -27,21 +27,21 @@ class TcsBaseControllerSim[F[_]: Applicative] extends TcsBaseController[F] {
     Applicative[F].pure(ApplyCommandResult.Completed)
 
   override def ecsCarouselMode(
-    domeMode:      DomeMode,
-    shutterMode:   ShutterMode,
-    slitHeight:    Double,
-    domeEnable:    Boolean,
-    shutterEnable: Boolean
-  ): F[ApplyCommandResult] =
+                                domeMode: DomeMode,
+                                shutterMode: ShutterMode,
+                                slitHeight: Double,
+                                domeEnable: Boolean,
+                                shutterEnable: Boolean
+                              ): F[ApplyCommandResult] =
     Applicative[F].pure(ApplyCommandResult.Completed)
 
   override def ecsVentGatesMove(gateEast: Double, westGate: Double): F[ApplyCommandResult] =
     Applicative[F].pure(ApplyCommandResult.Completed)
 
-  override def applyTcsConfig(config: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
+  override def tcsConfig(config: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
     Applicative[F].pure(ApplyCommandResult.Completed)
 
-  override def slew(config: SlewConfig): F[ApplyCommandResult] =
+  override def slew(slewOptions: SlewOptions, tcsConfig: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
     Applicative[F].pure(ApplyCommandResult.Completed)
 
   override def instrumentSpecifics(config: InstrumentSpecifics): F[ApplyCommandResult] =
@@ -70,3 +70,4 @@ class TcsBaseControllerSim[F[_]: Applicative] extends TcsBaseController[F] {
   override def disableGuide: F[ApplyCommandResult] =
     Applicative[F].pure(ApplyCommandResult.Completed)
 }
+

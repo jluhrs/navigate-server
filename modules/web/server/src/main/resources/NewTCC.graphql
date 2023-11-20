@@ -8,7 +8,7 @@ input TargetPropertiesInput {
   name: NonEmptyString!
   sidereal: SiderealInput
   nonsidereal: NonsiderealInput
-  wavelength: WavelengthInput!
+  wavelength: WavelengthInput
 }
 
 type Distance {
@@ -82,9 +82,8 @@ input GuiderConfig{
     tracking: ProbeTrackingInput!
 }
 
-input SlewInput {
-    slewOptions: SlewOptionsInput!
-    baseTarget: TargetPropertiesInput!
+input TcsConfigInput {
+    sourceATarget: TargetPropertiesInput!
     instParams: InstrumentSpecificsInput!
     oiwfs: GuiderConfig
     rotator: RotatorTrackingInput!
@@ -174,9 +173,10 @@ type Mutation {
     mountFollow(enable: Boolean!): OperationOutcome!
     rotatorPark: OperationOutcome!
     rotatorFollow(enable: Boolean!): OperationOutcome!
-    rotatorConfig(config: RotatorTrackingInput!): OperationOutcome!
-    slew(slewParams: SlewInput!): OperationOutcome!
+    slew(slewOptions: SlewOptionsInput!, config: TcsConfigInput!): OperationOutcome!
+    tcsConfig(config: TcsConfigInput!): OperationOutcome!
     instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecificsInput!): OperationOutcome!
+    rotatorConfig(config: RotatorTrackingInput!): OperationOutcome!
     oiwfsTarget(target: TargetPropertiesInput!): OperationOutcome!
     oiwfsProbeTracking(config: ProbeTrackingInput!): OperationOutcome!
     oiwfsPark: OperationOutcome!
