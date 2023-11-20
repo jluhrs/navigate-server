@@ -53,6 +53,7 @@ object NavigateCommand {
     gateEast: Double,
     gateWest: Double
   ) extends NavigateCommand
+  case object TcsConfigure                extends NavigateCommand
   case object Slew                        extends NavigateCommand
   case object InstSpecifics               extends NavigateCommand
   case object OiwfsTarget                 extends NavigateCommand
@@ -97,6 +98,7 @@ object NavigateCommand {
       case CrcsMove(_)           => "Crcs Move"
       case _: EcsCarouselMode    => "Ecs Carousel Mode"
       case _: EcsVentGatesMove   => "Ecs Vent Gates Move"
+      case TcsConfigure          => "TCS Configuration"
       case Slew                  => "Slew"
       case InstSpecifics         => "Instrument Specifics"
       case OiwfsTarget           => "OIWFS"

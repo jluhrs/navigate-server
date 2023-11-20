@@ -118,7 +118,7 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
   test("Slew command") {
     val target = SiderealTarget(
       objectName = "dummy",
-      wavelength = Wavelength.unsafeFromIntPicometers(400 * 1000),
+      wavelength = Wavelength.fromIntPicometers(400 * 1000),
       coordinates = Coordinates.unsafeFromRadians(-0.321, 0.123),
       epoch = Epoch.J2000,
       properMotion = none,
@@ -128,7 +128,7 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
 
     val oiwfsTarget = SiderealTarget(
       objectName = "oiwfsDummy",
-      wavelength = Wavelength.unsafeFromIntPicometers(600 * 1000),
+      wavelength = Wavelength.fromIntPicometers(600 * 1000),
       coordinates = Coordinates.unsafeFromRadians(-0.123, 0.321),
       epoch = Epoch.J2000,
       properMotion = none,
@@ -168,8 +168,8 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       x        <- createController
       (st, ctr) = x
       _        <- ctr.slew(
-                    SlewConfig(
-                      slewOptions,
+                    slewOptions,
+                    TcsConfig(
                       target,
                       instrumentSpecifics,
                       GuiderConfig(oiwfsTarget, oiwfsTracking).some,
@@ -443,7 +443,7 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
   test("oiwfsTarget command") {
     val oiwfsTarget = SiderealTarget(
       objectName = "oiwfsDummy",
-      wavelength = Wavelength.unsafeFromIntPicometers(600 * 1000),
+      wavelength = Wavelength.fromIntPicometers(600 * 1000),
       coordinates = Coordinates.unsafeFromRadians(-0.123, 0.321),
       epoch = Epoch.J2000,
       properMotion = none,

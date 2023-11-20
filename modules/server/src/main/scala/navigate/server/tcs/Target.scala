@@ -15,13 +15,13 @@ import lucuma.core.math.{
 
 sealed trait Target extends Product with Serializable {
   val objectName: String
-  val wavelength: Wavelength
+  val wavelength: Option[Wavelength]
 }
 
 object Target {
   case class SiderealTarget(
     override val objectName: String,
-    override val wavelength: Wavelength,
+    override val wavelength: Option[Wavelength],
     coordinates:             Coordinates,
     epoch:                   Epoch,
     properMotion:            Option[ProperMotion],
@@ -37,13 +37,13 @@ object Target {
 
   case class AzElTarget(
     override val objectName: String,
-    override val wavelength: Wavelength,
+    override val wavelength: Option[Wavelength],
     coordinates:             AzElCoordinates
   ) extends Target
 
   case class EphemerisTarget(
     override val objectName: String,
-    override val wavelength: Wavelength,
+    override val wavelength: Option[Wavelength],
     ephemerisFile:           String
   ) extends Target
 

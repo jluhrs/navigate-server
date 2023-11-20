@@ -23,8 +23,8 @@ trait TcsBaseController[F[_]] {
     shutterEnable: Boolean
   ): F[ApplyCommandResult]
   def ecsVentGatesMove(gateEast:  Double, westGate: Double): F[ApplyCommandResult]
-  def applyTcsConfig(config:      TcsConfig): F[ApplyCommandResult]
-  def slew(config:                SlewConfig): F[ApplyCommandResult]
+  def tcsConfig(config:      TcsConfig): F[ApplyCommandResult]
+  def slew(slewOptions: SlewOptions, tcsConfig: TcsConfig): F[ApplyCommandResult]
   def instrumentSpecifics(config: InstrumentSpecifics): F[ApplyCommandResult]
   def oiwfsTarget(target:         Target): F[ApplyCommandResult]
   def rotIaa(angle:               Angle): F[ApplyCommandResult]
@@ -39,7 +39,10 @@ trait TcsBaseController[F[_]] {
 object TcsBaseController {
 
   case class TcsConfig(
-    sourceATarget: Target
+                        sourceATarget: Target,
+                        instrumentSpecifics: InstrumentSpecifics,
+                        oiwfs: Option[GuiderConfig],
+                        rotatorTrackConfig: RotatorTrackConfig
   )
 
   val SystemDefault: String  = "FK5"
