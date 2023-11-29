@@ -26,6 +26,7 @@ import lucuma.core.math.Wavelength
 import lucuma.core.math.units.CentimetersPerSecond
 import lucuma.core.math.units.MetersPerSecond
 import lucuma.core.util.Enumerated
+import lucuma.core.util.TimeSpan
 import navigate.model.Distance
 
 trait GrackleParsers {
@@ -169,5 +170,16 @@ trait GrackleParsers {
 
   def parseEnumerated[T: Enumerated](tag: String): Option[T] =
     Enumerated.fromTag[T].getOption(tag.toLowerCase.capitalize)
+
+  def parseTimeSpan(units: List[(String, Value)]): Option[TimeSpan] =
+    units.find(_._2 != Value.AbsentValue) match {
+      case Some(("microseconds", n))     => longValue(n).flatMap(TimeSpan.fromMicroseconds)
+      case Some(("milliseconds", n))     => bigDecimalValue(n).flatMap(TimeSpan.fromMilliseconds)
+      case Some(("seconds", n))          => bigDecimalValue(n).flatMap(TimeSpan.fromSeconds)
+      case Some(("minutes", n))          => bigDecimalValue(n).flatMap(TimeSpan.fromMinutes)
+      case Some(("hours", n))            => bigDecimalValue(n).flatMap(TimeSpan.fromHours)
+      case Some(("iso", StringValue(n))) => TimeSpan.parse(n).toOption
+      case _                             => None
+    }
 
 }

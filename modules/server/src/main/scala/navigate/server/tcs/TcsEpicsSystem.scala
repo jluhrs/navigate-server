@@ -53,6 +53,7 @@ object TcsEpicsSystem {
     val focusOffsetCmd: Command1Channels[F, Double]
     val oiwfsProbeTrackingCmd: ProbeTrackingCommandChannels[F]
     val oiwfsProbeCmds: ProbeCommandsChannels[F]
+    val oiWfsCmds: WfsCommandsChannels[F]
     val m1GuideConfigCmd: Command4Channels[F, String, String, Int, String]
     val m1GuideCmd: Command1Channels[F, BinaryOnOff]
     val m2GuideCmd: Command1Channels[F, BinaryOnOff]
@@ -314,7 +315,7 @@ object TcsEpicsSystem {
     rotMoveAngle:     Channel[F, String],
     enclosure:        EnclosureChannels[F],
     sourceA:          TargetChannels[F],
-    oiwfs:            TargetChannels[F],
+    oiwfsTarget:      TargetChannels[F],
     wavelSourceA:     Channel[F, String],
     slew:             SlewChannels[F],
     rotator:          RotatorChannels[F],
@@ -328,7 +329,8 @@ object TcsEpicsSystem {
     m2GuideMode:      Channel[F, String],
     m2GuideConfig:    M2GuideConfigChannels[F],
     m2GuideReset:     Channel[F, CadDirective],
-    mountGuide:       MountGuideChannels[F]
+    mountGuide:       MountGuideChannels[F],
+    oiwfs:            WfsChannels[F]
   )
 
   // Next case classes are the channel groups
@@ -624,6 +626,83 @@ object TcsEpicsSystem {
     fl <- service.getChannel[String](s"${prefix}Follow.A")
   } yield ProbeChannels(pd, fl)
 
+  case class WfsObserveChannels[F[_]](
+    numberOfExposures: Channel[F, String],
+    interval: Channel[F, String],
+    options: Channel[F, String],
+    label: Channel[F, String],
+    output: Channel[F, String],
+    path: Channel[F, String],
+    fileName: Channel[F, String]
+  )
+
+  object WfsObserveChannels{
+    def build[F[_]](
+      service: EpicsService[F],
+      top: String,
+      wfs: String
+    ): Resource[F, WfsObserveChannels[F]] = for {
+      ne <- service.getChannel[String](s"${top}${wfs}Observe.A")
+      in <- service.getChannel[String](s"${top}${wfs}Observe.B")
+      op <- service.getChannel[String](s"${top}${wfs}Observe.C")
+      lb <- service.getChannel[String](s"${top}${wfs}Observe.D")
+      ou <- service.getChannel[String](s"${top}${wfs}Observe.E")
+      pa <- service.getChannel[String](s"${top}${wfs}Observe.F")
+      fn <- service.getChannel[String](s"${top}${wfs}Observe.G")
+    } yield WfsObserveChannels(
+      ne,
+      in,
+      op,
+      lb,
+      ou,
+      pa,
+      fn
+    )
+  }
+
+  case class WfsClosedLoopChannels[F[_]](
+    global: Channel[F, String],
+    average: Channel[F, String],
+    zernikes2m2: Channel[F, String],
+    mult: Channel[F, String]
+  )
+
+  object WfsClosedLoopChannels{
+    def build[F[_]](
+      service: EpicsService[F],
+      top: String,
+      wfs: String
+    ): Resource[F, WfsClosedLoopChannels[F]] = for {
+      gl <- service.getChannel[String](s"${top}${wfs}Seq.A")
+      av <- service.getChannel[String](s"${top}${wfs}Seq.B")
+      z2 <- service.getChannel[String](s"${top}${wfs}Seq.C")
+      m <- service.getChannel[String](s"${top}${wfs}Seq.D")
+    } yield WfsClosedLoopChannels(gl, av, z2, m)
+  }
+
+  case class WfsChannels[F[_]](
+    observe: WfsObserveChannels[F],
+    stop: Channel[F, CadDirective],
+    procParams: Channel[F, String],
+    dark: Channel[F, String],
+    closedLoop: WfsClosedLoopChannels[F]
+  )
+
+  object WfsChannels{
+    def build[F[_]](
+      service: EpicsService[F],
+      top: String,
+      wfsl: String,
+      wfss: String
+    ): Resource[F, WfsChannels[F]] = for {
+      ob <- WfsObserveChannels.build(service, top, wfsl)
+      st <- service.getChannel[CadDirective](s"${top}${wfsl}StopObserve${DirSuffix}")
+      pr <- service.getChannel[String](s"${top}${wfss}DetSigInit.A")
+      dk <- service.getChannel[String](s"${top}${wfss}SeqDark.A")
+      cl <- WfsClosedLoopChannels.build(service, top, wfss)
+    } yield WfsChannels(ob, st, pr, dk, cl)
+  }
+
   /**
    * Build all TcsChannels It will construct the desired raw channel or call the build function for
    * channels group
@@ -645,7 +724,7 @@ object TcsEpicsSystem {
       rma  <- service.getChannel[String](s"${top}rotMove.A")
       ecs  <- buildEnclosureChannels(service, top)
       sra  <- buildTargetChannels(service, s"${top}sourceA")
-      oiw  <- buildTargetChannels(service, s"${top}oiwfs")
+      oit  <- buildTargetChannels(service, s"${top}oiwfs")
       wva  <- service.getChannel[String](s"${top}wavelSourceA.A")
       slw  <- buildSlewChannels(service, top)
       rot  <- buildRotatorChannels(service, top)
@@ -660,6 +739,7 @@ object TcsEpicsSystem {
       m2gc <- M2GuideConfigChannels.build(service, top)
       m2gr <- service.getChannel[CadDirective](s"${top}m2GuideReset$DirSuffix")
       mng  <- MountGuideChannels.build(service, top)
+      oi   <- WfsChannels.build(service, top, "oiwfs", "oi")
     } yield TcsChannels[F](
       tt,
       tpd,
@@ -670,7 +750,7 @@ object TcsEpicsSystem {
       rma,
       ecs,
       sra,
-      oiw,
+      oit,
       wva,
       slw,
       rot,
@@ -684,7 +764,8 @@ object TcsEpicsSystem {
       m2gm,
       m2gc,
       m2gr,
-      mng
+      mng,
+      oi
     )
 
   case class TcsCommandsImpl[F[_]: Monad: Parallel](
@@ -1130,7 +1211,32 @@ object TcsEpicsSystem {
           tcsEpics.mountGuideCmd.setParam4(v)
         )
       }
+    override val oiWfsCommands: WfsCommands[F, TcsCommands[F]] =
+      new WfsCommands[F, TcsCommands[F]]{
+        override val observe: WfsObserveCommand[F, TcsCommands[F]] = new WfsObserveCommand[F, TcsCommands[F]] {
+          override def numberOfExposures(v: Int): TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.observe.setParam1(v))
+          override def interval(v: Double): TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.observe.setParam2(v))
+          override def options(v: String): TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.observe.setParam3(v))
+          override def label(v: String): TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.observe.setParam4(v))
+          override def output(v: String): TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.observe.setParam5(v))
+          override def path(v: String): TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.observe.setParam6(v))
+          override def fileName(v: String): TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.observe.setParam7(v))
+        }
+        override val stop: BaseCommand[F, TcsCommands[F]] = new BaseCommand[F, TcsCommands[F]] {
+          override def mark: TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.stop.mark)
+        }
+        override val signalProc: WfsSignalProcConfigCommand[F, TcsCommands[F]] = (v: String) => addParam(tcsEpics.oiWfsCmds.signalProc.setParam1(v))
+        override val dark: WfsDarkCommand[F, TcsCommands[F]] = (v: String) => addParam(tcsEpics.oiWfsCmds.dark.setParam1(v))
+        override val closedLoop: WfsClosedLoopCommand[F, TcsCommands[F]] = new WfsClosedLoopCommand[F, TcsCommands[F]] {
+          override def global(v: Double): TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.closedLoop.setParam1(v))
 
+          override def average(v: Int): TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.closedLoop.setParam2(v))
+
+          override def zernikes2m2(v: Int): TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.closedLoop.setParam3(v))
+
+          override def mult(v: Double): TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.closedLoop.setParam4(v))
+        }
+      }
   }
 
   class TcsEpicsSystemImpl[F[_]: Monad: Parallel](epics: TcsEpics[F]) extends TcsEpicsSystem[F] {
@@ -1193,7 +1299,7 @@ object TcsEpicsSystem {
       TargetCommandChannels[F](channels.telltale, channels.sourceA)
 
     override val oiwfsTargetCmd: TargetCommandChannels[F] =
-      TargetCommandChannels[F](channels.telltale, channels.oiwfs)
+      TargetCommandChannels[F](channels.telltale, channels.oiwfsTarget)
 
     override val wavelSourceA: Command1Channels[F, Double] =
       Command1Channels(channels.telltale, channels.wavelSourceA)
@@ -1278,7 +1384,7 @@ object TcsEpicsSystem {
         channels.mountGuide.p1weight,
         channels.mountGuide.p2weight
       )
-
+    override val oiWfsCmds: WfsCommandsChannels[F] = WfsCommandsChannels.build(channels.telltale, channels.oiwfs)
   }
 
   case class ParameterlessCommandChannels[F[_]: Monad](
@@ -1527,6 +1633,42 @@ object TcsEpicsSystem {
     Command1Channels(tt, probeChannels.follow)
   )
 
+  case class WfsCommandsChannels[F[_]: Monad](
+    observe: Command7Channels[F, Int, Double, String, String, String, String, String],
+    stop: ParameterlessCommandChannels[F],
+    signalProc: Command1Channels[F, String],
+    dark: Command1Channels[F, String],
+    closedLoop: Command4Channels[F, Double, Int, Int, Double]
+  )
+
+  object WfsCommandsChannels {
+    def build[F[_]: Monad](
+               tt: TelltaleChannel[F],
+               wfsChannels: WfsChannels[F]
+             ): WfsCommandsChannels[F] = WfsCommandsChannels(
+      Command7Channels(
+        tt,
+        wfsChannels.observe.numberOfExposures,
+        wfsChannels.observe.interval,
+        wfsChannels.observe.options,
+        wfsChannels.observe.label,
+        wfsChannels.observe.output,
+        wfsChannels.observe.path,
+        wfsChannels.observe.fileName
+      ),
+      ParameterlessCommandChannels(tt, wfsChannels.stop),
+      Command1Channels(tt, wfsChannels.procParams),
+      Command1Channels(tt, wfsChannels.dark),
+      Command4Channels(
+        tt,
+        wfsChannels.closedLoop.global,
+        wfsChannels.closedLoop.average,
+        wfsChannels.closedLoop.zernikes2m2,
+        wfsChannels.closedLoop.mult
+      )
+    )
+  }
+
   trait BaseCommand[F[_], +S] {
     def mark: S
   }
@@ -1663,6 +1805,39 @@ object TcsEpicsSystem {
     def p2Weight(v: Double): S
   }
 
+  trait WfsObserveCommand[F[_], +S] {
+    def numberOfExposures(v: Int): S
+    def interval(v: Double): S
+    def options(v: String): S
+    def label(v: String): S
+    def output(v: String): S
+    def path(v: String): S
+    def fileName(v: String): S
+  }
+
+  trait WfsSignalProcConfigCommand[F[_], +S] {
+    def darkFilename(v: String): S
+  }
+
+  trait WfsDarkCommand[F[_], +S] {
+    def filename(v: String): S
+  }
+
+  trait WfsClosedLoopCommand[F[_], +S] {
+    def global(v: Double): S
+    def average(v: Int): S
+    def zernikes2m2(v: Int): S
+    def mult(v: Double): S
+  }
+
+  trait WfsCommands[F[_], +S] {
+    val observe: WfsObserveCommand[F, S]
+    val stop: BaseCommand[F, S]
+    val signalProc: WfsSignalProcConfigCommand[F, S]
+    val dark:WfsDarkCommand[F, S]
+    val closedLoop: WfsClosedLoopCommand[F, S]
+  }
+
   trait TcsCommands[F[_]] {
     def post: VerifiedEpics[F, F, ApplyCommandResult]
     val mcsParkCommand: BaseCommand[F, TcsCommands[F]]
@@ -1691,6 +1866,7 @@ object TcsEpicsSystem {
     val m2GuideConfigCommand: M2GuideConfigCommand[F, TcsCommands[F]]
     val m2GuideResetCommand: BaseCommand[F, TcsCommands[F]]
     val mountGuideCommand: MountGuideCommand[F, TcsCommands[F]]
+    val oiWfsCommands: WfsCommands[F, TcsCommands[F]]
   }
   /*
   trait WfsObserveCmd[F[_]] extends EpicsCommand[F] {

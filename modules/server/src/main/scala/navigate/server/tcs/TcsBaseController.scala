@@ -4,6 +4,7 @@
 package navigate.server.tcs
 
 import lucuma.core.math.Angle
+import lucuma.core.util.TimeSpan
 import navigate.model.enums.{DomeMode, ShutterMode}
 import navigate.server.ApplyCommandResult
 
@@ -34,6 +35,8 @@ trait TcsBaseController[F[_]] {
   def oiwfsFollow(enable:         Boolean): F[ApplyCommandResult]
   def enableGuide(config:         TelescopeGuideConfig): F[ApplyCommandResult]
   def disableGuide: F[ApplyCommandResult]
+  def oiwfsObserve(exposureTime: TimeSpan, isQL: Boolean): F[ApplyCommandResult]
+  def oiwfsStopObserve: F[ApplyCommandResult]
 }
 
 object TcsBaseController {

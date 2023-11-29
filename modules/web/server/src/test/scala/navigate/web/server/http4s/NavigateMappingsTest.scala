@@ -17,6 +17,7 @@ import io.circe.Decoder
 import io.circe.Decoder.Result
 import io.circe.Json
 import lucuma.core.math.Angle
+import lucuma.core.util.TimeSpan
 import lucuma.core.util.Timestamp
 import munit.CatsEffectSuite
 import navigate.model.NavigateEvent
@@ -501,6 +502,43 @@ class NavigateMappingsTest extends CatsEffectSuite {
     )
   }
 
+  test("Process oiwfs observe command") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      mp  <- NavigateMappings[IO](eng, log)
+      r   <- mp.compileAndRun(
+               """
+          |mutation { oiwfsObserve( period: {
+          |    milliseconds: 20
+          |  }
+          |) {
+          |  result
+          |} }
+          |""".stripMargin
+             )
+    } yield assert(
+      extractResult[OperationOutcome](r, "oiwfsObserve").exists(_ === OperationOutcome.success)
+    )
+  }
+
+  test("Process oiwfs stop observe command") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      mp  <- NavigateMappings[IO](eng, log)
+      r   <- mp.compileAndRun(
+               """
+          |mutation { oiwfsStopObserve {
+          |  result
+          |} }
+          |""".stripMargin
+             )
+    } yield assert(
+      extractResult[OperationOutcome](r, "oiwfsStopObserve").exists(_ === OperationOutcome.success)
+    )
+  }
+
 }
 
 object NavigateMappingsTest {
@@ -555,6 +593,10 @@ object NavigateMappingsTest {
     override def disableGuide: IO[Unit] = IO.unit
 
     override def tcsConfig(config: TcsConfig): IO[Unit] = IO.unit
+
+    override def oiwfsObserve(period: TimeSpan): IO[Unit] = IO.unit
+
+    override def oiwfsStopObserve: IO[Unit] = IO.unit
   }.pure[IO]
 
   given Decoder[OperationOutcome] = Decoder.instance(h =>

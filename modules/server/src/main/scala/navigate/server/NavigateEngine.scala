@@ -19,6 +19,7 @@ import NavigateEvent.NullEvent
 import fs2.{Pipe, Stream}
 import lucuma.core.enums.Site
 import lucuma.core.math.Angle
+import lucuma.core.util.TimeSpan
 import monocle.{Focus, Lens}
 import navigate.server.tcs.TcsBaseController.TcsConfig
 
@@ -51,6 +52,8 @@ trait NavigateEngine[F[_]] {
   def oiwfsFollow(enable: Boolean): F[Unit]
   def enableGuide(config: TelescopeGuideConfig): F[Unit]
   def disableGuide: F[Unit]
+  def oiwfsObserve(period: TimeSpan): F[Unit]
+  def oiwfsStopObserve: F[Unit]
 }
 
 object NavigateEngine {
@@ -214,6 +217,20 @@ object NavigateEngine {
       systems.tcsSouth.disableGuide,
       Focus[State](_.disableGuide)
     )
+
+    override def oiwfsObserve(period: TimeSpan): F[Unit] = command(
+      engine,
+      OiwfsObserve,
+      systems.tcsSouth.oiwfsObserve(period, false),
+      Focus[State](_.oiwfsObserve)
+    )
+
+    override def oiwfsStopObserve: F[Unit] = command(
+      engine,
+      OiwfsStopObserve,
+      systems.tcsSouth.oiwfsStopObserve,
+      Focus[State](_.oiwfsStopObserve)
+    )
   }
 
   def build[F[_]: Concurrent: Logger](
@@ -242,7 +259,9 @@ object NavigateEngine {
     oiwfsParkInProgress:           Boolean,
     oiwfsFollowInProgress:         Boolean,
     enableGuide:                   Boolean,
-    disableGuide:                  Boolean
+    disableGuide:                  Boolean,
+    oiwfsObserve:                  Boolean,
+    oiwfsStopObserve:              Boolean
   ) {
     lazy val tcsActionInProgress: Boolean =
       mcsParkInProgress ||
@@ -262,7 +281,9 @@ object NavigateEngine {
         oiwfsParkInProgress ||
         oiwfsFollowInProgress ||
         enableGuide ||
-        disableGuide
+        disableGuide ||
+        oiwfsObserve ||
+        oiwfsStopObserve
   }
 
   val startState: State = State(
@@ -283,7 +304,9 @@ object NavigateEngine {
     oiwfsParkInProgress = false,
     oiwfsFollowInProgress = false,
     enableGuide = false,
-    disableGuide = false
+    disableGuide = false,
+    oiwfsObserve = false,
+    oiwfsStopObserve = false
   )
 
   private def command[F[_]: MonadThrow: Logger](

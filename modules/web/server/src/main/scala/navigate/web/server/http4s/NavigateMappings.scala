@@ -35,6 +35,7 @@ import lucuma.core.math.ProperMotion
 import lucuma.core.math.RadialVelocity
 import lucuma.core.math.RightAscension
 import lucuma.core.math.Wavelength
+import lucuma.core.util.TimeSpan
 import mouse.boolean.given
 import navigate.model.Distance
 import navigate.model.enums.M1Source
@@ -260,6 +261,31 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F], logTopic: Topic[F,
         Result.failure[OperationOutcome]("oiwfsFollow parameter could not be parsed.").pure[F]
       )
 
+  def oiwfsObserve(env: Env): F[Result[OperationOutcome]] =
+    env
+      .get[TimeSpan]("period")
+      .map { p =>
+        server
+          .oiwfsObserve(p)
+          .attempt
+          .map(x =>
+            Result.success(
+              x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+            )
+          )
+      }
+      .getOrElse(
+        Result.failure[OperationOutcome]("oiwfsObserve parameter could not be parsed.").pure[F]
+      )
+
+  def oiwfsStopObserve: F[Result[OperationOutcome]] =
+    server.oiwfsStopObserve.attempt
+      .map(x =>
+        Result.Success(
+          x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+        )
+      )
+
   def guideEnable(p: Path, env: Env): F[Result[OperationOutcome]] =
     env
       .get[TelescopeGuideConfig]("config")
@@ -351,6 +377,15 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F], logTopic: Topic[F,
       } yield ()
     case (MutationType, "oiwfsFollow", List(Binding("enable", BooleanValue(en))))           =>
       Elab.env("enable" -> en)
+    case (MutationType, "oiwfsObserve", List(Binding("period", ObjectValue(fields))))       =>
+      for {
+        x <- Elab.liftR(
+               parseTimeSpan(fields).toResult(
+                 "Could not parse oiwfsObserve parameters."
+               )
+             )
+        _ <- Elab.env("period" -> x)
+      } yield ()
     case (MutationType, "guideEnable", List(Binding("config", ObjectValue(fields))))        =>
       for {
         x <- Elab.liftR(
@@ -378,6 +413,8 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F], logTopic: Topic[F,
         RootEffect.computeEncodable("oiwfsProbeTracking")((p, env) => oiwfsProbeTracking(p, env)),
         RootEffect.computeEncodable("oiwfsPark")((p, env) => oiwfsPark(p, env)),
         RootEffect.computeEncodable("oiwfsFollow")((p, env) => oiwfsFollow(p, env)),
+        RootEffect.computeEncodable("oiwfsObserve")((_, env) => oiwfsObserve(env)),
+        RootEffect.computeEncodable("oiwfsStopObserve")((_, _) => oiwfsStopObserve),
         RootEffect.computeEncodable("guideEnable")((p, env) => guideEnable(p, env)),
         RootEffect.computeEncodable("guideDisable")((p, env) => guideDisable(p, env))
       )
