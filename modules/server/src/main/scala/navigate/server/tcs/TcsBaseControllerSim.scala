@@ -5,6 +5,7 @@ package navigate.server.tcs
 
 import cats.Applicative
 import lucuma.core.math.Angle
+import lucuma.core.util.TimeSpan
 import navigate.model.enums.{DomeMode, ShutterMode}
 import navigate.server.ApplyCommandResult
 
@@ -69,5 +70,9 @@ class TcsBaseControllerSim[F[_]: Applicative] extends TcsBaseController[F] {
 
   override def disableGuide: F[ApplyCommandResult] =
     Applicative[F].pure(ApplyCommandResult.Completed)
+
+  override def oiwfsObserve(exposureTime: TimeSpan, isQL: Boolean): F[ApplyCommandResult] = Applicative[F].pure(ApplyCommandResult.Completed)
+
+  override def oiwfsStopObserve: F[ApplyCommandResult] = Applicative[F].pure(ApplyCommandResult.Completed)
 }
 

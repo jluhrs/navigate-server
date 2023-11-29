@@ -61,6 +61,8 @@ object NavigateCommand {
   case object RotatorTrackingConfig       extends NavigateCommand
   case object EnableGuide                 extends NavigateCommand
   case object DisableGuide                extends NavigateCommand
+  case object OiwfsObserve                extends NavigateCommand
+  case object OiwfsStopObserve            extends NavigateCommand
 
   given Eq[NavigateCommand] = Eq.fromUniversalEquals
 
@@ -106,6 +108,8 @@ object NavigateCommand {
       case RotatorTrackingConfig => "CR Tracking Configuration"
       case EnableGuide           => "Guide Enable"
       case DisableGuide          => "Guide Disable"
+      case OiwfsObserve          => "Oiwfs Start Exposures"
+      case OiwfsStopObserve      => "Oiwfs Stop Exposures"
     }
   }
 

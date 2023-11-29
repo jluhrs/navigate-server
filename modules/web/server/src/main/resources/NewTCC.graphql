@@ -1,6 +1,6 @@
 #import NonEmptyString, Sidereal, TargetId, Nonsidereal from "lucuma/schemas/ObservationDB.graphql"
 #import SiderealInput, NonsiderealInput, WavelengthInput, AngleInput from "lucuma/schemas/ObservationDB.graphql"
-#import Long, BigDecimal, Timestamp from "lucuma/schemas/ObservationDB.graphql"
+#import Long, BigDecimal, Timestamp, TimeSpanInput from "lucuma/schemas/ObservationDB.graphql"
 
 """Target properties input"""
 input TargetPropertiesInput {
@@ -181,6 +181,8 @@ type Mutation {
     oiwfsProbeTracking(config: ProbeTrackingInput!): OperationOutcome!
     oiwfsPark: OperationOutcome!
     oiwfsFollow(enable: Boolean!): OperationOutcome!
+    oiwfsObserve(period: TimeSpanInput!): OperationOutcome!
+    oiwfsStopObserve: OperationOutcome!
     guideEnable(config: GuideConfigurationInput!): OperationOutcome!
     guideDisable: OperationOutcome!
 }

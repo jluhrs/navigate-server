@@ -13,7 +13,7 @@ import navigate.server.epicsdata.{BinaryOnOff, BinaryYesNo}
 import Target.SiderealTarget
 import TcsBaseController.*
 import lucuma.core.math.{Angle, Coordinates, Epoch, Wavelength}
-import lucuma.core.util.Enumerated
+import lucuma.core.util.{Enumerated, TimeSpan}
 import munit.CatsEffectSuite
 import navigate.server.epicsdata
 import navigate.server.tcs.M2GuideConfig.M2GuideOn
@@ -211,38 +211,38 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assertEquals(rs.sourceA.ephemerisFile.value, "".some)
 
       // OIWFS Target
-      assert(rs.oiwfs.objectName.connected)
-      assert(rs.oiwfs.brightness.connected)
-      assert(rs.oiwfs.coord1.connected)
-      assert(rs.oiwfs.coord2.connected)
-      assert(rs.oiwfs.properMotion1.connected)
-      assert(rs.oiwfs.properMotion2.connected)
-      assert(rs.oiwfs.epoch.connected)
-      assert(rs.oiwfs.equinox.connected)
-      assert(rs.oiwfs.parallax.connected)
-      assert(rs.oiwfs.radialVelocity.connected)
-      assert(rs.oiwfs.coordSystem.connected)
-      assert(rs.oiwfs.ephemerisFile.connected)
-      assertEquals(rs.oiwfs.objectName.value, oiwfsTarget.objectName.some)
+      assert(rs.oiwfsTarget.objectName.connected)
+      assert(rs.oiwfsTarget.brightness.connected)
+      assert(rs.oiwfsTarget.coord1.connected)
+      assert(rs.oiwfsTarget.coord2.connected)
+      assert(rs.oiwfsTarget.properMotion1.connected)
+      assert(rs.oiwfsTarget.properMotion2.connected)
+      assert(rs.oiwfsTarget.epoch.connected)
+      assert(rs.oiwfsTarget.equinox.connected)
+      assert(rs.oiwfsTarget.parallax.connected)
+      assert(rs.oiwfsTarget.radialVelocity.connected)
+      assert(rs.oiwfsTarget.coordSystem.connected)
+      assert(rs.oiwfsTarget.ephemerisFile.connected)
+      assertEquals(rs.oiwfsTarget.objectName.value, oiwfsTarget.objectName.some)
       assert(
-        rs.oiwfs.coord1.value.exists(x =>
+        rs.oiwfsTarget.coord1.value.exists(x =>
           compareDouble(x.toDouble, oiwfsTarget.coordinates.ra.toHourAngle.toDoubleHours)
         )
       )
       assert(
-        rs.oiwfs.coord2.value.exists(x =>
+        rs.oiwfsTarget.coord2.value.exists(x =>
           compareDouble(x.toDouble, oiwfsTarget.coordinates.dec.toAngle.toDoubleDegrees)
         )
       )
-      assert(rs.oiwfs.properMotion1.value.exists(x => compareDouble(x.toDouble, 0.0)))
-      assert(rs.oiwfs.properMotion2.value.exists(x => compareDouble(x.toDouble, 0.0)))
+      assert(rs.oiwfsTarget.properMotion1.value.exists(x => compareDouble(x.toDouble, 0.0)))
+      assert(rs.oiwfsTarget.properMotion2.value.exists(x => compareDouble(x.toDouble, 0.0)))
       assert(
-        rs.oiwfs.epoch.value.exists(x => compareDouble(x.toDouble, oiwfsTarget.epoch.epochYear))
+        rs.oiwfsTarget.epoch.value.exists(x => compareDouble(x.toDouble, oiwfsTarget.epoch.epochYear))
       )
-      assert(rs.oiwfs.parallax.value.exists(x => compareDouble(x.toDouble, 0.0)))
-      assert(rs.oiwfs.radialVelocity.value.exists(x => compareDouble(x.toDouble, 0.0)))
-      assertEquals(rs.oiwfs.coordSystem.value, SystemDefault.some)
-      assertEquals(rs.oiwfs.ephemerisFile.value, "".some)
+      assert(rs.oiwfsTarget.parallax.value.exists(x => compareDouble(x.toDouble, 0.0)))
+      assert(rs.oiwfsTarget.radialVelocity.value.exists(x => compareDouble(x.toDouble, 0.0)))
+      assertEquals(rs.oiwfsTarget.coordSystem.value, SystemDefault.some)
+      assertEquals(rs.oiwfsTarget.ephemerisFile.value, "".some)
 
       // OIWFS probe tracking
       assert(rs.oiwfsTracking.nodAchopA.connected)
@@ -457,38 +457,38 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       _        <- ctr.oiwfsTarget(oiwfsTarget)
       rs       <- st.get
     } yield {
-      assert(rs.oiwfs.objectName.connected)
-      assert(rs.oiwfs.brightness.connected)
-      assert(rs.oiwfs.coord1.connected)
-      assert(rs.oiwfs.coord2.connected)
-      assert(rs.oiwfs.properMotion1.connected)
-      assert(rs.oiwfs.properMotion2.connected)
-      assert(rs.oiwfs.epoch.connected)
-      assert(rs.oiwfs.equinox.connected)
-      assert(rs.oiwfs.parallax.connected)
-      assert(rs.oiwfs.radialVelocity.connected)
-      assert(rs.oiwfs.coordSystem.connected)
-      assert(rs.oiwfs.ephemerisFile.connected)
-      assertEquals(rs.oiwfs.objectName.value, oiwfsTarget.objectName.some)
+      assert(rs.oiwfsTarget.objectName.connected)
+      assert(rs.oiwfsTarget.brightness.connected)
+      assert(rs.oiwfsTarget.coord1.connected)
+      assert(rs.oiwfsTarget.coord2.connected)
+      assert(rs.oiwfsTarget.properMotion1.connected)
+      assert(rs.oiwfsTarget.properMotion2.connected)
+      assert(rs.oiwfsTarget.epoch.connected)
+      assert(rs.oiwfsTarget.equinox.connected)
+      assert(rs.oiwfsTarget.parallax.connected)
+      assert(rs.oiwfsTarget.radialVelocity.connected)
+      assert(rs.oiwfsTarget.coordSystem.connected)
+      assert(rs.oiwfsTarget.ephemerisFile.connected)
+      assertEquals(rs.oiwfsTarget.objectName.value, oiwfsTarget.objectName.some)
       assert(
-        rs.oiwfs.coord1.value.exists(x =>
+        rs.oiwfsTarget.coord1.value.exists(x =>
           compareDouble(x.toDouble, oiwfsTarget.coordinates.ra.toHourAngle.toDoubleHours)
         )
       )
       assert(
-        rs.oiwfs.coord2.value.exists(x =>
+        rs.oiwfsTarget.coord2.value.exists(x =>
           compareDouble(x.toDouble, oiwfsTarget.coordinates.dec.toAngle.toDoubleDegrees)
         )
       )
-      assert(rs.oiwfs.properMotion1.value.exists(x => compareDouble(x.toDouble, 0.0)))
-      assert(rs.oiwfs.properMotion2.value.exists(x => compareDouble(x.toDouble, 0.0)))
+      assert(rs.oiwfsTarget.properMotion1.value.exists(x => compareDouble(x.toDouble, 0.0)))
+      assert(rs.oiwfsTarget.properMotion2.value.exists(x => compareDouble(x.toDouble, 0.0)))
       assert(
-        rs.oiwfs.epoch.value.exists(x => compareDouble(x.toDouble, oiwfsTarget.epoch.epochYear))
+        rs.oiwfsTarget.epoch.value.exists(x => compareDouble(x.toDouble, oiwfsTarget.epoch.epochYear))
       )
-      assert(rs.oiwfs.parallax.value.exists(x => compareDouble(x.toDouble, 0.0)))
-      assert(rs.oiwfs.radialVelocity.value.exists(x => compareDouble(x.toDouble, 0.0)))
-      assertEquals(rs.oiwfs.coordSystem.value, SystemDefault.some)
-      assertEquals(rs.oiwfs.ephemerisFile.value, "".some)
+      assert(rs.oiwfsTarget.parallax.value.exists(x => compareDouble(x.toDouble, 0.0)))
+      assert(rs.oiwfsTarget.radialVelocity.value.exists(x => compareDouble(x.toDouble, 0.0)))
+      assertEquals(rs.oiwfsTarget.coordSystem.value, SystemDefault.some)
+      assertEquals(rs.oiwfsTarget.ephemerisFile.value, "".some)
     }
   }
 
@@ -614,6 +614,39 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assertEquals(r2.mountGuide.mode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.Off.some
       )
+    }
+  }
+
+  test("start OIWFS exposures") {
+    val testVal = TimeSpan.unsafeFromMicroseconds(12345)
+
+    for {
+      x <- createController
+      (st, ctr) = x
+      _ <- ctr.oiwfsObserve(testVal, true)
+      rs <- st.get
+    } yield {
+      assert(rs.oiWfs.observe.path.connected)
+      assert(rs.oiWfs.observe.label.connected)
+      assert(rs.oiWfs.observe.output.connected)
+      assert(rs.oiWfs.observe.options.connected)
+      assert(rs.oiWfs.observe.fileName.connected)
+      assert(rs.oiWfs.observe.interval.connected)
+      assert(rs.oiWfs.observe.numberOfExposures.connected)
+      assertEquals(rs.oiWfs.observe.interval.value.flatMap(_.toDoubleOption), testVal.toSeconds.toDouble.some)
+      assertEquals(rs.oiWfs.observe.numberOfExposures.value.flatMap(_.toIntOption), -1.some)
+    }
+  }
+
+  test("Stop OIWFS exposures") {
+    for {
+      x <- createController
+      (st, ctr) = x
+      _ <- ctr.oiwfsStopObserve
+      rs <- st.get
+    } yield {
+      assert(rs.oiWfs.stop.connected)
+      assertEquals(rs.oiWfs.stop.value, CadDirective.MARK.some)
     }
   }
 

@@ -19,7 +19,10 @@ import navigate.server.tcs.TcsEpicsSystem.{
   RotatorChannels,
   SlewChannels,
   TargetChannels,
-  TcsChannels
+  TcsChannels,
+  WfsChannels,
+  WfsObserveChannels,
+  WfsClosedLoopChannels
 }
 import navigate.server.ApplyCommandResult
 import monocle.{Focus, Lens}
@@ -108,31 +111,88 @@ object TestTcsEpicsSystem {
     yc: TestChannel.State[String]
   )
 
+  case class WfsObserveChannelState(
+    numberOfExposures: TestChannel.State[String],
+    interval: TestChannel.State[String],
+    options: TestChannel.State[String],
+    label: TestChannel.State[String],
+    output: TestChannel.State[String],
+    path: TestChannel.State[String],
+    fileName: TestChannel.State[String]
+  )
+
+  object WfsObserveChannelState {
+    val default: WfsObserveChannelState = WfsObserveChannelState(
+      TestChannel.State.default,
+      TestChannel.State.default,
+      TestChannel.State.default,
+      TestChannel.State.default,
+      TestChannel.State.default,
+      TestChannel.State.default,
+      TestChannel.State.default
+    )
+  }
+
+  case class WfsClosedLoopChannelState(
+    global: TestChannel.State[String],
+    average: TestChannel.State[String],
+    zernikes2m2: TestChannel.State[String],
+    mult: TestChannel.State[String],
+  )
+
+  object WfsClosedLoopChannelState {
+    val default: WfsClosedLoopChannelState = WfsClosedLoopChannelState(
+      TestChannel.State.default,
+      TestChannel.State.default,
+      TestChannel.State.default,
+      TestChannel.State.default
+    )
+  }
+
+  case class WfsChannelState(
+    observe: WfsObserveChannelState,
+    stop: TestChannel.State[CadDirective],
+    signalProc: TestChannel.State[String],
+    dark: TestChannel.State[String],
+    closedLoop: WfsClosedLoopChannelState
+  )
+
+  object WfsChannelState {
+    val default: WfsChannelState = WfsChannelState(
+      WfsObserveChannelState.default,
+      TestChannel.State.default,
+      TestChannel.State.default,
+      TestChannel.State.default,
+      WfsClosedLoopChannelState.default
+    )
+  }
+
   case class State(
-    telltale:         TestChannel.State[String],
-    telescopeParkDir: TestChannel.State[CadDirective],
-    mountFollow:      TestChannel.State[String],
-    rotStopBrake:     TestChannel.State[String],
-    rotParkDir:       TestChannel.State[CadDirective],
-    rotFollow:        TestChannel.State[String],
-    rotMoveAngle:     TestChannel.State[String],
-    enclosure:        EnclosureChannelsState,
-    sourceA:          TargetChannelsState,
-    oiwfs:            TargetChannelsState,
-    wavelSourceA:     TestChannel.State[String],
-    slew:             SlewChannelsState,
-    rotator:          RotatorChannelState,
-    origin:           OriginChannelState,
-    focusOffset:      TestChannel.State[String],
-    oiwfsTracking:    ProbeTrackingState,
-    oiwfsProbe:       ProbeState,
-    m1Guide:          TestChannel.State[String],
-    m1GuideConfig:    M1GuideConfigState,
-    m2Guide:          TestChannel.State[String],
-    m2GuideMode:      TestChannel.State[String],
-    m2GuideConfig:    M2GuideConfigState,
-    m2GuideReset:     TestChannel.State[CadDirective],
-    mountGuide:       MountGuideState
+                    telltale:         TestChannel.State[String],
+                    telescopeParkDir: TestChannel.State[CadDirective],
+                    mountFollow:      TestChannel.State[String],
+                    rotStopBrake:     TestChannel.State[String],
+                    rotParkDir:       TestChannel.State[CadDirective],
+                    rotFollow:        TestChannel.State[String],
+                    rotMoveAngle:     TestChannel.State[String],
+                    enclosure:        EnclosureChannelsState,
+                    sourceA:          TargetChannelsState,
+                    oiwfsTarget:      TargetChannelsState,
+                    wavelSourceA:     TestChannel.State[String],
+                    slew:             SlewChannelsState,
+                    rotator:          RotatorChannelState,
+                    origin:           OriginChannelState,
+                    focusOffset:      TestChannel.State[String],
+                    oiwfsTracking:    ProbeTrackingState,
+                    oiwfsProbe:       ProbeState,
+                    oiWfs:            WfsChannelState,
+                    m1Guide:          TestChannel.State[String],
+                    m1GuideConfig:    M1GuideConfigState,
+                    m2Guide:          TestChannel.State[String],
+                    m2GuideMode:      TestChannel.State[String],
+                    m2GuideConfig:    M2GuideConfigState,
+                    m2GuideReset:     TestChannel.State[CadDirective],
+                    mountGuide:       MountGuideState
   )
 
   val defaultState: State = State(
@@ -169,7 +229,7 @@ object TestTcsEpicsSystem {
       brightness = TestChannel.State.default,
       ephemerisFile = TestChannel.State.default
     ),
-    oiwfs = TargetChannelsState(
+    oiwfsTarget = TargetChannelsState(
       objectName = TestChannel.State.default,
       coordSystem = TestChannel.State.default,
       coord1 = TestChannel.State.default,
@@ -225,6 +285,7 @@ object TestTcsEpicsSystem {
     ),
     oiwfsProbe =
       ProbeState(parkDir = TestChannel.State.default, follow = TestChannel.State.default),
+    oiWfs = WfsChannelState.default,
     m1Guide = TestChannel.State.default,
     m1GuideConfig = M1GuideConfigState.default,
     m2Guide = TestChannel.State.default,
@@ -453,6 +514,30 @@ object TestTcsEpicsSystem {
     new TestChannel[F, State, String](s, l.andThen(Focus[MountGuideState](_.p2weight)))
   )
 
+  def buildWfsChannels[F[_]: Applicative](
+    s: Ref[F, State],
+    l: Lens[State, WfsChannelState]
+  ): WfsChannels[F] = WfsChannels(
+    WfsObserveChannels(
+      new TestChannel[F, State, String](s, l.andThen(Focus[WfsChannelState](_.observe.numberOfExposures))),
+      new TestChannel[F, State, String](s, l.andThen(Focus[WfsChannelState](_.observe.interval))),
+      new TestChannel[F, State, String](s, l.andThen(Focus[WfsChannelState](_.observe.options))),
+      new TestChannel[F, State, String](s, l.andThen(Focus[WfsChannelState](_.observe.label))),
+      new TestChannel[F, State, String](s, l.andThen(Focus[WfsChannelState](_.observe.output))),
+      new TestChannel[F, State, String](s, l.andThen(Focus[WfsChannelState](_.observe.path))),
+      new TestChannel[F, State, String](s, l.andThen(Focus[WfsChannelState](_.observe.fileName)))
+    ),
+    new TestChannel[F, State, CadDirective](s, l.andThen(Focus[WfsChannelState](_.stop))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[WfsChannelState](_.signalProc))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[WfsChannelState](_.dark))),
+    WfsClosedLoopChannels(
+      new TestChannel[F, State, String](s, l.andThen(Focus[WfsChannelState](_.closedLoop.global))),
+      new TestChannel[F, State, String](s, l.andThen(Focus[WfsChannelState](_.closedLoop.average))),
+      new TestChannel[F, State, String](s, l.andThen(Focus[WfsChannelState](_.closedLoop.zernikes2m2))),
+      new TestChannel[F, State, String](s, l.andThen(Focus[WfsChannelState](_.closedLoop.mult))),
+    )
+  )
+
   def buildChannels[F[_]: Applicative](s: Ref[F, State]): TcsChannels[F] =
     TcsChannels(
       telltale =
@@ -466,7 +551,7 @@ object TestTcsEpicsSystem {
       rotMoveAngle = new TestChannel[F, State, String](s, Focus[State](_.rotMoveAngle)),
       enclosure = buildEnclosureChannels(s),
       sourceA = buildTargetChannels(s, Focus[State](_.sourceA)),
-      oiwfs = buildTargetChannels(s, Focus[State](_.oiwfs)),
+      oiwfsTarget = buildTargetChannels(s, Focus[State](_.oiwfsTarget)),
       wavelSourceA = new TestChannel[F, State, String](s, Focus[State](_.rotMoveAngle)),
       slew = buildSlewChannels(s),
       rotator = buildRotatorChannels(s),
@@ -480,7 +565,8 @@ object TestTcsEpicsSystem {
       m2GuideMode = new TestChannel[F, State, String](s, Focus[State](_.m2GuideMode)),
       m2GuideConfig = buildM2GuideConfigChannels(s, Focus[State](_.m2GuideConfig)),
       m2GuideReset = new TestChannel[F, State, CadDirective](s, Focus[State](_.m2GuideReset)),
-      mountGuide = buildMountGuideChannels(s, Focus[State](_.mountGuide))
+      mountGuide = buildMountGuideChannels(s, Focus[State](_.mountGuide)),
+      oiwfs = buildWfsChannels(s, Focus[State](_.oiWfs))
     )
 
   def build[F[_]: Monad: Parallel](s: Ref[F, State]): TcsEpicsSystem[F] =

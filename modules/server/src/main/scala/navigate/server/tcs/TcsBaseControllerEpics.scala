@@ -2,12 +2,12 @@
 // For license information see LICENSE or https://opensource.org/licenses/BSD-3-Clause
 
 package navigate.server.tcs
+
 import cats.Parallel
 import cats.syntax.all.*
 import cats.effect.Async
 import mouse.boolean.given
 import navigate.server.{ApplyCommandResult, ConnectionTimeout}
-
 import scala.concurrent.duration.FiniteDuration
 import navigate.epics.VerifiedEpics.*
 import navigate.model.Distance
@@ -15,6 +15,7 @@ import navigate.model.enums.{DomeMode, ShutterMode}
 import navigate.server.tcs.Target.*
 import navigate.server.tcs.TcsEpicsSystem.{ProbeTrackingCommand, TargetCommand, TcsCommands}
 import lucuma.core.math.{Angle, Parallax, ProperMotion, RadialVelocity, Wavelength}
+import lucuma.core.util.TimeSpan
 import monocle.Getter
 import TcsBaseController.{EquinoxDefault, FixedSystem, SystemDefault}
 
@@ -438,4 +439,21 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
     .post
     .verifiedRun(ConnectionTimeout)
 
+  override def oiwfsObserve(exposureTime: TimeSpan, isQL: Boolean): F[ApplyCommandResult] = tcsEpics
+    .startCommand(timeout)
+    .oiWfsCommands.observe.interval(exposureTime.toSeconds.toDouble)
+    .oiWfsCommands.observe.output(isQL.fold("QL", ""))
+    .oiWfsCommands.observe.options(isQL.fold("DHS", "NONE"))
+    .oiWfsCommands.observe.numberOfExposures(-1)
+    .oiWfsCommands.observe.path("")
+    .oiWfsCommands.observe.fileName("")
+    .oiWfsCommands.observe.label("")
+    .post
+    .verifiedRun(ConnectionTimeout)
+
+  override def oiwfsStopObserve: F[ApplyCommandResult] = tcsEpics
+    .startCommand(timeout)
+    .oiWfsCommands.stop.mark
+    .post
+    .verifiedRun(ConnectionTimeout)
 }
