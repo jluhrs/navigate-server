@@ -46,11 +46,12 @@ ThisBuild / evictionErrorLevel := Level.Info
 
 ThisBuild / crossScalaVersions := Seq("3.3.1")
 
-lazy val root = tlCrossRootProject.aggregate(epics,
-                                             stateengine,
-                                             navigate_web_server,
-                                             navigate_model,
-                                             app_navigate_server
+lazy val root = tlCrossRootProject.aggregate(
+  epics,
+  stateengine,
+  navigate_web_server,
+  navigate_model,
+  app_navigate_server
 )
 
 lazy val epics = project
@@ -107,7 +108,11 @@ lazy val navigate_web_server = project
       Http4sClient ++ Http4s ++ PureConfig ++ Logging.value ++ MUnit.value ++ Grackle.value,
     // Supports launching the server in the background
     reStart / mainClass  := Some("navigate.web.server.http4s.WebServerLauncher"),
-    Compile / bspEnabled := false
+    Compile / bspEnabled := false,
+    // Don't include configuration files in the JAR. We want them outside, so they are editable.
+    Compile / packageBin / mappings ~= {
+      _.filterNot(f => f._1.getName.endsWith(".conf") || f._1.getName.endsWith("logback.xml"))
+    }
   )
   .settings(
     buildInfoUsePackageAsPath := true,
@@ -176,6 +181,8 @@ lazy val app_navigate_server = preventPublication(project.in(file("app/navigate-
   .enablePlugins(JavaServerAppPackaging)
   .enablePlugins(GitBranchPrompt)
   .settings(navigateCommonSettings: _*)
+  .settings(releaseAppMappings: _*)
+  .settings(embeddedJreSettings: _*)
   .settings(
     description          := "Navigate server for local testing",
     // Put the jar files in the lib dir
@@ -191,19 +198,26 @@ lazy val app_navigate_server = preventPublication(project.in(file("app/navigate-
       }
       filtered
     },
-    Universal / mappings += {
-      val f = (Compile / resourceDirectory).value / "update_smartgcal"
-      f -> ("bin/" + f.getName)
-    },
-    Universal / mappings += {
-      val f = (Compile / resourceDirectory).value / "navigate-server.env"
-      f -> ("systemd/" + f.getName)
-    },
-    Universal / mappings += {
-      val f = (Compile / resourceDirectory).value / "navigate-server.service"
-      f -> ("systemd/" + f.getName)
+    Universal / mappings ++= {
+      // Navigate UI project must be in sibling folder and be already built. See its README.md.
+      val clientDir = (ThisBuild / baseDirectory).value.getParentFile / "navigate-ui" / "dist"
+      directory(clientDir)
+        .map(path => path._1 -> ("app/" + path._1.relativeTo(clientDir).get.getPath))
     }
   )
+
+// Mappings for a particular release.
+lazy val releaseAppMappings = Seq(
+  // Copy the resource directory, with customized configuration files, but first remove existing mappings.
+  Universal / mappings := { // maps =>
+    val resourceDir         = (Compile / resourceDirectory).value
+    val resourceDirMappings =
+      directory(resourceDir).map(path => path._1 -> path._1.relativeTo(resourceDir).get.getPath)
+    val resourceDirFiles    = resourceDirMappings.map(_._2)
+    (Universal / mappings).value.filterNot(map => resourceDirFiles.contains(map._2)) ++
+      resourceDirMappings
+  }
+)
 
 /**
  * Common settings for the Navigate instances

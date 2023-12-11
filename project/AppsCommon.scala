@@ -56,15 +56,15 @@ object AppsCommon {
     }
   )
 
-  private def embeddedJreSettings(target: DeploymentTarget) = Seq(
+  lazy val embeddedJreSettings = Seq(
     // Put the jre in the tarball
     Universal / mappings ++= {
-      val jresDir    = (ThisBuild / ocsJreDir).value
-      // Map the location of jre files
-      val jreLink    = "JRE64_1.8"
-      val linux64Jre = jresDir.toPath.resolve(target.subdir).resolve(jreLink)
-      directory(linux64Jre.toFile).map { j =>
-        j._1 -> j._2.replace(jreLink, "jre")
+      // We look for the JRE in the project's base directory. This can be a symlink.
+      val jreDir = (ThisBuild / baseDirectory).value / "jre"
+      if (!jreDir.exists)
+        throw new Exception("JRE directory does not exist: " + jreDir)
+      directory(jreDir).map { path =>
+        path._1 -> ("jre/" + path._1.relativeTo(jreDir).get.getPath)
       }
     },
 
@@ -73,8 +73,6 @@ object AppsCommon {
       "-java-home ${app_home}/../jre"
     )
   )
-
-  lazy val embeddedJreSettingsLinux64 = embeddedJreSettings(DeploymentTarget.Linux64)
 
   /**
    * Settings for meta projects to make them non-publishable

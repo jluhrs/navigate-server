@@ -13,6 +13,7 @@ import com.comcast.ip4s.Dns
 import fs2.Stream
 import fs2.compression.Compression
 import fs2.concurrent.Topic
+import fs2.io.file.Files
 import natchez.Trace.Implicits.noop
 import navigate.model.NavigateEvent
 import navigate.model.config.*
@@ -24,6 +25,7 @@ import navigate.web.server.OcsBuildInfo
 import navigate.web.server.common.LogInitialization
 import navigate.web.server.common.RedirectToHttpsRoutes
 import navigate.web.server.common.StaticRoutes
+import navigate.web.server.common.baseDir
 import navigate.web.server.config.*
 import navigate.web.server.logging.SubscriptionAppender
 import navigate.web.server.security.AuthenticationService
@@ -107,7 +109,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
   }
 
   /** Resource that yields the running web server */
-  def webServer[F[_]: Logger: Async: Dns: Compression](
+  def webServer[F[_]: Logger: Async: Dns: Files: Compression](
     conf:      NavigateConfiguration,
     as:        AuthenticationService[F],
     outputs:   Topic[F, NavigateEvent],
@@ -127,7 +129,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
     }.flatten
 
     def router(wsBuilder: WebSocketBuilder2[F]) = Router[F](
-      "/"         -> new StaticRoutes(conf.mode === Mode.Development, OcsBuildInfo.builtAtMillis).service,
+      "/"         -> new StaticRoutes().service,
       "/navigate" -> new GraphQlRoutes(se, logTopic).service(wsBuilder)
     )
 
