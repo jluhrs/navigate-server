@@ -6,7 +6,7 @@ New telescope control tool for the Gemini Observatory
 
 If you haven't already, create a symlink `jre` in the project directory that points to the Linux JRE you want bundled with the deployment.
 
-Also, the UI project (`observe-ui`) must be in a sibling folder and be already built. See its README.md for instructions on how to build it.
+Also, the UI project (`navigate-ui`) must be in a sibling folder and be already built. See its README.md for instructions on how to build it.
 
 To deploy, run in `sbt`:
 
