@@ -70,6 +70,7 @@ ensime.sbt
 archive
 smartgcal
 .jvmopts
+/jre
 
 # Node modules
 node_modules/

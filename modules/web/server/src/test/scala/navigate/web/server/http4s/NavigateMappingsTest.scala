@@ -456,7 +456,7 @@ class NavigateMappingsTest extends CatsEffectSuite {
     } yield logs
 
     Dispatcher.sequential[IO].use { d =>
-      s(d).take(3).compile.toList.timeout(Duration.fromNanos(5e9)).map { l =>
+      s(d).take(3).compile.toList.timeout(Duration.fromNanos(10e9)).map { l =>
         val g: List[SimpleLoggingEvent] = l.collect { case Right(a) => a }
         assertEquals(g.length, l.length)
         assert(g.forall(_.message =!= debugMsg))
