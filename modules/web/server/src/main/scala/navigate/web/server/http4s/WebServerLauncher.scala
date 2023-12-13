@@ -60,14 +60,8 @@ object WebServerLauncher extends IOApp with LogInitialization {
   def configurationFile[F[_]: Sync]: F[FilePath] =
     baseDir[F].map(_.resolve("conf").resolve("app.conf"))
 
-  // Try to load config from the file and fall back to the common one in the class path
-  def config[F[_]: Sync]: F[ConfigObjectSource] = {
-    val defaultConfig = ConfigSource.resources("app.conf").pure[F]
-    val fileConfig    = configurationFile.map(ConfigSource.file)
-
-    // ConfigSource, first attempt the file or default to the classpath file
-    (fileConfig, defaultConfig).mapN(_.optional.withFallback(_))
-  }
+  def config[F[_]: Sync]: F[ConfigObjectSource] =
+    configurationFile.map(ConfigSource.file)
 
   /** Configures the Authentication service */
   def authService[F[_]: Sync: Logger](
