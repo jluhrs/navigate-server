@@ -260,7 +260,6 @@ lazy val navigateCommonSettings = Seq(
     "-J-XX:+ExitOnOutOfMemoryError",
     "-J-XX:+CrashOnOutOfMemoryError",
     "-J-XX:HeapDumpPath=/tmp",
-    "-J-Xrunjdwp:transport=dt_socket,address=8457,server=y,suspend=n",
-    "-java-home ${app_home}/../jre" // This breaks builds without jre
+    "-J-Xrunjdwp:transport=dt_socket,address=8457,server=y,suspend=n"
   )
 ) ++ commonSettings
