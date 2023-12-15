@@ -81,7 +81,7 @@ object Settings {
 
     // EPICS Libraries
     val ca  = "1.3.2"
-    val jca = "2.4.8"
+    val jca = "2.4.9"
 
     // Gemini Libraries
     val gspMath = "0.1.17"
