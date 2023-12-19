@@ -5,7 +5,8 @@ package navigate.server.tcs
 
 import lucuma.core.math.Angle
 import lucuma.core.util.TimeSpan
-import navigate.model.enums.{DomeMode, ShutterMode}
+import navigate.model.enums.DomeMode
+import navigate.model.enums.ShutterMode
 import navigate.server.ApplyCommandResult
 
 trait TcsBaseController[F[_]] {
@@ -23,9 +24,9 @@ trait TcsBaseController[F[_]] {
     domeEnable:    Boolean,
     shutterEnable: Boolean
   ): F[ApplyCommandResult]
-  def ecsVentGatesMove(gateEast:  Double, westGate: Double): F[ApplyCommandResult]
-  def tcsConfig(config:      TcsConfig): F[ApplyCommandResult]
-  def slew(slewOptions: SlewOptions, tcsConfig: TcsConfig): F[ApplyCommandResult]
+  def ecsVentGatesMove(gateEast:  Double, westGate:       Double): F[ApplyCommandResult]
+  def tcsConfig(config:           TcsConfig): F[ApplyCommandResult]
+  def slew(slewOptions:           SlewOptions, tcsConfig: TcsConfig): F[ApplyCommandResult]
   def instrumentSpecifics(config: InstrumentSpecifics): F[ApplyCommandResult]
   def oiwfsTarget(target:         Target): F[ApplyCommandResult]
   def rotIaa(angle:               Angle): F[ApplyCommandResult]
@@ -35,17 +36,19 @@ trait TcsBaseController[F[_]] {
   def oiwfsFollow(enable:         Boolean): F[ApplyCommandResult]
   def enableGuide(config:         TelescopeGuideConfig): F[ApplyCommandResult]
   def disableGuide: F[ApplyCommandResult]
-  def oiwfsObserve(exposureTime: TimeSpan, isQL: Boolean): F[ApplyCommandResult]
+  def oiwfsObserve(exposureTime:  TimeSpan, isQL:         Boolean): F[ApplyCommandResult]
   def oiwfsStopObserve: F[ApplyCommandResult]
+  
+  def getGuideState: F[GuideState]
 }
 
 object TcsBaseController {
 
   case class TcsConfig(
-                        sourceATarget: Target,
-                        instrumentSpecifics: InstrumentSpecifics,
-                        oiwfs: Option[GuiderConfig],
-                        rotatorTrackConfig: RotatorTrackConfig
+    sourceATarget:       Target,
+    instrumentSpecifics: InstrumentSpecifics,
+    oiwfs:               Option[GuiderConfig],
+    rotatorTrackConfig:  RotatorTrackConfig
   )
 
   val SystemDefault: String  = "FK5"

@@ -3,19 +3,23 @@
 
 package navigate.server.acm
 
-import cats.{Applicative, Monad}
-import cats.effect.{Resource, Temporal}
+import cats.Applicative
+import cats.Monad
+import cats.effect.Resource
+import cats.effect.Temporal
 import cats.effect.std.Dispatcher
 import cats.effect.syntax.temporal.*
 import cats.syntax.all.*
+import fs2.RaiseThrowable.*
+import fs2.Stream
+import mouse.all.booleanSyntaxMouse
+import navigate.epics.Channel
 import navigate.epics.Channel.StreamEvent
+import navigate.epics.EpicsService
+import navigate.epics.EpicsSystem.TelltaleChannel
+import navigate.epics.VerifiedEpics
 import navigate.epics.VerifiedEpics.*
 import navigate.server.ApplyCommandResult
-import navigate.epics.{Channel, EpicsService, VerifiedEpics}
-import navigate.epics.EpicsSystem.TelltaleChannel
-import fs2.Stream
-import fs2.RaiseThrowable.*
-import mouse.all.booleanSyntaxMouse
 
 import scala.concurrent.duration.FiniteDuration
 

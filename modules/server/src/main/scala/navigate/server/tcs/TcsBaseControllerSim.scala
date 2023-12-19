@@ -4,9 +4,11 @@
 package navigate.server.tcs
 
 import cats.Applicative
+import cats.syntax.all.*
 import lucuma.core.math.Angle
 import lucuma.core.util.TimeSpan
-import navigate.model.enums.{DomeMode, ShutterMode}
+import navigate.model.enums.DomeMode
+import navigate.model.enums.ShutterMode
 import navigate.server.ApplyCommandResult
 
 class TcsBaseControllerSim[F[_]: Applicative] extends TcsBaseController[F] {
@@ -28,12 +30,12 @@ class TcsBaseControllerSim[F[_]: Applicative] extends TcsBaseController[F] {
     Applicative[F].pure(ApplyCommandResult.Completed)
 
   override def ecsCarouselMode(
-                                domeMode: DomeMode,
-                                shutterMode: ShutterMode,
-                                slitHeight: Double,
-                                domeEnable: Boolean,
-                                shutterEnable: Boolean
-                              ): F[ApplyCommandResult] =
+    domeMode:      DomeMode,
+    shutterMode:   ShutterMode,
+    slitHeight:    Double,
+    domeEnable:    Boolean,
+    shutterEnable: Boolean
+  ): F[ApplyCommandResult] =
     Applicative[F].pure(ApplyCommandResult.Completed)
 
   override def ecsVentGatesMove(gateEast: Double, westGate: Double): F[ApplyCommandResult] =
@@ -42,7 +44,10 @@ class TcsBaseControllerSim[F[_]: Applicative] extends TcsBaseController[F] {
   override def tcsConfig(config: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
     Applicative[F].pure(ApplyCommandResult.Completed)
 
-  override def slew(slewOptions: SlewOptions, tcsConfig: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
+  override def slew(
+    slewOptions: SlewOptions,
+    tcsConfig:   TcsBaseController.TcsConfig
+  ): F[ApplyCommandResult] =
     Applicative[F].pure(ApplyCommandResult.Completed)
 
   override def instrumentSpecifics(config: InstrumentSpecifics): F[ApplyCommandResult] =
@@ -71,8 +76,15 @@ class TcsBaseControllerSim[F[_]: Applicative] extends TcsBaseController[F] {
   override def disableGuide: F[ApplyCommandResult] =
     Applicative[F].pure(ApplyCommandResult.Completed)
 
-  override def oiwfsObserve(exposureTime: TimeSpan, isQL: Boolean): F[ApplyCommandResult] = Applicative[F].pure(ApplyCommandResult.Completed)
+  override def oiwfsObserve(exposureTime: TimeSpan, isQL: Boolean): F[ApplyCommandResult] =
+    Applicative[F].pure(ApplyCommandResult.Completed)
 
-  override def oiwfsStopObserve: F[ApplyCommandResult] = Applicative[F].pure(ApplyCommandResult.Completed)
+  override def oiwfsStopObserve: F[ApplyCommandResult] =
+    Applicative[F].pure(ApplyCommandResult.Completed)
+
+  override def getGuideState: F[GuideState] = GuideState(
+    false,
+    M1GuideConfig.M1GuideOff,
+    M2GuideConfig.M2GuideOff
+  ).pure[F]
 }
-

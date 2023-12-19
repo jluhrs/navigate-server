@@ -128,6 +128,17 @@ enum M1CorrectionSource {
     OIWFS
 }
 
+type GuideConfigurationState {
+    """M2 Tip-Tilt correction sources. An empty array means no corrections"""
+    m2Inputs: [M2CorrectionSource!]
+    """M2 coma correction enabled. Only valid if m2Inputs and m1Input are defined"""
+    m2Coma: Boolean
+    """M1 correction source. If it is not defined it means no M1 correction"""
+    m1Input: M1CorrectionSource
+    """Tip-tilt offload to the mount enabled"""
+    mountOffload: Boolean!
+}
+
 input GuideConfigurationInput {
     """M2 Tip-Tilt correction sources. An empty array means no corrections"""
     m2Inputs: [M2CorrectionSource!]
@@ -189,4 +200,5 @@ type Mutation {
 
 type Subscription {
     logMessage: LogMessage!
+    guideState: GuideConfigurationState!
 }

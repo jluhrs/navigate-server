@@ -8,6 +8,9 @@ import io.circe.Encoder
 import io.circe.Json
 import io.circe.syntax.*
 import lucuma.core.util.Timestamp
+import navigate.server.tcs.GuideState
+import navigate.server.tcs.M1GuideConfig
+import navigate.server.tcs.M2GuideConfig
 
 package object encoder {
 
@@ -18,5 +21,22 @@ package object encoder {
       "thread"    -> e.getThreadName.asJson,
       "message"   -> e.getFormattedMessage.asJson
     )
+
+  given Encoder[GuideState] = s => {
+    val m2fields: List[(String, Json)] = s.m2Guide match {
+      case M2GuideConfig.M2GuideOff               => List.empty
+      case M2GuideConfig.M2GuideOn(coma, sources) =>
+        List(
+          "m2Inputs" -> sources.map(_.tag).asJson,
+          "m2Coma"   -> coma.asJson
+        )
+    }
+    val m1field: List[(String, Json)]  = s.m1Guide match {
+      case M1GuideConfig.M1GuideOff        => List.empty
+      case M1GuideConfig.M1GuideOn(source) => List("m1Input" -> source.tag.asJson)
+    }
+
+    Json.fromFields(m2fields ++ m1field :+ ("mountOffload", s.mountOffload.asJson))
+  }
 
 }

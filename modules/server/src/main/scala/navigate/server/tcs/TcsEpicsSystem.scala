@@ -3,37 +3,50 @@
 
 package navigate.server.tcs
 
-import cats.{Applicative, Monad, Parallel}
+import cats.Applicative
+import cats.Monad
+import cats.Parallel
+import cats.effect.Resource
+import cats.effect.Temporal
 import cats.effect.std.Dispatcher
-import cats.effect.{Resource, Temporal}
 import lucuma.core.math.Angle
 import mouse.all.*
+import navigate.epics.{Channel, EpicsService, VerifiedEpics}
 import navigate.epics.EpicsSystem.TelltaleChannel
-import navigate.epics.{Channel, EpicsService, given}
 import navigate.epics.VerifiedEpics.*
 import navigate.model.Distance
-import navigate.model.enums.{DomeMode, ShutterMode}
-import navigate.server.{ApplyCommandResult, tcs}
-import navigate.server.acm.ParameterList.*
-import navigate.server.acm.{CadDirective, Encoder, GeminiApplyCommand, writeCadParam}
-import navigate.server.epicsdata.{BinaryOnOff, BinaryYesNo, DirSuffix}
-import navigate.server.epicsdata.BinaryOnOff.given
-import navigate.server.epicsdata.BinaryYesNo.given
+import navigate.model.enums.DomeMode
+import navigate.model.enums.ShutterMode
+import navigate.server.ApplyCommandResult
+import navigate.server.acm.CadDirective
+import navigate.server.acm.Encoder
 import navigate.server.acm.Encoder.given
+import navigate.server.acm.GeminiApplyCommand
+import navigate.server.acm.ParameterList.*
+import navigate.server.acm.writeCadParam
+import navigate.server.epicsdata.BinaryOnOff
+import navigate.server.epicsdata.BinaryOnOff.given
+import navigate.server.epicsdata.BinaryYesNo
+import navigate.server.epicsdata.BinaryYesNo.given
 
 import scala.concurrent.duration.FiniteDuration
+import TcsChannels.{ProbeChannels, ProbeTrackingChannels, SlewChannels, TargetChannels, WfsChannels}
+import navigate.server.tcs.TcsEpicsSystem.TcsStatus
 
 trait TcsEpicsSystem[F[_]] {
   // TcsCommands accumulates the list of channels that need to be written to set parameters.
   // Once all the parameters are defined, the user calls the post method. Only then the EPICS channels will be verified,
   // the parameters written, and the apply record triggered.
-  def startCommand(timeout: FiniteDuration): tcs.TcsEpicsSystem.TcsCommands[F]
+  def startCommand(timeout: FiniteDuration): TcsEpicsSystem.TcsCommands[F]
+
+  val status: TcsStatus[F]
 }
 
 object TcsEpicsSystem {
 
   trait TcsEpics[F[_]] {
     def post(timeout: FiniteDuration): VerifiedEpics[F, F, ApplyCommandResult]
+
     val mountParkCmd: ParameterlessCommandChannels[F]
     val mountFollowCmd: Command1Channels[F, BinaryOnOff]
     val rotStopCmd: Command1Channels[F, BinaryYesNo]
@@ -93,20 +106,56 @@ object TcsEpicsSystem {
     // val scienceFoldPosCmd: ScienceFoldPosCmd[F]
     // val observe: EpicsCommand[F]
     // val endObserve: EpicsCommand[F]
+    // // GeMS Commands
+    // import VirtualGemsTelescope._
+    // val g1ProbeGuideCmd: ProbeGuideCmd[F]
+    // val g2ProbeGuideCmd: ProbeGuideCmd[F]
+    // val g3ProbeGuideCmd: ProbeGuideCmd[F]
+    // val g4ProbeGuideCmd: ProbeGuideCmd[F]
+    // def gemsProbeGuideCmd(g: VirtualGemsTelescope): ProbeGuideCmd[F] = g match {
+    //   case G1 => g1ProbeGuideCmd
+    //   case G2 => g2ProbeGuideCmd
+    //   case G3 => g3ProbeGuideCmd
+    //   case G4 => g4ProbeGuideCmd
+    // }
+    // val wavelG1: TargetWavelengthCmd[F]
+    // val wavelG2: TargetWavelengthCmd[F]
+    // val wavelG3: TargetWavelengthCmd[F]
+    // val wavelG4: TargetWavelengthCmd[F]
+    // def gemsWavelengthCmd(g: VirtualGemsTelescope): TargetWavelengthCmd[F] = g match {
+    //   case G1 => wavelG1
+    //   case G2 => wavelG2
+    //   case G3 => wavelG3
+    //   case G4 => wavelG4
+    // }
+    // val cwfs1ProbeFollowCmd: ProbeFollowCmd[F]
+    // val cwfs2ProbeFollowCmd: ProbeFollowCmd[F]
+    // val cwfs3ProbeFollowCmd: ProbeFollowCmd[F]
+    // val odgw1FollowCmd: ProbeFollowCmd[F]
+    // val odgw2FollowCmd: ProbeFollowCmd[F]
+    // val odgw3FollowCmd: ProbeFollowCmd[F]
+    // val odgw4FollowCmd: ProbeFollowCmd[F]
+    // val odgw1ParkCmd: EpicsCommand[F]
+    // val odgw2ParkCmd: EpicsCommand[F]
+    // val odgw3ParkCmd: EpicsCommand[F]
+    // val odgw4ParkCmd: EpicsCommand[F]
+  }
+
+  trait TcsStatus[F[_]] {
     // val aoCorrect: AoCorrect[F]
     // val aoPrepareControlMatrix: AoPrepareControlMatrix[F]
     // val aoFlatten: EpicsCommand[F]
     // val aoStatistics: AoStatistics[F]
     // val targetFilter: TargetFilter[F]
-    // def absorbTipTilt: F[Int]
-    // def m1GuideSource: F[String]
-    // def m1Guide: F[BinaryOnOff]
-    // def m2p1Guide: F[String]
-    // def m2p2Guide: F[String]
-    // def m2oiGuide: F[String]
-    // def m2aoGuide: F[String]
-    // def comaCorrect: F[String]
-    // def m2GuideState: F[BinaryOnOff]
+    def absorbTipTilt: VerifiedEpics[F, F, Int]
+    def m1GuideSource: VerifiedEpics[F, F, String]
+    def m1Guide: VerifiedEpics[F, F, BinaryOnOff]
+    def m2p1Guide: VerifiedEpics[F, F, String]
+    def m2p2Guide: VerifiedEpics[F, F, String]
+    def m2oiGuide: VerifiedEpics[F, F, String]
+    def m2aoGuide: VerifiedEpics[F, F, String]
+    def comaCorrect: VerifiedEpics[F, F, BinaryOnOff]
+    def m2GuideState: VerifiedEpics[F, F, BinaryOnOff]
     // def xoffsetPoA1: F[Double]
     // def yoffsetPoA1: F[Double]
     // def xoffsetPoB1: F[Double]
@@ -200,28 +249,6 @@ object TcsEpicsSystem {
     // def aoGuideStarY: F[Double]
     // def aoPreparedCMX: F[Double]
     // def aoPreparedCMY: F[Double]
-    // // GeMS Commands
-    // import VirtualGemsTelescope._
-    // val g1ProbeGuideCmd: ProbeGuideCmd[F]
-    // val g2ProbeGuideCmd: ProbeGuideCmd[F]
-    // val g3ProbeGuideCmd: ProbeGuideCmd[F]
-    // val g4ProbeGuideCmd: ProbeGuideCmd[F]
-    // def gemsProbeGuideCmd(g: VirtualGemsTelescope): ProbeGuideCmd[F] = g match {
-    //   case G1 => g1ProbeGuideCmd
-    //   case G2 => g2ProbeGuideCmd
-    //   case G3 => g3ProbeGuideCmd
-    //   case G4 => g4ProbeGuideCmd
-    // }
-    // val wavelG1: TargetWavelengthCmd[F]
-    // val wavelG2: TargetWavelengthCmd[F]
-    // val wavelG3: TargetWavelengthCmd[F]
-    // val wavelG4: TargetWavelengthCmd[F]
-    // def gemsWavelengthCmd(g: VirtualGemsTelescope): TargetWavelengthCmd[F] = g match {
-    //   case G1 => wavelG1
-    //   case G2 => wavelG2
-    //   case G3 => wavelG3
-    //   case G4 => wavelG4
-    // }
     // def gwfs1Target: Target[F]
     // def gwfs2Target: Target[F]
     // def gwfs3Target: Target[F]
@@ -232,17 +259,6 @@ object TcsEpicsSystem {
     //   case G3 => gwfs3Target
     //   case G4 => gwfs4Target
     // }
-    // val cwfs1ProbeFollowCmd: ProbeFollowCmd[F]
-    // val cwfs2ProbeFollowCmd: ProbeFollowCmd[F]
-    // val cwfs3ProbeFollowCmd: ProbeFollowCmd[F]
-    // val odgw1FollowCmd: ProbeFollowCmd[F]
-    // val odgw2FollowCmd: ProbeFollowCmd[F]
-    // val odgw3FollowCmd: ProbeFollowCmd[F]
-    // val odgw4FollowCmd: ProbeFollowCmd[F]
-    // val odgw1ParkCmd: EpicsCommand[F]
-    // val odgw2ParkCmd: EpicsCommand[F]
-    // val odgw3ParkCmd: EpicsCommand[F]
-    // val odgw4ParkCmd: EpicsCommand[F]
     // // GeMS statuses
     // def cwfs1Follow: F[Boolean]
     // def cwfs2Follow: F[Boolean]
@@ -281,14 +297,38 @@ object TcsEpicsSystem {
     // }
   }
 
-  val sysName: String = "TCS"
+  object TcsStatus {
+
+    def build[F[_]](channels: TcsChannels[F]): TcsStatus[F] =
+      new TcsStatus[F] {
+        override def absorbTipTilt: VerifiedEpics[F, F, Int]        =
+          VerifiedEpics.readChannel(channels.telltale, channels.guide.absorbTipTilt)
+        override def m1GuideSource: VerifiedEpics[F, F, String]     =
+          VerifiedEpics.readChannel(channels.telltale, channels.guide.m1Source)
+        override def m1Guide: VerifiedEpics[F, F, BinaryOnOff]      =
+          VerifiedEpics.readChannel(channels.telltale, channels.guide.m1State)
+        override def m2p1Guide: VerifiedEpics[F, F, String]         =
+          VerifiedEpics.readChannel(channels.telltale, channels.guide.m2P1Guide)
+        override def m2p2Guide: VerifiedEpics[F, F, String]         =
+          VerifiedEpics.readChannel(channels.telltale, channels.guide.m2P2Guide)
+        override def m2oiGuide: VerifiedEpics[F, F, String]         =
+          VerifiedEpics.readChannel(channels.telltale, channels.guide.m2OiGuide)
+        override def m2aoGuide: VerifiedEpics[F, F, String]         =
+          VerifiedEpics.readChannel(channels.telltale, channels.guide.m2AoGuide)
+        override def comaCorrect: VerifiedEpics[F, F, BinaryOnOff]  =
+          VerifiedEpics.readChannel(channels.telltale, channels.guide.m2ComaCorrection)
+        override def m2GuideState: VerifiedEpics[F, F, BinaryOnOff] =
+          VerifiedEpics.readChannel(channels.telltale, channels.guide.m2State)
+      }
+  }
 
   val className: String = getClass.getName
 
   private[tcs] def buildSystem[F[_]: Monad: Parallel](
     applyCmd: GeminiApplyCommand[F],
     channels: TcsChannels[F]
-  ): TcsEpicsSystem[F] = new TcsEpicsSystemImpl[F](new TcsEpicsImpl[F](applyCmd, channels))
+  ): TcsEpicsSystem[F] =
+    new TcsEpicsSystemImpl[F](new TcsEpicsImpl[F](applyCmd, channels), TcsStatus.build(channels))
 
   def build[F[_]: Dispatcher: Temporal: Parallel](
     service: EpicsService[F],
@@ -296,477 +336,11 @@ object TcsEpicsSystem {
   ): Resource[F, TcsEpicsSystem[F]] = {
     val top = tops.getOrElse("tcs", "tcs:")
     for {
-      channels <- buildChannels(service, top)
+      channels <- TcsChannels.buildChannels(service, top)
       applyCmd <-
         GeminiApplyCommand.build(service, channels.telltale, s"${top}apply", s"${top}applyC")
     } yield buildSystem(applyCmd, channels)
   }
-
-  case class TcsChannels[F[_]](
-    /**
-     * List of all TcsChannels. Channel -> Defines a raw channel Other cases -> Group of channels
-     */
-    telltale:         TelltaleChannel[F],
-    telescopeParkDir: Channel[F, CadDirective],
-    mountFollow:      Channel[F, String],
-    rotStopBrake:     Channel[F, String],
-    rotParkDir:       Channel[F, CadDirective],
-    rotFollow:        Channel[F, String],
-    rotMoveAngle:     Channel[F, String],
-    enclosure:        EnclosureChannels[F],
-    sourceA:          TargetChannels[F],
-    oiwfsTarget:      TargetChannels[F],
-    wavelSourceA:     Channel[F, String],
-    slew:             SlewChannels[F],
-    rotator:          RotatorChannels[F],
-    origin:           OriginChannels[F],
-    focusOffset:      Channel[F, String],
-    oiProbeTracking:  ProbeTrackingChannels[F],
-    oiProbe:          ProbeChannels[F],
-    m1Guide:          Channel[F, String],
-    m1GuideConfig:    M1GuideConfigChannels[F],
-    m2Guide:          Channel[F, String],
-    m2GuideMode:      Channel[F, String],
-    m2GuideConfig:    M2GuideConfigChannels[F],
-    m2GuideReset:     Channel[F, CadDirective],
-    mountGuide:       MountGuideChannels[F],
-    oiwfs:            WfsChannels[F]
-  )
-
-  // Next case classes are the channel groups
-  case class M1GuideConfigChannels[F[_]](
-    weighting: Channel[F, String],
-    source:    Channel[F, String],
-    frames:    Channel[F, String],
-    filename:  Channel[F, String]
-  )
-
-  object M1GuideConfigChannels {
-    def build[F[_]](
-      service: EpicsService[F],
-      top:     String
-    ): Resource[F, M1GuideConfigChannels[F]] = for {
-      w <- service.getChannel[String](s"${top}m1GuideConfig.A")
-      s <- service.getChannel[String](s"${top}m1GuideConfig.B")
-      f <- service.getChannel[String](s"${top}m1GuideConfig.C")
-      n <- service.getChannel[String](s"${top}m1GuideConfig.D")
-    } yield M1GuideConfigChannels(w, s, f, n)
-  }
-
-  case class M2GuideConfigChannels[F[_]](
-    source:     Channel[F, String],
-    samplefreq: Channel[F, String],
-    filter:     Channel[F, String],
-    freq1:      Channel[F, String],
-    freq2:      Channel[F, String],
-    beam:       Channel[F, String],
-    reset:      Channel[F, String]
-  )
-
-  object M2GuideConfigChannels {
-    def build[F[_]](
-      service: EpicsService[F],
-      top:     String
-    ): Resource[F, M2GuideConfigChannels[F]] = for {
-      sr <- service.getChannel[String](s"${top}m2GuideConfig.A")
-      sf <- service.getChannel[String](s"${top}m2GuideConfig.B")
-      fl <- service.getChannel[String](s"${top}m2GuideConfig.C")
-      f1 <- service.getChannel[String](s"${top}m2GuideConfig.D")
-      f2 <- service.getChannel[String](s"${top}m2GuideConfig.E")
-      bm <- service.getChannel[String](s"${top}m2GuideConfig.F")
-      rs <- service.getChannel[String](s"${top}m2GuideConfig.G")
-    } yield M2GuideConfigChannels(sr, sf, fl, f1, f2, bm, rs)
-  }
-
-  case class MountGuideChannels[F[_]](
-    mode:     Channel[F, String],
-    source:   Channel[F, String],
-    p1weight: Channel[F, String],
-    p2weight: Channel[F, String]
-  )
-
-  object MountGuideChannels {
-    def build[F[_]](
-      service: EpicsService[F],
-      top:     String
-    ): Resource[F, MountGuideChannels[F]] = for {
-      mn <- service.getChannel[String](s"${top}mountGuideMode.A")
-      sr <- service.getChannel[String](s"${top}mountGuideMode.B")
-      p1 <- service.getChannel[String](s"${top}mountGuideMode.C")
-      p2 <- service.getChannel[String](s"${top}mountGuideMode.D")
-    } yield MountGuideChannels(mn, sr, p1, p2)
-  }
-
-  case class EnclosureChannels[F[_]](
-    ecsDomeMode:      Channel[F, String],
-    ecsShutterMode:   Channel[F, String],
-    ecsSlitHeight:    Channel[F, String],
-    ecsDomeEnable:    Channel[F, String],
-    ecsShutterEnable: Channel[F, String],
-    ecsMoveAngle:     Channel[F, String],
-    ecsShutterTop:    Channel[F, String],
-    ecsShutterBottom: Channel[F, String],
-    ecsVentGateEast:  Channel[F, String],
-    ecsVentGateWest:  Channel[F, String]
-  )
-
-  case class TargetChannels[F[_]](
-    objectName:     Channel[F, String],
-    coordSystem:    Channel[F, String],
-    coord1:         Channel[F, String],
-    coord2:         Channel[F, String],
-    epoch:          Channel[F, String],
-    equinox:        Channel[F, String],
-    parallax:       Channel[F, String],
-    properMotion1:  Channel[F, String],
-    properMotion2:  Channel[F, String],
-    radialVelocity: Channel[F, String],
-    brightness:     Channel[F, String],
-    ephemerisFile:  Channel[F, String]
-  )
-
-  case class ProbeTrackingChannels[F[_]](
-    nodachopa: Channel[F, String],
-    nodachopb: Channel[F, String],
-    nodbchopa: Channel[F, String],
-    nodbchopb: Channel[F, String]
-  )
-
-  case class SlewChannels[F[_]](
-    zeroChopThrow:            Channel[F, String],
-    zeroSourceOffset:         Channel[F, String],
-    zeroSourceDiffTrack:      Channel[F, String],
-    zeroMountOffset:          Channel[F, String],
-    zeroMountDiffTrack:       Channel[F, String],
-    shortcircuitTargetFilter: Channel[F, String],
-    shortcircuitMountFilter:  Channel[F, String],
-    resetPointing:            Channel[F, String],
-    stopGuide:                Channel[F, String],
-    zeroGuideOffset:          Channel[F, String],
-    zeroInstrumentOffset:     Channel[F, String],
-    autoparkPwfs1:            Channel[F, String],
-    autoparkPwfs2:            Channel[F, String],
-    autoparkOiwfs:            Channel[F, String],
-    autoparkGems:             Channel[F, String],
-    autoparkAowfs:            Channel[F, String]
-  )
-
-  case class RotatorChannels[F[_]](
-    ipa:     Channel[F, String],
-    system:  Channel[F, String],
-    equinox: Channel[F, String],
-    iaa:     Channel[F, String]
-  )
-
-  case class OriginChannels[F[_]](
-    xa: Channel[F, String],
-    ya: Channel[F, String],
-    xb: Channel[F, String],
-    yb: Channel[F, String],
-    xc: Channel[F, String],
-    yc: Channel[F, String]
-  )
-
-  case class ProbeChannels[F[_]](
-    parkDir: Channel[F, CadDirective],
-    follow:  Channel[F, String]
-  )
-
-  // Build functions to construct each epics cannel for each
-  // channels group
-  def buildEnclosureChannels[F[_]](
-    service: EpicsService[F],
-    top:     String
-  ): Resource[F, EnclosureChannels[F]] =
-    for {
-      edm <- service.getChannel[String](s"${top}carouselMode.A")
-      esm <- service.getChannel[String](s"${top}carouselMode.B")
-      esh <- service.getChannel[String](s"${top}carouselMode.C")
-      ede <- service.getChannel[String](s"${top}carouselMode.D")
-      ese <- service.getChannel[String](s"${top}carouselMode.E")
-      ema <- service.getChannel[String](s"${top}carousel.A")
-      est <- service.getChannel[String](s"${top}shutter.A")
-      esb <- service.getChannel[String](s"${top}shutter.B")
-      eve <- service.getChannel[String](s"${top}ventgates.A")
-      evw <- service.getChannel[String](s"${top}ventgates.B")
-    } yield EnclosureChannels(
-      edm,
-      esm,
-      esh,
-      ede,
-      ese,
-      ema,
-      est,
-      esb,
-      eve,
-      evw
-    )
-
-  def buildTargetChannels[F[_]](
-    service: EpicsService[F],
-    prefix:  String
-  ): Resource[F, TargetChannels[F]] =
-    for {
-      on  <- service.getChannel[String](prefix + ".A")
-      cs  <- service.getChannel[String](prefix + ".B")
-      co1 <- service.getChannel[String](prefix + ".C")
-      co2 <- service.getChannel[String](prefix + ".D")
-      eq  <- service.getChannel[String](prefix + ".E")
-      ep  <- service.getChannel[String](prefix + ".F")
-      pr  <- service.getChannel[String](prefix + ".G")
-      pm1 <- service.getChannel[String](prefix + ".H")
-      pm2 <- service.getChannel[String](prefix + ".I")
-      rv  <- service.getChannel[String](prefix + ".J")
-      br  <- service.getChannel[String](prefix + ".K")
-      eph <- service.getChannel[String](prefix + ".L")
-    } yield TargetChannels(
-      on,
-      cs,
-      co1,
-      co2,
-      ep,
-      eq,
-      pr,
-      pm1,
-      pm2,
-      rv,
-      br,
-      eph
-    )
-
-  def buildProbeTrackingChannels[F[_]](
-    service: EpicsService[F],
-    top:     String,
-    name:    String
-  ): Resource[F, ProbeTrackingChannels[F]] = for {
-    aa <- service.getChannel[String](s"${top}config${name}.A")
-    ab <- service.getChannel[String](s"${top}config${name}.B")
-    ba <- service.getChannel[String](s"${top}config${name}.D")
-    bb <- service.getChannel[String](s"${top}config${name}.E")
-  } yield ProbeTrackingChannels(aa, ab, ba, bb)
-
-  def buildSlewChannels[F[_]](
-    service: EpicsService[F],
-    top:     String
-  ): Resource[F, SlewChannels[F]] = for {
-    zct <- service.getChannel[String](s"${top}slew.A")
-    zso <- service.getChannel[String](s"${top}slew.B")
-    zsd <- service.getChannel[String](s"${top}slew.C")
-    zmo <- service.getChannel[String](s"${top}slew.D")
-    zmd <- service.getChannel[String](s"${top}slew.E")
-    fl1 <- service.getChannel[String](s"${top}slew.F")
-    fl2 <- service.getChannel[String](s"${top}slew.G")
-    rp  <- service.getChannel[String](s"${top}slew.H")
-    sg  <- service.getChannel[String](s"${top}slew.I")
-    zgo <- service.getChannel[String](s"${top}slew.J")
-    zio <- service.getChannel[String](s"${top}slew.K")
-    ap1 <- service.getChannel[String](s"${top}slew.L")
-    ap2 <- service.getChannel[String](s"${top}slew.M")
-    aoi <- service.getChannel[String](s"${top}slew.N")
-    agm <- service.getChannel[String](s"${top}slew.O")
-    aao <- service.getChannel[String](s"${top}slew.P")
-  } yield SlewChannels(
-    zct,
-    zso,
-    zsd,
-    zmo,
-    zmd,
-    fl1,
-    fl2,
-    rp,
-    sg,
-    zgo,
-    zio,
-    ap1,
-    ap2,
-    aoi,
-    agm,
-    aao
-  )
-
-  def buildRotatorChannels[F[_]](
-    service: EpicsService[F],
-    top:     String
-  ): Resource[F, RotatorChannels[F]] = for {
-    ipa     <- service.getChannel[String](s"${top}rotator.A")
-    system  <- service.getChannel[String](s"${top}rotator.B")
-    equinox <- service.getChannel[String](s"${top}rotator.C")
-    iaa     <- service.getChannel[String](s"${top}rotator.D")
-  } yield RotatorChannels(
-    ipa,
-    system,
-    equinox,
-    iaa
-  )
-
-  def buildOriginChannels[F[_]](
-    service: EpicsService[F],
-    top:     String
-  ): Resource[F, OriginChannels[F]] = for {
-    xa <- service.getChannel[String](s"${top}poriginA.A")
-    ya <- service.getChannel[String](s"${top}poriginA.B")
-    xb <- service.getChannel[String](s"${top}poriginB.A")
-    yb <- service.getChannel[String](s"${top}poriginB.B")
-    xc <- service.getChannel[String](s"${top}poriginC.A")
-    yc <- service.getChannel[String](s"${top}poriginC.B")
-  } yield OriginChannels(
-    xa,
-    ya,
-    xb,
-    yb,
-    xc,
-    yc
-  )
-
-  def buildProbeChannels[F[_]](
-    service: EpicsService[F],
-    prefix:  String
-  ): Resource[F, ProbeChannels[F]] = for {
-    pd <- service.getChannel[CadDirective](s"${prefix}Park${DirSuffix}")
-    fl <- service.getChannel[String](s"${prefix}Follow.A")
-  } yield ProbeChannels(pd, fl)
-
-  case class WfsObserveChannels[F[_]](
-    numberOfExposures: Channel[F, String],
-    interval: Channel[F, String],
-    options: Channel[F, String],
-    label: Channel[F, String],
-    output: Channel[F, String],
-    path: Channel[F, String],
-    fileName: Channel[F, String]
-  )
-
-  object WfsObserveChannels{
-    def build[F[_]](
-      service: EpicsService[F],
-      top: String,
-      wfs: String
-    ): Resource[F, WfsObserveChannels[F]] = for {
-      ne <- service.getChannel[String](s"${top}${wfs}Observe.A")
-      in <- service.getChannel[String](s"${top}${wfs}Observe.B")
-      op <- service.getChannel[String](s"${top}${wfs}Observe.C")
-      lb <- service.getChannel[String](s"${top}${wfs}Observe.D")
-      ou <- service.getChannel[String](s"${top}${wfs}Observe.E")
-      pa <- service.getChannel[String](s"${top}${wfs}Observe.F")
-      fn <- service.getChannel[String](s"${top}${wfs}Observe.G")
-    } yield WfsObserveChannels(
-      ne,
-      in,
-      op,
-      lb,
-      ou,
-      pa,
-      fn
-    )
-  }
-
-  case class WfsClosedLoopChannels[F[_]](
-    global: Channel[F, String],
-    average: Channel[F, String],
-    zernikes2m2: Channel[F, String],
-    mult: Channel[F, String]
-  )
-
-  object WfsClosedLoopChannels{
-    def build[F[_]](
-      service: EpicsService[F],
-      top: String,
-      wfs: String
-    ): Resource[F, WfsClosedLoopChannels[F]] = for {
-      gl <- service.getChannel[String](s"${top}${wfs}Seq.A")
-      av <- service.getChannel[String](s"${top}${wfs}Seq.B")
-      z2 <- service.getChannel[String](s"${top}${wfs}Seq.C")
-      m <- service.getChannel[String](s"${top}${wfs}Seq.D")
-    } yield WfsClosedLoopChannels(gl, av, z2, m)
-  }
-
-  case class WfsChannels[F[_]](
-    observe: WfsObserveChannels[F],
-    stop: Channel[F, CadDirective],
-    procParams: Channel[F, String],
-    dark: Channel[F, String],
-    closedLoop: WfsClosedLoopChannels[F]
-  )
-
-  object WfsChannels{
-    def build[F[_]](
-      service: EpicsService[F],
-      top: String,
-      wfsl: String,
-      wfss: String
-    ): Resource[F, WfsChannels[F]] = for {
-      ob <- WfsObserveChannels.build(service, top, wfsl)
-      st <- service.getChannel[CadDirective](s"${top}${wfsl}StopObserve${DirSuffix}")
-      pr <- service.getChannel[String](s"${top}${wfss}DetSigInit.A")
-      dk <- service.getChannel[String](s"${top}${wfss}SeqDark.A")
-      cl <- WfsClosedLoopChannels.build(service, top, wfss)
-    } yield WfsChannels(ob, st, pr, dk, cl)
-  }
-
-  /**
-   * Build all TcsChannels It will construct the desired raw channel or call the build function for
-   * channels group
-   *
-   * @param service
-   *   Epics service to handle channels
-   * @param top
-   *   Prefix string of epics channel
-   * @return
-   */
-  def buildChannels[F[_]](service: EpicsService[F], top: String): Resource[F, TcsChannels[F]] =
-    for {
-      tt   <- service.getChannel[String](s"${top}sad:health.VAL").map(TelltaleChannel(sysName, _))
-      tpd  <- service.getChannel[CadDirective](s"${top}telpark$DirSuffix")
-      mf   <- service.getChannel[String](s"${top}mcFollow.A")
-      rsb  <- service.getChannel[String](s"${top}rotStop.B")
-      rpd  <- service.getChannel[CadDirective](s"${top}rotPark$DirSuffix")
-      rf   <- service.getChannel[String](s"${top}crFollow.A")
-      rma  <- service.getChannel[String](s"${top}rotMove.A")
-      ecs  <- buildEnclosureChannels(service, top)
-      sra  <- buildTargetChannels(service, s"${top}sourceA")
-      oit  <- buildTargetChannels(service, s"${top}oiwfs")
-      wva  <- service.getChannel[String](s"${top}wavelSourceA.A")
-      slw  <- buildSlewChannels(service, top)
-      rot  <- buildRotatorChannels(service, top)
-      org  <- buildOriginChannels(service, top)
-      foc  <- service.getChannel[String](s"${top}dtelFocus.A")
-      oig  <- buildProbeTrackingChannels(service, top, "Oiwfs")
-      op   <- buildProbeChannels(service, s"${top}oiwfs")
-      m1g  <- service.getChannel[String](s"${top}m1GuideMode.A")
-      m1gc <- M1GuideConfigChannels.build(service, top)
-      m2g  <- service.getChannel[String](s"${top}m2GuideControl.A")
-      m2gm <- service.getChannel[String](s"${top}m2GuideMode.A")
-      m2gc <- M2GuideConfigChannels.build(service, top)
-      m2gr <- service.getChannel[CadDirective](s"${top}m2GuideReset$DirSuffix")
-      mng  <- MountGuideChannels.build(service, top)
-      oi   <- WfsChannels.build(service, top, "oiwfs", "oi")
-    } yield TcsChannels[F](
-      tt,
-      tpd,
-      mf,
-      rsb,
-      rpd,
-      rf,
-      rma,
-      ecs,
-      sra,
-      oit,
-      wva,
-      slw,
-      rot,
-      org,
-      foc,
-      oig,
-      op,
-      m1g,
-      m1gc,
-      m2g,
-      m2gm,
-      m2gc,
-      m2gr,
-      mng,
-      oi
-    )
 
   case class TcsCommandsImpl[F[_]: Monad: Parallel](
     tcsEpics: TcsEpics[F],
@@ -1211,37 +785,67 @@ object TcsEpicsSystem {
           tcsEpics.mountGuideCmd.setParam4(v)
         )
       }
+
     override val oiWfsCommands: WfsCommands[F, TcsCommands[F]] =
-      new WfsCommands[F, TcsCommands[F]]{
-        override val observe: WfsObserveCommand[F, TcsCommands[F]] = new WfsObserveCommand[F, TcsCommands[F]] {
-          override def numberOfExposures(v: Int): TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.observe.setParam1(v))
-          override def interval(v: Double): TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.observe.setParam2(v))
-          override def options(v: String): TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.observe.setParam3(v))
-          override def label(v: String): TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.observe.setParam4(v))
-          override def output(v: String): TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.observe.setParam5(v))
-          override def path(v: String): TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.observe.setParam6(v))
-          override def fileName(v: String): TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.observe.setParam7(v))
-        }
-        override val stop: BaseCommand[F, TcsCommands[F]] = new BaseCommand[F, TcsCommands[F]] {
+      new WfsCommands[F, TcsCommands[F]] {
+        override val observe: WfsObserveCommand[F, TcsCommands[F]]             =
+          new WfsObserveCommand[F, TcsCommands[F]] {
+            override def numberOfExposures(v: Int): TcsCommands[F] = addParam(
+              tcsEpics.oiWfsCmds.observe.setParam1(v)
+            )
+            override def interval(v: Double): TcsCommands[F]       = addParam(
+              tcsEpics.oiWfsCmds.observe.setParam2(v)
+            )
+            override def options(v: String): TcsCommands[F]        = addParam(
+              tcsEpics.oiWfsCmds.observe.setParam3(v)
+            )
+            override def label(v: String): TcsCommands[F]          = addParam(
+              tcsEpics.oiWfsCmds.observe.setParam4(v)
+            )
+            override def output(v: String): TcsCommands[F]         = addParam(
+              tcsEpics.oiWfsCmds.observe.setParam5(v)
+            )
+            override def path(v: String): TcsCommands[F]           = addParam(
+              tcsEpics.oiWfsCmds.observe.setParam6(v)
+            )
+            override def fileName(v: String): TcsCommands[F]       = addParam(
+              tcsEpics.oiWfsCmds.observe.setParam7(v)
+            )
+          }
+        override val stop: BaseCommand[F, TcsCommands[F]]                      = new BaseCommand[F, TcsCommands[F]] {
           override def mark: TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.stop.mark)
         }
-        override val signalProc: WfsSignalProcConfigCommand[F, TcsCommands[F]] = (v: String) => addParam(tcsEpics.oiWfsCmds.signalProc.setParam1(v))
-        override val dark: WfsDarkCommand[F, TcsCommands[F]] = (v: String) => addParam(tcsEpics.oiWfsCmds.dark.setParam1(v))
-        override val closedLoop: WfsClosedLoopCommand[F, TcsCommands[F]] = new WfsClosedLoopCommand[F, TcsCommands[F]] {
-          override def global(v: Double): TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.closedLoop.setParam1(v))
+        override val signalProc: WfsSignalProcConfigCommand[F, TcsCommands[F]] = (v: String) =>
+          addParam(tcsEpics.oiWfsCmds.signalProc.setParam1(v))
+        override val dark: WfsDarkCommand[F, TcsCommands[F]]                   = (v: String) =>
+          addParam(tcsEpics.oiWfsCmds.dark.setParam1(v))
+        override val closedLoop: WfsClosedLoopCommand[F, TcsCommands[F]]       =
+          new WfsClosedLoopCommand[F, TcsCommands[F]] {
+            override def global(v: Double): TcsCommands[F] = addParam(
+              tcsEpics.oiWfsCmds.closedLoop.setParam1(v)
+            )
 
-          override def average(v: Int): TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.closedLoop.setParam2(v))
+            override def average(v: Int): TcsCommands[F] = addParam(
+              tcsEpics.oiWfsCmds.closedLoop.setParam2(v)
+            )
 
-          override def zernikes2m2(v: Int): TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.closedLoop.setParam3(v))
+            override def zernikes2m2(v: Int): TcsCommands[F] = addParam(
+              tcsEpics.oiWfsCmds.closedLoop.setParam3(v)
+            )
 
-          override def mult(v: Double): TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.closedLoop.setParam4(v))
-        }
+            override def mult(v: Double): TcsCommands[F] = addParam(
+              tcsEpics.oiWfsCmds.closedLoop.setParam4(v)
+            )
+          }
       }
   }
 
-  class TcsEpicsSystemImpl[F[_]: Monad: Parallel](epics: TcsEpics[F]) extends TcsEpicsSystem[F] {
+  class TcsEpicsSystemImpl[F[_]: Monad: Parallel](epics: TcsEpics[F], st: TcsStatus[F])
+      extends TcsEpicsSystem[F] {
     override def startCommand(timeout: FiniteDuration): TcsCommands[F] =
       TcsCommandsImpl(epics, timeout, List.empty)
+
+    override val status: TcsStatus[F] = st
   }
 
   class TcsEpicsImpl[F[_]: Monad](
@@ -1384,7 +988,8 @@ object TcsEpicsSystem {
         channels.mountGuide.p1weight,
         channels.mountGuide.p2weight
       )
-    override val oiWfsCmds: WfsCommandsChannels[F] = WfsCommandsChannels.build(channels.telltale, channels.oiwfs)
+    override val oiWfsCmds: WfsCommandsChannels[F]                                       =
+      WfsCommandsChannels.build(channels.telltale, channels.oiwfs)
   }
 
   case class ParameterlessCommandChannels[F[_]: Monad](
@@ -1634,18 +1239,18 @@ object TcsEpicsSystem {
   )
 
   case class WfsCommandsChannels[F[_]: Monad](
-    observe: Command7Channels[F, Int, Double, String, String, String, String, String],
-    stop: ParameterlessCommandChannels[F],
+    observe:    Command7Channels[F, Int, Double, String, String, String, String, String],
+    stop:       ParameterlessCommandChannels[F],
     signalProc: Command1Channels[F, String],
-    dark: Command1Channels[F, String],
+    dark:       Command1Channels[F, String],
     closedLoop: Command4Channels[F, Double, Int, Int, Double]
   )
 
   object WfsCommandsChannels {
     def build[F[_]: Monad](
-               tt: TelltaleChannel[F],
-               wfsChannels: WfsChannels[F]
-             ): WfsCommandsChannels[F] = WfsCommandsChannels(
+      tt:          TelltaleChannel[F],
+      wfsChannels: WfsChannels[F]
+    ): WfsCommandsChannels[F] = WfsCommandsChannels(
       Command7Channels(
         tt,
         wfsChannels.observe.numberOfExposures,
@@ -1807,12 +1412,12 @@ object TcsEpicsSystem {
 
   trait WfsObserveCommand[F[_], +S] {
     def numberOfExposures(v: Int): S
-    def interval(v: Double): S
-    def options(v: String): S
-    def label(v: String): S
-    def output(v: String): S
-    def path(v: String): S
-    def fileName(v: String): S
+    def interval(v:          Double): S
+    def options(v:           String): S
+    def label(v:             String): S
+    def output(v:            String): S
+    def path(v:              String): S
+    def fileName(v:          String): S
   }
 
   trait WfsSignalProcConfigCommand[F[_], +S] {
@@ -1824,17 +1429,17 @@ object TcsEpicsSystem {
   }
 
   trait WfsClosedLoopCommand[F[_], +S] {
-    def global(v: Double): S
-    def average(v: Int): S
+    def global(v:      Double): S
+    def average(v:     Int): S
     def zernikes2m2(v: Int): S
-    def mult(v: Double): S
+    def mult(v:        Double): S
   }
 
   trait WfsCommands[F[_], +S] {
     val observe: WfsObserveCommand[F, S]
     val stop: BaseCommand[F, S]
     val signalProc: WfsSignalProcConfigCommand[F, S]
-    val dark:WfsDarkCommand[F, S]
+    val dark: WfsDarkCommand[F, S]
     val closedLoop: WfsClosedLoopCommand[F, S]
   }
 
@@ -1869,57 +1474,6 @@ object TcsEpicsSystem {
     val oiWfsCommands: WfsCommands[F, TcsCommands[F]]
   }
   /*
-  trait WfsObserveCmd[F[_]] extends EpicsCommand[F] {
-    def setNoexp(v:  Integer): F[Unit]
-    def setInt(v:    Double): F[Unit]
-    def setOutopt(v: String): F[Unit]
-    def setLabel(v:  String): F[Unit]
-    def setOutput(v: String): F[Unit]
-    def setPath(v:   String): F[Unit]
-    def setName(v:   String): F[Unit]
-  }
-
-  final class WfsObserveCmdImpl[F[_]: Async](csName: String, epicsService: CaService)
-      extends EpicsCommandBase[F](sysName)
-      with WfsObserveCmd[F] {
-    override val cs: Option[CaCommandSender] = Option(epicsService.getCommandSender(csName))
-
-    private val noexp                          = cs.map(_.getInteger("noexp"))
-    override def setNoexp(v: Integer): F[Unit] = setParameter(noexp, v)
-
-    private val int                         = cs.map(_.getDouble("int"))
-    override def setInt(v: Double): F[Unit] = setParameter[F, java.lang.Double](int, v)
-
-    private val outopt                         = cs.map(_.getString("outopt"))
-    override def setOutopt(v: String): F[Unit] = setParameter(outopt, v)
-
-    private val label                         = cs.map(_.getString("label"))
-    override def setLabel(v: String): F[Unit] = setParameter(label, v)
-
-    private val output                         = cs.map(_.getString("output"))
-    override def setOutput(v: String): F[Unit] = setParameter(output, v)
-
-    private val path                         = cs.map(_.getString("path"))
-    override def setPath(v: String): F[Unit] = setParameter(path, v)
-
-    private val name                         = cs.map(_.getString("name"))
-    override def setName(v: String): F[Unit] = setParameter(name, v)
-  }
-
-  trait ProbeFollowCmd[F[_]] extends EpicsCommand[F] {
-    def setFollowState(v: String): F[Unit]
-  }
-
-  final class ProbeFollowCmdImpl[F[_]: Async](csName: String, epicsService: CaService)
-      extends EpicsCommandBase[F](sysName)
-      with ProbeFollowCmd[F] {
-    override protected val cs: Option[CaCommandSender] = Option(
-      epicsService.getCommandSender(csName)
-    )
-
-    private val follow                              = cs.map(_.getString("followState"))
-    override def setFollowState(v: String): F[Unit] = setParameter(follow, v)
-  }
 
   sealed trait VirtualGemsTelescope extends Product with Serializable
 

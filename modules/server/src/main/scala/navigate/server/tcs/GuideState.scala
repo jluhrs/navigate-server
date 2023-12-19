@@ -3,6 +3,11 @@
 
 package navigate.server.tcs
 
-case class SlewConfig(
-  slewOptions: SlewOptions
-)
+import cats.Eq
+import cats.derived.*
+
+case class GuideState (
+  mountOffload: Boolean,
+  m1Guide: M1GuideConfig,
+  m2Guide: M2GuideConfig
+) derives Eq

@@ -12,12 +12,11 @@ sealed abstract class TipTiltSource(val tag: String) extends Product with Serial
 
 object TipTiltSource {
 // Commented values will be restored when implementing support for each guider
-//  case object PWFS1 extends TipTiltSource("PWFS1")
-//  case object PWFS2 extends TipTiltSource("PWFS2")
+  case object PWFS1 extends TipTiltSource("PWFS1")
+  case object PWFS2 extends TipTiltSource("PWFS2")
   case object OIWFS extends TipTiltSource("OIWFS")
-//  case object GAOS  extends TipTiltSource("GAOS")
+  case object GAOS  extends TipTiltSource("GAOS")
 
-  /** @group Typeclass Instances */
   given Enumerated[TipTiltSource] =
     Enumerated.from(OIWFS).withTag(_.tag)
 }

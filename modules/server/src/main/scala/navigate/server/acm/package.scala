@@ -7,7 +7,8 @@ import cats.Monad
 import cats.syntax.all.*
 import navigate.epics.Channel
 import navigate.epics.EpicsSystem.TelltaleChannel
-import navigate.epics.VerifiedEpics.{VerifiedEpics, writeChannel}
+import navigate.epics.VerifiedEpics.VerifiedEpics
+import navigate.epics.VerifiedEpics.writeChannel
 
 package object acm {
 

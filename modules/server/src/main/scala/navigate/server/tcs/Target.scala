@@ -3,15 +3,13 @@
 
 package navigate.server.tcs
 
-import lucuma.core.math.{
-  Angle,
-  Coordinates,
-  Epoch,
-  Parallax,
-  ProperMotion,
-  RadialVelocity,
-  Wavelength
-}
+import lucuma.core.math.Angle
+import lucuma.core.math.Coordinates
+import lucuma.core.math.Epoch
+import lucuma.core.math.Parallax
+import lucuma.core.math.ProperMotion
+import lucuma.core.math.RadialVelocity
+import lucuma.core.math.Wavelength
 
 sealed trait Target extends Product with Serializable {
   val objectName: String

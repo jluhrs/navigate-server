@@ -3,7 +3,8 @@
 
 package navigate.server.tcs
 
-import cats.{Eq, Show}
+import cats.Eq
+import cats.Show
 import cats.derived.*
 
 /** Data type for guide config. */

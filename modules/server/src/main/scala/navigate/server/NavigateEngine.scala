@@ -3,38 +3,50 @@
 
 package navigate.server
 
-import cats.{Applicative, MonadThrow}
-import cats.effect.{Async, Concurrent, Ref, Temporal}
+import cats.Applicative
+import cats.MonadThrow
+import cats.effect.Async
+import cats.effect.Concurrent
+import cats.effect.Ref
+import cats.effect.Temporal
 import cats.effect.kernel.Sync
 import cats.syntax.all.*
-import org.typelevel.log4cats.Logger
-import navigate.model.NavigateCommand.*
-import navigate.model.{NavigateCommand, NavigateEvent}
-import navigate.model.NavigateEvent.{CommandFailure, CommandPaused, CommandStart, CommandSuccess}
-import navigate.model.config.NavigateEngineConfiguration
-import navigate.model.enums.{DomeMode, ShutterMode}
-import navigate.server.tcs.{InstrumentSpecifics, RotatorTrackConfig, Target, TelescopeGuideConfig, TrackingConfig, SlewOptions}
-import navigate.stateengine.StateEngine
-import NavigateEvent.NullEvent
-import fs2.{Pipe, Stream}
+import fs2.Pipe
+import fs2.Stream
 import lucuma.core.enums.Site
 import lucuma.core.math.Angle
 import lucuma.core.util.TimeSpan
-import monocle.{Focus, Lens}
+import monocle.Focus
+import monocle.Lens
+import navigate.model.NavigateCommand
+import navigate.model.NavigateCommand.*
+import navigate.model.NavigateEvent
+import navigate.model.NavigateEvent.CommandFailure
+import navigate.model.NavigateEvent.CommandPaused
+import navigate.model.NavigateEvent.CommandStart
+import navigate.model.NavigateEvent.CommandSuccess
+import navigate.model.config.NavigateEngineConfiguration
+import navigate.model.enums.DomeMode
+import navigate.model.enums.ShutterMode
+import navigate.server.tcs.{GuideState, InstrumentSpecifics, RotatorTrackConfig, SlewOptions, Target, TelescopeGuideConfig, TrackingConfig}
 import navigate.server.tcs.TcsBaseController.TcsConfig
+import navigate.stateengine.StateEngine
+import org.typelevel.log4cats.Logger
 
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.FiniteDuration
+import NavigateEvent.NullEvent
 
 trait NavigateEngine[F[_]] {
   val systems: Systems[F]
   def eventStream: Stream[F, NavigateEvent]
   def mcsPark: F[Unit]
-  def mcsFollow(enable: Boolean): F[Unit]
-  def rotStop(useBrakes: Boolean): F[Unit]
+  def mcsFollow(enable:                              Boolean): F[Unit]
+  def rotStop(useBrakes:                             Boolean): F[Unit]
   def rotPark: F[Unit]
-  def rotFollow(enable: Boolean): F[Unit]
-  def rotMove(angle: Angle): F[Unit]
-  def rotTrackingConfig(cfg: RotatorTrackConfig): F[Unit]
+  def rotFollow(enable:                              Boolean): F[Unit]
+  def rotMove(angle:                                 Angle): F[Unit]
+  def rotTrackingConfig(cfg:                         RotatorTrackConfig): F[Unit]
   def ecsCarouselMode(
     domeMode:      DomeMode,
     shutterMode:   ShutterMode,
@@ -42,18 +54,19 @@ trait NavigateEngine[F[_]] {
     domeEnable:    Boolean,
     shutterEnable: Boolean
   ): F[Unit]
-  def ecsVentGatesMove(gateEast: Double, westGate: Double): F[Unit]
-  def tcsConfig(config: TcsConfig): F[Unit]
-  def slew(slewOptions: SlewOptions, tcsConfig: TcsConfig): F[Unit]
+  def ecsVentGatesMove(gateEast:                     Double, westGate:       Double): F[Unit]
+  def tcsConfig(config:                              TcsConfig): F[Unit]
+  def slew(slewOptions:                              SlewOptions, tcsConfig: TcsConfig): F[Unit]
   def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): F[Unit]
-  def oiwfsTarget(target: Target): F[Unit]
-  def oiwfsProbeTracking(config: TrackingConfig): F[Unit]
+  def oiwfsTarget(target:                            Target): F[Unit]
+  def oiwfsProbeTracking(config:                     TrackingConfig): F[Unit]
   def oiwfsPark: F[Unit]
-  def oiwfsFollow(enable: Boolean): F[Unit]
-  def enableGuide(config: TelescopeGuideConfig): F[Unit]
+  def oiwfsFollow(enable:                            Boolean): F[Unit]
+  def enableGuide(config:                            TelescopeGuideConfig): F[Unit]
   def disableGuide: F[Unit]
-  def oiwfsObserve(period: TimeSpan): F[Unit]
+  def oiwfsObserve(period:                           TimeSpan): F[Unit]
   def oiwfsStopObserve: F[Unit]
+  def getGuideState: F[GuideState]
 }
 
 object NavigateEngine {
@@ -231,6 +244,8 @@ object NavigateEngine {
       systems.tcsSouth.oiwfsStopObserve,
       Focus[State](_.oiwfsStopObserve)
     )
+
+    override def getGuideState: F[GuideState] = systems.tcsSouth.getGuideState
   }
 
   def build[F[_]: Concurrent: Logger](

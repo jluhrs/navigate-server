@@ -4,7 +4,9 @@
 package navigate.server.acm
 
 import cats.effect.Resource
-import navigate.epics.{Channel, EpicsService, given}
+import navigate.epics.Channel
+import navigate.epics.EpicsService
+import navigate.epics.given
 
 case class CarRecord[F[_]](
   name: String,

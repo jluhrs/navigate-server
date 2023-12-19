@@ -47,6 +47,7 @@ import navigate.server.tcs.AutoparkOiwfs
 import navigate.server.tcs.AutoparkPwfs1
 import navigate.server.tcs.AutoparkPwfs2
 import navigate.server.tcs.FollowStatus
+import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuiderConfig
 import navigate.server.tcs.InstrumentSpecifics
 import navigate.server.tcs.M1GuideConfig
@@ -78,7 +79,11 @@ import scala.reflect.classTag
 
 import encoder.given
 
-class NavigateMappings[F[_]: Sync](server: NavigateEngine[F], logTopic: Topic[F, ILoggingEvent])(
+class NavigateMappings[F[_]: Sync](
+  server:              NavigateEngine[F],
+  logTopic:            Topic[F, ILoggingEvent],
+  guideStateTopic:     Topic[F, GuideState]
+)(
   override val schema: Schema
 ) extends CirceMapping[F] {
   import NavigateMappings._
@@ -428,6 +433,13 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F], logTopic: Topic[F,
             .map(_.asJson)
             .map(circeCursor(p, env, _))
             .map(Result.success)
+        },
+        RootStream.computeCursor("guideState") { (p, env) =>
+          guideStateTopic
+            .subscribe(10)
+            .map(_.asJson)
+            .map(circeCursor(p, env, _))
+            .map(Result.success)
         }
       )
     ),
@@ -448,12 +460,14 @@ object NavigateMappings extends GrackleParsers {
     .build
 
   def apply[F[_]: Sync](
-    server:   NavigateEngine[F],
-    logTopic: Topic[F, ILoggingEvent]
+    server:          NavigateEngine[F],
+    logTopic:        Topic[F, ILoggingEvent],
+    guideStateTopic: Topic[F, GuideState]
   ): F[NavigateMappings[F]] = loadSchema.flatMap {
-    case Result.Success(schema)           => new NavigateMappings[F](server, logTopic)(schema).pure[F]
+    case Result.Success(schema)           =>
+      new NavigateMappings[F](server, logTopic, guideStateTopic)(schema).pure[F]
     case Result.Warning(problems, schema) =>
-      new NavigateMappings[F](server, logTopic)(schema).pure[F]
+      new NavigateMappings[F](server, logTopic, guideStateTopic)(schema).pure[F]
     case Result.Failure(problems)         =>
       Sync[F].raiseError[NavigateMappings[F]](
         new Throwable(
@@ -525,7 +539,6 @@ object NavigateMappings extends GrackleParsers {
     ra    <- l.collectFirst { case ("ra", ObjectValue(v)) => parseRightAscension(v) }.flatten
     dec   <- l.collectFirst { case ("dec", ObjectValue(v)) => parseDeclination(v) }.flatten
     epoch <- l.collectFirst { case ("epoch", StringValue(v)) => parseEpoch(v) }.flatten
-
   } yield Target.SiderealTarget(
     name,
     centralWavel,
