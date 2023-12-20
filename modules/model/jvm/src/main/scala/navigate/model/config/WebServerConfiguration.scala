@@ -4,6 +4,7 @@
 package navigate.model.config
 
 import cats.Eq
+import org.http4s.Uri
 
 import java.nio.file.Path
 
@@ -43,7 +44,8 @@ case class WebServerConfiguration(
   host:            String,
   port:            Int,
   insecurePort:    Int,
-  externalBaseUrl: String
+  externalBaseUrl: String,
+  proxyBaseUri:    Uri
 ) {
   // FIXME Pureconfig can't load this anymore
   val tls: Option[TLSConfig] = None

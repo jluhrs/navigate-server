@@ -6,6 +6,7 @@ package navigate.web.server.http4s
 import cats.Parallel
 import cats.effect.*
 import cats.effect.std.Dispatcher
+import cats.effect.syntax.all.*
 import cats.syntax.all.*
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.Appender
@@ -14,6 +15,7 @@ import fs2.Stream
 import fs2.compression.Compression
 import fs2.concurrent.Topic
 import fs2.io.file.Files
+import fs2.io.net.Network
 import natchez.Trace.Implicits.noop
 import navigate.model.NavigateEvent
 import navigate.model.config.*
@@ -30,6 +32,7 @@ import navigate.web.server.config.*
 import navigate.web.server.logging.SubscriptionAppender
 import navigate.web.server.security.AuthenticationService
 import org.http4s.HttpRoutes
+import org.http4s.Uri
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.client.Client
 import org.http4s.ember.client.EmberClientBuilder
@@ -53,7 +56,9 @@ import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManagerFactory
 import scala.concurrent.duration.*
 
-object WebServerLauncher extends IOApp with LogInitialization {
+object WebServerLauncher extends IOApp with LogInitialization:
+  private val ProxyRoute: Uri.Path = Uri.Path.empty / "db"
+
   private given Logger[IO] = Slf4jLogger.getLoggerFromName[IO]("navigate")
 
   // Attempt to get the configuration file relative to the base dir
@@ -61,7 +66,12 @@ object WebServerLauncher extends IOApp with LogInitialization {
     baseDir[F].map(_.resolve("conf").resolve("app.conf"))
 
   def config[F[_]: Sync]: F[ConfigObjectSource] =
-    configurationFile.map(ConfigSource.file)
+    val defaultConfig = ConfigSource.resources("app.conf").pure[F]
+    val fileConfig    = configurationFile.map(ConfigSource.file)
+
+    // ConfigSource, first attempt the file or default to the classpath/resources file
+    (fileConfig, defaultConfig).mapN: (file, default) =>
+      file.optional.withFallback(default.optional)
 
   /** Configures the Authentication service */
   def authService[F[_]: Sync: Logger](
@@ -103,7 +113,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
   }
 
   /** Resource that yields the running web server */
-  def webServer[F[_]: Logger: Async: Dns: Files: Compression](
+  def webServer[F[_]: Logger: Async: Dns: Files: Compression: Network](
     conf:      NavigateConfiguration,
     as:        AuthenticationService[F],
     outputs:   Topic[F, NavigateEvent],
@@ -111,31 +121,36 @@ object WebServerLauncher extends IOApp with LogInitialization {
     se:        NavigateEngine[F],
     clientsDb: ClientsSetDb[F]
   ): Resource[F, Server] = {
-
     val ssl: F[Option[SSLContext]] = conf.webServer.tls.map(makeContext[F]).sequence
 
-    def build(all: WebSocketBuilder2[F] => HttpRoutes[F]): Resource[F, Server] = Resource.eval {
-      val builder =
-        BlazeServerBuilder[F]
-          .bindHttp(conf.webServer.port, conf.webServer.host)
-          .withHttpWebSocketApp(wsb => all(wsb).orNotFound)
-      ssl.map(_.fold(builder)(builder.withSslContext)).map(_.resource)
-    }.flatten
-
-    def router(wsBuilder: WebSocketBuilder2[F]) = Router[F](
-      "/"         -> new StaticRoutes().service,
-      "/navigate" -> new GraphQlRoutes(se, logTopic).service(wsBuilder)
+    def router(wsBuilder: WebSocketBuilder2[F], proxyService: HttpRoutes[F]) = Router[F](
+      "/"                 -> new StaticRoutes().service,
+      "/navigate"         -> new GraphQlRoutes(se, logTopic).service(wsBuilder),
+      ProxyRoute.toString -> proxyService
     )
 
     val pingRouter = Router[F](
       "/ping" -> new PingRoutes(as).service
     )
 
-    def loggedRoutes(wsBuilder: WebSocketBuilder2[F]) =
-      pingRouter <+> Http4sLogger.httpRoutes(logHeaders = false, logBody = false)(router(wsBuilder))
+    def loggedRoutes(wsBuilder: WebSocketBuilder2[F], proxyService: HttpRoutes[F]) =
+      pingRouter <+>
+        Http4sLogger.httpRoutes(logHeaders = false, logBody = false)(
+          router(wsBuilder, proxyService)
+        )
 
-    build(loggedRoutes)
+    def builder(proxyService: HttpRoutes[F]) =
+      BlazeServerBuilder[F]
+        .bindHttp(conf.webServer.port, conf.webServer.host)
+        .withHttpWebSocketApp(wsb => loggedRoutes(wsb, proxyService).orNotFound)
 
+    for
+      proxyService <- ProxyBuilder.buildService[F](conf.webServer.proxyBaseUri, ProxyRoute)
+      server       <- ssl
+                        .map(_.fold(builder(proxyService))(builder(proxyService).withSslContext).resource)
+                        .toResource
+                        .flatten
+    yield server
   }
 
   def redirectWebServer[F[_]: Async](conf: WebServerConfiguration): Resource[F, Server] = {
@@ -284,5 +299,3 @@ object WebServerLauncher extends IOApp with LogInitialization {
       if (oc.isSuccess) IO.unit
       else IO(Console.println(s"Exit code $oc")) // scalastyle:off console.io
     }
-
-}
