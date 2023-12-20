@@ -58,7 +58,7 @@ import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManagerFactory
 import scala.concurrent.duration.*
 
-object WebServerLauncher extends IOApp with LogInitialization:
+object WebServerLauncher extends IOApp with LogInitialization {
   private val ProxyRoute: Uri.Path = Uri.Path.empty / "db"
 
   private given Logger[IO] = Slf4jLogger.getLoggerFromName[IO]("navigate")
@@ -115,15 +115,15 @@ object WebServerLauncher extends IOApp with LogInitialization:
   }
 
   /** Resource that yields the running web server */
-def webServer[F[_]: Logger: Async: Dns: Files: Compression: Network](
-    conf:       NavigateConfiguration,
-    as:         AuthenticationService[F],
-    outputs:    Topic[F, NavigateEvent],
-    logTopic:   Topic[F, ILoggingEvent],
-    guideTopic: Topic[F, GuideState],
-    se:         NavigateEngine[F],
-    clientsDb:  ClientsSetDb[F]
-  ): Resource[F, Server] = {
+  def webServer[F[_]: Logger: Async: Dns: Files: Compression: Network](
+      conf:       NavigateConfiguration,
+      as:         AuthenticationService[F],
+      outputs:    Topic[F, NavigateEvent],
+      logTopic:   Topic[F, ILoggingEvent],
+      guideTopic: Topic[F, GuideState],
+      se:         NavigateEngine[F],
+      clientsDb:  ClientsSetDb[F]
+    ): Resource[F, Server] = {
     val ssl: F[Option[SSLContext]] = conf.webServer.tls.map(makeContext[F]).sequence
 
     def router(wsBuilder: WebSocketBuilder2[F], proxyService: HttpRoutes[F]) = Router[F](

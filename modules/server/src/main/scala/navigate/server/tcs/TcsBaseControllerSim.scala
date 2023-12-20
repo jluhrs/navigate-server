@@ -4,6 +4,7 @@
 package navigate.server.tcs
 
 import cats.Applicative
+import cats.effect.Ref
 import cats.syntax.all.*
 import lucuma.core.math.Angle
 import lucuma.core.util.TimeSpan
@@ -11,7 +12,7 @@ import navigate.model.enums.DomeMode
 import navigate.model.enums.ShutterMode
 import navigate.server.ApplyCommandResult
 
-class TcsBaseControllerSim[F[_]: Applicative] extends TcsBaseController[F] {
+class TcsBaseControllerSim[F[_]: Applicative](guideRef: Ref[F, GuideState]) extends TcsBaseController[F] {
   override def mcsPark: F[ApplyCommandResult] = Applicative[F].pure(ApplyCommandResult.Completed)
 
   override def mcsFollow(enable: Boolean): F[ApplyCommandResult] =
@@ -70,11 +71,15 @@ class TcsBaseControllerSim[F[_]: Applicative] extends TcsBaseController[F] {
   override def rotTrackingConfig(cfg: RotatorTrackConfig): F[ApplyCommandResult] =
     Applicative[F].pure(ApplyCommandResult.Completed)
 
-  override def enableGuide(config: TelescopeGuideConfig): F[ApplyCommandResult] =
-    Applicative[F].pure(ApplyCommandResult.Completed)
+  override def enableGuide(config: TelescopeGuideConfig): F[ApplyCommandResult] = guideRef.set(
+    GuideState(
+      config.mountGuide,
+      config.m1Guide,
+      config.m2Guide
+    )
+  ).as(ApplyCommandResult.Completed)
 
-  override def disableGuide: F[ApplyCommandResult] =
-    Applicative[F].pure(ApplyCommandResult.Completed)
+  override def disableGuide: F[ApplyCommandResult] = guideRef.set(GuideState(false, M1GuideConfig.M1GuideOff, M2GuideConfig.M2GuideOff)).as(ApplyCommandResult.Completed)
 
   override def oiwfsObserve(exposureTime: TimeSpan, isQL: Boolean): F[ApplyCommandResult] =
     Applicative[F].pure(ApplyCommandResult.Completed)
@@ -82,9 +87,5 @@ class TcsBaseControllerSim[F[_]: Applicative] extends TcsBaseController[F] {
   override def oiwfsStopObserve: F[ApplyCommandResult] =
     Applicative[F].pure(ApplyCommandResult.Completed)
 
-  override def getGuideState: F[GuideState] = GuideState(
-    false,
-    M1GuideConfig.M1GuideOff,
-    M2GuideConfig.M2GuideOff
-  ).pure[F]
+  override def getGuideState: F[GuideState] = guideRef.get
 }

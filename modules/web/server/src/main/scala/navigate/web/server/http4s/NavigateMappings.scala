@@ -88,6 +88,9 @@ class NavigateMappings[F[_]: Sync](
 ) extends CirceMapping[F] {
   import NavigateMappings._
 
+  def guideState(p: Path, env: Env): F[Result[GuideState]] =
+    server.getGuideState.attempt.map(_.fold(Result.internalError, Result.success))
+
   def mountPark(p: Path, env: Env): F[Result[OperationOutcome]] =
     server.mcsPark.attempt
       .map(x =>
@@ -316,6 +319,7 @@ class NavigateMappings[F[_]: Sync](
         )
       )
 
+  val QueryType: TypeRef               = schema.ref("Query")
   val MutationType: TypeRef            = schema.ref("Mutation")
   val SubscriptionType: TypeRef        = schema.ref("Subscription")
   val ParkStatusType: TypeRef          = schema.ref("ParkStatus")
@@ -403,6 +407,12 @@ class NavigateMappings[F[_]: Sync](
   }
 
   override val typeMappings: List[TypeMapping] = List(
+    ObjectMapping(
+      tpe = QueryType,
+      fieldMappings = List(
+        RootEffect.computeEncodable("guideState")((p, env) => guideState(p, env) )
+      )
+    ),
     ObjectMapping(
       tpe = MutationType,
       fieldMappings = List(

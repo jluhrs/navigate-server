@@ -177,6 +177,7 @@ type OperationOutcome {
 
 type Query {
     telescopeStatus: TelescopeStatus!
+    guideState: GuideConfigurationState!
 }
 
 type Mutation {

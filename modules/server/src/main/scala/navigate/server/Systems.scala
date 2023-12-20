@@ -39,13 +39,13 @@ object Systems {
       if (conf.systemControl.tcs === ControlStrategy.FullControl)
         TcsEpicsSystem.build(epicsSrv, tops).map(new TcsSouthControllerEpics(_, conf.ioTimeout))
       else
-        Resource.pure(new TcsSouthControllerSim)
+        Resource.eval(TcsSouthControllerSim.build)
 
     def buildTcsNorthController: Resource[F, TcsNorthController[F]] =
       if (conf.systemControl.tcs === ControlStrategy.FullControl)
         TcsEpicsSystem.build(epicsSrv, tops).map(new TcsNorthControllerEpics(_, conf.ioTimeout))
       else
-        Resource.pure(new TcsNorthControllerSim)
+        Resource.eval(TcsNorthControllerSim.build)
 
     for {
       odb  <- buildOdbProxy
