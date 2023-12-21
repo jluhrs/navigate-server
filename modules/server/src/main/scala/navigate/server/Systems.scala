@@ -3,15 +3,17 @@
 
 package navigate.server
 
-import cats.effect.std.Dispatcher
-import cats.effect.{Async, Resource}
 import cats.Parallel
+import cats.effect.Async
+import cats.effect.Resource
+import cats.effect.std.Dispatcher
 import cats.syntax.all.*
-import navigate.epics.EpicsService
-import navigate.model.config.{ControlStrategy, NavigateEngineConfiguration}
-import org.http4s.client.Client
-import navigate.server.tcs.*
 import lucuma.core.enums.Site
+import navigate.epics.EpicsService
+import navigate.model.config.ControlStrategy
+import navigate.model.config.NavigateEngineConfiguration
+import navigate.server.tcs.*
+import org.http4s.client.Client
 
 import scala.annotation.nowarn
 
@@ -37,13 +39,13 @@ object Systems {
       if (conf.systemControl.tcs === ControlStrategy.FullControl)
         TcsEpicsSystem.build(epicsSrv, tops).map(new TcsSouthControllerEpics(_, conf.ioTimeout))
       else
-        Resource.pure(new TcsSouthControllerSim)
+        Resource.eval(TcsSouthControllerSim.build)
 
     def buildTcsNorthController: Resource[F, TcsNorthController[F]] =
       if (conf.systemControl.tcs === ControlStrategy.FullControl)
         TcsEpicsSystem.build(epicsSrv, tops).map(new TcsNorthControllerEpics(_, conf.ioTimeout))
       else
-        Resource.pure(new TcsNorthControllerSim)
+        Resource.eval(TcsNorthControllerSim.build)
 
     for {
       odb  <- buildOdbProxy

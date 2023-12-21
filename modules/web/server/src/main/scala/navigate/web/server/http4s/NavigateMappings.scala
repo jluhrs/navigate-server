@@ -47,6 +47,7 @@ import navigate.server.tcs.AutoparkOiwfs
 import navigate.server.tcs.AutoparkPwfs1
 import navigate.server.tcs.AutoparkPwfs2
 import navigate.server.tcs.FollowStatus
+import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuiderConfig
 import navigate.server.tcs.InstrumentSpecifics
 import navigate.server.tcs.M1GuideConfig
@@ -78,10 +79,17 @@ import scala.reflect.classTag
 
 import encoder.given
 
-class NavigateMappings[F[_]: Sync](server: NavigateEngine[F], logTopic: Topic[F, ILoggingEvent])(
+class NavigateMappings[F[_]: Sync](
+  server:              NavigateEngine[F],
+  logTopic:            Topic[F, ILoggingEvent],
+  guideStateTopic:     Topic[F, GuideState]
+)(
   override val schema: Schema
 ) extends CirceMapping[F] {
   import NavigateMappings._
+
+  def guideState(p: Path, env: Env): F[Result[GuideState]] =
+    server.getGuideState.attempt.map(_.fold(Result.internalError, Result.success))
 
   def mountPark(p: Path, env: Env): F[Result[OperationOutcome]] =
     server.mcsPark.attempt
@@ -311,6 +319,7 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F], logTopic: Topic[F,
         )
       )
 
+  val QueryType: TypeRef               = schema.ref("Query")
   val MutationType: TypeRef            = schema.ref("Mutation")
   val SubscriptionType: TypeRef        = schema.ref("Subscription")
   val ParkStatusType: TypeRef          = schema.ref("ParkStatus")
@@ -318,8 +327,8 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F], logTopic: Topic[F,
   val OperationOutcomeType: TypeRef    = schema.ref("OperationOutcome")
   val OperationResultType: TypeRef     = schema.ref("OperationResult")
   val RotatorTrackingModeType: TypeRef = schema.ref("RotatorTrackingMode")
-  val M1CorrectionSourceType: TypeRef  = schema.ref("M1CorrectionSource")
-  val M2CorrectionSourceType: TypeRef  = schema.ref("M2CorrectionSource")
+  val M1SourceType: TypeRef            = schema.ref("M1Source")
+  val TipTiltSourceType: TypeRef       = schema.ref("TipTiltSource")
 
   override val selectElaborator: SelectElaborator = SelectElaborator {
     case (MutationType, "mountFollow", List(Binding("enable", BooleanValue(en))))           =>
@@ -399,6 +408,12 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F], logTopic: Topic[F,
 
   override val typeMappings: List[TypeMapping] = List(
     ObjectMapping(
+      tpe = QueryType,
+      fieldMappings = List(
+        RootEffect.computeEncodable("guideState")((p, env) => guideState(p, env))
+      )
+    ),
+    ObjectMapping(
       tpe = MutationType,
       fieldMappings = List(
         RootEffect.computeEncodable("mountPark")((p, env) => mountPark(p, env)),
@@ -428,6 +443,13 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F], logTopic: Topic[F,
             .map(_.asJson)
             .map(circeCursor(p, env, _))
             .map(Result.success)
+        },
+        RootStream.computeCursor("guideState") { (p, env) =>
+          guideStateTopic
+            .subscribe(10)
+            .map(_.asJson)
+            .map(circeCursor(p, env, _))
+            .map(Result.success)
         }
       )
     ),
@@ -436,8 +458,8 @@ class NavigateMappings[F[_]: Sync](server: NavigateEngine[F], logTopic: Topic[F,
     LeafMapping[OperationOutcome](OperationOutcomeType),
     LeafMapping[OperationResult](OperationResultType),
     LeafMapping[RotatorTrackingMode](RotatorTrackingModeType),
-    LeafMapping[M1Source](M1CorrectionSourceType),
-    LeafMapping[TipTiltSource](M2CorrectionSourceType)
+    LeafMapping[M1Source](M1SourceType),
+    LeafMapping[TipTiltSource](TipTiltSourceType)
   )
 }
 
@@ -448,12 +470,14 @@ object NavigateMappings extends GrackleParsers {
     .build
 
   def apply[F[_]: Sync](
-    server:   NavigateEngine[F],
-    logTopic: Topic[F, ILoggingEvent]
+    server:          NavigateEngine[F],
+    logTopic:        Topic[F, ILoggingEvent],
+    guideStateTopic: Topic[F, GuideState]
   ): F[NavigateMappings[F]] = loadSchema.flatMap {
-    case Result.Success(schema)           => new NavigateMappings[F](server, logTopic)(schema).pure[F]
+    case Result.Success(schema)           =>
+      new NavigateMappings[F](server, logTopic, guideStateTopic)(schema).pure[F]
     case Result.Warning(problems, schema) =>
-      new NavigateMappings[F](server, logTopic)(schema).pure[F]
+      new NavigateMappings[F](server, logTopic, guideStateTopic)(schema).pure[F]
     case Result.Failure(problems)         =>
       Sync[F].raiseError[NavigateMappings[F]](
         new Throwable(
@@ -525,7 +549,6 @@ object NavigateMappings extends GrackleParsers {
     ra    <- l.collectFirst { case ("ra", ObjectValue(v)) => parseRightAscension(v) }.flatten
     dec   <- l.collectFirst { case ("dec", ObjectValue(v)) => parseDeclination(v) }.flatten
     epoch <- l.collectFirst { case ("epoch", StringValue(v)) => parseEpoch(v) }.flatten
-
   } yield Target.SiderealTarget(
     name,
     centralWavel,
@@ -624,7 +647,7 @@ object NavigateMappings extends GrackleParsers {
       parseEnumerated[M1Source](v)
     }.flatten
 
-    val coma = l.collectFirst { case ("m2coma", BooleanValue(v)) => v }.exists(identity)
+    val coma = l.collectFirst { case ("m2Coma", BooleanValue(v)) => v }.exists(identity)
 
     l.collectFirst { case ("mountOffload", BooleanValue(v)) => v }
       .map { mount =>

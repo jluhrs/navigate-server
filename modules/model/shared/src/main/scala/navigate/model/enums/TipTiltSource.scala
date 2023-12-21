@@ -11,13 +11,11 @@ import lucuma.core.util.Enumerated
 sealed abstract class TipTiltSource(val tag: String) extends Product with Serializable derives Show
 
 object TipTiltSource {
-// Commented values will be restored when implementing support for each guider
-//  case object PWFS1 extends TipTiltSource("PWFS1")
-//  case object PWFS2 extends TipTiltSource("PWFS2")
-  case object OIWFS extends TipTiltSource("OIWFS")
-//  case object GAOS  extends TipTiltSource("GAOS")
+  case object Pwfs1 extends TipTiltSource("Pwfs1")
+  case object Pwfs2 extends TipTiltSource("Pwfs2")
+  case object Oiwfs extends TipTiltSource("Oiwfs")
+  case object Gaos  extends TipTiltSource("Gaos")
 
-  /** @group Typeclass Instances */
   given Enumerated[TipTiltSource] =
-    Enumerated.from(OIWFS).withTag(_.tag)
+    Enumerated.from(Oiwfs).withTag(_.tag)
 }

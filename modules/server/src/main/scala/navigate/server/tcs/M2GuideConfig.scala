@@ -3,9 +3,10 @@
 
 package navigate.server.tcs
 
-import cats.{Eq, Show}
-import cats.syntax.all.*
+import cats.Eq
+import cats.Show
 import cats.derived.*
+import cats.syntax.all.*
 import navigate.model.enums.TipTiltSource
 
 /** Data type for M2 guide config. */

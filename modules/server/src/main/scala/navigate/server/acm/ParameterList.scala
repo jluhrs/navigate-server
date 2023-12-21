@@ -3,9 +3,11 @@
 
 package navigate.server.acm
 
-import cats.{Applicative, Parallel}
+import cats.Applicative
+import cats.Parallel
 import cats.syntax.all.*
-import navigate.epics.{EpicsSystem, RemoteChannel}
+import navigate.epics.EpicsSystem
+import navigate.epics.RemoteChannel
 import navigate.epics.VerifiedEpics.VerifiedEpics
 
 object ParameterList {

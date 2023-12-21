@@ -3,7 +3,8 @@
 
 package navigate.server
 
-import cats.effect.{Async, Resource}
+import cats.effect.Async
+import cats.effect.Resource
 import cats.syntax.all.*
 import navigate.epics.EpicsService
 import navigate.model.config.NavigateEngineConfiguration

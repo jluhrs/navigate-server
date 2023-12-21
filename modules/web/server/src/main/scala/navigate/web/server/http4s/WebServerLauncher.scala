@@ -23,6 +23,7 @@ import navigate.server.CaServiceInit
 import navigate.server.NavigateEngine
 import navigate.server.NavigateFailure
 import navigate.server.Systems
+import navigate.server.tcs.GuideState
 import navigate.web.server.OcsBuildInfo
 import navigate.web.server.common.LogInitialization
 import navigate.web.server.common.RedirectToHttpsRoutes
@@ -51,12 +52,13 @@ import java.nio.file.Path as FilePath
 import java.security.KeyStore
 import java.security.Security
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManagerFactory
 import scala.concurrent.duration.*
 
-object WebServerLauncher extends IOApp with LogInitialization:
+object WebServerLauncher extends IOApp with LogInitialization {
   private val ProxyRoute: Uri.Path = Uri.Path.empty / "db"
 
   private given Logger[IO] = Slf4jLogger.getLoggerFromName[IO]("navigate")
@@ -114,18 +116,19 @@ object WebServerLauncher extends IOApp with LogInitialization:
 
   /** Resource that yields the running web server */
   def webServer[F[_]: Logger: Async: Dns: Files: Compression: Network](
-    conf:      NavigateConfiguration,
-    as:        AuthenticationService[F],
-    outputs:   Topic[F, NavigateEvent],
-    logTopic:  Topic[F, ILoggingEvent],
-    se:        NavigateEngine[F],
-    clientsDb: ClientsSetDb[F]
+    conf:       NavigateConfiguration,
+    as:         AuthenticationService[F],
+    outputs:    Topic[F, NavigateEvent],
+    logTopic:   Topic[F, ILoggingEvent],
+    guideTopic: Topic[F, GuideState],
+    se:         NavigateEngine[F],
+    clientsDb:  ClientsSetDb[F]
   ): Resource[F, Server] = {
     val ssl: F[Option[SSLContext]] = conf.webServer.tls.map(makeContext[F]).sequence
 
     def router(wsBuilder: WebSocketBuilder2[F], proxyService: HttpRoutes[F]) = Router[F](
       "/"                 -> new StaticRoutes().service,
-      "/navigate"         -> new GraphQlRoutes(se, logTopic).service(wsBuilder),
+      "/navigate"         -> new GraphQlRoutes(se, logTopic, guideTopic).service(wsBuilder),
       ProxyRoute.toString -> proxyService
     )
 
@@ -245,15 +248,16 @@ object WebServerLauncher extends IOApp with LogInitialization:
       } yield seqE
 
     def webServerIO(
-      conf: NavigateConfiguration,
-      out:  Topic[IO, NavigateEvent],
-      log:  Topic[IO, ILoggingEvent],
-      en:   NavigateEngine[IO],
-      cs:   ClientsSetDb[IO]
+      conf:  NavigateConfiguration,
+      out:   Topic[IO, NavigateEvent],
+      log:   Topic[IO, ILoggingEvent],
+      guide: Topic[IO, GuideState],
+      en:    NavigateEngine[IO],
+      cs:    ClientsSetDb[IO]
     ): Resource[IO, Unit] =
       for {
         as <- Resource.eval(authService[IO](conf.mode, conf.authentication))
-        _  <- webServer[IO](conf, as, out, log, en, cs)
+        _  <- webServer[IO](conf, as, out, log, guide, en, cs)
       } yield ()
 
     def publishStats[F[_]: Temporal](cs: ClientsSetDb[F]): Stream[F, Unit] =
@@ -268,6 +272,7 @@ object WebServerLauncher extends IOApp with LogInitialization:
         cli    <- client(10.seconds)
         out    <- Resource.eval(Topic[IO, NavigateEvent])
         log    <- Resource.eval(Topic[IO, ILoggingEvent])
+        gd     <- Resource.eval(Topic[IO, GuideState])
         dsp    <- Dispatcher.sequential[IO]
         _      <- Resource.eval(logToClients(log, dsp))
         cs     <- Resource.eval(
@@ -275,13 +280,16 @@ object WebServerLauncher extends IOApp with LogInitialization:
                   )
         _      <- Resource.eval(publishStats(cs).compile.drain.start)
         engine <- engineIO(conf, cli)
-        _      <- webServerIO(conf, out, log, engine, cs)
+        _      <- webServerIO(conf, out, log, gd, engine, cs)
         _      <- Resource.eval(
                     out.subscribers
                       .evalMap(l => Logger[IO].debug(s"Subscribers amount: $l").whenA(l > 1))
                       .compile
                       .drain
                       .start
+                  )
+        _      <- Resource.eval(
+                    guideStatePoll(engine, gd).compile.drain.start
                   )
         f      <- Resource.eval(
                     engine.eventStream.through(out.publish).compile.drain.onError(logError).start
@@ -299,3 +307,14 @@ object WebServerLauncher extends IOApp with LogInitialization:
       if (oc.isSuccess) IO.unit
       else IO(Console.println(s"Exit code $oc")) // scalastyle:off console.io
     }
+
+  def guideStatePoll(eng: NavigateEngine[IO], t: Topic[IO, GuideState]): Stream[IO, Unit] =
+    Stream
+      .fixedRate[IO](FiniteDuration(1, TimeUnit.SECONDS))
+      .evalMap(_ => eng.getGuideState)
+      .evalMapAccumulate(none) { (acc, gs) =>
+        (if (acc.contains(gs)) IO.unit else t.publish1(gs).void).as(gs.some, ())
+      }
+      .void
+
+}

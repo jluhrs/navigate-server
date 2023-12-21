@@ -4,19 +4,33 @@
 package navigate.server.tcs
 
 import cats.Parallel
-import cats.syntax.all.*
 import cats.effect.Async
-import mouse.boolean.given
-import navigate.server.{ApplyCommandResult, ConnectionTimeout}
-import scala.concurrent.duration.FiniteDuration
-import navigate.epics.VerifiedEpics.*
-import navigate.model.Distance
-import navigate.model.enums.{DomeMode, ShutterMode}
-import navigate.server.tcs.Target.*
-import navigate.server.tcs.TcsEpicsSystem.{ProbeTrackingCommand, TargetCommand, TcsCommands}
-import lucuma.core.math.{Angle, Parallax, ProperMotion, RadialVelocity, Wavelength}
+import cats.syntax.all.*
+import lucuma.core.math.Angle
+import lucuma.core.math.Parallax
+import lucuma.core.math.ProperMotion
+import lucuma.core.math.RadialVelocity
+import lucuma.core.math.Wavelength
+import lucuma.core.util.Enumerated
 import lucuma.core.util.TimeSpan
 import monocle.Getter
+import mouse.boolean.given
+import navigate.epics.VerifiedEpics.*
+import navigate.model.Distance
+import navigate.model.enums.DomeMode
+import navigate.model.enums.M1Source
+import navigate.model.enums.ShutterMode
+import navigate.model.enums.TipTiltSource
+import navigate.server.ApplyCommandResult
+import navigate.server.ConnectionTimeout
+import navigate.server.epicsdata.BinaryOnOff
+import navigate.server.tcs.Target.*
+import navigate.server.tcs.TcsEpicsSystem.ProbeTrackingCommand
+import navigate.server.tcs.TcsEpicsSystem.TargetCommand
+import navigate.server.tcs.TcsEpicsSystem.TcsCommands
+
+import scala.concurrent.duration.FiniteDuration
+
 import TcsBaseController.{EquinoxDefault, FixedSystem, SystemDefault}
 
 /* This class implements the common TCS commands */
@@ -212,9 +226,11 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
   protected def setOrigin(origin: Origin): TcsCommands[F] => TcsCommands[F] =
     (x: TcsCommands[F]) => x.originCommand.originX(origin.x).originCommand.originY(origin.y)
 
-  protected def applyTcsConfig(config: TcsBaseController.TcsConfig): VerifiedEpics[F, F, ApplyCommandResult] =
+  protected def applyTcsConfig(
+    config: TcsBaseController.TcsConfig
+  ): VerifiedEpics[F, F, ApplyCommandResult] =
     setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.sourceACmd),
-      config.sourceATarget
+              config.sourceATarget
     ).compose(config.sourceATarget.wavelength.map(setSourceAWalength).getOrElse(identity))
       .compose(setRotatorTrackingConfig(config.rotatorTrackConfig))
       .compose(setInstrumentSpecifics(config.instrumentSpecifics))(
@@ -230,9 +246,12 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
     ).post
       .verifiedRun(ConnectionTimeout)
 
-  override def slew(slewOptions: SlewOptions, tcsConfig: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
+  override def slew(
+    slewOptions: SlewOptions,
+    tcsConfig:   TcsBaseController.TcsConfig
+  ): F[ApplyCommandResult] =
     setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.sourceACmd),
-      tcsConfig.sourceATarget
+              tcsConfig.sourceATarget
     )
       .compose(tcsConfig.sourceATarget.wavelength.map(setSourceAWalength).getOrElse(identity))
       .compose(setSlewOptions(slewOptions))
@@ -261,7 +280,9 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
       .post
       .verifiedRun(ConnectionTimeout)
 
-  protected def setInstrumentSpecifics(config: InstrumentSpecifics): TcsCommands[F] => TcsCommands[F] =
+  protected def setInstrumentSpecifics(
+    config: InstrumentSpecifics
+  ): TcsCommands[F] => TcsCommands[F] =
     setRotatorIaa(config.iaa)
       .compose(setFocusOffset(config.focusOffset))
       .compose(setOrigin(config.origin))
@@ -441,19 +462,96 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
 
   override def oiwfsObserve(exposureTime: TimeSpan, isQL: Boolean): F[ApplyCommandResult] = tcsEpics
     .startCommand(timeout)
-    .oiWfsCommands.observe.interval(exposureTime.toSeconds.toDouble)
-    .oiWfsCommands.observe.output(isQL.fold("QL", ""))
-    .oiWfsCommands.observe.options(isQL.fold("DHS", "NONE"))
-    .oiWfsCommands.observe.numberOfExposures(-1)
-    .oiWfsCommands.observe.path("")
-    .oiWfsCommands.observe.fileName("")
-    .oiWfsCommands.observe.label("")
+    .oiWfsCommands
+    .observe
+    .interval(exposureTime.toSeconds.toDouble)
+    .oiWfsCommands
+    .observe
+    .output(isQL.fold("QL", ""))
+    .oiWfsCommands
+    .observe
+    .options(isQL.fold("DHS", "NONE"))
+    .oiWfsCommands
+    .observe
+    .numberOfExposures(-1)
+    .oiWfsCommands
+    .observe
+    .path("")
+    .oiWfsCommands
+    .observe
+    .fileName("")
+    .oiWfsCommands
+    .observe
+    .label("")
     .post
     .verifiedRun(ConnectionTimeout)
 
   override def oiwfsStopObserve: F[ApplyCommandResult] = tcsEpics
     .startCommand(timeout)
-    .oiWfsCommands.stop.mark
+    .oiWfsCommands
+    .stop
+    .mark
     .post
     .verifiedRun(ConnectionTimeout)
+
+  private def calcM1Guide(m1: BinaryOnOff, m1src: String): M1GuideConfig =
+    if (m1 === BinaryOnOff.Off) M1GuideConfig.M1GuideOff
+    else
+      Enumerated[M1Source]
+        .fromTag(m1src.toLowerCase.capitalize)
+        .map(M1GuideConfig.M1GuideOn.apply)
+        .getOrElse(M1GuideConfig.M1GuideOff)
+
+  private def calcM2Source(v: String, tt: TipTiltSource): Set[TipTiltSource] =
+    if (v.contains("AUTO")) Set(tt)
+    else Set.empty
+
+  private def calcM2Guide(
+    m2:   BinaryOnOff,
+    m2p1: String,
+    m2p2: String,
+    m2oi: String,
+    m2ao: String,
+    coma: BinaryOnOff
+  ): M2GuideConfig = {
+    val src = Set.empty ++
+      calcM2Source(m2p1, TipTiltSource.Pwfs1) ++
+      calcM2Source(m2p2, TipTiltSource.Pwfs2) ++
+      calcM2Source(m2oi, TipTiltSource.Oiwfs) ++
+      calcM2Source(m2ao, TipTiltSource.Gaos)
+
+    if (m2 === BinaryOnOff.On && src.nonEmpty) M2GuideConfig.M2GuideOn(coma === BinaryOnOff.On, src)
+    else M2GuideConfig.M2GuideOff
+  }
+
+  override def getGuideState: F[GuideState] = {
+    val x = for {
+      fa <- tcsEpics.status.m1Guide
+      fb <- tcsEpics.status.m2aoGuide
+      fc <- tcsEpics.status.m2oiGuide
+      fd <- tcsEpics.status.m2p1Guide
+      fe <- tcsEpics.status.m2p2Guide
+      ff <- tcsEpics.status.absorbTipTilt
+      fg <- tcsEpics.status.comaCorrect
+      fh <- tcsEpics.status.m1GuideSource
+      fi <- tcsEpics.status.m2GuideState
+    } yield for {
+      a <- fa
+      b <- fb
+      c <- fc
+      d <- fd
+      e <- fe
+      f <- ff
+      g <- fg
+      h <- fh
+      i <- fi
+    } yield GuideState(
+      f =!= 0,
+      calcM1Guide(a, h),
+      calcM2Guide(i, d, e, c, b, g)
+    )
+
+    x.verifiedRun(ConnectionTimeout)
+  }
+
 }

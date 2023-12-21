@@ -3,23 +3,36 @@
 
 package navigate.server.tcs
 
-import cats.effect.{IO, Ref}
+import cats.effect.IO
+import cats.effect.Ref
 import cats.syntax.all.*
+import lucuma.core.math.Angle
+import lucuma.core.math.Coordinates
+import lucuma.core.math.Epoch
+import lucuma.core.math.Wavelength
+import lucuma.core.util.Enumerated
+import lucuma.core.util.TimeSpan
+import monocle.syntax.all.*
 import mouse.boolean.given
-import navigate.model.enums.{DomeMode, M1Source, ShutterMode, TipTiltSource}
-import navigate.model.Distance
-import navigate.server.acm.CadDirective
-import navigate.server.epicsdata.{BinaryOnOff, BinaryYesNo}
-import Target.SiderealTarget
-import TcsBaseController.*
-import lucuma.core.math.{Angle, Coordinates, Epoch, Wavelength}
-import lucuma.core.util.{Enumerated, TimeSpan}
 import munit.CatsEffectSuite
+import navigate.epics.TestChannel
+import navigate.model.Distance
+import navigate.model.enums.DomeMode
+import navigate.model.enums.M1Source
+import navigate.model.enums.ShutterMode
+import navigate.model.enums.TipTiltSource
+import navigate.server.acm.CadDirective
 import navigate.server.epicsdata
-import navigate.server.tcs.M2GuideConfig.M2GuideOn
+import navigate.server.epicsdata.BinaryOnOff
+import navigate.server.epicsdata.BinaryYesNo
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
+
+import Target.SiderealTarget
+import TcsBaseController.*
+import M2GuideConfig.M2GuideOn
+import TestTcsEpicsSystem.GuideConfigState
 
 class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
 
@@ -237,7 +250,9 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assert(rs.oiwfsTarget.properMotion1.value.exists(x => compareDouble(x.toDouble, 0.0)))
       assert(rs.oiwfsTarget.properMotion2.value.exists(x => compareDouble(x.toDouble, 0.0)))
       assert(
-        rs.oiwfsTarget.epoch.value.exists(x => compareDouble(x.toDouble, oiwfsTarget.epoch.epochYear))
+        rs.oiwfsTarget.epoch.value.exists(x =>
+          compareDouble(x.toDouble, oiwfsTarget.epoch.epochYear)
+        )
       )
       assert(rs.oiwfsTarget.parallax.value.exists(x => compareDouble(x.toDouble, 0.0)))
       assert(rs.oiwfsTarget.radialVelocity.value.exists(x => compareDouble(x.toDouble, 0.0)))
@@ -483,7 +498,9 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assert(rs.oiwfsTarget.properMotion1.value.exists(x => compareDouble(x.toDouble, 0.0)))
       assert(rs.oiwfsTarget.properMotion2.value.exists(x => compareDouble(x.toDouble, 0.0)))
       assert(
-        rs.oiwfsTarget.epoch.value.exists(x => compareDouble(x.toDouble, oiwfsTarget.epoch.epochYear))
+        rs.oiwfsTarget.epoch.value.exists(x =>
+          compareDouble(x.toDouble, oiwfsTarget.epoch.epochYear)
+        )
       )
       assert(rs.oiwfsTarget.parallax.value.exists(x => compareDouble(x.toDouble, 0.0)))
       assert(rs.oiwfsTarget.radialVelocity.value.exists(x => compareDouble(x.toDouble, 0.0)))
@@ -552,11 +569,11 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
     }
   }
 
-  test("enable and disable guiding") {
+  test("Enable and disable guiding") {
     val guideCfg = TelescopeGuideConfig(
       mountGuide = true,
-      m1Guide = M1GuideConfig.M1GuideOn(M1Source.OIWFS),
-      m2Guide = M2GuideOn(true, Set(TipTiltSource.OIWFS))
+      m1Guide = M1GuideConfig.M1GuideOn(M1Source.Oiwfs),
+      m2Guide = M2GuideOn(true, Set(TipTiltSource.Oiwfs))
     )
 
     for {
@@ -585,14 +602,14 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
 
       assertEquals(r1.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
       assertEquals(r1.m1GuideConfig.source.value.flatMap(Enumerated[M1Source].fromTag),
-                   M1Source.OIWFS.some
+                   M1Source.Oiwfs.some
       )
       assertEquals(r1.m1GuideConfig.frames.value.flatMap(_.toIntOption), 1.some)
       assertEquals(r1.m1GuideConfig.weighting.value, "none".some)
       assertEquals(r1.m1GuideConfig.filename.value, "".some)
       assertEquals(r1.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
       assertEquals(r1.m2GuideConfig.source.value.flatMap(Enumerated[TipTiltSource].fromTag),
-                   TipTiltSource.OIWFS.some
+                   TipTiltSource.Oiwfs.some
       )
       assertEquals(r1.m2GuideConfig.beam.value, "B".some)
       assertEquals(r1.m2GuideConfig.filter.value, "raw".some)
@@ -617,14 +634,14 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
     }
   }
 
-  test("start OIWFS exposures") {
+  test("Start OIWFS exposures") {
     val testVal = TimeSpan.unsafeFromMicroseconds(12345)
 
     for {
-      x <- createController
+      x        <- createController
       (st, ctr) = x
-      _ <- ctr.oiwfsObserve(testVal, true)
-      rs <- st.get
+      _        <- ctr.oiwfsObserve(testVal, true)
+      rs       <- st.get
     } yield {
       assert(rs.oiWfs.observe.path.connected)
       assert(rs.oiWfs.observe.label.connected)
@@ -633,20 +650,69 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assert(rs.oiWfs.observe.fileName.connected)
       assert(rs.oiWfs.observe.interval.connected)
       assert(rs.oiWfs.observe.numberOfExposures.connected)
-      assertEquals(rs.oiWfs.observe.interval.value.flatMap(_.toDoubleOption), testVal.toSeconds.toDouble.some)
+      assertEquals(rs.oiWfs.observe.interval.value.flatMap(_.toDoubleOption),
+                   testVal.toSeconds.toDouble.some
+      )
       assertEquals(rs.oiWfs.observe.numberOfExposures.value.flatMap(_.toIntOption), -1.some)
     }
   }
 
   test("Stop OIWFS exposures") {
     for {
-      x <- createController
+      x        <- createController
       (st, ctr) = x
-      _ <- ctr.oiwfsStopObserve
-      rs <- st.get
+      _        <- ctr.oiwfsStopObserve
+      rs       <- st.get
     } yield {
       assert(rs.oiWfs.stop.connected)
       assertEquals(rs.oiWfs.stop.value, CadDirective.MARK.some)
+    }
+  }
+
+  test("Read guide state") {
+    val testValue1 = GuideConfigState(
+      pwfs1Integrating = TestChannel.State.of(BinaryYesNo.No),
+      pwfs2Integrating = TestChannel.State.of(BinaryYesNo.No),
+      oiwfsIntegrating = TestChannel.State.of(BinaryYesNo.Yes),
+      m2State = TestChannel.State.of(BinaryOnOff.On),
+      absorbTipTilt = TestChannel.State.of(1),
+      m2ComaCorrection = TestChannel.State.of(BinaryOnOff.On),
+      m1State = TestChannel.State.of(BinaryOnOff.On),
+      m1Source = TestChannel.State.of("OIWFS"),
+      p1ProbeGuide = TestChannel.State.of(0.0),
+      p2ProbeGuide = TestChannel.State.of(0.0),
+      oiProbeGuide = TestChannel.State.of(0.0),
+      p1ProbeGuided = TestChannel.State.of(0.0),
+      p2ProbeGuided = TestChannel.State.of(0.0),
+      oiProbeGuided = TestChannel.State.of(0.0),
+      mountP1Weight = TestChannel.State.of(0.0),
+      mountP2Weight = TestChannel.State.of(0.0),
+      m2P1Guide = TestChannel.State.of("OFF"),
+      m2P2Guide = TestChannel.State.of("OFF"),
+      m2OiGuide = TestChannel.State.of("RAW A-AUTO B-OFF C-OFF"),
+      m2AoGuide = TestChannel.State.of("OFF")
+    )
+
+    val testGuide = GuideState(
+      true,
+      M1GuideConfig.M1GuideOn(M1Source.Oiwfs),
+      M2GuideConfig.M2GuideOn(true, Set(TipTiltSource.Oiwfs))
+    )
+
+    for {
+      x        <- createController
+      (st, ctr) = x
+      _        <- st.update(_.focus(_.guideStatus).replace(testValue1))
+      g        <- ctr.getGuideState
+      r1       <- st.get
+    } yield {
+      assert(r1.guideStatus.m2State.connected)
+      assert(r1.guideStatus.absorbTipTilt.connected)
+      assert(r1.guideStatus.m2ComaCorrection.connected)
+      assert(r1.guideStatus.m1State.connected)
+      assert(r1.guideStatus.m1Source.connected)
+      assert(r1.guideStatus.m2OiGuide.connected)
+      assertEquals(g, testGuide)
     }
   }
 
