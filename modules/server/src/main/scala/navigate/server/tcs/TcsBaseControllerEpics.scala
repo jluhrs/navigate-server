@@ -11,22 +11,27 @@ import lucuma.core.math.Parallax
 import lucuma.core.math.ProperMotion
 import lucuma.core.math.RadialVelocity
 import lucuma.core.math.Wavelength
-import lucuma.core.util.{Enumerated, TimeSpan}
+import lucuma.core.util.Enumerated
+import lucuma.core.util.TimeSpan
 import monocle.Getter
 import mouse.boolean.given
 import navigate.epics.VerifiedEpics.*
 import navigate.model.Distance
-import navigate.model.enums.{DomeMode, M1Source, ShutterMode, TipTiltSource}
+import navigate.model.enums.DomeMode
+import navigate.model.enums.M1Source
+import navigate.model.enums.ShutterMode
+import navigate.model.enums.TipTiltSource
 import navigate.server.ApplyCommandResult
 import navigate.server.ConnectionTimeout
+import navigate.server.epicsdata.BinaryOnOff
 import navigate.server.tcs.Target.*
 import navigate.server.tcs.TcsEpicsSystem.ProbeTrackingCommand
 import navigate.server.tcs.TcsEpicsSystem.TargetCommand
 import navigate.server.tcs.TcsEpicsSystem.TcsCommands
 
 import scala.concurrent.duration.FiniteDuration
+
 import TcsBaseController.{EquinoxDefault, FixedSystem, SystemDefault}
-import navigate.server.epicsdata.BinaryOnOff
 
 /* This class implements the common TCS commands */
 class TcsBaseControllerEpics[F[_]: Async: Parallel](
@@ -490,21 +495,32 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
     .verifiedRun(ConnectionTimeout)
 
   private def calcM1Guide(m1: BinaryOnOff, m1src: String): M1GuideConfig =
-    if(m1 === BinaryOnOff.Off) M1GuideConfig.M1GuideOff
-    else Enumerated[M1Source].fromTag(m1src).map(M1GuideConfig.M1GuideOn.apply).getOrElse(M1GuideConfig.M1GuideOff)
+    if (m1 === BinaryOnOff.Off) M1GuideConfig.M1GuideOff
+    else
+      Enumerated[M1Source]
+        .fromTag(m1src.toLowerCase.capitalize)
+        .map(M1GuideConfig.M1GuideOn.apply)
+        .getOrElse(M1GuideConfig.M1GuideOff)
 
   private def calcM2Source(v: String, tt: TipTiltSource): Set[TipTiltSource] =
-    if(v.contains("AUTO")) Set(tt)
+    if (v.contains("AUTO")) Set(tt)
     else Set.empty
 
-  private def calcM2Guide(m2: BinaryOnOff, m2p1: String, m2p2: String, m2oi: String, m2ao: String, coma: BinaryOnOff): M2GuideConfig = {
+  private def calcM2Guide(
+    m2:   BinaryOnOff,
+    m2p1: String,
+    m2p2: String,
+    m2oi: String,
+    m2ao: String,
+    coma: BinaryOnOff
+  ): M2GuideConfig = {
     val src = Set.empty ++
-      calcM2Source(m2p1, TipTiltSource.PWFS1) ++
-      calcM2Source(m2p2, TipTiltSource.PWFS2) ++
-      calcM2Source(m2oi, TipTiltSource.OIWFS) ++
-      calcM2Source(m2ao, TipTiltSource.GAOS)
+      calcM2Source(m2p1, TipTiltSource.Pwfs1) ++
+      calcM2Source(m2p2, TipTiltSource.Pwfs2) ++
+      calcM2Source(m2oi, TipTiltSource.Oiwfs) ++
+      calcM2Source(m2ao, TipTiltSource.Gaos)
 
-    if(m2 === BinaryOnOff.On && src.nonEmpty) M2GuideConfig.M2GuideOn(coma === BinaryOnOff.On, src)
+    if (m2 === BinaryOnOff.On && src.nonEmpty) M2GuideConfig.M2GuideOn(coma === BinaryOnOff.On, src)
     else M2GuideConfig.M2GuideOff
   }
 
@@ -537,5 +553,5 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
 
     x.verifiedRun(ConnectionTimeout)
   }
-  
+
 }

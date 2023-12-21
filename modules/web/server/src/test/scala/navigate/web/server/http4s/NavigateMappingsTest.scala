@@ -490,18 +490,18 @@ class NavigateMappingsTest extends CatsEffectSuite {
 
     val changes: List[GuideState] = List(
       GuideState(true,
-                 M1GuideConfig.M1GuideOn(M1Source.OIWFS),
-                 M2GuideConfig.M2GuideOn(true, Set(TipTiltSource.OIWFS))
+                 M1GuideConfig.M1GuideOn(M1Source.Oiwfs),
+                 M2GuideConfig.M2GuideOn(true, Set(TipTiltSource.Oiwfs))
       ),
       GuideState(false, M1GuideConfig.M1GuideOff, M2GuideConfig.M2GuideOff),
       GuideState(false,
-                 M1GuideConfig.M1GuideOn(M1Source.OIWFS),
-                 M2GuideConfig.M2GuideOn(true, Set(TipTiltSource.OIWFS))
+                 M1GuideConfig.M1GuideOn(M1Source.Oiwfs),
+                 M2GuideConfig.M2GuideOn(true, Set(TipTiltSource.Oiwfs))
       ),
       GuideState(false, M1GuideConfig.M1GuideOff, M2GuideConfig.M2GuideOff),
       GuideState(false,
-                 M1GuideConfig.M1GuideOn(M1Source.OIWFS),
-                 M2GuideConfig.M2GuideOn(false, Set(TipTiltSource.OIWFS))
+                 M1GuideConfig.M1GuideOn(M1Source.Oiwfs),
+                 M2GuideConfig.M2GuideOn(false, Set(TipTiltSource.Oiwfs))
       )
     )
 
@@ -625,8 +625,8 @@ object NavigateMappingsTest {
       new NavigateEngine[IO] {
         override val systems: Systems[IO] = Systems(
           OdbProxy.dummy[IO],
-          new TcsSouthControllerSim[IO],
-          new TcsNorthControllerSim[IO]
+          new TcsSouthControllerSim[IO](r),
+          new TcsNorthControllerSim[IO](r)
         )
 
         override def eventStream: Stream[IO, NavigateEvent] = Stream.empty
@@ -753,8 +753,12 @@ object NavigateMappingsTest {
         .downField("m2Inputs")
         .as[List[String]]
         .toOption
-        .map(_.map(Enumerated[TipTiltSource].fromTag).flattenOption)
-      val m1 = h.downField("m1Input").as[String].toOption.flatMap(Enumerated[M1Source].fromTag)
+        .map(_.map(x => Enumerated[TipTiltSource].fromTag(x.toLowerCase.capitalize)).flattenOption)
+      val m1 = h
+        .downField("m1Input")
+        .as[String]
+        .toOption
+        .flatMap(x => Enumerated[M1Source].fromTag(x.toLowerCase.capitalize))
       val cm = h.downField("m2Coma").as[Boolean].toOption
 
       GuideState(

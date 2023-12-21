@@ -27,13 +27,13 @@ package object encoder {
       case M2GuideConfig.M2GuideOff               => List.empty
       case M2GuideConfig.M2GuideOn(coma, sources) =>
         List(
-          "m2Inputs" -> sources.map(_.tag).asJson,
+          "m2Inputs" -> sources.asJson,
           "m2Coma"   -> coma.asJson
         )
     }
     val m1field: List[(String, Json)]  = s.m1Guide match {
       case M1GuideConfig.M1GuideOff        => List.empty
-      case M1GuideConfig.M1GuideOn(source) => List("m1Input" -> source.tag.asJson)
+      case M1GuideConfig.M1GuideOn(source) => List("m1Input" -> source.asJson)
     }
 
     Json.fromFields(m2fields ++ m1field :+ ("mountOffload", s.mountOffload.asJson))

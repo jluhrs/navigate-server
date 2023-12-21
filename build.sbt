@@ -49,6 +49,7 @@ ThisBuild / crossScalaVersions := Seq("3.3.1")
 lazy val root = tlCrossRootProject.aggregate(
   epics,
   stateengine,
+  navigate_server,
   navigate_web_server,
   navigate_model,
   app_navigate_server

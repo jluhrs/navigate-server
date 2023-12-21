@@ -327,8 +327,8 @@ class NavigateMappings[F[_]: Sync](
   val OperationOutcomeType: TypeRef    = schema.ref("OperationOutcome")
   val OperationResultType: TypeRef     = schema.ref("OperationResult")
   val RotatorTrackingModeType: TypeRef = schema.ref("RotatorTrackingMode")
-  val M1CorrectionSourceType: TypeRef  = schema.ref("M1CorrectionSource")
-  val M2CorrectionSourceType: TypeRef  = schema.ref("M2CorrectionSource")
+  val M1SourceType: TypeRef            = schema.ref("M1Source")
+  val TipTiltSourceType: TypeRef       = schema.ref("TipTiltSource")
 
   override val selectElaborator: SelectElaborator = SelectElaborator {
     case (MutationType, "mountFollow", List(Binding("enable", BooleanValue(en))))           =>
@@ -410,7 +410,7 @@ class NavigateMappings[F[_]: Sync](
     ObjectMapping(
       tpe = QueryType,
       fieldMappings = List(
-        RootEffect.computeEncodable("guideState")((p, env) => guideState(p, env) )
+        RootEffect.computeEncodable("guideState")((p, env) => guideState(p, env))
       )
     ),
     ObjectMapping(
@@ -458,8 +458,8 @@ class NavigateMappings[F[_]: Sync](
     LeafMapping[OperationOutcome](OperationOutcomeType),
     LeafMapping[OperationResult](OperationResultType),
     LeafMapping[RotatorTrackingMode](RotatorTrackingModeType),
-    LeafMapping[M1Source](M1CorrectionSourceType),
-    LeafMapping[TipTiltSource](M2CorrectionSourceType)
+    LeafMapping[M1Source](M1SourceType),
+    LeafMapping[TipTiltSource](TipTiltSourceType)
   )
 }
 
@@ -647,7 +647,7 @@ object NavigateMappings extends GrackleParsers {
       parseEnumerated[M1Source](v)
     }.flatten
 
-    val coma = l.collectFirst { case ("m2coma", BooleanValue(v)) => v }.exists(identity)
+    val coma = l.collectFirst { case ("m2Coma", BooleanValue(v)) => v }.exists(identity)
 
     l.collectFirst { case ("mountOffload", BooleanValue(v)) => v }
       .map { mount =>

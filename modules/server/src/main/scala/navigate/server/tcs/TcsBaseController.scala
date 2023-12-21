@@ -38,7 +38,7 @@ trait TcsBaseController[F[_]] {
   def disableGuide: F[ApplyCommandResult]
   def oiwfsObserve(exposureTime:  TimeSpan, isQL:         Boolean): F[ApplyCommandResult]
   def oiwfsStopObserve: F[ApplyCommandResult]
-  
+
   def getGuideState: F[GuideState]
 }
 

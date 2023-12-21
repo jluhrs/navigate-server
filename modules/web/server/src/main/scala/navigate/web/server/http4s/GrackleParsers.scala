@@ -25,6 +25,7 @@ import lucuma.core.math.RightAscension
 import lucuma.core.math.Wavelength
 import lucuma.core.math.units.CentimetersPerSecond
 import lucuma.core.math.units.MetersPerSecond
+import lucuma.core.syntax.string.*
 import lucuma.core.util.Enumerated
 import lucuma.core.util.TimeSpan
 import navigate.model.Distance
@@ -168,8 +169,8 @@ trait GrackleParsers {
       case _                             => None
     }
 
-  def parseEnumerated[T: Enumerated](tag: String): Option[T] =
-    Enumerated.fromTag[T].getOption(tag.toLowerCase.capitalize)
+  def parseEnumerated[T: Enumerated](s: String): Option[T] =
+    Enumerated[T].all.find(e => Enumerated[T].tag(e).toScreamingSnakeCase === s)
 
   def parseTimeSpan(units: List[(String, Value)]): Option[TimeSpan] =
     units.find(_._2 != Value.AbsentValue) match {

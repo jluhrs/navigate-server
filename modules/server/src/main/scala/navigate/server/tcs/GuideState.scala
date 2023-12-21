@@ -6,8 +6,8 @@ package navigate.server.tcs
 import cats.Eq
 import cats.derived.*
 
-case class GuideState (
+case class GuideState(
   mountOffload: Boolean,
-  m1Guide: M1GuideConfig,
-  m2Guide: M2GuideConfig
+  m1Guide:      M1GuideConfig,
+  m2Guide:      M2GuideConfig
 ) derives Eq

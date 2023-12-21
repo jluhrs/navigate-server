@@ -11,8 +11,10 @@ import cats.effect.Temporal
 import cats.effect.std.Dispatcher
 import lucuma.core.math.Angle
 import mouse.all.*
-import navigate.epics.{Channel, EpicsService, VerifiedEpics}
+import navigate.epics.Channel
+import navigate.epics.EpicsService
 import navigate.epics.EpicsSystem.TelltaleChannel
+import navigate.epics.VerifiedEpics
 import navigate.epics.VerifiedEpics.*
 import navigate.model.Distance
 import navigate.model.enums.DomeMode
@@ -28,10 +30,11 @@ import navigate.server.epicsdata.BinaryOnOff
 import navigate.server.epicsdata.BinaryOnOff.given
 import navigate.server.epicsdata.BinaryYesNo
 import navigate.server.epicsdata.BinaryYesNo.given
+import navigate.server.tcs.TcsEpicsSystem.TcsStatus
 
 import scala.concurrent.duration.FiniteDuration
+
 import TcsChannels.{ProbeChannels, ProbeTrackingChannels, SlewChannels, TargetChannels, WfsChannels}
-import navigate.server.tcs.TcsEpicsSystem.TcsStatus
 
 trait TcsEpicsSystem[F[_]] {
   // TcsCommands accumulates the list of channels that need to be written to set parameters.

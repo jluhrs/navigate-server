@@ -116,14 +116,14 @@ object WebServerLauncher extends IOApp with LogInitialization {
 
   /** Resource that yields the running web server */
   def webServer[F[_]: Logger: Async: Dns: Files: Compression: Network](
-      conf:       NavigateConfiguration,
-      as:         AuthenticationService[F],
-      outputs:    Topic[F, NavigateEvent],
-      logTopic:   Topic[F, ILoggingEvent],
-      guideTopic: Topic[F, GuideState],
-      se:         NavigateEngine[F],
-      clientsDb:  ClientsSetDb[F]
-    ): Resource[F, Server] = {
+    conf:       NavigateConfiguration,
+    as:         AuthenticationService[F],
+    outputs:    Topic[F, NavigateEvent],
+    logTopic:   Topic[F, ILoggingEvent],
+    guideTopic: Topic[F, GuideState],
+    se:         NavigateEngine[F],
+    clientsDb:  ClientsSetDb[F]
+  ): Resource[F, Server] = {
     val ssl: F[Option[SSLContext]] = conf.webServer.tls.map(makeContext[F]).sequence
 
     def router(wsBuilder: WebSocketBuilder2[F], proxyService: HttpRoutes[F]) = Router[F](

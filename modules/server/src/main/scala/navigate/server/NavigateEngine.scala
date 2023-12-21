@@ -28,13 +28,20 @@ import navigate.model.NavigateEvent.CommandSuccess
 import navigate.model.config.NavigateEngineConfiguration
 import navigate.model.enums.DomeMode
 import navigate.model.enums.ShutterMode
-import navigate.server.tcs.{GuideState, InstrumentSpecifics, RotatorTrackConfig, SlewOptions, Target, TelescopeGuideConfig, TrackingConfig}
+import navigate.server.tcs.GuideState
+import navigate.server.tcs.InstrumentSpecifics
+import navigate.server.tcs.RotatorTrackConfig
+import navigate.server.tcs.SlewOptions
+import navigate.server.tcs.Target
 import navigate.server.tcs.TcsBaseController.TcsConfig
+import navigate.server.tcs.TelescopeGuideConfig
+import navigate.server.tcs.TrackingConfig
 import navigate.stateengine.StateEngine
 import org.typelevel.log4cats.Logger
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
+
 import NavigateEvent.NullEvent
 
 trait NavigateEngine[F[_]] {

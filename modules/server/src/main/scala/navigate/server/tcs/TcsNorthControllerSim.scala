@@ -4,7 +4,8 @@
 package navigate.server.tcs
 
 import cats.Applicative
-import cats.effect.{Ref, Sync}
+import cats.effect.Ref
+import cats.effect.Sync
 import cats.syntax.all.*
 
 class TcsNorthControllerSim[F[_]: Applicative](guideRef: Ref[F, GuideState])
@@ -12,5 +13,7 @@ class TcsNorthControllerSim[F[_]: Applicative](guideRef: Ref[F, GuideState])
     with TcsNorthController[F] {}
 
 object TcsNorthControllerSim {
-  def build[F[_]: Sync]: F[TcsNorthControllerSim[F]] = Ref.of(GuideState(false, M1GuideConfig.M1GuideOff, M2GuideConfig.M2GuideOff)).map(new TcsNorthControllerSim(_))
+  def build[F[_]: Sync]: F[TcsNorthControllerSim[F]] = Ref
+    .of(GuideState(false, M1GuideConfig.M1GuideOff, M2GuideConfig.M2GuideOff))
+    .map(new TcsNorthControllerSim(_))
 }

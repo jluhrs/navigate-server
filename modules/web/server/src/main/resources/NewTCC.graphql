@@ -120,7 +120,7 @@ type Target {
   nonsidereal: Nonsidereal
 }
 
-enum M2CorrectionSource {
+enum TipTiltSource {
     OIWFS
 }
 
@@ -130,7 +130,7 @@ enum M1CorrectionSource {
 
 type GuideConfigurationState {
     """M2 Tip-Tilt correction sources. An empty array means no corrections"""
-    m2Inputs: [M2CorrectionSource!]
+    m2Inputs: [TipTiltSource!]
     """M2 coma correction enabled. Only valid if m2Inputs and m1Input are defined"""
     m2Coma: Boolean
     """M1 correction source. If it is not defined it means no M1 correction"""
@@ -141,7 +141,7 @@ type GuideConfigurationState {
 
 input GuideConfigurationInput {
     """M2 Tip-Tilt correction sources. An empty array means no corrections"""
-    m2Inputs: [M2CorrectionSource!]
+    m2Inputs: [TipTiltSource!]
     """M2 coma correction enabled. Only valid if m2Inputs and m1Input are defined"""
     m2Coma: Boolean
     """M1 correction source. If it is not defined it means no M1 correction"""
@@ -176,7 +176,7 @@ type OperationOutcome {
 }
 
 type Query {
-    telescopeStatus: TelescopeStatus!
+    """telescopeStatus: TelescopeStatus!"""
     guideState: GuideConfigurationState!
 }
 

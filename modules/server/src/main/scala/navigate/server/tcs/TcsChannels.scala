@@ -190,10 +190,7 @@ object TcsChannels {
     follow:  Channel[F, String]
   )
 
-  case class GuidingStatus[F[_]](
-  )
-
-  // Build functions to construct each epics cannel for each
+  // Build functions to construct each epics channel for each
   // channels group
   def buildEnclosureChannels[F[_]](
     service: EpicsService[F],
