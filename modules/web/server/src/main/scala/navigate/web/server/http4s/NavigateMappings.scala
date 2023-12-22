@@ -586,6 +586,16 @@ object NavigateMappings extends GrackleParsers {
             )
   } yield bt
 
+  def parseGuideTargetInput(l: List[(String, Value)]): Option[Target] = for {
+    nm <- l.collectFirst { case ("name", StringValue(v)) => v }
+    bt <- l.collectFirst { case ("sidereal", ObjectValue(v)) => v }
+            .flatMap[Target](parseSiderealTarget(nm, None, _))
+            .orElse(
+              l.collectFirst { case ("nonsidereal", ObjectValue(v)) => v }
+                .flatMap(parseNonSiderealTarget(nm, None, _))
+            )
+  } yield bt
+
   def parseTrackingInput(l: List[(String, Value)]): Option[TrackingConfig] = for {
     aa <- l.collectFirst { case ("nodAchopA", BooleanValue(v)) => v }
     ab <- l.collectFirst { case ("nodAchopB", BooleanValue(v)) => v }
@@ -611,7 +621,7 @@ object NavigateMappings extends GrackleParsers {
   )
 
   def parseGuiderConfig(l: List[(String, Value)]): Option[GuiderConfig] = for {
-    target   <- l.collectFirst { case ("target", ObjectValue(v)) => parseTargetInput(v) }.flatten
+    target   <- l.collectFirst { case ("target", ObjectValue(v)) => parseGuideTargetInput(v) }.flatten
     tracking <- l.collectFirst { case ("tracking", ObjectValue(v)) =>
                   parseTrackingInput(v)
                 }.flatten

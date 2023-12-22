@@ -152,7 +152,6 @@ class NavigateMappingsTest extends CatsEffectSuite {
                 |    }
                 |    oiwfs: {
                 |      target: {
-                |        id: "T0002"
                 |        name: "OiwfsDummy"
                 |        sidereal: {
                 |          ra: {
@@ -232,7 +231,6 @@ class NavigateMappingsTest extends CatsEffectSuite {
           |  }
           |  oiwfs: {
           |    target: {
-          |      id: "T0002"
           |      name: "OiwfsDummy"
           |      sidereal: {
           |        ra: {

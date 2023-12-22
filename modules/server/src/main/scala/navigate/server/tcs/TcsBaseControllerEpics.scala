@@ -255,9 +255,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
     )
       .compose(tcsConfig.sourceATarget.wavelength.map(setSourceAWalength).getOrElse(identity))
       .compose(setSlewOptions(slewOptions))
-      .compose(setRotatorIaa(tcsConfig.instrumentSpecifics.iaa))
-      .compose(setFocusOffset(tcsConfig.instrumentSpecifics.focusOffset))
-      .compose(setOrigin(tcsConfig.instrumentSpecifics.origin))
+      .compose(setInstrumentSpecifics(tcsConfig.instrumentSpecifics))
       .compose(
         tcsConfig.oiwfs
           .map(o =>
