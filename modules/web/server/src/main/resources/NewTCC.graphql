@@ -11,6 +11,12 @@ input TargetPropertiesInput {
   wavelength: WavelengthInput
 }
 
+input GuideTargetPropertiesInput {
+  name: NonEmptyString!
+  sidereal: SiderealInput
+  nonsidereal: NonsiderealInput
+}
+
 type Distance {
     micrometers: Long!
     millimeters: BigDecimal!
@@ -78,7 +84,7 @@ type TelescopeStatus {
 }
 
 input GuiderConfig{
-    target: TargetPropertiesInput!
+    target: GuideTargetPropertiesInput!
     tracking: ProbeTrackingInput!
 }
 
