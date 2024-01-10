@@ -29,7 +29,7 @@ jobs:
         os: [ubuntu-latest]
         scala: [3]
         java: [temurin@17]
-        project: [rootJS, rootJVM]
+        project: [rootJVM]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:
@@ -61,10 +61,6 @@ jobs:
       - name: Check scalafix lints
         if: matrix.java == 'temurin@17' && matrix.os == 'ubuntu-latest'
         run: sbt 'project ${{ matrix.project }}' '++ ${{ matrix.scala }}' 'scalafixAll --check'
-
-      - name: scalaJSLink
-        if: matrix.project == 'rootJS'
-        run: sbt 'project ${{ matrix.project }}' '++ ${{ matrix.scala }}' Test/scalaJSLinkerResult
 
       - name: Test
         run: sbt 'project ${{ matrix.project }}' '++ ${{ matrix.scala }}' test

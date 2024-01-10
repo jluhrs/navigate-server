@@ -23,11 +23,10 @@ case class NavigateConfiguration(
   site:           Site,
   mode:           Mode,
   navigateEngine: NavigateEngineConfiguration,
-  webServer:      WebServerConfiguration,
-  authentication: AuthenticationConfig
+  webServer:      WebServerConfiguration
 )
 
 object NavigateConfiguration {
   given Eq[NavigateConfiguration] =
-    Eq.by(x => (x.site, x.mode, x.navigateEngine, x.webServer, x.authentication))
+    Eq.by(x => (x.site, x.mode, x.navigateEngine, x.webServer))
 }
