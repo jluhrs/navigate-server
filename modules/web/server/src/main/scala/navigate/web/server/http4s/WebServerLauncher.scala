@@ -31,7 +31,6 @@ import navigate.web.server.common.StaticRoutes
 import navigate.web.server.common.baseDir
 import navigate.web.server.config.*
 import navigate.web.server.logging.SubscriptionAppender
-import navigate.web.server.security.AuthenticationService
 import org.http4s.HttpRoutes
 import org.http4s.Uri
 import org.http4s.blaze.server.BlazeServerBuilder
@@ -75,13 +74,6 @@ object WebServerLauncher extends IOApp with LogInitialization {
     (fileConfig, defaultConfig).mapN: (file, default) =>
       file.optional.withFallback(default.optional)
 
-  /** Configures the Authentication service */
-  def authService[F[_]: Sync: Logger](
-    mode: Mode,
-    conf: AuthenticationConfig
-  ): F[AuthenticationService[F]] =
-    Sync[F].delay(AuthenticationService[F](mode, conf))
-
   def makeContext[F[_]: Sync](tls: TLSConfig): F[SSLContext] = Sync[F].delay {
     val ksStream   = new FileInputStream(tls.keyStore.toFile.getAbsolutePath)
     val ks         = KeyStore.getInstance("JKS")
@@ -117,7 +109,6 @@ object WebServerLauncher extends IOApp with LogInitialization {
   /** Resource that yields the running web server */
   def webServer[F[_]: Logger: Async: Dns: Files: Compression: Network](
     conf:       NavigateConfiguration,
-    as:         AuthenticationService[F],
     outputs:    Topic[F, NavigateEvent],
     logTopic:   Topic[F, ILoggingEvent],
     guideTopic: Topic[F, GuideState],
@@ -132,15 +123,10 @@ object WebServerLauncher extends IOApp with LogInitialization {
       ProxyRoute.toString -> proxyService
     )
 
-    val pingRouter = Router[F](
-      "/ping" -> new PingRoutes(as).service
-    )
-
     def loggedRoutes(wsBuilder: WebSocketBuilder2[F], proxyService: HttpRoutes[F]) =
-      pingRouter <+>
-        Http4sLogger.httpRoutes(logHeaders = false, logBody = false)(
-          router(wsBuilder, proxyService)
-        )
+      Http4sLogger.httpRoutes(logHeaders = false, logBody = false)(
+        router(wsBuilder, proxyService)
+      )
 
     def builder(proxyService: HttpRoutes[F]) =
       BlazeServerBuilder[F]
@@ -247,19 +233,6 @@ object WebServerLauncher extends IOApp with LogInitialization {
                 )
       } yield seqE
 
-    def webServerIO(
-      conf:  NavigateConfiguration,
-      out:   Topic[IO, NavigateEvent],
-      log:   Topic[IO, ILoggingEvent],
-      guide: Topic[IO, GuideState],
-      en:    NavigateEngine[IO],
-      cs:    ClientsSetDb[IO]
-    ): Resource[IO, Unit] =
-      for {
-        as <- Resource.eval(authService[IO](conf.mode, conf.authentication))
-        _  <- webServer[IO](conf, as, out, log, guide, en, cs)
-      } yield ()
-
     def publishStats[F[_]: Temporal](cs: ClientsSetDb[F]): Stream[F, Unit] =
       Stream.fixedRate[F](10.minute).flatMap(_ => Stream.eval(cs.report))
 
@@ -280,7 +253,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
                   )
         _      <- Resource.eval(publishStats(cs).compile.drain.start)
         engine <- engineIO(conf, cli)
-        _      <- webServerIO(conf, out, log, gd, engine, cs)
+        _      <- webServer[IO](conf, out, log, gd, engine, cs)
         _      <- Resource.eval(
                     out.subscribers
                       .evalMap(l => Logger[IO].debug(s"Subscribers amount: $l").whenA(l > 1))

@@ -1,5 +1,4 @@
 import Settings.Libraries
-import Settings.Plugins
 import Common.*
 import Settings.Libraries.*
 import Settings.LibraryVersions
@@ -91,20 +90,13 @@ lazy val navigate_web_server = project
   .settings(
     name                 := "navigate_web_server",
     libraryDependencies ++= Seq(
-      UnboundId,
-      JwtCore,
-      JwtCirce,
-      CommonsHttp,
       Log4CatsNoop.value,
       CatsEffect.value,
       Log4Cats.value,
       Http4sCirce,
-      BooPickle.value,
-      Http4sBoopickle,
       GrackleRoutes,
       Natchez,
-      LucumaSchemas,
-      JavaLocales.value
+      LucumaSchemas
     ) ++
       Http4sClient ++ Http4s ++ PureConfig ++ Logging.value ++ MUnit.value ++ Grackle.value,
     // Supports launching the server in the background
@@ -123,29 +115,18 @@ lazy val navigate_web_server = project
     buildInfoPackage          := "navigate.web.server"
   )
   .dependsOn(navigate_server)
-  .dependsOn(navigate_model.jvm % "compile->compile;test->test")
+  .dependsOn(navigate_model % "compile->compile;test->test")
   .dependsOn(schema_util)
 
-lazy val navigate_model = crossProject(JVMPlatform, JSPlatform)
-  .crossType(CrossType.Full)
+lazy val navigate_model = project
   .in(file("modules/model"))
   .enablePlugins(GitBranchPrompt)
   .settings(
     libraryDependencies ++= Seq(
-      Squants.value,
       Mouse.value,
-      BooPickle.value,
+      Http4sCore,
       CatsTime.value
-    ) ++ MUnit.value ++ Monocle.value ++ LucumaCore.value ++ Sttp.value ++ Circe.value
-  )
-  .jvmSettings(
-    commonSettings,
-    libraryDependencies += Http4sCore
-  )
-  .jsSettings(
-    // And add a custom one
-    libraryDependencies += JavaTimeJS.value,
-    scalaJSLinkerConfig ~= (_.withModuleKind(ModuleKind.CommonJSModule))
+    ) ++ MUnit.value ++ Monocle.value ++ LucumaCore.value ++ Circe.value
   )
 
 lazy val schema_util = project
@@ -169,7 +150,7 @@ lazy val navigate_server = project
       Log4Cats.value
     ) ++ MUnit.value ++ LucumaCore.value ++ Http4sClient
   )
-  .dependsOn(navigate_model.jvm % "compile->compile;test->test")
+  .dependsOn(navigate_model % "compile->compile;test->test")
   .dependsOn(epics)
   .dependsOn(stateengine)
 

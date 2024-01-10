@@ -6,8 +6,8 @@ package navigate.model
 import cats.Eq
 import cats.Order
 import cats.syntax.all.*
+import lucuma.core.model.User
 import navigate.model.enums.ServerLogLevel
-import navigate.model.security.UserDetails
 
 import java.time.Instant
 
@@ -26,7 +26,7 @@ object NavigateEvent {
   case object NullEvent extends NavigateEvent
 
   case class ConnectionOpenEvent(
-    userDetails:   Option[UserDetails],
+    userDetails:   Option[User],
     clientId:      ClientId,
     serverVersion: String
   ) extends NavigateEvent
