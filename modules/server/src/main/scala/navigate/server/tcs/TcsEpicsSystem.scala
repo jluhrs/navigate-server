@@ -85,6 +85,9 @@ object TcsEpicsSystem {
     ]
     val m2GuideResetCmd: ParameterlessCommandChannels[F]
     val mountGuideCmd: Command4Channels[F, BinaryOnOff, String, Double, Double]
+    val p1GuiderGainsCmd: Command3Channels[F, Double, Double, Double]
+    val p2GuiderGainsCmd: Command3Channels[F, Double, Double, Double]
+    val oiGuiderGainsCmd: Command3Channels[F, Double, Double, Double]
 
     // val offsetACmd: OffsetCmd[F]
     // val offsetBCmd: OffsetCmd[F]
@@ -841,6 +844,41 @@ object TcsEpicsSystem {
             )
           }
       }
+
+    override val guiderGainsCommands: GuiderGainsCommand[F, TcsCommands[F]] =
+      new GuiderGainsCommand[F, TcsCommands[F]] {
+        override def dayTimeGains: TcsCommands[F] =
+          addMultipleParams(
+            List(
+              tcsEpics.p1GuiderGainsCmd.setParam1(0.0),
+              tcsEpics.p1GuiderGainsCmd.setParam2(0.0),
+              tcsEpics.p1GuiderGainsCmd.setParam3(0.0),
+              tcsEpics.p2GuiderGainsCmd.setParam1(0.0),
+              tcsEpics.p2GuiderGainsCmd.setParam2(0.0),
+              tcsEpics.p2GuiderGainsCmd.setParam3(0.0),
+              tcsEpics.oiGuiderGainsCmd.setParam1(0.0),
+              tcsEpics.oiGuiderGainsCmd.setParam2(0.0),
+              tcsEpics.oiGuiderGainsCmd.setParam3(0.0)
+            )
+          )
+
+        // TODO These hardcoded value should be configurable
+        override def defaultGains: TcsCommands[F] =
+          addMultipleParams(
+            List(
+              tcsEpics.p1GuiderGainsCmd.setParam1(0.03),
+              tcsEpics.p1GuiderGainsCmd.setParam2(0.03),
+              tcsEpics.p1GuiderGainsCmd.setParam3(0.00002),
+              tcsEpics.p2GuiderGainsCmd.setParam1(0.05),
+              tcsEpics.p2GuiderGainsCmd.setParam2(0.05),
+              tcsEpics.p2GuiderGainsCmd.setParam3(0.0001),
+              tcsEpics.oiGuiderGainsCmd.setParam1(0.08),
+              tcsEpics.oiGuiderGainsCmd.setParam2(0.08),
+              tcsEpics.oiGuiderGainsCmd.setParam3(0.00015)
+            )
+          )
+
+      }
   }
 
   class TcsEpicsSystemImpl[F[_]: Monad: Parallel](epics: TcsEpics[F], st: TcsStatus[F])
@@ -993,6 +1031,30 @@ object TcsEpicsSystem {
       )
     override val oiWfsCmds: WfsCommandsChannels[F]                                       =
       WfsCommandsChannels.build(channels.telltale, channels.oiwfs)
+
+    override val p1GuiderGainsCmd: Command3Channels[F, Double, Double, Double] =
+      Command3Channels(
+        channels.telltale,
+        channels.guiderGains.p1TipGain,
+        channels.guiderGains.p1TiltGain,
+        channels.guiderGains.p1FocusGain
+      )
+
+    override val p2GuiderGainsCmd: Command3Channels[F, Double, Double, Double] =
+      Command3Channels(
+        channels.telltale,
+        channels.guiderGains.p2TipGain,
+        channels.guiderGains.p2TiltGain,
+        channels.guiderGains.p2FocusGain
+      )
+
+    override val oiGuiderGainsCmd: Command3Channels[F, Double, Double, Double] =
+      Command3Channels(
+        channels.telltale,
+        channels.guiderGains.oiTipGain,
+        channels.guiderGains.oiTiltGain,
+        channels.guiderGains.oiFocusGain
+      )
   }
 
   case class ParameterlessCommandChannels[F[_]: Monad](
@@ -1385,6 +1447,11 @@ object TcsEpicsSystem {
     def state(v: Boolean): S
   }
 
+  trait GuiderGainsCommand[F[_], +S] {
+    def dayTimeGains: S
+    def defaultGains: S
+  }
+
   trait M1GuideConfigCommand[F[_], +S] {
     def weighting(v: String): S
     def source(v:    String): S
@@ -1475,6 +1542,7 @@ object TcsEpicsSystem {
     val m2GuideResetCommand: BaseCommand[F, TcsCommands[F]]
     val mountGuideCommand: MountGuideCommand[F, TcsCommands[F]]
     val oiWfsCommands: WfsCommands[F, TcsCommands[F]]
+    val guiderGainsCommands: GuiderGainsCommand[F, TcsCommands[F]]
   }
   /*
 

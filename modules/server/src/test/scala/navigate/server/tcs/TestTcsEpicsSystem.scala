@@ -2,6 +2,7 @@
 // For license information see LICENSE or https://opensource.org/licenses/BSD-3-Clause
 
 package navigate.server.tcs
+
 import cats.Applicative
 import cats.Monad
 import cats.Parallel
@@ -174,17 +175,17 @@ object TestTcsEpicsSystem {
   }
 
   case class GuiderGainsState(
-    p1tipGain:   TestChannel.State[Double],
-    p1tiltGain:  TestChannel.State[Double],
-    p1FocusGain: TestChannel.State[Double],
+    p1TipGain:   TestChannel.State[String],
+    p1TiltGain:  TestChannel.State[String],
+    p1FocusGain: TestChannel.State[String],
     p1Reset:     TestChannel.State[BinaryYesNo],
-    p2tipGain:   TestChannel.State[Double],
-    p2tiltGain:  TestChannel.State[Double],
-    p2FocusGain: TestChannel.State[Double],
+    p2TipGain:   TestChannel.State[String],
+    p2TiltGain:  TestChannel.State[String],
+    p2FocusGain: TestChannel.State[String],
     p2Reset:     TestChannel.State[BinaryYesNo],
-    oitipGain:   TestChannel.State[Double],
-    oitiltGain:  TestChannel.State[Double],
-    oiFocusGain: TestChannel.State[Double],
+    oiTipGain:   TestChannel.State[String],
+    oiTiltGain:  TestChannel.State[String],
+    oiFocusGain: TestChannel.State[String],
     oiReset:     TestChannel.State[BinaryYesNo]
   )
 
@@ -671,17 +672,17 @@ object TestTcsEpicsSystem {
     s: Ref[F, State],
     l: Lens[State, GuiderGainsState]
   ): GuiderGainsChannels[F] = GuiderGainsChannels(
-    new TestChannel[F, State, Double](s, l.andThen(Focus[GuiderGainsState](_.p1tipGain))),
-    new TestChannel[F, State, Double](s, l.andThen(Focus[GuiderGainsState](_.p1tiltGain))),
-    new TestChannel[F, State, Double](s, l.andThen(Focus[GuiderGainsState](_.p1FocusGain))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[GuiderGainsState](_.p1TipGain))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[GuiderGainsState](_.p1TiltGain))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[GuiderGainsState](_.p1FocusGain))),
     new TestChannel[F, State, BinaryYesNo](s, l.andThen(Focus[GuiderGainsState](_.p1Reset))),
-    new TestChannel[F, State, Double](s, l.andThen(Focus[GuiderGainsState](_.p2tipGain))),
-    new TestChannel[F, State, Double](s, l.andThen(Focus[GuiderGainsState](_.p2tiltGain))),
-    new TestChannel[F, State, Double](s, l.andThen(Focus[GuiderGainsState](_.p2FocusGain))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[GuiderGainsState](_.p2TipGain))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[GuiderGainsState](_.p2TiltGain))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[GuiderGainsState](_.p2FocusGain))),
     new TestChannel[F, State, BinaryYesNo](s, l.andThen(Focus[GuiderGainsState](_.p2Reset))),
-    new TestChannel[F, State, Double](s, l.andThen(Focus[GuiderGainsState](_.oitipGain))),
-    new TestChannel[F, State, Double](s, l.andThen(Focus[GuiderGainsState](_.oitiltGain))),
-    new TestChannel[F, State, Double](s, l.andThen(Focus[GuiderGainsState](_.oiFocusGain))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[GuiderGainsState](_.oiTipGain))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[GuiderGainsState](_.oiTiltGain))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[GuiderGainsState](_.oiFocusGain))),
     new TestChannel[F, State, BinaryYesNo](s, l.andThen(Focus[GuiderGainsState](_.oiReset)))
   )
   def buildChannels[F[_]: Applicative](s: Ref[F, State]): TcsChannels[F] =

@@ -569,11 +569,184 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
     }
   }
 
+  test("Enable and disable guiding default gains") {
+    val guideCfg = TelescopeGuideConfig(
+      mountGuide = true,
+      m1Guide = M1GuideConfig.M1GuideOn(M1Source.Oiwfs),
+      m2Guide = M2GuideOn(true, Set(TipTiltSource.Oiwfs)),
+      dayTimeMode = false
+    )
+
+    for {
+      x        <- createController
+      (st, ctr) = x
+      _        <- ctr.enableGuide(guideCfg)
+      r1       <- st.get
+      _        <- ctr.disableGuide
+      r2       <- st.get
+    } yield {
+      assert(r1.m1Guide.connected)
+      assert(r1.m1GuideConfig.source.connected)
+      assert(r1.m1GuideConfig.frames.connected)
+      assert(r1.m1GuideConfig.weighting.connected)
+      assert(r1.m1GuideConfig.filename.connected)
+      assert(r1.m2Guide.connected)
+      assert(r1.m2GuideConfig.source.connected)
+      assert(r1.m2GuideConfig.beam.connected)
+      assert(r1.m2GuideConfig.filter.connected)
+      assert(r1.m2GuideConfig.samplefreq.connected)
+      assert(r1.m2GuideConfig.reset.connected)
+      assert(r1.m2GuideMode.connected)
+      assert(r1.m2GuideReset.connected)
+      assert(r1.mountGuide.mode.connected)
+      assert(r1.mountGuide.source.connected)
+      assert(r1.guiderGains.p1TipGain.connected)
+      assert(r1.guiderGains.p1TiltGain.connected)
+      assert(r1.guiderGains.p1FocusGain.connected)
+      assert(r1.guiderGains.p2TipGain.connected)
+      assert(r1.guiderGains.p2TiltGain.connected)
+      assert(r1.guiderGains.p2FocusGain.connected)
+      assert(r1.guiderGains.oiTipGain.connected)
+      assert(r1.guiderGains.oiTiltGain.connected)
+      assert(r1.guiderGains.oiFocusGain.connected)
+
+      assertEquals(r1.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
+      assertEquals(r1.m1GuideConfig.source.value.flatMap(Enumerated[M1Source].fromTag),
+                   M1Source.Oiwfs.some
+      )
+      assertEquals(r1.m1GuideConfig.frames.value.flatMap(_.toIntOption), 1.some)
+      assertEquals(r1.m1GuideConfig.weighting.value, "none".some)
+      assertEquals(r1.m1GuideConfig.filename.value, "".some)
+      assertEquals(r1.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
+      assertEquals(r1.m2GuideConfig.source.value.flatMap(Enumerated[TipTiltSource].fromTag),
+                   TipTiltSource.Oiwfs.some
+      )
+      assertEquals(r1.m2GuideConfig.beam.value, "B".some)
+      assertEquals(r1.m2GuideConfig.filter.value, "raw".some)
+      assertEquals(r1.m2GuideConfig.samplefreq.value.flatMap(_.toDoubleOption), 200.0.some)
+      assertEquals(r1.m2GuideConfig.reset.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.Off.some
+      )
+      assertEquals(r1.m2GuideMode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.On.some
+      )
+      assertEquals(r1.m2GuideReset.value, CadDirective.MARK.some)
+      assertEquals(r1.mountGuide.mode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.On.some
+      )
+      assertEquals(r1.mountGuide.source.value, "SCS".some)
+
+      assertEquals(r2.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.Off.some)
+      assertEquals(r2.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.Off.some)
+      assertEquals(r2.mountGuide.mode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.Off.some
+      )
+      assertEquals(r1.guiderGains.p1TipGain.value, "0.03".some)
+      assertEquals(r1.guiderGains.p1TiltGain.value, "0.03".some)
+      assertEquals(r1.guiderGains.p1FocusGain.value, "2.0E-5".some)
+
+      assertEquals(r1.guiderGains.p2TipGain.value, "0.05".some)
+      assertEquals(r1.guiderGains.p2TiltGain.value, "0.05".some)
+      assertEquals(r1.guiderGains.p2FocusGain.value, "1.0E-4".some)
+
+      assertEquals(r1.guiderGains.oiTipGain.value, "0.08".some)
+      assertEquals(r1.guiderGains.oiTiltGain.value, "0.08".some)
+      assertEquals(r1.guiderGains.oiFocusGain.value, "1.5E-4".some)
+    }
+  }
+
+  test("Enable and disable guiding day mode") {
+    val guideCfg = TelescopeGuideConfig(
+      mountGuide = true,
+      m1Guide = M1GuideConfig.M1GuideOn(M1Source.Oiwfs),
+      m2Guide = M2GuideOn(true, Set(TipTiltSource.Oiwfs)),
+      dayTimeMode = true
+    )
+
+    for {
+      x        <- createController
+      (st, ctr) = x
+      _        <- ctr.enableGuide(guideCfg)
+      r1       <- st.get
+      _        <- ctr.disableGuide
+      r2       <- st.get
+    } yield {
+      assert(r1.m1Guide.connected)
+      assert(r1.m1GuideConfig.source.connected)
+      assert(r1.m1GuideConfig.frames.connected)
+      assert(r1.m1GuideConfig.weighting.connected)
+      assert(r1.m1GuideConfig.filename.connected)
+      assert(r1.m2Guide.connected)
+      assert(r1.m2GuideConfig.source.connected)
+      assert(r1.m2GuideConfig.beam.connected)
+      assert(r1.m2GuideConfig.filter.connected)
+      assert(r1.m2GuideConfig.samplefreq.connected)
+      assert(r1.m2GuideConfig.reset.connected)
+      assert(r1.m2GuideMode.connected)
+      assert(r1.m2GuideReset.connected)
+      assert(r1.mountGuide.mode.connected)
+      assert(r1.mountGuide.source.connected)
+      assert(r1.guiderGains.p1TipGain.connected)
+      assert(r1.guiderGains.p1TiltGain.connected)
+      assert(r1.guiderGains.p1FocusGain.connected)
+      assert(r1.guiderGains.p2TipGain.connected)
+      assert(r1.guiderGains.p2TiltGain.connected)
+      assert(r1.guiderGains.p2FocusGain.connected)
+      assert(r1.guiderGains.oiTipGain.connected)
+      assert(r1.guiderGains.oiTiltGain.connected)
+      assert(r1.guiderGains.oiFocusGain.connected)
+
+      assertEquals(r1.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
+      assertEquals(r1.m1GuideConfig.source.value.flatMap(Enumerated[M1Source].fromTag),
+                   M1Source.Oiwfs.some
+      )
+      assertEquals(r1.m1GuideConfig.frames.value.flatMap(_.toIntOption), 1.some)
+      assertEquals(r1.m1GuideConfig.weighting.value, "none".some)
+      assertEquals(r1.m1GuideConfig.filename.value, "".some)
+      assertEquals(r1.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
+      assertEquals(r1.m2GuideConfig.source.value.flatMap(Enumerated[TipTiltSource].fromTag),
+                   TipTiltSource.Oiwfs.some
+      )
+      assertEquals(r1.m2GuideConfig.beam.value, "B".some)
+      assertEquals(r1.m2GuideConfig.filter.value, "raw".some)
+      assertEquals(r1.m2GuideConfig.samplefreq.value.flatMap(_.toDoubleOption), 200.0.some)
+      assertEquals(r1.m2GuideConfig.reset.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.Off.some
+      )
+      assertEquals(r1.m2GuideMode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.On.some
+      )
+      assertEquals(r1.m2GuideReset.value, CadDirective.MARK.some)
+      assertEquals(r1.mountGuide.mode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.On.some
+      )
+      assertEquals(r1.mountGuide.source.value, "SCS".some)
+
+      assertEquals(r2.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.Off.some)
+      assertEquals(r2.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.Off.some)
+      assertEquals(r2.mountGuide.mode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.Off.some
+      )
+      assertEquals(r1.guiderGains.p1TipGain.value, "0.0".some)
+      assertEquals(r1.guiderGains.p1TiltGain.value, "0.0".some)
+      assertEquals(r1.guiderGains.p1FocusGain.value, "0.0".some)
+
+      assertEquals(r1.guiderGains.p2TipGain.value, "0.0".some)
+      assertEquals(r1.guiderGains.p2TiltGain.value, "0.0".some)
+      assertEquals(r1.guiderGains.p2FocusGain.value, "0.0".some)
+
+      assertEquals(r1.guiderGains.oiTipGain.value, "0.0".some)
+      assertEquals(r1.guiderGains.oiTiltGain.value, "0.0".some)
+      assertEquals(r1.guiderGains.oiFocusGain.value, "0.0".some)
+    }
+  }
+
   test("Enable and disable guiding") {
     val guideCfg = TelescopeGuideConfig(
       mountGuide = true,
       m1Guide = M1GuideConfig.M1GuideOn(M1Source.Oiwfs),
-      m2Guide = M2GuideOn(true, Set(TipTiltSource.Oiwfs))
+      m2Guide = M2GuideOn(true, Set(TipTiltSource.Oiwfs)),
+      false
     )
 
     for {

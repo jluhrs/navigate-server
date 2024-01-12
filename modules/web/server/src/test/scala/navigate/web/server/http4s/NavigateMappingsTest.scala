@@ -564,6 +564,7 @@ class NavigateMappingsTest extends CatsEffectSuite {
           |    m2Coma: true
           |    m1Input: OIWFS
           |    mountOffload: true
+          |    daytimeMode: false
           |  }
           |) {
           |  result

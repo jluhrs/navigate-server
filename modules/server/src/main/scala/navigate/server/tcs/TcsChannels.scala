@@ -192,17 +192,17 @@ object TcsChannels {
   )
 
   case class GuiderGainsChannels[F[_]](
-    p1tipGain:   Channel[F, Double],
-    p1tiltGain:  Channel[F, Double],
-    p1FocusGain: Channel[F, Double],
+    p1TipGain:   Channel[F, String],
+    p1TiltGain:  Channel[F, String],
+    p1FocusGain: Channel[F, String],
     p1Reset:     Channel[F, BinaryYesNo],
-    p2tipGain:   Channel[F, Double],
-    p2tiltGain:  Channel[F, Double],
-    p2FocusGain: Channel[F, Double],
+    p2TipGain:   Channel[F, String],
+    p2TiltGain:  Channel[F, String],
+    p2FocusGain: Channel[F, String],
     p2Reset:     Channel[F, BinaryYesNo],
-    oitipGain:   Channel[F, Double],
-    oitiltGain:  Channel[F, Double],
-    oiFocusGain: Channel[F, Double],
+    oiTipGain:   Channel[F, String],
+    oiTiltGain:  Channel[F, String],
+    oiFocusGain: Channel[F, String],
     oiReset:     Channel[F, BinaryYesNo]
   )
 
@@ -515,18 +515,18 @@ object TcsChannels {
       top:     String
     ): Resource[F, GuiderGainsChannels[F]] =
       for {
-        p1tipGain   <- service.getChannel[Double](top, "pwfs1:dc:detSigInitFgGain.A")
-        p1tiltGain  <- service.getChannel[Double](top, "pwfs1:dc:detSigInitFgGain.B")
-        p1FocusGain <- service.getChannel[Double](top, "pwfs1:dc:detSigInitFgGain.C")
-        p1Reset     <- service.getChannel[BinaryYesNo](top, "pwfs1:dc:initSigInit.J")
-        p2tipGain   <- service.getChannel[Double](top, "pwfs2:dc:detSigInitFgGain.A")
-        p2tiltGain  <- service.getChannel[Double](top, "pwfs2:dc:detSigInitFgGain.B")
-        p2FocusGain <- service.getChannel[Double](top, "pwfs2:dc:detSigInitFgGain.C")
-        p2Reset     <- service.getChannel[BinaryYesNo](top, "pwfs2:dc:initSigInit.J")
-        oitipGain   <- service.getChannel[Double](top, "oiwfs:dc:detSigInitFgGain.A")
-        oitiltGain  <- service.getChannel[Double](top, "oiwfs:dc:detSigInitFgGain.B")
-        oiFocusGain <- service.getChannel[Double](top, "oiwfs:dc:detSigInitFgGain.C")
-        oiReset     <- service.getChannel[BinaryYesNo](top, "oiwfs:dc:initSigInit.J")
+        p1tipGain   <- service.getChannel[String]("pwfs1:dc:detSigInitFgGain.A")
+        p1tiltGain  <- service.getChannel[String]("pwfs1:dc:detSigInitFgGain.B")
+        p1FocusGain <- service.getChannel[String]("pwfs1:dc:detSigInitFgGain.C")
+        p1Reset     <- service.getChannel[BinaryYesNo]("pwfs1:dc:initSigInit.J")
+        p2tipGain   <- service.getChannel[String]("pwfs2:dc:detSigInitFgGain.A")
+        p2tiltGain  <- service.getChannel[String]("pwfs2:dc:detSigInitFgGain.B")
+        p2FocusGain <- service.getChannel[String]("pwfs2:dc:detSigInitFgGain.C")
+        p2Reset     <- service.getChannel[BinaryYesNo]("pwfs2:dc:initSigInit.J")
+        oitipGain   <- service.getChannel[String]("oiwfs:dc:detSigInitFgGain.A")
+        oitiltGain  <- service.getChannel[String]("oiwfs:dc:detSigInitFgGain.B")
+        oiFocusGain <- service.getChannel[String]("oiwfs:dc:detSigInitFgGain.C")
+        oiReset     <- service.getChannel[BinaryYesNo]("oiwfs:dc:initSigInit.J")
       } yield GuiderGainsChannels(
         p1tipGain,
         p1tiltGain,

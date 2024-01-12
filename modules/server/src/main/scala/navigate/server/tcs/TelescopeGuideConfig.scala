@@ -9,8 +9,9 @@ import cats.derived.*
 
 /** Data type for guide config. */
 case class TelescopeGuideConfig(
-  mountGuide: Boolean,
-  m1Guide:    M1GuideConfig,
-  m2Guide:    M2GuideConfig
+  mountGuide:  Boolean,
+  m1Guide:     M1GuideConfig,
+  m2Guide:     M2GuideConfig,
+  dayTimeMode: Boolean
 ) derives Eq,
       Show

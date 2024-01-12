@@ -364,6 +364,12 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
       .verifiedRun(ConnectionTimeout)
 
   override def enableGuide(config: TelescopeGuideConfig): F[ApplyCommandResult] = {
+    val gains = (x: TcsCommands[F]) =>
+      if (config.dayTimeMode)
+        x.guiderGainsCommands.dayTimeGains
+      else
+        x.guiderGainsCommands.defaultGains
+
     val m1 = (x: TcsCommands[F]) =>
       config.m1Guide match {
         case M1GuideConfig.M1GuideOff        => x.m1GuideCommand.state(false)
@@ -382,7 +388,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
 
     config.m2Guide match {
       case M2GuideConfig.M2GuideOff               =>
-        m1(tcsEpics.startCommand(timeout)).m2GuideCommand
+        m1(gains(tcsEpics.startCommand(timeout))).m2GuideCommand
           .state(false)
           .m2GuideModeCommand
           .coma(false)
@@ -399,11 +405,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
           .flatMap(x => beams.map(y => (x, y)))
           .foldLeft(
             requireReset.fold(
-              tcsEpics
-                .startCommand(timeout)
-                .m2GuideResetCommand
-                .mark
-                .post
+              gains(tcsEpics.startCommand(timeout)).m2GuideResetCommand.mark.post
                 .verifiedRun(ConnectionTimeout),
               ApplyCommandResult.Completed.pure[F]
             )
@@ -412,9 +414,10 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
               // Set tip-tilt guide for each source on each beam
               // TCC adds a delay between each call. Is it necessary?
               (r === ApplyCommandResult.Completed).fold(
-                tcsEpics
-                  .startCommand(timeout)
-                  .m2GuideConfigCommand
+                gains(
+                  tcsEpics
+                    .startCommand(timeout)
+                ).m2GuideConfigCommand
                   .source(src.tag)
                   .m2GuideConfigCommand
                   .sampleFreq(200.0)
@@ -430,7 +433,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
               )
             }.flatMap { r =>
               (r === ApplyCommandResult.Completed).fold(
-                m1(tcsEpics.startCommand(timeout)).m2GuideCommand
+                m1(gains(tcsEpics.startCommand(timeout))).m2GuideCommand
                   .state(true)
                   .m2GuideModeCommand
                   .coma(coma)
