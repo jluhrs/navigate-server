@@ -44,7 +44,8 @@ case class TcsChannels[F[_]](
   m2GuideReset:     Channel[F, CadDirective],
   mountGuide:       MountGuideChannels[F],
   oiwfs:            WfsChannels[F],
-  guide:            GuideConfigStatusChannels[F]
+  guide:            GuideConfigStatusChannels[F],
+  guiderGains:      GuiderGainsChannels[F]
 )
 
 object TcsChannels {
@@ -188,6 +189,21 @@ object TcsChannels {
   case class ProbeChannels[F[_]](
     parkDir: Channel[F, CadDirective],
     follow:  Channel[F, String]
+  )
+
+  case class GuiderGainsChannels[F[_]](
+    p1tipGain:   Channel[F, Double],
+    p1tiltGain:  Channel[F, Double],
+    p1FocusGain: Channel[F, Double],
+    p1Reset:     Channel[F, BinaryYesNo],
+    p2tipGain:   Channel[F, Double],
+    p2tiltGain:  Channel[F, Double],
+    p2FocusGain: Channel[F, Double],
+    p2Reset:     Channel[F, BinaryYesNo],
+    oitipGain:   Channel[F, Double],
+    oitiltGain:  Channel[F, Double],
+    oiFocusGain: Channel[F, Double],
+    oiReset:     Channel[F, BinaryYesNo]
   )
 
   // Build functions to construct each epics channel for each
@@ -493,6 +509,40 @@ object TcsChannels {
     )
   }
 
+  object GuiderGains {
+    def build[F[_]](
+      service: EpicsService[F],
+      top:     String
+    ): Resource[F, GuiderGainsChannels[F]] =
+      for {
+        p1tipGain   <- service.getChannel[Double](top, "pwfs1:dc:detSigInitFgGain.A")
+        p1tiltGain  <- service.getChannel[Double](top, "pwfs1:dc:detSigInitFgGain.B")
+        p1FocusGain <- service.getChannel[Double](top, "pwfs1:dc:detSigInitFgGain.C")
+        p1Reset     <- service.getChannel[BinaryYesNo](top, "pwfs1:dc:initSigInit.J")
+        p2tipGain   <- service.getChannel[Double](top, "pwfs2:dc:detSigInitFgGain.A")
+        p2tiltGain  <- service.getChannel[Double](top, "pwfs2:dc:detSigInitFgGain.B")
+        p2FocusGain <- service.getChannel[Double](top, "pwfs2:dc:detSigInitFgGain.C")
+        p2Reset     <- service.getChannel[BinaryYesNo](top, "pwfs2:dc:initSigInit.J")
+        oitipGain   <- service.getChannel[Double](top, "oiwfs:dc:detSigInitFgGain.A")
+        oitiltGain  <- service.getChannel[Double](top, "oiwfs:dc:detSigInitFgGain.B")
+        oiFocusGain <- service.getChannel[Double](top, "oiwfs:dc:detSigInitFgGain.C")
+        oiReset     <- service.getChannel[BinaryYesNo](top, "oiwfs:dc:initSigInit.J")
+      } yield GuiderGainsChannels(
+        p1tipGain,
+        p1tiltGain,
+        p1FocusGain,
+        p1Reset,
+        p2tipGain,
+        p2tiltGain,
+        p2FocusGain,
+        p2Reset,
+        oitipGain,
+        oitiltGain,
+        oiFocusGain,
+        oiReset
+      )
+  }
+
   /**
    * Build all TcsChannels It will construct the desired raw channel or call the build function for
    * channels group
@@ -531,6 +581,7 @@ object TcsChannels {
       mng  <- MountGuideChannels.build(service, top)
       oi   <- WfsChannels.build(service, top, "oiwfs", "oi")
       gd   <- GuideConfigStatusChannels.build(service, top)
+      gg   <- GuiderGains.build(service, top)
     } yield TcsChannels[F](
       tt,
       tpd,
@@ -557,6 +608,7 @@ object TcsChannels {
       m2gr,
       mng,
       oi,
-      gd
+      gd,
+      gg
     )
 }

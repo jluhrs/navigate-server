@@ -21,12 +21,13 @@ import scala.concurrent.duration.FiniteDuration
 
 trait EpicsService[F[_]] {
   def getChannel[T](name: String)(using tjt: ToJavaType[T]): Resource[F, Channel[F, T]]
+  def getChannel[T](top:  String, name:      String)(using tjt: ToJavaType[T]): Resource[F, Channel[F, T]]
 }
 
 object EpicsService {
 
   final class EpicsServiceImpl[F[_]: Async](ctx: Context) extends EpicsService[F] {
-    override def getChannel[T](
+    def getChannel[T](
       name: String
     )(using tjt: ToJavaType[T]): Resource[F, Channel[F, T]] = Resource
       .make(
@@ -34,6 +35,12 @@ object EpicsService {
           .delay(ctx.createChannel[tjt.javaType](name, tjt.clazz))
       )(c => Async[F].delay(c.close()))
       .map(x => Channel.build[F, T, tjt.javaType](x)(Async[F], tjt.convert))
+
+    def getChannel[T](top: String, name: String)(using
+      tjt: ToJavaType[T]
+    ): Resource[F, Channel[F, T]] =
+      getChannel(s"$top$name")
+
   }
 
   case class Builder(
