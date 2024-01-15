@@ -1037,7 +1037,7 @@ object TcsEpicsSystem {
 
     override val p1GuiderGainsCmd: Command3Channels[F, Double, Double, Double] =
       Command3Channels(
-        channels.telltale,
+        channels.pwfs1Telltale,
         channels.guiderGains.p1TipGain,
         channels.guiderGains.p1TiltGain,
         channels.guiderGains.p1FocusGain
@@ -1045,7 +1045,7 @@ object TcsEpicsSystem {
 
     override val p2GuiderGainsCmd: Command3Channels[F, Double, Double, Double] =
       Command3Channels(
-        channels.telltale,
+        channels.pwfs2Telltale,
         channels.guiderGains.p2TipGain,
         channels.guiderGains.p2TiltGain,
         channels.guiderGains.p2FocusGain
@@ -1053,7 +1053,7 @@ object TcsEpicsSystem {
 
     override val oiGuiderGainsCmd: Command3Channels[F, Double, Double, Double] =
       Command3Channels(
-        channels.telltale,
+        channels.oiwfsTelltale,
         channels.guiderGains.oiTipGain,
         channels.guiderGains.oiTiltGain,
         channels.guiderGains.oiFocusGain

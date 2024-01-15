@@ -20,6 +20,9 @@ case class TcsChannels[F[_]](
    * List of all TcsChannels. Channel -> Defines a raw channel Other cases -> Group of channels
    */
   telltale:         TelltaleChannel[F],
+  pwfs1Telltale:    TelltaleChannel[F],
+  pwfs2Telltale:    TelltaleChannel[F],
+  oiwfsTelltale:    TelltaleChannel[F],
   telescopeParkDir: Channel[F, CadDirective],
   mountFollow:      Channel[F, String],
   rotStopBrake:     Channel[F, String],
@@ -560,10 +563,15 @@ object TcsChannels {
     tcsTop:   String,
     pwfs1Top: String,
     pwfs2Top: String,
-    oiTop:    String
+    oiTop:    String,
+    agTop:    String
   ): Resource[F, TcsChannels[F]] =
     for {
       tt   <- service.getChannel[String](s"${tcsTop}sad:health.VAL").map(TelltaleChannel(sysName, _))
+      p1tt <- service.getChannel[String](pwfs1Top, "health.VAL").map(TelltaleChannel(sysName, _))
+      p2tt <- service.getChannel[String](pwfs2Top, "health.VAL").map(TelltaleChannel(sysName, _))
+      oitt <-
+        service.getChannel[String](agTop, "hlth:oiwfs:health.VAL").map(TelltaleChannel(sysName, _))
       tpd  <- service.getChannel[CadDirective](s"${tcsTop}telpark$DirSuffix")
       mf   <- service.getChannel[String](s"${tcsTop}mcFollow.A")
       rsb  <- service.getChannel[String](s"${tcsTop}rotStop.B")
@@ -592,6 +600,9 @@ object TcsChannels {
       gg   <- GuiderGains.build(service, pwfs1Top, pwfs2Top, oiTop)
     } yield TcsChannels[F](
       tt,
+      p1tt,
+      p2tt,
+      oitt,
       tpd,
       mf,
       rsb,

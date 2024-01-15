@@ -388,7 +388,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
 
     config.m2Guide match {
       case M2GuideConfig.M2GuideOff               =>
-        m1(gains(tcsEpics.startCommand(timeout))).m2GuideCommand
+        (gains >>> m1)(tcsEpics.startCommand(timeout)).m2GuideCommand
           .state(false)
           .m2GuideModeCommand
           .coma(false)
@@ -433,7 +433,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
               )
             }.flatMap { r =>
               (r === ApplyCommandResult.Completed).fold(
-                m1(gains(tcsEpics.startCommand(timeout))).m2GuideCommand
+                (gains >>> m1)(tcsEpics.startCommand(timeout)).m2GuideCommand
                   .state(true)
                   .m2GuideModeCommand
                   .coma(coma)
