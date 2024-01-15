@@ -66,12 +66,12 @@ object TcsChannels {
   object M1GuideConfigChannels {
     def build[F[_]](
       service: EpicsService[F],
-      top:     String
+      top:     TcsTop
     ): Resource[F, M1GuideConfigChannels[F]] = for {
-      w <- service.getChannel[String](s"${top}m1GuideConfig.A")
-      s <- service.getChannel[String](s"${top}m1GuideConfig.B")
-      f <- service.getChannel[String](s"${top}m1GuideConfig.C")
-      n <- service.getChannel[String](s"${top}m1GuideConfig.D")
+      w <- service.getChannel[String](top.value, "m1GuideConfig.A")
+      s <- service.getChannel[String](top.value, "m1GuideConfig.B")
+      f <- service.getChannel[String](top.value, "m1GuideConfig.C")
+      n <- service.getChannel[String](top.value, "m1GuideConfig.D")
     } yield M1GuideConfigChannels(w, s, f, n)
   }
 
@@ -88,15 +88,15 @@ object TcsChannels {
   object M2GuideConfigChannels {
     def build[F[_]](
       service: EpicsService[F],
-      top:     String
+      top:     TcsTop
     ): Resource[F, M2GuideConfigChannels[F]] = for {
-      sr <- service.getChannel[String](s"${top}m2GuideConfig.A")
-      sf <- service.getChannel[String](s"${top}m2GuideConfig.B")
-      fl <- service.getChannel[String](s"${top}m2GuideConfig.C")
-      f1 <- service.getChannel[String](s"${top}m2GuideConfig.D")
-      f2 <- service.getChannel[String](s"${top}m2GuideConfig.E")
-      bm <- service.getChannel[String](s"${top}m2GuideConfig.F")
-      rs <- service.getChannel[String](s"${top}m2GuideConfig.G")
+      sr <- service.getChannel[String](top.value, "m2GuideConfig.A")
+      sf <- service.getChannel[String](top.value, "m2GuideConfig.B")
+      fl <- service.getChannel[String](top.value, "m2GuideConfig.C")
+      f1 <- service.getChannel[String](top.value, "m2GuideConfig.D")
+      f2 <- service.getChannel[String](top.value, "m2GuideConfig.E")
+      bm <- service.getChannel[String](top.value, "m2GuideConfig.F")
+      rs <- service.getChannel[String](top.value, "m2GuideConfig.G")
     } yield M2GuideConfigChannels(sr, sf, fl, f1, f2, bm, rs)
   }
 
@@ -110,12 +110,12 @@ object TcsChannels {
   object MountGuideChannels {
     def build[F[_]](
       service: EpicsService[F],
-      top:     String
+      top:     TcsTop
     ): Resource[F, MountGuideChannels[F]] = for {
-      mn <- service.getChannel[String](s"${top}mountGuideMode.A")
-      sr <- service.getChannel[String](s"${top}mountGuideMode.B")
-      p1 <- service.getChannel[String](s"${top}mountGuideMode.C")
-      p2 <- service.getChannel[String](s"${top}mountGuideMode.D")
+      mn <- service.getChannel[String](top.value, "mountGuideMode.A")
+      sr <- service.getChannel[String](top.value, "mountGuideMode.B")
+      p1 <- service.getChannel[String](top.value, "mountGuideMode.C")
+      p2 <- service.getChannel[String](top.value, "mountGuideMode.D")
     } yield MountGuideChannels(mn, sr, p1, p2)
   }
 
@@ -213,19 +213,19 @@ object TcsChannels {
   // channels group
   def buildEnclosureChannels[F[_]](
     service: EpicsService[F],
-    top:     String
+    top:     TcsTop
   ): Resource[F, EnclosureChannels[F]] =
     for {
-      edm <- service.getChannel[String](s"${top}carouselMode.A")
-      esm <- service.getChannel[String](s"${top}carouselMode.B")
-      esh <- service.getChannel[String](s"${top}carouselMode.C")
-      ede <- service.getChannel[String](s"${top}carouselMode.D")
-      ese <- service.getChannel[String](s"${top}carouselMode.E")
-      ema <- service.getChannel[String](s"${top}carousel.A")
-      est <- service.getChannel[String](s"${top}shutter.A")
-      esb <- service.getChannel[String](s"${top}shutter.B")
-      eve <- service.getChannel[String](s"${top}ventgates.A")
-      evw <- service.getChannel[String](s"${top}ventgates.B")
+      edm <- service.getChannel[String](top.value, "carouselMode.A")
+      esm <- service.getChannel[String](top.value, "carouselMode.B")
+      esh <- service.getChannel[String](top.value, "carouselMode.C")
+      ede <- service.getChannel[String](top.value, "carouselMode.D")
+      ese <- service.getChannel[String](top.value, "carouselMode.E")
+      ema <- service.getChannel[String](top.value, "carousel.A")
+      est <- service.getChannel[String](top.value, "shutter.A")
+      esb <- service.getChannel[String](top.value, "shutter.B")
+      eve <- service.getChannel[String](top.value, "ventgates.A")
+      evw <- service.getChannel[String](top.value, "ventgates.B")
     } yield EnclosureChannels(
       edm,
       esm,
@@ -273,35 +273,35 @@ object TcsChannels {
 
   def buildProbeTrackingChannels[F[_]](
     service: EpicsService[F],
-    top:     String,
+    top:     TcsTop,
     name:    String
   ): Resource[F, ProbeTrackingChannels[F]] = for {
-    aa <- service.getChannel[String](s"${top}config${name}.A")
-    ab <- service.getChannel[String](s"${top}config${name}.B")
-    ba <- service.getChannel[String](s"${top}config${name}.D")
-    bb <- service.getChannel[String](s"${top}config${name}.E")
+    aa <- service.getChannel[String](top.value, s"config${name}.A")
+    ab <- service.getChannel[String](top.value, s"config${name}.B")
+    ba <- service.getChannel[String](top.value, s"config${name}.D")
+    bb <- service.getChannel[String](top.value, s"config${name}.E")
   } yield ProbeTrackingChannels(aa, ab, ba, bb)
 
   def buildSlewChannels[F[_]](
     service: EpicsService[F],
-    top:     String
+    top:     TcsTop
   ): Resource[F, SlewChannels[F]] = for {
-    zct <- service.getChannel[String](s"${top}slew.A")
-    zso <- service.getChannel[String](s"${top}slew.B")
-    zsd <- service.getChannel[String](s"${top}slew.C")
-    zmo <- service.getChannel[String](s"${top}slew.D")
-    zmd <- service.getChannel[String](s"${top}slew.E")
-    fl1 <- service.getChannel[String](s"${top}slew.F")
-    fl2 <- service.getChannel[String](s"${top}slew.G")
-    rp  <- service.getChannel[String](s"${top}slew.H")
-    sg  <- service.getChannel[String](s"${top}slew.I")
-    zgo <- service.getChannel[String](s"${top}slew.J")
-    zio <- service.getChannel[String](s"${top}slew.K")
-    ap1 <- service.getChannel[String](s"${top}slew.L")
-    ap2 <- service.getChannel[String](s"${top}slew.M")
-    aoi <- service.getChannel[String](s"${top}slew.N")
-    agm <- service.getChannel[String](s"${top}slew.O")
-    aao <- service.getChannel[String](s"${top}slew.P")
+    zct <- service.getChannel[String](top.value, "slew.A")
+    zso <- service.getChannel[String](top.value, "slew.B")
+    zsd <- service.getChannel[String](top.value, "slew.C")
+    zmo <- service.getChannel[String](top.value, "slew.D")
+    zmd <- service.getChannel[String](top.value, "slew.E")
+    fl1 <- service.getChannel[String](top.value, "slew.F")
+    fl2 <- service.getChannel[String](top.value, "slew.G")
+    rp  <- service.getChannel[String](top.value, "slew.H")
+    sg  <- service.getChannel[String](top.value, "slew.I")
+    zgo <- service.getChannel[String](top.value, "slew.J")
+    zio <- service.getChannel[String](top.value, "slew.K")
+    ap1 <- service.getChannel[String](top.value, "slew.L")
+    ap2 <- service.getChannel[String](top.value, "slew.M")
+    aoi <- service.getChannel[String](top.value, "slew.N")
+    agm <- service.getChannel[String](top.value, "slew.O")
+    aao <- service.getChannel[String](top.value, "slew.P")
   } yield SlewChannels(
     zct,
     zso,
@@ -323,12 +323,12 @@ object TcsChannels {
 
   def buildRotatorChannels[F[_]](
     service: EpicsService[F],
-    top:     String
+    top:     TcsTop
   ): Resource[F, RotatorChannels[F]] = for {
-    ipa     <- service.getChannel[String](s"${top}rotator.A")
-    system  <- service.getChannel[String](s"${top}rotator.B")
-    equinox <- service.getChannel[String](s"${top}rotator.C")
-    iaa     <- service.getChannel[String](s"${top}rotator.D")
+    ipa     <- service.getChannel[String]("${top}rotator.A")
+    system  <- service.getChannel[String](top.value, "rotator.B")
+    equinox <- service.getChannel[String](top.value, "rotator.C")
+    iaa     <- service.getChannel[String](top.value, "rotator.D")
   } yield RotatorChannels(
     ipa,
     system,
@@ -338,14 +338,14 @@ object TcsChannels {
 
   def buildOriginChannels[F[_]](
     service: EpicsService[F],
-    top:     String
+    top:     TcsTop
   ): Resource[F, OriginChannels[F]] = for {
-    xa <- service.getChannel[String](s"${top}poriginA.A")
-    ya <- service.getChannel[String](s"${top}poriginA.B")
-    xb <- service.getChannel[String](s"${top}poriginB.A")
-    yb <- service.getChannel[String](s"${top}poriginB.B")
-    xc <- service.getChannel[String](s"${top}poriginC.A")
-    yc <- service.getChannel[String](s"${top}poriginC.B")
+    xa <- service.getChannel[String](top.value, "poriginA.A")
+    ya <- service.getChannel[String](top.value, "poriginA.B")
+    xb <- service.getChannel[String](top.value, "poriginB.A")
+    yb <- service.getChannel[String](top.value, "poriginB.B")
+    xc <- service.getChannel[String](top.value, "poriginC.A")
+    yc <- service.getChannel[String](top.value, "poriginC.B")
   } yield OriginChannels(
     xa,
     ya,
@@ -376,16 +376,16 @@ object TcsChannels {
   object WfsObserveChannels {
     def build[F[_]](
       service: EpicsService[F],
-      top:     String,
+      top:     TcsTop,
       wfs:     String
     ): Resource[F, WfsObserveChannels[F]] = for {
-      ne <- service.getChannel[String](s"${top}${wfs}Observe.A")
-      in <- service.getChannel[String](s"${top}${wfs}Observe.B")
-      op <- service.getChannel[String](s"${top}${wfs}Observe.C")
-      lb <- service.getChannel[String](s"${top}${wfs}Observe.D")
-      ou <- service.getChannel[String](s"${top}${wfs}Observe.E")
-      pa <- service.getChannel[String](s"${top}${wfs}Observe.F")
-      fn <- service.getChannel[String](s"${top}${wfs}Observe.G")
+      ne <- service.getChannel[String](top.value, s"${wfs}Observe.A")
+      in <- service.getChannel[String](top.value, s"${wfs}Observe.B")
+      op <- service.getChannel[String](top.value, s"${wfs}Observe.C")
+      lb <- service.getChannel[String](top.value, s"${wfs}Observe.D")
+      ou <- service.getChannel[String](top.value, s"${wfs}Observe.E")
+      pa <- service.getChannel[String](top.value, s"${wfs}Observe.F")
+      fn <- service.getChannel[String](top.value, s"${wfs}Observe.G")
     } yield WfsObserveChannels(
       ne,
       in,
@@ -407,13 +407,13 @@ object TcsChannels {
   object WfsClosedLoopChannels {
     def build[F[_]](
       service: EpicsService[F],
-      top:     String,
+      top:     TcsTop,
       wfs:     String
     ): Resource[F, WfsClosedLoopChannels[F]] = for {
-      gl <- service.getChannel[String](s"${top}${wfs}Seq.A")
-      av <- service.getChannel[String](s"${top}${wfs}Seq.B")
-      z2 <- service.getChannel[String](s"${top}${wfs}Seq.C")
-      m  <- service.getChannel[String](s"${top}${wfs}Seq.D")
+      gl <- service.getChannel[String](top.value, s"${wfs}Seq.A")
+      av <- service.getChannel[String](top.value, s"${wfs}Seq.B")
+      z2 <- service.getChannel[String](top.value, s"${wfs}Seq.C")
+      m  <- service.getChannel[String](top.value, s"${wfs}Seq.D")
     } yield WfsClosedLoopChannels(gl, av, z2, m)
   }
 
@@ -428,14 +428,14 @@ object TcsChannels {
   object WfsChannels {
     def build[F[_]](
       service: EpicsService[F],
-      top:     String,
+      top:     TcsTop,
       wfsl:    String,
       wfss:    String
     ): Resource[F, WfsChannels[F]] = for {
       ob <- WfsObserveChannels.build(service, top, wfsl)
-      st <- service.getChannel[CadDirective](s"${top}${wfsl}StopObserve${DirSuffix}")
-      pr <- service.getChannel[String](s"${top}${wfss}DetSigInit.A")
-      dk <- service.getChannel[String](s"${top}${wfss}SeqDark.A")
+      st <- service.getChannel[CadDirective](top.value, s"${wfsl}StopObserve${DirSuffix}")
+      pr <- service.getChannel[String](top.value, s"${wfss}DetSigInit.A")
+      dk <- service.getChannel[String](top.value, s"${wfss}SeqDark.A")
       cl <- WfsClosedLoopChannels.build(service, top, wfss)
     } yield WfsChannels(ob, st, pr, dk, cl)
   }
@@ -466,28 +466,28 @@ object TcsChannels {
   object GuideConfigStatusChannels {
     def build[F[_]](
       service: EpicsService[F],
-      top:     String
+      top:     TcsTop
     ): Resource[F, GuideConfigStatusChannels[F]] = for {
-      p1i   <- service.getChannel[BinaryYesNo](s"${top}drives:p1Integrating.VAL")
-      p2i   <- service.getChannel[BinaryYesNo](s"${top}drives:p2Integrating.VAL")
-      oii   <- service.getChannel[BinaryYesNo](s"${top}drives:oiIntegrating.VAL")
-      m2    <- service.getChannel[BinaryOnOff](s"${top}om:m2GuideState.VAL")
-      tt    <- service.getChannel[Int](s"${top}absorbTipTiltFlag.VAL")
-      cm    <- service.getChannel[BinaryOnOff](s"${top}im:m2gm:comaCorrectFlag.VAL")
-      m1    <- service.getChannel[BinaryOnOff](s"${top}im:m1GuideOn.VAL")
-      m1s   <- service.getChannel[String](s"${top}m1GuideConfig.VALB")
-      p1pg  <- service.getChannel[Double](s"${top}ak:wfsguide:p1weight.VAL")
-      p2pg  <- service.getChannel[Double](s"${top}ak:wfsguide:p2weight.VAL")
-      oipg  <- service.getChannel[Double](s"${top}ak:wfsguide:oiweight.VAL")
-      p1pd  <- service.getChannel[Double](s"${top}wfsGuideMode:p1.VAL")
-      p2pd  <- service.getChannel[Double](s"${top}wfsGuideMode:p2.VAL")
-      oipd  <- service.getChannel[Double](s"${top}wfsGuideMode:oi.VAL")
-      p1w   <- service.getChannel[Double](s"${top}mountGuideMode.VALC")
-      p2w   <- service.getChannel[Double](s"${top}mountGuideMode.VALD")
-      m2p1g <- service.getChannel[String](s"${top}drives:p1GuideConfig.VAL")
-      m2p2g <- service.getChannel[String](s"${top}drives:p2GuideConfig.VAL")
-      m2oig <- service.getChannel[String](s"${top}drives:oiGuideConfig.VAL")
-      m2aog <- service.getChannel[String](s"${top}drives:aoGuideConfig.VAL")
+      p1i   <- service.getChannel[BinaryYesNo](top.value, "drives:p1Integrating.VAL")
+      p2i   <- service.getChannel[BinaryYesNo](top.value, "drives:p2Integrating.VAL")
+      oii   <- service.getChannel[BinaryYesNo](top.value, "drives:oiIntegrating.VAL")
+      m2    <- service.getChannel[BinaryOnOff](top.value, "om:m2GuideState.VAL")
+      tt    <- service.getChannel[Int](top.value, "absorbTipTiltFlag.VAL")
+      cm    <- service.getChannel[BinaryOnOff](top.value, "im:m2gm:comaCorrectFlag.VAL")
+      m1    <- service.getChannel[BinaryOnOff](top.value, "im:m1GuideOn.VAL")
+      m1s   <- service.getChannel[String](top.value, "m1GuideConfig.VALB")
+      p1pg  <- service.getChannel[Double](top.value, "ak:wfsguide:p1weight.VAL")
+      p2pg  <- service.getChannel[Double](top.value, "ak:wfsguide:p2weight.VAL")
+      oipg  <- service.getChannel[Double](top.value, "ak:wfsguide:oiweight.VAL")
+      p1pd  <- service.getChannel[Double](top.value, "wfsGuideMode:p1.VAL")
+      p2pd  <- service.getChannel[Double](top.value, "wfsGuideMode:p2.VAL")
+      oipd  <- service.getChannel[Double](top.value, "wfsGuideMode:oi.VAL")
+      p1w   <- service.getChannel[Double](top.value, "mountGuideMode.VALC")
+      p2w   <- service.getChannel[Double](top.value, "mountGuideMode.VALD")
+      m2p1g <- service.getChannel[String](top.value, "drives:p1GuideConfig.VAL")
+      m2p2g <- service.getChannel[String](top.value, "drives:p2GuideConfig.VAL")
+      m2oig <- service.getChannel[String](top.value, "drives:oiGuideConfig.VAL")
+      m2aog <- service.getChannel[String](top.value, "drives:aoGuideConfig.VAL")
     } yield GuideConfigStatusChannels(
       p1i,
       p2i,
@@ -515,23 +515,23 @@ object TcsChannels {
   object GuiderGains {
     def build[F[_]](
       service:  EpicsService[F],
-      pwfs1Top: String,
-      pwfs2Top: String,
-      oiTop:    String
+      pwfs1Top: Pwfs1Top,
+      pwfs2Top: Pwfs2Top,
+      oiTop:    OiwfsTop
     ): Resource[F, GuiderGainsChannels[F]] =
       for {
-        p1tipGain   <- service.getChannel[String](pwfs1Top, "dc:detSigInitFgGain.A")
-        p1tiltGain  <- service.getChannel[String](pwfs1Top, "dc:detSigInitFgGain.B")
-        p1FocusGain <- service.getChannel[String](pwfs1Top, "dc:detSigInitFgGain.C")
-        p1Reset     <- service.getChannel[BinaryYesNo](pwfs1Top, "dc:initSigInit.J")
-        p2tipGain   <- service.getChannel[String](pwfs2Top, "dc:detSigInitFgGain.A")
-        p2tiltGain  <- service.getChannel[String](pwfs2Top, "dc:detSigInitFgGain.B")
-        p2FocusGain <- service.getChannel[String](pwfs2Top, "dc:detSigInitFgGain.C")
-        p2Reset     <- service.getChannel[BinaryYesNo](pwfs2Top, "dc:initSigInit.J")
-        oitipGain   <- service.getChannel[String](oiTop, "dc:detSigInitFgGain.A")
-        oitiltGain  <- service.getChannel[String](oiTop, "dc:detSigInitFgGain.B")
-        oiFocusGain <- service.getChannel[String](oiTop, "dc:detSigInitFgGain.C")
-        oiReset     <- service.getChannel[BinaryYesNo](oiTop, "dc:initSigInit.J")
+        p1tipGain   <- service.getChannel[String](pwfs1Top.value, "dc:detSigInitFgGain.A")
+        p1tiltGain  <- service.getChannel[String](pwfs1Top.value, "dc:detSigInitFgGain.B")
+        p1FocusGain <- service.getChannel[String](pwfs1Top.value, "dc:detSigInitFgGain.C")
+        p1Reset     <- service.getChannel[BinaryYesNo](pwfs1Top.value, "dc:initSigInit.J")
+        p2tipGain   <- service.getChannel[String](pwfs2Top.value, "dc:detSigInitFgGain.A")
+        p2tiltGain  <- service.getChannel[String](pwfs2Top.value, "dc:detSigInitFgGain.B")
+        p2FocusGain <- service.getChannel[String](pwfs2Top.value, "dc:detSigInitFgGain.C")
+        p2Reset     <- service.getChannel[BinaryYesNo](pwfs2Top.value, "dc:initSigInit.J")
+        oitipGain   <- service.getChannel[String](oiTop.value, "dc:detSigInitFgGain.A")
+        oitiltGain  <- service.getChannel[String](oiTop.value, "dc:detSigInitFgGain.B")
+        oiFocusGain <- service.getChannel[String](oiTop.value, "dc:detSigInitFgGain.C")
+        oiReset     <- service.getChannel[BinaryYesNo](oiTop.value, "dc:initSigInit.J")
       } yield GuiderGainsChannels(
         p1tipGain,
         p1tiltGain,
@@ -560,24 +560,28 @@ object TcsChannels {
    */
   def buildChannels[F[_]](
     service:  EpicsService[F],
-    tcsTop:   String,
-    pwfs1Top: String,
-    pwfs2Top: String,
-    oiTop:    String,
-    agTop:    String
+    tcsTop:   TcsTop,
+    pwfs1Top: Pwfs1Top,
+    pwfs2Top: Pwfs2Top,
+    oiTop:    OiwfsTop,
+    agTop:    AgTop
   ): Resource[F, TcsChannels[F]] =
     for {
       tt   <- service.getChannel[String](s"${tcsTop}sad:health.VAL").map(TelltaleChannel(sysName, _))
-      p1tt <- service.getChannel[String](pwfs1Top, "health.VAL").map(TelltaleChannel(sysName, _))
-      p2tt <- service.getChannel[String](pwfs2Top, "health.VAL").map(TelltaleChannel(sysName, _))
+      p1tt <-
+        service.getChannel[String](pwfs1Top.value, "health.VAL").map(TelltaleChannel(sysName, _))
+      p2tt <-
+        service.getChannel[String](pwfs2Top.value, "health.VAL").map(TelltaleChannel(sysName, _))
       oitt <-
-        service.getChannel[String](agTop, "hlth:oiwfs:health.VAL").map(TelltaleChannel(sysName, _))
-      tpd  <- service.getChannel[CadDirective](s"${tcsTop}telpark$DirSuffix")
-      mf   <- service.getChannel[String](s"${tcsTop}mcFollow.A")
-      rsb  <- service.getChannel[String](s"${tcsTop}rotStop.B")
-      rpd  <- service.getChannel[CadDirective](s"${tcsTop}rotPark$DirSuffix")
-      rf   <- service.getChannel[String](s"${tcsTop}crFollow.A")
-      rma  <- service.getChannel[String](s"${tcsTop}rotMove.A")
+        service
+          .getChannel[String](agTop.value, "hlth:oiwfs:health.VAL")
+          .map(TelltaleChannel(sysName, _))
+      tpd  <- service.getChannel[CadDirective](s"${tcsTop.value.value}telpark$DirSuffix")
+      mf   <- service.getChannel[String](s"${tcsTop.value.value}mcFollow.A")
+      rsb  <- service.getChannel[String](s"${tcsTop.value.value}rotStop.B")
+      rpd  <- service.getChannel[CadDirective](s"${tcsTop.value.value}rotPark$DirSuffix")
+      rf   <- service.getChannel[String](s"${tcsTop.value.value}crFollow.A")
+      rma  <- service.getChannel[String](s"${tcsTop.value.value}rotMove.A")
       ecs  <- buildEnclosureChannels(service, tcsTop)
       sra  <- buildTargetChannels(service, s"${tcsTop}sourceA")
       oit  <- buildTargetChannels(service, s"${tcsTop}oiwfs")

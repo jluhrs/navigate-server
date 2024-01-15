@@ -689,6 +689,18 @@ object TestTcsEpicsSystem {
     TcsChannels(
       telltale =
         TelltaleChannel[F]("dummy", new TestChannel[F, State, String](s, Focus[State](_.telltale))),
+      pwfs1Telltale =
+        TelltaleChannel[F]("dummy2",
+                           new TestChannel[F, State, String](s, Focus[State](_.telltale))
+        ),
+      pwfs2Telltale =
+        TelltaleChannel[F]("dummy3",
+                           new TestChannel[F, State, String](s, Focus[State](_.telltale))
+        ),
+      oiwfsTelltale =
+        TelltaleChannel[F]("dummy4",
+                           new TestChannel[F, State, String](s, Focus[State](_.telltale))
+        ),
       telescopeParkDir =
         new TestChannel[F, State, CadDirective](s, Focus[State](_.telescopeParkDir)),
       mountFollow = new TestChannel[F, State, String](s, Focus[State](_.mountFollow)),
