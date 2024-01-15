@@ -511,22 +511,24 @@ object TcsChannels {
 
   object GuiderGains {
     def build[F[_]](
-      service: EpicsService[F],
-      top:     String
+      service:  EpicsService[F],
+      pwfs1Top: String,
+      pwfs2Top: String,
+      oiTop:    String
     ): Resource[F, GuiderGainsChannels[F]] =
       for {
-        p1tipGain   <- service.getChannel[String]("pwfs1:dc:detSigInitFgGain.A")
-        p1tiltGain  <- service.getChannel[String]("pwfs1:dc:detSigInitFgGain.B")
-        p1FocusGain <- service.getChannel[String]("pwfs1:dc:detSigInitFgGain.C")
-        p1Reset     <- service.getChannel[BinaryYesNo]("pwfs1:dc:initSigInit.J")
-        p2tipGain   <- service.getChannel[String]("pwfs2:dc:detSigInitFgGain.A")
-        p2tiltGain  <- service.getChannel[String]("pwfs2:dc:detSigInitFgGain.B")
-        p2FocusGain <- service.getChannel[String]("pwfs2:dc:detSigInitFgGain.C")
-        p2Reset     <- service.getChannel[BinaryYesNo]("pwfs2:dc:initSigInit.J")
-        oitipGain   <- service.getChannel[String]("oiwfs:dc:detSigInitFgGain.A")
-        oitiltGain  <- service.getChannel[String]("oiwfs:dc:detSigInitFgGain.B")
-        oiFocusGain <- service.getChannel[String]("oiwfs:dc:detSigInitFgGain.C")
-        oiReset     <- service.getChannel[BinaryYesNo]("oiwfs:dc:initSigInit.J")
+        p1tipGain   <- service.getChannel[String](pwfs1Top, "dc:detSigInitFgGain.A")
+        p1tiltGain  <- service.getChannel[String](pwfs1Top, "dc:detSigInitFgGain.B")
+        p1FocusGain <- service.getChannel[String](pwfs1Top, "dc:detSigInitFgGain.C")
+        p1Reset     <- service.getChannel[BinaryYesNo](pwfs1Top, "dc:initSigInit.J")
+        p2tipGain   <- service.getChannel[String](pwfs2Top, "dc:detSigInitFgGain.A")
+        p2tiltGain  <- service.getChannel[String](pwfs2Top, "dc:detSigInitFgGain.B")
+        p2FocusGain <- service.getChannel[String](pwfs2Top, "dc:detSigInitFgGain.C")
+        p2Reset     <- service.getChannel[BinaryYesNo](pwfs2Top, "dc:initSigInit.J")
+        oitipGain   <- service.getChannel[String](oiTop, "dc:detSigInitFgGain.A")
+        oitiltGain  <- service.getChannel[String](oiTop, "dc:detSigInitFgGain.B")
+        oiFocusGain <- service.getChannel[String](oiTop, "dc:detSigInitFgGain.C")
+        oiReset     <- service.getChannel[BinaryYesNo](oiTop, "dc:initSigInit.J")
       } yield GuiderGainsChannels(
         p1tipGain,
         p1tiltGain,
@@ -553,35 +555,41 @@ object TcsChannels {
    *   Prefix string of epics channel
    * @return
    */
-  def buildChannels[F[_]](service: EpicsService[F], top: String): Resource[F, TcsChannels[F]] =
+  def buildChannels[F[_]](
+    service:  EpicsService[F],
+    tcsTop:   String,
+    pwfs1Top: String,
+    pwfs2Top: String,
+    oiTop:    String
+  ): Resource[F, TcsChannels[F]] =
     for {
-      tt   <- service.getChannel[String](s"${top}sad:health.VAL").map(TelltaleChannel(sysName, _))
-      tpd  <- service.getChannel[CadDirective](s"${top}telpark$DirSuffix")
-      mf   <- service.getChannel[String](s"${top}mcFollow.A")
-      rsb  <- service.getChannel[String](s"${top}rotStop.B")
-      rpd  <- service.getChannel[CadDirective](s"${top}rotPark$DirSuffix")
-      rf   <- service.getChannel[String](s"${top}crFollow.A")
-      rma  <- service.getChannel[String](s"${top}rotMove.A")
-      ecs  <- buildEnclosureChannels(service, top)
-      sra  <- buildTargetChannels(service, s"${top}sourceA")
-      oit  <- buildTargetChannels(service, s"${top}oiwfs")
-      wva  <- service.getChannel[String](s"${top}wavelSourceA.A")
-      slw  <- buildSlewChannels(service, top)
-      rot  <- buildRotatorChannels(service, top)
-      org  <- buildOriginChannels(service, top)
-      foc  <- service.getChannel[String](s"${top}dtelFocus.A")
-      oig  <- buildProbeTrackingChannels(service, top, "Oiwfs")
-      op   <- buildProbeChannels(service, s"${top}oiwfs")
-      m1g  <- service.getChannel[String](s"${top}m1GuideMode.A")
-      m1gc <- M1GuideConfigChannels.build(service, top)
-      m2g  <- service.getChannel[String](s"${top}m2GuideControl.A")
-      m2gm <- service.getChannel[String](s"${top}m2GuideMode.A")
-      m2gc <- M2GuideConfigChannels.build(service, top)
-      m2gr <- service.getChannel[CadDirective](s"${top}m2GuideReset$DirSuffix")
-      mng  <- MountGuideChannels.build(service, top)
-      oi   <- WfsChannels.build(service, top, "oiwfs", "oi")
-      gd   <- GuideConfigStatusChannels.build(service, top)
-      gg   <- GuiderGains.build(service, top)
+      tt   <- service.getChannel[String](s"${tcsTop}sad:health.VAL").map(TelltaleChannel(sysName, _))
+      tpd  <- service.getChannel[CadDirective](s"${tcsTop}telpark$DirSuffix")
+      mf   <- service.getChannel[String](s"${tcsTop}mcFollow.A")
+      rsb  <- service.getChannel[String](s"${tcsTop}rotStop.B")
+      rpd  <- service.getChannel[CadDirective](s"${tcsTop}rotPark$DirSuffix")
+      rf   <- service.getChannel[String](s"${tcsTop}crFollow.A")
+      rma  <- service.getChannel[String](s"${tcsTop}rotMove.A")
+      ecs  <- buildEnclosureChannels(service, tcsTop)
+      sra  <- buildTargetChannels(service, s"${tcsTop}sourceA")
+      oit  <- buildTargetChannels(service, s"${tcsTop}oiwfs")
+      wva  <- service.getChannel[String](s"${tcsTop}wavelSourceA.A")
+      slw  <- buildSlewChannels(service, tcsTop)
+      rot  <- buildRotatorChannels(service, tcsTop)
+      org  <- buildOriginChannels(service, tcsTop)
+      foc  <- service.getChannel[String](s"${tcsTop}dtelFocus.A")
+      oig  <- buildProbeTrackingChannels(service, tcsTop, "Oiwfs")
+      op   <- buildProbeChannels(service, s"${tcsTop}oiwfs")
+      m1g  <- service.getChannel[String](s"${tcsTop}m1GuideMode.A")
+      m1gc <- M1GuideConfigChannels.build(service, tcsTop)
+      m2g  <- service.getChannel[String](s"${tcsTop}m2GuideControl.A")
+      m2gm <- service.getChannel[String](s"${tcsTop}m2GuideMode.A")
+      m2gc <- M2GuideConfigChannels.build(service, tcsTop)
+      m2gr <- service.getChannel[CadDirective](s"${tcsTop}m2GuideReset$DirSuffix")
+      mng  <- MountGuideChannels.build(service, tcsTop)
+      oi   <- WfsChannels.build(service, tcsTop, "oiwfs", "oi")
+      gd   <- GuideConfigStatusChannels.build(service, tcsTop)
+      gg   <- GuiderGains.build(service, pwfs1Top, pwfs2Top, oiTop)
     } yield TcsChannels[F](
       tt,
       tpd,

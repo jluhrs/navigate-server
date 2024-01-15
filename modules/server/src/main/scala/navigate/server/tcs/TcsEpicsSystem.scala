@@ -340,9 +340,12 @@ object TcsEpicsSystem {
     service: EpicsService[F],
     tops:    Map[String, String]
   ): Resource[F, TcsEpicsSystem[F]] = {
-    val top = tops.getOrElse("tcs", "tcs:")
+    val top   = tops.getOrElse("tcs", "tcs:")
+    val pwfs1 = tops.getOrElse("pwfs1", "pwfs1:")
+    val pwfs2 = tops.getOrElse("pwfs2", "pwfs2:")
+    val oi    = tops.getOrElse("oi", "oiwfs:")
     for {
-      channels <- TcsChannels.buildChannels(service, top)
+      channels <- TcsChannels.buildChannels(service, top, pwfs1, pwfs2, oi)
       applyCmd <-
         GeminiApplyCommand.build(service, channels.telltale, s"${top}apply", s"${top}applyC")
     } yield buildSystem(applyCmd, channels)
