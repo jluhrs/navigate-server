@@ -9,10 +9,8 @@ import cats.Parallel
 import cats.effect.Resource
 import cats.effect.Temporal
 import cats.effect.std.Dispatcher
-import eu.timepit.refined.collection.NonEmpty
 import eu.timepit.refined.types.string.NonEmptyString
 import lucuma.core.math.Angle
-import lucuma.refined.*
 import mouse.all.*
 import navigate.epics.Channel
 import navigate.epics.EpicsService
@@ -343,22 +341,18 @@ object TcsEpicsSystem {
     service: EpicsService[F],
     tops:    Map[String, String]
   ): Resource[F, TcsEpicsSystem[F]] = {
-    val top   =
-      tops.get("tcs").flatMap(NonEmptyString.from(_).toOption).getOrElse("tcs:".refined[NonEmpty])
-    val pwfs1 =
+    def readTop(key: String): NonEmptyString =
       tops
-        .get("pwfs1")
+        .get(key)
         .flatMap(NonEmptyString.from(_).toOption)
-        .getOrElse("pwfs1:".refined[NonEmpty])
-    val pwfs2 =
-      tops
-        .get("pwfs2")
-        .flatMap(NonEmptyString.from(_).toOption)
-        .getOrElse("pwfs2:".refined[NonEmpty])
-    val oi    =
-      tops.get("oi").flatMap(NonEmptyString.from(_).toOption).getOrElse("oiwfs:".refined[NonEmpty])
-    val ag    =
-      tops.get("ag").flatMap(NonEmptyString.from(_).toOption).getOrElse("ag:".refined[NonEmpty])
+        .getOrElse(NonEmptyString.unsafeFrom(s"${key}:"))
+
+    val top   = readTop("tcs")
+    val pwfs1 = readTop("pwfs1")
+    val pwfs2 = readTop("pwfs2")
+    val oi    = readTop("oiwfs")
+    val ag    = readTop("ag")
+
     for {
       channels <- TcsChannels.buildChannels(service,
                                             TcsTop(top),

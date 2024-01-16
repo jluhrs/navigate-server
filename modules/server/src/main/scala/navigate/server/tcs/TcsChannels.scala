@@ -4,6 +4,7 @@
 package navigate.server.tcs
 
 import cats.effect.Resource
+import eu.timepit.refined.types.string.NonEmptyString
 import navigate.epics.Channel
 import navigate.epics.EpicsService
 import navigate.epics.EpicsSystem.TelltaleChannel
@@ -325,7 +326,7 @@ object TcsChannels {
     service: EpicsService[F],
     top:     TcsTop
   ): Resource[F, RotatorChannels[F]] = for {
-    ipa     <- service.getChannel[String]("${top}rotator.A")
+    ipa     <- service.getChannel[String](top.value, "rotator.A")
     system  <- service.getChannel[String](top.value, "rotator.B")
     equinox <- service.getChannel[String](top.value, "rotator.C")
     iaa     <- service.getChannel[String](top.value, "rotator.D")
@@ -565,39 +566,37 @@ object TcsChannels {
     pwfs2Top: Pwfs2Top,
     oiTop:    OiwfsTop,
     agTop:    AgTop
-  ): Resource[F, TcsChannels[F]] =
+  ): Resource[F, TcsChannels[F]] = {
+    def telltaleChannel(top: NonEmptyString, channel: String): Resource[F, TelltaleChannel[F]] =
+      service.getChannel[String](top, channel).map(TelltaleChannel(sysName, _))
+
     for {
-      tt   <- service.getChannel[String](s"${tcsTop}sad:health.VAL").map(TelltaleChannel(sysName, _))
-      p1tt <-
-        service.getChannel[String](pwfs1Top.value, "health.VAL").map(TelltaleChannel(sysName, _))
-      p2tt <-
-        service.getChannel[String](pwfs2Top.value, "health.VAL").map(TelltaleChannel(sysName, _))
-      oitt <-
-        service
-          .getChannel[String](agTop.value, "hlth:oiwfs:health.VAL")
-          .map(TelltaleChannel(sysName, _))
-      tpd  <- service.getChannel[CadDirective](s"${tcsTop.value.value}telpark$DirSuffix")
-      mf   <- service.getChannel[String](s"${tcsTop.value.value}mcFollow.A")
-      rsb  <- service.getChannel[String](s"${tcsTop.value.value}rotStop.B")
-      rpd  <- service.getChannel[CadDirective](s"${tcsTop.value.value}rotPark$DirSuffix")
-      rf   <- service.getChannel[String](s"${tcsTop.value.value}crFollow.A")
-      rma  <- service.getChannel[String](s"${tcsTop.value.value}rotMove.A")
+      tt   <- telltaleChannel(tcsTop.value, "sad:health.VAL")
+      p1tt <- telltaleChannel(pwfs1Top.value, "health.VAL")
+      p2tt <- telltaleChannel(pwfs2Top.value, "health.VAL")
+      oitt <- telltaleChannel(agTop.value, "hlth:oiwfs:health.VAL")
+      tpd  <- service.getChannel[CadDirective](tcsTop.value, s"telpark$DirSuffix")
+      mf   <- service.getChannel[String](tcsTop.value, "mcFollow.A")
+      rsb  <- service.getChannel[String](tcsTop.value, "rotStop.B")
+      rpd  <- service.getChannel[CadDirective](tcsTop.value, s"rotPark$DirSuffix")
+      rf   <- service.getChannel[String](tcsTop.value, "crFollow.A")
+      rma  <- service.getChannel[String](tcsTop.value, "rotMove.A")
       ecs  <- buildEnclosureChannels(service, tcsTop)
-      sra  <- buildTargetChannels(service, s"${tcsTop}sourceA")
-      oit  <- buildTargetChannels(service, s"${tcsTop}oiwfs")
-      wva  <- service.getChannel[String](s"${tcsTop}wavelSourceA.A")
+      sra  <- buildTargetChannels(service, s"${tcsTop.value.value}sourceA")
+      oit  <- buildTargetChannels(service, s"${tcsTop.value}oiwfs")
+      wva  <- service.getChannel[String](tcsTop.value, "wavelSourceA.A")
       slw  <- buildSlewChannels(service, tcsTop)
       rot  <- buildRotatorChannels(service, tcsTop)
       org  <- buildOriginChannels(service, tcsTop)
-      foc  <- service.getChannel[String](s"${tcsTop}dtelFocus.A")
+      foc  <- service.getChannel[String](tcsTop.value, "dtelFocus.A")
       oig  <- buildProbeTrackingChannels(service, tcsTop, "Oiwfs")
-      op   <- buildProbeChannels(service, s"${tcsTop}oiwfs")
-      m1g  <- service.getChannel[String](s"${tcsTop}m1GuideMode.A")
+      op   <- buildProbeChannels(service, s"${tcsTop.value.value}oiwfs")
+      m1g  <- service.getChannel[String](tcsTop.value, "m1GuideMode.A")
       m1gc <- M1GuideConfigChannels.build(service, tcsTop)
-      m2g  <- service.getChannel[String](s"${tcsTop}m2GuideControl.A")
-      m2gm <- service.getChannel[String](s"${tcsTop}m2GuideMode.A")
+      m2g  <- service.getChannel[String](tcsTop.value, "m2GuideControl.A")
+      m2gm <- service.getChannel[String](tcsTop.value, "m2GuideMode.A")
       m2gc <- M2GuideConfigChannels.build(service, tcsTop)
-      m2gr <- service.getChannel[CadDirective](s"${tcsTop}m2GuideReset$DirSuffix")
+      m2gr <- service.getChannel[CadDirective](tcsTop.value, s"m2GuideReset$DirSuffix")
       mng  <- MountGuideChannels.build(service, tcsTop)
       oi   <- WfsChannels.build(service, tcsTop, "oiwfs", "oi")
       gd   <- GuideConfigStatusChannels.build(service, tcsTop)
@@ -634,4 +633,5 @@ object TcsChannels {
       gd,
       gg
     )
+  }
 }
