@@ -154,6 +154,8 @@ input GuideConfigurationInput {
     m1Input: M1CorrectionSource
     """Tip-tilt offload to the mount enabled"""
     mountOffload: Boolean!
+    """Flag for day time tests. It sets all gains to 0"""
+    daytimeMode: Boolean!
 }
 
 enum LogLevel {

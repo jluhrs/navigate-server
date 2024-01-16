@@ -659,6 +659,8 @@ object NavigateMappings extends GrackleParsers {
 
     val coma = l.collectFirst { case ("m2Coma", BooleanValue(v)) => v }.exists(identity)
 
+    val dayTimeMode = l.collectFirst { case ("daytimeMode", BooleanValue(v)) => v }.exists(identity)
+
     l.collectFirst { case ("mountOffload", BooleanValue(v)) => v }
       .map { mount =>
         TelescopeGuideConfig(
@@ -667,7 +669,8 @@ object NavigateMappings extends GrackleParsers {
           m2.isEmpty.fold(
             M2GuideConfig.M2GuideOff,
             M2GuideConfig.M2GuideOn(coma && m1.isDefined, m2.toSet)
-          )
+          ),
+          dayTimeMode
         )
       }
   }

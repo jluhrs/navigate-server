@@ -6,6 +6,7 @@ package navigate.epics
 import cats.effect.Async
 import cats.effect.Resource
 import cats.syntax.option.*
+import eu.timepit.refined.types.string.NonEmptyString
 import org.epics.ca.Context
 import org.epics.ca.impl.LibraryConfiguration.PropertyNames.CA_REPEATER_DISABLE
 import org.epics.ca.impl.ProtocolConfiguration.PropertyNames.EPICS_CA_ADDR_LIST
@@ -21,12 +22,15 @@ import scala.concurrent.duration.FiniteDuration
 
 trait EpicsService[F[_]] {
   def getChannel[T](name: String)(using tjt: ToJavaType[T]): Resource[F, Channel[F, T]]
+  def getChannel[T](top: NonEmptyString, name: String)(using
+    tjt: ToJavaType[T]
+  ): Resource[F, Channel[F, T]]
 }
 
 object EpicsService {
 
   final class EpicsServiceImpl[F[_]: Async](ctx: Context) extends EpicsService[F] {
-    override def getChannel[T](
+    def getChannel[T](
       name: String
     )(using tjt: ToJavaType[T]): Resource[F, Channel[F, T]] = Resource
       .make(
@@ -34,6 +38,12 @@ object EpicsService {
           .delay(ctx.createChannel[tjt.javaType](name, tjt.clazz))
       )(c => Async[F].delay(c.close()))
       .map(x => Channel.build[F, T, tjt.javaType](x)(Async[F], tjt.convert))
+
+    def getChannel[T](top: NonEmptyString, name: String)(using
+      tjt: ToJavaType[T]
+    ): Resource[F, Channel[F, T]] =
+      getChannel(s"${top.value}$name")
+
   }
 
   case class Builder(
