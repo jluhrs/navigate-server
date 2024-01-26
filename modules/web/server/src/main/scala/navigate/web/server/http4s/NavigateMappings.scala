@@ -36,6 +36,7 @@ import lucuma.core.math.RadialVelocity
 import lucuma.core.math.RightAscension
 import lucuma.core.math.Wavelength
 import lucuma.core.util.TimeSpan
+import lucuma.ags.GuideProbe
 import mouse.boolean.given
 import navigate.model.Distance
 import navigate.model.enums.M1Source
@@ -55,6 +56,7 @@ import navigate.server.tcs.M1GuideConfig.M1GuideOn
 import navigate.server.tcs.M2GuideConfig
 import navigate.server.tcs.Origin
 import navigate.server.tcs.ParkStatus
+import navigate.server.tcs.ProbeGuide
 import navigate.server.tcs.ResetPointing
 import navigate.server.tcs.RotatorTrackConfig
 import navigate.server.tcs.RotatorTrackingMode
@@ -648,6 +650,11 @@ object NavigateMappings extends GrackleParsers {
     rc <- l.collectFirst { case ("rotator", ObjectValue(v)) => parseRotatorConfig(v) }.flatten
   } yield TcsConfig(t, in, oi, rc)
 
+  def parseProbeGuide(l: List[(String, Value)]): Option[ProbeGuide] = for {
+    f <- l.collectFirst { case ("from", EnumValue(v)) => parseEnumerated[GuideProbe](v) }.flatten
+    t <- l.collectFirst { case ("to", EnumValue(v)) => parseEnumerated[GuideProbe](v) }.flatten
+  } yield ProbeGuide(f, t)
+
   def parseGuideConfig(l: List[(String, Value)]): Option[TelescopeGuideConfig] = {
     val m2: List[TipTiltSource] = l.collectFirst { case ("m2Inputs", ListValue(v)) =>
       v.collect { case EnumValue(v) => parseEnumerated[TipTiltSource](v) }.flattenOption
@@ -661,6 +668,9 @@ object NavigateMappings extends GrackleParsers {
 
     val dayTimeMode = l.collectFirst { case ("daytimeMode", BooleanValue(v)) => v }.exists(identity)
 
+    val probeGuide =
+      l.collectFirst { case ("probeGuide", ObjectValue(v)) => parseProbeGuide(v) }.flatten
+
     l.collectFirst { case ("mountOffload", BooleanValue(v)) => v }
       .map { mount =>
         TelescopeGuideConfig(
@@ -670,7 +680,8 @@ object NavigateMappings extends GrackleParsers {
             M2GuideConfig.M2GuideOff,
             M2GuideConfig.M2GuideOn(coma && m1.isDefined, m2.toSet)
           ),
-          dayTimeMode
+          dayTimeMode,
+          probeGuide
         )
       }
   }

@@ -6,13 +6,11 @@ package navigate.server.tcs
 import cats.Eq
 import cats.Show
 import cats.derived.*
+import lucuma.ags.GuideProbe
 
 /** Data type for guide config. */
-case class TelescopeGuideConfig(
-  mountGuide:  Boolean,
-  m1Guide:     M1GuideConfig,
-  m2Guide:     M2GuideConfig,
-  dayTimeMode: Boolean,
-  probeGuide:  Option[ProbeGuide]
+case class ProbeGuide(
+  from: GuideProbe,
+  to:   GuideProbe
 ) derives Eq,
       Show

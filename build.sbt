@@ -147,7 +147,8 @@ lazy val navigate_server = project
     libraryDependencies ++= Seq(
       CatsEffect.value,
       Fs2,
-      Log4Cats.value
+      Log4Cats.value,
+      LucumaAgs
     ) ++ MUnit.value ++ LucumaCore.value ++ Http4sClient
   )
   .dependsOn(navigate_model % "compile->compile;test->test")
