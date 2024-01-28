@@ -6,6 +6,7 @@ package navigate.server.tcs
 import cats.effect.IO
 import cats.effect.Ref
 import cats.syntax.all.*
+import lucuma.ags.GuideProbe
 import lucuma.core.math.Angle
 import lucuma.core.math.Coordinates
 import lucuma.core.math.Epoch
@@ -34,7 +35,7 @@ import TcsBaseController.*
 import M2GuideConfig.M2GuideOn
 import TestTcsEpicsSystem.GuideConfigState
 
-class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
+class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   private val DefaultTimeout: FiniteDuration = FiniteDuration(1, TimeUnit.SECONDS)
 
@@ -574,7 +575,8 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       mountGuide = true,
       m1Guide = M1GuideConfig.M1GuideOn(M1Source.Oiwfs),
       m2Guide = M2GuideOn(true, Set(TipTiltSource.Oiwfs)),
-      dayTimeMode = false
+      dayTimeMode = false,
+      probeGuide = none
     )
 
     for {
@@ -660,7 +662,8 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       mountGuide = true,
       m1Guide = M1GuideConfig.M1GuideOn(M1Source.Oiwfs),
       m2Guide = M2GuideOn(true, Set(TipTiltSource.Oiwfs)),
-      dayTimeMode = true
+      dayTimeMode = true,
+      probeGuide = none
     )
 
     for {
@@ -746,7 +749,8 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       mountGuide = true,
       m1Guide = M1GuideConfig.M1GuideOn(M1Source.Oiwfs),
       m2Guide = M2GuideOn(true, Set(TipTiltSource.Oiwfs)),
-      false
+      dayTimeMode = false,
+      probeGuide = none
     )
 
     for {
@@ -772,6 +776,7 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assert(r1.m2GuideReset.connected)
       assert(r1.mountGuide.mode.connected)
       assert(r1.mountGuide.source.connected)
+      assert(r1.guideMode.state.connected)
 
       assertEquals(r1.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
       assertEquals(r1.m1GuideConfig.source.value.flatMap(Enumerated[M1Source].fromTag),
@@ -804,6 +809,59 @@ class TcsBaseControllerEpicsSpec extends CatsEffectSuite {
       assertEquals(r2.mountGuide.mode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.Off.some
       )
+      assertEquals(r1.guideMode.state.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.Off.some
+      )
+    }
+  }
+
+  test("Set guide mode OIWFS to OIWFS") {
+    val guideCfg = TelescopeGuideConfig(
+      mountGuide = true,
+      m1Guide = M1GuideConfig.M1GuideOn(M1Source.Oiwfs),
+      m2Guide = M2GuideOn(true, Set(TipTiltSource.Oiwfs)),
+      dayTimeMode = false,
+      probeGuide = ProbeGuide(GuideProbe.GmosOiwfs, GuideProbe.GmosOiwfs).some
+    )
+
+    for {
+      x        <- createController
+      (st, ctr) = x
+      _        <- ctr.enableGuide(guideCfg)
+      r1       <- st.get
+    } yield {
+      assert(r1.guideMode.state.connected)
+
+      assertEquals(r1.guideMode.state.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.On.some
+      )
+      assertEquals(r1.guideMode.from.value, "OIWFS".some)
+      assertEquals(r1.guideMode.to.value, "OIWFS".some)
+    }
+  }
+
+  test("Set guide mode PWFS1 to PWFS2") {
+    val guideCfg = TelescopeGuideConfig(
+      mountGuide = true,
+      m1Guide = M1GuideConfig.M1GuideOn(M1Source.Oiwfs),
+      m2Guide = M2GuideOn(true, Set(TipTiltSource.Oiwfs)),
+      dayTimeMode = false,
+      probeGuide = ProbeGuide(GuideProbe.Pwfs1, GuideProbe.Pwfs2).some
+    )
+
+    for {
+      x        <- createController
+      (st, ctr) = x
+      _        <- ctr.enableGuide(guideCfg)
+      r1       <- st.get
+    } yield {
+      assert(r1.guideMode.state.connected)
+
+      assertEquals(r1.guideMode.state.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.On.some
+      )
+      assertEquals(r1.guideMode.from.value, "PWFS1".some)
+      assertEquals(r1.guideMode.to.value, "PWFS2".some)
     }
   }
 

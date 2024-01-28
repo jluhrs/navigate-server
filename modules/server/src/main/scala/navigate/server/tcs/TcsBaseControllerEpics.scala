@@ -372,7 +372,8 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
 
     val m1 = (x: TcsCommands[F]) =>
       config.m1Guide match {
-        case M1GuideConfig.M1GuideOff        => x.m1GuideCommand.state(false)
+        case M1GuideConfig.M1GuideOff        =>
+          x.m1GuideCommand.state(false).guideModeCommand.setMode(config.probeGuide)
         case M1GuideConfig.M1GuideOn(source) =>
           x.m1GuideCommand
             .state(true)
@@ -384,6 +385,8 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
             .frames(1)
             .m1GuideConfigCommand
             .filename("")
+            .guideModeCommand
+            .setMode(config.probeGuide)
       }
 
     config.m2Guide match {
@@ -396,6 +399,8 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
           .mode(config.mountGuide)
           .mountGuideCommand
           .source("SCS")
+          .guideModeCommand
+          .setMode(config.probeGuide)
           .post
           .verifiedRun(ConnectionTimeout)
       case M2GuideConfig.M2GuideOn(coma, sources) =>
@@ -405,7 +410,11 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
           .flatMap(x => beams.map(y => (x, y)))
           .foldLeft(
             requireReset.fold(
-              gains(tcsEpics.startCommand(timeout)).m2GuideResetCommand.mark.post
+              tcsEpics
+                .startCommand(timeout)
+                .m2GuideResetCommand
+                .mark
+                .post
                 .verifiedRun(ConnectionTimeout),
               ApplyCommandResult.Completed.pure[F]
             )
@@ -427,6 +436,8 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
                   .beam(beam)
                   .m2GuideConfigCommand
                   .reset(false)
+                  .guideModeCommand
+                  .setMode(config.probeGuide)
                   .post
                   .verifiedRun(ConnectionTimeout),
                 r.pure[F]
@@ -441,6 +452,8 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
                   .mode(config.mountGuide)
                   .mountGuideCommand
                   .source("SCS")
+                  .guideModeCommand
+                  .setMode(config.probeGuide)
                   .post
                   .verifiedRun(ConnectionTimeout),
                 ApplyCommandResult.Completed.pure[F]

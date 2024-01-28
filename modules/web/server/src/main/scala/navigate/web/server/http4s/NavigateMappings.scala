@@ -27,6 +27,7 @@ import grackle.Value.StringValue
 import grackle.circe.CirceMapping
 import grackle.syntax.given
 import io.circe.syntax.*
+import lucuma.ags.GuideProbe
 import lucuma.core.math.Coordinates
 import lucuma.core.math.Declination
 import lucuma.core.math.Epoch
@@ -36,7 +37,6 @@ import lucuma.core.math.RadialVelocity
 import lucuma.core.math.RightAscension
 import lucuma.core.math.Wavelength
 import lucuma.core.util.TimeSpan
-import lucuma.ags.GuideProbe
 import mouse.boolean.given
 import navigate.model.Distance
 import navigate.model.enums.M1Source

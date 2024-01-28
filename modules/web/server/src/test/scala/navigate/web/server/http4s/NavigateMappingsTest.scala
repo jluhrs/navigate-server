@@ -615,7 +615,7 @@ class NavigateMappingsTest extends CatsEffectSuite {
     )
   }
 
-  test("Set probeGuide") {
+  test("Set probeGuide OIWFS to OIWFS") {
     for {
       eng <- buildServer
       log <- Topic[IO, ILoggingEvent]
@@ -632,6 +632,35 @@ class NavigateMappingsTest extends CatsEffectSuite {
           |    probeGuide: {
           |      from: GMOS_OIWFS
           |      to: GMOS_OIWFS
+          |    }
+          |  }
+          |) {
+          |  result
+          |} }
+          |""".stripMargin
+             )
+    } yield assert(
+      extractResult[OperationOutcome](r, "guideEnable").exists(_ === OperationOutcome.success)
+    )
+  }
+
+  test("Set probeGuide PWFS1 to PWFS2") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      gd  <- Topic[IO, GuideState]
+      mp  <- NavigateMappings[IO](eng, log, gd)
+      r   <- mp.compileAndRun(
+               """
+          |mutation { guideEnable( config: {
+          |    m2Inputs: [ OIWFS ]
+          |    m2Coma: true
+          |    m1Input: OIWFS
+          |    mountOffload: true
+          |    daytimeMode: false
+          |    probeGuide: {
+          |      from: PWFS_1
+          |      to: PWFS_2
           |    }
           |  }
           |) {
