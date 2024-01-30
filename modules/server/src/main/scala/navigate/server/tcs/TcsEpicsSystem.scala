@@ -90,7 +90,7 @@ object TcsEpicsSystem {
     val p1GuiderGainsCmd: Command3Channels[F, Double, Double, Double]
     val p2GuiderGainsCmd: Command3Channels[F, Double, Double, Double]
     val oiGuiderGainsCmd: Command3Channels[F, Double, Double, Double]
-    val guideModeCmd: Command3Channels[F, BinaryOnOff, GuideProbe, GuideProbe]
+    val probeGuideModeCmd: Command3Channels[F, BinaryOnOff, GuideProbe, GuideProbe]
 
     // val offsetACmd: OffsetCmd[F]
     // val offsetBCmd: OffsetCmd[F]
@@ -900,16 +900,16 @@ object TcsEpicsSystem {
 
       }
 
-    override val guideModeCommand: GuideModeCommand[F, TcsCommands[F]] =
-      new GuideModeCommand[F, TcsCommands[F]] {
+    override val probeGuideModeCommand: ProbeGuideModeCommand[F, TcsCommands[F]] =
+      new ProbeGuideModeCommand[F, TcsCommands[F]] {
         override def setMode(pg: Option[ProbeGuide]): TcsCommands[F] =
           pg.fold(
-            addParam(tcsEpics.guideModeCmd.setParam1(BinaryOnOff.Off))
+            addParam(tcsEpics.probeGuideModeCmd.setParam1(BinaryOnOff.Off))
           )(pg =>
             addMultipleParams(
-              List(tcsEpics.guideModeCmd.setParam1(BinaryOnOff.On),
-                   tcsEpics.guideModeCmd.setParam2(pg.from),
-                   tcsEpics.guideModeCmd.setParam3(pg.to)
+              List(tcsEpics.probeGuideModeCmd.setParam1(BinaryOnOff.On),
+                   tcsEpics.probeGuideModeCmd.setParam2(pg.from),
+                   tcsEpics.probeGuideModeCmd.setParam3(pg.to)
               )
             )
           )
@@ -1097,12 +1097,12 @@ object TcsEpicsSystem {
         channels.guiderGains.oiFocusGain
       )
 
-    override val guideModeCmd: Command3Channels[F, BinaryOnOff, GuideProbe, GuideProbe] =
+    override val probeGuideModeCmd: Command3Channels[F, BinaryOnOff, GuideProbe, GuideProbe] =
       Command3Channels(
         channels.telltale,
-        channels.guideMode.state,
-        channels.guideMode.from,
-        channels.guideMode.to
+        channels.probeGuideMode.state,
+        channels.probeGuideMode.from,
+        channels.probeGuideMode.to
       )
   }
 
@@ -1539,7 +1539,7 @@ object TcsEpicsSystem {
     def fileName(v:          String): S
   }
 
-  trait GuideModeCommand[F[_], +S] {
+  trait ProbeGuideModeCommand[F[_], +S] {
     def setMode(pg: Option[ProbeGuide]): S
   }
 
@@ -1596,7 +1596,7 @@ object TcsEpicsSystem {
     val mountGuideCommand: MountGuideCommand[F, TcsCommands[F]]
     val oiWfsCommands: WfsCommands[F, TcsCommands[F]]
     val guiderGainsCommands: GuiderGainsCommand[F, TcsCommands[F]]
-    val guideModeCommand: GuideModeCommand[F, TcsCommands[F]]
+    val probeGuideModeCommand: ProbeGuideModeCommand[F, TcsCommands[F]]
   }
   /*
 

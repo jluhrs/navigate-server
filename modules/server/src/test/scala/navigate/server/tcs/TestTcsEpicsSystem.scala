@@ -20,13 +20,13 @@ import navigate.server.epicsdata.BinaryOnOff
 import navigate.server.epicsdata.BinaryYesNo
 import navigate.server.tcs.TcsChannels.EnclosureChannels
 import navigate.server.tcs.TcsChannels.GuideConfigStatusChannels
-import navigate.server.tcs.TcsChannels.GuideModeChannels
 import navigate.server.tcs.TcsChannels.GuiderGainsChannels
 import navigate.server.tcs.TcsChannels.M1GuideConfigChannels
 import navigate.server.tcs.TcsChannels.M2GuideConfigChannels
 import navigate.server.tcs.TcsChannels.MountGuideChannels
 import navigate.server.tcs.TcsChannels.OriginChannels
 import navigate.server.tcs.TcsChannels.ProbeChannels
+import navigate.server.tcs.TcsChannels.ProbeGuideModeChannels
 import navigate.server.tcs.TcsChannels.ProbeTrackingChannels
 import navigate.server.tcs.TcsChannels.RotatorChannels
 import navigate.server.tcs.TcsChannels.SlewChannels
@@ -157,14 +157,14 @@ object TestTcsEpicsSystem {
     )
   }
 
-  case class GuideModeState(
+  case class ProbeGuideModeState(
     state: TestChannel.State[String],
     from:  TestChannel.State[String],
     to:    TestChannel.State[String]
   )
 
-  object GuideModeState {
-    val default: GuideModeState = GuideModeState(
+  object ProbeGuideModeState {
+    val default: ProbeGuideModeState = ProbeGuideModeState(
       TestChannel.State.default,
       TestChannel.State.default,
       TestChannel.State.default
@@ -249,7 +249,7 @@ object TestTcsEpicsSystem {
     mountGuide:       MountGuideState,
     guideStatus:      GuideConfigState,
     guiderGains:      GuiderGainsState,
-    guideMode:        GuideModeState
+    probeGuideMode:   ProbeGuideModeState
   )
 
   val defaultState: State = State(
@@ -352,7 +352,7 @@ object TestTcsEpicsSystem {
     mountGuide = MountGuideState.default,
     guideStatus = GuideConfigState.default,
     guiderGains = GuiderGainsState.default,
-    guideMode = GuideModeState.default
+    probeGuideMode = ProbeGuideModeState.default
   )
 
   def buildEnclosureChannels[F[_]: Applicative](s: Ref[F, State]): EnclosureChannels[F] =
@@ -705,11 +705,11 @@ object TestTcsEpicsSystem {
 
   def buildGuideModeChannels[F[_]: Applicative](
     s: Ref[F, State],
-    l: Lens[State, GuideModeState]
-  ): GuideModeChannels[F] = GuideModeChannels(
-    new TestChannel[F, State, String](s, l.andThen(Focus[GuideModeState](_.state))),
-    new TestChannel[F, State, String](s, l.andThen(Focus[GuideModeState](_.from))),
-    new TestChannel[F, State, String](s, l.andThen(Focus[GuideModeState](_.to)))
+    l: Lens[State, ProbeGuideModeState]
+  ): ProbeGuideModeChannels[F] = ProbeGuideModeChannels(
+    new TestChannel[F, State, String](s, l.andThen(Focus[ProbeGuideModeState](_.state))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[ProbeGuideModeState](_.from))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[ProbeGuideModeState](_.to)))
   )
 
   def buildChannels[F[_]: Applicative](s: Ref[F, State]): TcsChannels[F] =
@@ -755,7 +755,7 @@ object TestTcsEpicsSystem {
       oiwfs = buildWfsChannels(s, Focus[State](_.oiWfs)),
       guide = buildGuideStateChannels(s, Focus[State](_.guideStatus)),
       guiderGains = buildGuiderGainsChannels(s, Focus[State](_.guiderGains)),
-      guideMode = buildGuideModeChannels(s, Focus[State](_.guideMode))
+      probeGuideMode = buildGuideModeChannels(s, Focus[State](_.probeGuideMode))
     )
 
   def build[F[_]: Monad: Parallel](s: Ref[F, State]): TcsEpicsSystem[F] =

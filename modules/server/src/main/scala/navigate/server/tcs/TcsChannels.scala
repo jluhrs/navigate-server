@@ -50,7 +50,7 @@ case class TcsChannels[F[_]](
   oiwfs:            WfsChannels[F],
   guide:            GuideConfigStatusChannels[F],
   guiderGains:      GuiderGainsChannels[F],
-  guideMode:        GuideModeChannels[F]
+  probeGuideMode:   ProbeGuideModeChannels[F]
 )
 
 object TcsChannels {
@@ -514,21 +514,21 @@ object TcsChannels {
     )
   }
 
-  case class GuideModeChannels[F[_]](
+  case class ProbeGuideModeChannels[F[_]](
     state: Channel[F, String],
     from:  Channel[F, String],
     to:    Channel[F, String]
   )
 
-  object GuideModeChannels {
+  object ProbeGuideModeChannels {
     def build[F[_]](
       service: EpicsService[F],
       top:     TcsTop
-    ): Resource[F, GuideModeChannels[F]] = for {
+    ): Resource[F, ProbeGuideModeChannels[F]] = for {
       state <- service.getChannel[String](top.value, "wfsGuideMode.A")
       from  <- service.getChannel[String](top.value, "wfsGuideMode.B")
       to    <- service.getChannel[String](top.value, "wfsGuideMode.C")
-    } yield GuideModeChannels(state, from, to)
+    } yield ProbeGuideModeChannels(state, from, to)
   }
 
   object GuiderGains {
@@ -619,7 +619,7 @@ object TcsChannels {
       oi   <- WfsChannels.build(service, tcsTop, "oiwfs", "oi")
       gd   <- GuideConfigStatusChannels.build(service, tcsTop)
       gg   <- GuiderGains.build(service, pwfs1Top, pwfs2Top, oiTop)
-      gm   <- GuideModeChannels.build(service, tcsTop)
+      gm   <- ProbeGuideModeChannels.build(service, tcsTop)
     } yield TcsChannels[F](
       tt,
       p1tt,

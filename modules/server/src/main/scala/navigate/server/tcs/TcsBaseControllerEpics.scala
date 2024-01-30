@@ -373,7 +373,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
     val m1 = (x: TcsCommands[F]) =>
       config.m1Guide match {
         case M1GuideConfig.M1GuideOff        =>
-          x.m1GuideCommand.state(false).guideModeCommand.setMode(config.probeGuide)
+          x.m1GuideCommand.state(false).probeGuideModeCommand.setMode(config.probeGuide)
         case M1GuideConfig.M1GuideOn(source) =>
           x.m1GuideCommand
             .state(true)
@@ -385,7 +385,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
             .frames(1)
             .m1GuideConfigCommand
             .filename("")
-            .guideModeCommand
+            .probeGuideModeCommand
             .setMode(config.probeGuide)
       }
 
@@ -399,7 +399,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
           .mode(config.mountGuide)
           .mountGuideCommand
           .source("SCS")
-          .guideModeCommand
+          .probeGuideModeCommand
           .setMode(config.probeGuide)
           .post
           .verifiedRun(ConnectionTimeout)
@@ -436,7 +436,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
                   .beam(beam)
                   .m2GuideConfigCommand
                   .reset(false)
-                  .guideModeCommand
+                  .probeGuideModeCommand
                   .setMode(config.probeGuide)
                   .post
                   .verifiedRun(ConnectionTimeout),
@@ -452,7 +452,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
                   .mode(config.mountGuide)
                   .mountGuideCommand
                   .source("SCS")
-                  .guideModeCommand
+                  .probeGuideModeCommand
                   .setMode(config.probeGuide)
                   .post
                   .verifiedRun(ConnectionTimeout),

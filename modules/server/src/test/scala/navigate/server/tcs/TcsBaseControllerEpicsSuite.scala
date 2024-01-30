@@ -776,7 +776,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assert(r1.m2GuideReset.connected)
       assert(r1.mountGuide.mode.connected)
       assert(r1.mountGuide.source.connected)
-      assert(r1.guideMode.state.connected)
+      assert(r1.probeGuideMode.state.connected)
 
       assertEquals(r1.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
       assertEquals(r1.m1GuideConfig.source.value.flatMap(Enumerated[M1Source].fromTag),
@@ -809,7 +809,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assertEquals(r2.mountGuide.mode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.Off.some
       )
-      assertEquals(r1.guideMode.state.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+      assertEquals(r1.probeGuideMode.state.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.Off.some
       )
     }
@@ -830,13 +830,13 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       _        <- ctr.enableGuide(guideCfg)
       r1       <- st.get
     } yield {
-      assert(r1.guideMode.state.connected)
+      assert(r1.probeGuideMode.state.connected)
 
-      assertEquals(r1.guideMode.state.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+      assertEquals(r1.probeGuideMode.state.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.On.some
       )
-      assertEquals(r1.guideMode.from.value, "OIWFS".some)
-      assertEquals(r1.guideMode.to.value, "OIWFS".some)
+      assertEquals(r1.probeGuideMode.from.value, "OIWFS".some)
+      assertEquals(r1.probeGuideMode.to.value, "OIWFS".some)
     }
   }
 
@@ -855,13 +855,13 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       _        <- ctr.enableGuide(guideCfg)
       r1       <- st.get
     } yield {
-      assert(r1.guideMode.state.connected)
+      assert(r1.probeGuideMode.state.connected)
 
-      assertEquals(r1.guideMode.state.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+      assertEquals(r1.probeGuideMode.state.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.On.some
       )
-      assertEquals(r1.guideMode.from.value, "PWFS1".some)
-      assertEquals(r1.guideMode.to.value, "PWFS2".some)
+      assertEquals(r1.probeGuideMode.from.value, "PWFS1".some)
+      assertEquals(r1.probeGuideMode.to.value, "PWFS2".some)
     }
   }
 
