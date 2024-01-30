@@ -10,6 +10,7 @@ import cats.effect.Resource
 import cats.effect.Temporal
 import cats.effect.std.Dispatcher
 import eu.timepit.refined.types.string.NonEmptyString
+import lucuma.ags.GuideProbe
 import lucuma.core.math.Angle
 import mouse.all.*
 import navigate.epics.Channel
@@ -89,6 +90,7 @@ object TcsEpicsSystem {
     val p1GuiderGainsCmd: Command3Channels[F, Double, Double, Double]
     val p2GuiderGainsCmd: Command3Channels[F, Double, Double, Double]
     val oiGuiderGainsCmd: Command3Channels[F, Double, Double, Double]
+    val probeGuideModeCmd: Command3Channels[F, BinaryOnOff, GuideProbe, GuideProbe]
 
     // val offsetACmd: OffsetCmd[F]
     // val offsetBCmd: OffsetCmd[F]
@@ -897,6 +899,21 @@ object TcsEpicsSystem {
           )
 
       }
+
+    override val probeGuideModeCommand: ProbeGuideModeCommand[F, TcsCommands[F]] =
+      new ProbeGuideModeCommand[F, TcsCommands[F]] {
+        override def setMode(pg: Option[ProbeGuide]): TcsCommands[F] =
+          pg.fold(
+            addParam(tcsEpics.probeGuideModeCmd.setParam1(BinaryOnOff.Off))
+          )(pg =>
+            addMultipleParams(
+              List(tcsEpics.probeGuideModeCmd.setParam1(BinaryOnOff.On),
+                   tcsEpics.probeGuideModeCmd.setParam2(pg.from),
+                   tcsEpics.probeGuideModeCmd.setParam3(pg.to)
+              )
+            )
+          )
+      }
   }
 
   class TcsEpicsSystemImpl[F[_]: Monad: Parallel](epics: TcsEpics[F], st: TcsStatus[F])
@@ -911,6 +928,12 @@ object TcsEpicsSystem {
     applyCmd: GeminiApplyCommand[F],
     channels: TcsChannels[F]
   ) extends TcsEpics[F] {
+    given Encoder[GuideProbe, String] = _ match {
+      case GuideProbe.GmosOiwfs => "OIWFS"
+      case GuideProbe.Pwfs1     => "PWFS1"
+      case GuideProbe.Pwfs2     => "PWFS2"
+    }
+
     override def post(timeout: FiniteDuration): VerifiedEpics[F, F, ApplyCommandResult] =
       applyCmd.post(timeout)
 
@@ -1072,6 +1095,14 @@ object TcsEpicsSystem {
         channels.guiderGains.oiTipGain,
         channels.guiderGains.oiTiltGain,
         channels.guiderGains.oiFocusGain
+      )
+
+    override val probeGuideModeCmd: Command3Channels[F, BinaryOnOff, GuideProbe, GuideProbe] =
+      Command3Channels(
+        channels.telltale,
+        channels.probeGuideMode.state,
+        channels.probeGuideMode.from,
+        channels.probeGuideMode.to
       )
   }
 
@@ -1508,6 +1539,10 @@ object TcsEpicsSystem {
     def fileName(v:          String): S
   }
 
+  trait ProbeGuideModeCommand[F[_], +S] {
+    def setMode(pg: Option[ProbeGuide]): S
+  }
+
   trait WfsSignalProcConfigCommand[F[_], +S] {
     def darkFilename(v: String): S
   }
@@ -1561,6 +1596,7 @@ object TcsEpicsSystem {
     val mountGuideCommand: MountGuideCommand[F, TcsCommands[F]]
     val oiWfsCommands: WfsCommands[F, TcsCommands[F]]
     val guiderGainsCommands: GuiderGainsCommand[F, TcsCommands[F]]
+    val probeGuideModeCommand: ProbeGuideModeCommand[F, TcsCommands[F]]
   }
   /*
 

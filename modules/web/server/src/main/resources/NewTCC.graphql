@@ -1,4 +1,4 @@
-#import NonEmptyString, Sidereal, TargetId, Nonsidereal from "lucuma/schemas/ObservationDB.graphql"
+#import NonEmptyString, Sidereal, GuideProbe, TargetId, Nonsidereal from "lucuma/schemas/ObservationDB.graphql"
 #import SiderealInput, NonsiderealInput, WavelengthInput, AngleInput from "lucuma/schemas/ObservationDB.graphql"
 #import Long, BigDecimal, Timestamp, TimeSpanInput from "lucuma/schemas/ObservationDB.graphql"
 
@@ -156,6 +156,13 @@ input GuideConfigurationInput {
     mountOffload: Boolean!
     """Flag for day time tests. It sets all gains to 0"""
     daytimeMode: Boolean!
+    """Probe names to be used for guiding"""
+    probeGuide: ProbeGuideInput
+}
+
+input ProbeGuideInput {
+    from: GuideProbe
+    to: GuideProbe
 }
 
 enum LogLevel {
