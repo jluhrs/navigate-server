@@ -56,24 +56,6 @@ object AppsCommon {
     }
   )
 
-  lazy val embeddedJreSettings = Seq(
-    // Put the jre in the tarball
-    Universal / mappings ++= {
-      // We look for the JRE in the project's base directory. This can be a symlink.
-      val jreDir = (ThisBuild / baseDirectory).value / "jre"
-      if (!jreDir.exists)
-        throw new Exception("JRE directory does not exist: " + jreDir)
-      directory(jreDir).map { path =>
-        path._1 -> ("jre/" + path._1.relativeTo(jreDir).get.getPath)
-      }
-    },
-
-    // Make the launcher use the embedded jre
-    Universal / javaOptions ++= Seq(
-      "-java-home ${app_home}/../jre"
-    )
-  )
-
   /**
    * Settings for meta projects to make them non-publishable
    */
