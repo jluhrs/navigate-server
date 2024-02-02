@@ -34,7 +34,7 @@ pull_request_rules:
       remove: []
 - name: Label navigate-server PRs
   conditions:
-  - files~=^app/navigate-server/
+  - files~=^deploy/navigate-server/
   actions:
     label:
       add:
