@@ -23,7 +23,7 @@ object Settings {
 
     val http4s      = "0.23.25"
     val http4sBlaze = "0.23.16"
-    val slf4j       = "2.0.11"
+    val slf4j       = "2.0.12"
     val log4s       = "1.10.0"
     val logback     = "1.4.14"
     val janino      = "3.1.11"
