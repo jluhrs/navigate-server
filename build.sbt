@@ -20,6 +20,9 @@ ThisBuild / resolvers ++= Seq(
 
 Global / resolvers ++= Resolver.sonatypeOssRepos("public")
 
+ThisBuild / dockerExposedPorts ++= Seq(7070, 7071) // Must match deployed app.conf web-server.port
+ThisBuild / dockerBaseImage := "eclipse-temurin:17-jre"
+
 enablePlugins(GitBranchPrompt)
 
 // Custom commands to facilitate web development
@@ -51,7 +54,7 @@ lazy val root = tlCrossRootProject.aggregate(
   navigate_server,
   navigate_web_server,
   navigate_model,
-  app_navigate_server
+  deploy_navigate_server
 )
 
 lazy val epics = project
@@ -158,29 +161,18 @@ lazy val navigate_server = project
 /**
  * Project for the navigate server app for development
  */
-lazy val app_navigate_server = preventPublication(project.in(file("app/navigate-server")))
+lazy val deploy_navigate_server = preventPublication(project.in(file("deploy/navigate-server")))
   .dependsOn(navigate_web_server)
   .aggregate(navigate_web_server)
+  .enablePlugins(DockerPlugin)
   .enablePlugins(JavaServerAppPackaging)
   .enablePlugins(GitBranchPrompt)
   .settings(navigateCommonSettings: _*)
   .settings(releaseAppMappings: _*)
-  .settings(embeddedJreSettings: _*)
   .settings(
-    description          := "Navigate server for local testing",
-    // Put the jar files in the lib dir
-    Universal / mappings += {
-      val jar = (Compile / packageBin).value
-      jar -> ("lib/" + jar.getName)
-    },
-    Universal / mappings := {
-      // filter out sjs jar files. otherwise it could generate some conflicts
-      val universalMappings = (Universal / mappings).value
-      val filtered          = universalMappings.filter { case (_, name) =>
-        !name.contains("_sjs")
-      }
-      filtered
-    },
+    description          := "Navigate server",
+    Docker / packageName := "navigate-server",
+    dockerUpdateLatest   := true,
     Universal / mappings ++= {
       // Navigate UI project must be in sibling folder and be already built. See its README.md.
       val clientDir = (ThisBuild / baseDirectory).value.getParentFile / "navigate-ui" / "dist"
