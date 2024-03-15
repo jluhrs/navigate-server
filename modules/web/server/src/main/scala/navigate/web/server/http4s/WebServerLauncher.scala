@@ -224,9 +224,10 @@ object WebServerLauncher extends IOApp with LogInitialization {
         cas  <- CaServiceInit.caInit[IO](conf.navigateEngine)
         sys  <-
           Systems
-            .build[IO](conf.site, httpClient, conf.navigateEngine, cas)(Async[IO],
-                                                                        dspt,
-                                                                        Parallel[IO]
+            .build[IO](conf.site, httpClient, conf.navigateEngine, cas)(using
+              Async[IO],
+              dspt,
+              Parallel[IO]
             )
         seqE <- Resource.eval[IO, NavigateEngine[IO]](
                   NavigateEngine.build[IO](conf.site, sys, conf.navigateEngine)
