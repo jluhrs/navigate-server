@@ -37,7 +37,7 @@ object EpicsService {
         Async[F]
           .delay(ctx.createChannel[tjt.javaType](name, tjt.clazz))
       )(c => Async[F].delay(c.close()))
-      .map(x => Channel.build[F, T, tjt.javaType](x)(Async[F], tjt.convert))
+      .map(x => Channel.build(x)(using Async[F], tjt.convert))
 
     def getChannel[T](top: NonEmptyString, name: String)(using
       tjt: ToJavaType[T]

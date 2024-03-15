@@ -162,7 +162,7 @@ class NavigateMappings[F[_]: Sync](
 
   def instrumentSpecifics(p: Path, env: Env): F[Result[OperationOutcome]] =
     env
-      .get[InstrumentSpecifics]("instrumentSpecificsParams")(classTag[InstrumentSpecifics])
+      .get[InstrumentSpecifics]("instrumentSpecificsParams")(using classTag[InstrumentSpecifics])
       .map { isp =>
         server
           .instrumentSpecifics(isp)
@@ -180,8 +180,8 @@ class NavigateMappings[F[_]: Sync](
       )
 
   def slew(p: Path, env: Env): F[Result[OperationOutcome]] = (for {
-    so <- env.get[SlewOptions]("slewOptions")(classTag[SlewOptions])
-    tc <- env.get[TcsConfig]("config")(classTag[TcsConfig])
+    so <- env.get[SlewOptions]("slewOptions")(using classTag[SlewOptions])
+    tc <- env.get[TcsConfig]("config")(using classTag[TcsConfig])
   } yield server
     .slew(so, tc)
     .attempt
@@ -193,7 +193,7 @@ class NavigateMappings[F[_]: Sync](
 
   def tcsConfig(p: Path, env: Env): F[Result[OperationOutcome]] =
     env
-      .get[TcsConfig]("config")(classTag[TcsConfig])
+      .get[TcsConfig]("config")(using classTag[TcsConfig])
       .map { tc =>
         server
           .tcsConfig(tc)
@@ -212,7 +212,7 @@ class NavigateMappings[F[_]: Sync](
 
   def oiwfsTarget(p: Path, env: Env): F[Result[OperationOutcome]] =
     env
-      .get[Target]("target")(classTag[Target])
+      .get[Target]("target")(using classTag[Target])
       .map { oi =>
         server
           .oiwfsTarget(oi)
@@ -229,7 +229,7 @@ class NavigateMappings[F[_]: Sync](
 
   def oiwfsProbeTracking(p: Path, env: Env): F[Result[OperationOutcome]] =
     env
-      .get[TrackingConfig]("config")(classTag[TrackingConfig])
+      .get[TrackingConfig]("config")(using classTag[TrackingConfig])
       .map { tc =>
         server
           .oiwfsProbeTracking(tc)
