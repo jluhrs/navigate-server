@@ -11,9 +11,9 @@ object Settings {
   object LibraryVersions {
 
     // Scala libraries
-    val catsEffect = "3.5.3"
+    val catsEffect = "3.5.4"
     val cats       = "2.10.0"
-    val mouse      = "1.2.2"
+    val mouse      = "1.2.3"
     val fs2        = "3.9.4"
     val catsTime   = "0.5.1"
 
@@ -21,14 +21,14 @@ object Settings {
     val log4Cats         = "2.6.0"
     val log4CatsLogLevel = "0.3.1"
 
-    val http4s      = "0.23.25"
+    val http4s      = "0.23.26"
     val http4sBlaze = "0.23.16"
     val slf4j       = "2.0.12"
     val log4s       = "1.10.0"
-    val logback     = "1.4.14"
+    val logback     = "1.5.3"
     val janino      = "3.1.12"
     val logstash    = "7.0"
-    val pureConfig  = "0.17.5"
+    val pureConfig  = "0.17.6"
     val monocle     = "3.2.0"
     val circe       = "0.14.6"
 
@@ -54,13 +54,13 @@ object Settings {
     val jca = "2.4.9"
 
     // Lucuma
-    val lucumaCore    = "0.92.0"
-    val lucumaSchemas = "0.72.0"
-    val lucumaAgs     = "0.44.5"
+    val lucumaCore    = "0.93.1"
+    val lucumaSchemas = "0.76.0"
+    val lucumaAgs     = "0.44.7"
 
     val grackle = "0.18.1"
 
-    val graphQLRoutes = "0.8.6"
+    val graphQLRoutes = "0.8.7"
 
     val clue = "0.35.0"
 
