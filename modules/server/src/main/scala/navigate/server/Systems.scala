@@ -19,16 +19,17 @@ import scala.annotation.nowarn
 
 case class Systems[F[_]](
   odb:      OdbProxy[F],
+  client:   Client[F],
   tcsSouth: TcsSouthController[F],
   tcsNorth: TcsNorthController[F]
 )
 
 object Systems {
   def build[F[_]: Async: Dispatcher: Parallel](
-    @nowarn site:   Site,
-    @nowarn client: Client[F],
-    conf:           NavigateEngineConfiguration,
-    epicsSrv:       EpicsService[F]
+    @nowarn site: Site,
+    client:       Client[F],
+    conf:         NavigateEngineConfiguration,
+    epicsSrv:     EpicsService[F]
   ): Resource[F, Systems[F]] = {
     val tops = decodeTops(conf.tops)
 
@@ -51,7 +52,7 @@ object Systems {
       odb  <- buildOdbProxy
       tcsS <- buildTcsSouthController
       tcsN <- buildTcsNorthController
-    } yield Systems[F](odb, tcsS, tcsN)
+    } yield Systems[F](odb, client, tcsS, tcsN)
   }
 
   private def decodeTops(s: String): Map[String, String] =

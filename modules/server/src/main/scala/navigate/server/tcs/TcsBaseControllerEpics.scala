@@ -6,11 +6,18 @@ package navigate.server.tcs
 import cats.Parallel
 import cats.effect.Async
 import cats.syntax.all.*
+import lucuma.core.enums.ComaOption
+import lucuma.core.enums.M1Source
+import lucuma.core.enums.MountGuideOption
+import lucuma.core.enums.TipTiltSource
 import lucuma.core.math.Angle
 import lucuma.core.math.Parallax
 import lucuma.core.math.ProperMotion
 import lucuma.core.math.RadialVelocity
 import lucuma.core.math.Wavelength
+import lucuma.core.model.M1GuideConfig
+import lucuma.core.model.M2GuideConfig
+import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.Enumerated
 import lucuma.core.util.TimeSpan
 import monocle.Getter
@@ -18,9 +25,7 @@ import mouse.boolean.given
 import navigate.epics.VerifiedEpics.*
 import navigate.model.Distance
 import navigate.model.enums.DomeMode
-import navigate.model.enums.M1Source
 import navigate.model.enums.ShutterMode
-import navigate.model.enums.TipTiltSource
 import navigate.server.ApplyCommandResult
 import navigate.server.ConnectionTimeout
 import navigate.server.epicsdata.BinaryOnOff
@@ -396,7 +401,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
           .m2GuideModeCommand
           .coma(false)
           .mountGuideCommand
-          .mode(config.mountGuide)
+          .mode(config.mountGuide === MountGuideOption.MountGuideOn)
           .mountGuideCommand
           .source("SCS")
           .probeGuideModeCommand
@@ -447,9 +452,9 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
                 (gains >>> m1)(tcsEpics.startCommand(timeout)).m2GuideCommand
                   .state(true)
                   .m2GuideModeCommand
-                  .coma(coma)
+                  .coma(coma === ComaOption.ComaOn)
                   .mountGuideCommand
-                  .mode(config.mountGuide)
+                  .mode(config.mountGuide === MountGuideOption.MountGuideOn)
                   .mountGuideCommand
                   .source("SCS")
                   .probeGuideModeCommand
@@ -529,12 +534,13 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
     coma: BinaryOnOff
   ): M2GuideConfig = {
     val src = Set.empty ++
-      calcM2Source(m2p1, TipTiltSource.Pwfs1) ++
-      calcM2Source(m2p2, TipTiltSource.Pwfs2) ++
-      calcM2Source(m2oi, TipTiltSource.Oiwfs) ++
-      calcM2Source(m2ao, TipTiltSource.Gaos)
+      calcM2Source(m2p1, TipTiltSource.PWFS1) ++
+      calcM2Source(m2p2, TipTiltSource.PWFS2) ++
+      calcM2Source(m2oi, TipTiltSource.OIWFS) ++
+      calcM2Source(m2ao, TipTiltSource.GAOS)
 
-    if (m2 === BinaryOnOff.On && src.nonEmpty) M2GuideConfig.M2GuideOn(coma === BinaryOnOff.On, src)
+    if (m2 === BinaryOnOff.On && src.nonEmpty)
+      M2GuideConfig.M2GuideOn(ComaOption.fromBoolean(coma === BinaryOnOff.On), src)
     else M2GuideConfig.M2GuideOff
   }
 
@@ -560,7 +566,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
       h <- fh
       i <- fi
     } yield GuideState(
-      f =!= 0,
+      MountGuideOption.fromBoolean(f =!= 0),
       calcM1Guide(a, h),
       calcM2Guide(i, d, e, c, b, g)
     )

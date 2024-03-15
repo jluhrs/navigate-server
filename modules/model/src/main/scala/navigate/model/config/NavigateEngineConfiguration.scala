@@ -4,6 +4,7 @@
 package navigate.model.config
 
 import cats.Eq
+import cats.derived.*
 import org.http4s.Uri
 
 import scala.concurrent.duration.FiniteDuration
@@ -33,6 +34,7 @@ trait GpiSettings
  */
 case class NavigateEngineConfiguration(
   odb:                     Uri,
+  observe:                 Uri,
   systemControl:           SystemsControlConfiguration,
   odbNotifications:        Boolean,
   odbQueuePollingInterval: FiniteDuration,
@@ -40,21 +42,4 @@ case class NavigateEngineConfiguration(
   epicsCaAddrList:         Option[String],
   readRetries:             Int,
   ioTimeout:               FiniteDuration
-)
-
-object NavigateEngineConfiguration {
-
-  given Eq[NavigateEngineConfiguration] =
-    Eq.by(x =>
-      (x.odb,
-       x.systemControl,
-       x.odbNotifications,
-       x.odbQueuePollingInterval,
-       x.tops,
-       x.epicsCaAddrList,
-       x.readRetries,
-       x.ioTimeout
-      )
-    )
-
-}
+) derives Eq

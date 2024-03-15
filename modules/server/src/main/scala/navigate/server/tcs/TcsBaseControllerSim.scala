@@ -6,7 +6,11 @@ package navigate.server.tcs
 import cats.Applicative
 import cats.effect.Ref
 import cats.syntax.all.*
+import lucuma.core.enums.MountGuideOption
 import lucuma.core.math.Angle
+import lucuma.core.model.M1GuideConfig
+import lucuma.core.model.M2GuideConfig
+import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.TimeSpan
 import navigate.model.enums.DomeMode
 import navigate.model.enums.ShutterMode
@@ -83,7 +87,9 @@ class TcsBaseControllerSim[F[_]: Applicative](guideRef: Ref[F, GuideState])
     .as(ApplyCommandResult.Completed)
 
   override def disableGuide: F[ApplyCommandResult] = guideRef
-    .set(GuideState(false, M1GuideConfig.M1GuideOff, M2GuideConfig.M2GuideOff))
+    .set(
+      GuideState(MountGuideOption.MountGuideOff, M1GuideConfig.M1GuideOff, M2GuideConfig.M2GuideOff)
+    )
     .as(ApplyCommandResult.Completed)
 
   override def oiwfsObserve(exposureTime: TimeSpan, isQL: Boolean): F[ApplyCommandResult] =

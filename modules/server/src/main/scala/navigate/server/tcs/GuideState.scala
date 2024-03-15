@@ -5,9 +5,12 @@ package navigate.server.tcs
 
 import cats.Eq
 import cats.derived.*
+import lucuma.core.enums.MountGuideOption
+import lucuma.core.model.M1GuideConfig
+import lucuma.core.model.M2GuideConfig
 
 case class GuideState(
-  mountOffload: Boolean,
+  mountOffload: MountGuideOption,
   m1Guide:      M1GuideConfig,
   m2Guide:      M2GuideConfig
 ) derives Eq

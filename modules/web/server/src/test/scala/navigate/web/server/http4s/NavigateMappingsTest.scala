@@ -17,31 +17,35 @@ import fs2.concurrent.Topic
 import io.circe.Decoder
 import io.circe.Decoder.Result
 import io.circe.Json
+import lucuma.core.enums.ComaOption
+import lucuma.core.enums.M1Source
+import lucuma.core.enums.MountGuideOption
+import lucuma.core.enums.TipTiltSource
 import lucuma.core.math.Angle
+import lucuma.core.model.M1GuideConfig
+import lucuma.core.model.M2GuideConfig
+import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.Enumerated
 import lucuma.core.util.TimeSpan
 import lucuma.core.util.Timestamp
 import munit.CatsEffectSuite
 import navigate.model.NavigateEvent
 import navigate.model.enums.DomeMode
-import navigate.model.enums.M1Source
 import navigate.model.enums.ShutterMode
-import navigate.model.enums.TipTiltSource
 import navigate.server.NavigateEngine
 import navigate.server.OdbProxy
 import navigate.server.Systems
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.InstrumentSpecifics
-import navigate.server.tcs.M1GuideConfig
-import navigate.server.tcs.M2GuideConfig
 import navigate.server.tcs.RotatorTrackConfig
 import navigate.server.tcs.SlewOptions
 import navigate.server.tcs.Target
 import navigate.server.tcs.TcsBaseController.TcsConfig
 import navigate.server.tcs.TcsNorthControllerSim
 import navigate.server.tcs.TcsSouthControllerSim
-import navigate.server.tcs.TelescopeGuideConfig
 import navigate.server.tcs.TrackingConfig
+import org.http4s.HttpApp
+import org.http4s.client.Client
 import org.slf4j.Marker
 import org.slf4j.event.KeyValuePair
 
@@ -487,19 +491,21 @@ class NavigateMappingsTest extends CatsEffectSuite {
   test("Provide guide state subscription") {
 
     val changes: List[GuideState] = List(
-      GuideState(true,
-                 M1GuideConfig.M1GuideOn(M1Source.Oiwfs),
-                 M2GuideConfig.M2GuideOn(true, Set(TipTiltSource.Oiwfs))
+      GuideState(MountGuideOption.MountGuideOn,
+                 M1GuideConfig.M1GuideOn(M1Source.OIWFS),
+                 M2GuideConfig.M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS))
       ),
-      GuideState(false, M1GuideConfig.M1GuideOff, M2GuideConfig.M2GuideOff),
-      GuideState(false,
-                 M1GuideConfig.M1GuideOn(M1Source.Oiwfs),
-                 M2GuideConfig.M2GuideOn(true, Set(TipTiltSource.Oiwfs))
+      GuideState(MountGuideOption.MountGuideOff,
+                 M1GuideConfig.M1GuideOff,
+                 M2GuideConfig.M2GuideOff
       ),
-      GuideState(false, M1GuideConfig.M1GuideOff, M2GuideConfig.M2GuideOff),
-      GuideState(false,
-                 M1GuideConfig.M1GuideOn(M1Source.Oiwfs),
-                 M2GuideConfig.M2GuideOn(false, Set(TipTiltSource.Oiwfs))
+      GuideState(MountGuideOption.MountGuideOff,
+                 M1GuideConfig.M1GuideOn(M1Source.OIWFS),
+                 M2GuideConfig.M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS))
+      ),
+      GuideState(MountGuideOption.MountGuideOff,
+                 M1GuideConfig.M1GuideOn(M1Source.OIWFS),
+                 M2GuideConfig.M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS))
       )
     )
 
@@ -676,12 +682,18 @@ class NavigateMappingsTest extends CatsEffectSuite {
 }
 
 object NavigateMappingsTest {
+
+  val dummyClient = Client.fromHttpApp(HttpApp.notFound[IO])
+
   def buildServer: IO[NavigateEngine[IO]] = Ref
-    .of[IO, GuideState](GuideState(false, M1GuideConfig.M1GuideOff, M2GuideConfig.M2GuideOff))
+    .of[IO, GuideState](
+      GuideState(MountGuideOption.MountGuideOff, M1GuideConfig.M1GuideOff, M2GuideConfig.M2GuideOff)
+    )
     .map(r =>
       new NavigateEngine[IO] {
         override val systems: Systems[IO] = Systems(
           OdbProxy.dummy[IO],
+          dummyClient,
           new TcsSouthControllerSim[IO](r),
           new TcsNorthControllerSim[IO](r)
         )
@@ -734,7 +746,12 @@ object NavigateMappingsTest {
         )
 
         override def disableGuide: IO[Unit] =
-          r.set(GuideState(false, M1GuideConfig.M1GuideOff, M2GuideConfig.M2GuideOff))
+          r.set(
+            GuideState(MountGuideOption.MountGuideOff,
+                       M1GuideConfig.M1GuideOff,
+                       M2GuideConfig.M2GuideOff
+            )
+          )
 
         override def tcsConfig(config: TcsConfig): IO[Unit] = IO.unit
 
@@ -819,11 +836,11 @@ object NavigateMappingsTest {
       val cm = h.downField("m2Coma").as[Boolean].toOption
 
       GuideState(
-        mnt,
+        MountGuideOption.fromBoolean(mnt),
         m1.map(M1GuideConfig.M1GuideOn.apply).getOrElse(M1GuideConfig.M1GuideOff),
         m2.map(l =>
           if (l.isEmpty) M2GuideConfig.M2GuideOff
-          else M2GuideConfig.M2GuideOn(cm.exists(identity), l.toSet)
+          else M2GuideConfig.M2GuideOn(ComaOption.fromBoolean(cm.exists(identity)), l.toSet)
         ).getOrElse(M2GuideConfig.M2GuideOff)
       )
     }

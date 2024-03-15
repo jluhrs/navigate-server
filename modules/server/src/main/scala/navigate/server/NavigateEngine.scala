@@ -13,8 +13,11 @@ import cats.effect.kernel.Sync
 import cats.syntax.all.*
 import fs2.Pipe
 import fs2.Stream
+import io.circe.syntax.*
 import lucuma.core.enums.Site
 import lucuma.core.math.Angle
+import lucuma.core.model.GuideConfig
+import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.TimeSpan
 import monocle.Focus
 import monocle.Lens
@@ -25,6 +28,7 @@ import navigate.model.NavigateEvent.CommandFailure
 import navigate.model.NavigateEvent.CommandPaused
 import navigate.model.NavigateEvent.CommandStart
 import navigate.model.NavigateEvent.CommandSuccess
+import navigate.model.config.ControlStrategy
 import navigate.model.config.NavigateEngineConfiguration
 import navigate.model.enums.DomeMode
 import navigate.model.enums.ShutterMode
@@ -34,9 +38,15 @@ import navigate.server.tcs.RotatorTrackConfig
 import navigate.server.tcs.SlewOptions
 import navigate.server.tcs.Target
 import navigate.server.tcs.TcsBaseController.TcsConfig
-import navigate.server.tcs.TelescopeGuideConfig
 import navigate.server.tcs.TrackingConfig
 import navigate.stateengine.StateEngine
+import org.http4s.EntityDecoder
+import org.http4s.*
+import org.http4s.circe.*
+import org.http4s.client.dsl.Http4sClientDsl
+import org.http4s.client.middleware.Retry
+import org.http4s.client.middleware.RetryPolicy
+import org.http4s.dsl.io.*
 import org.typelevel.log4cats.Logger
 
 import scala.concurrent.duration.DurationInt
@@ -103,12 +113,44 @@ object NavigateEngine {
     }
   }
 
-  private case class NavigateEngineImpl[F[_]: Concurrent: Logger](
+  private case class NavigateEngineImpl[F[_]: Concurrent: Temporal: Logger](
     site:    Site,
     systems: Systems[F],
     conf:    NavigateEngineConfiguration,
     engine:  StateEngine[F, State, NavigateEvent]
-  ) extends NavigateEngine[F] {
+  ) extends NavigateEngine[F]
+      with Http4sClientDsl[F] {
+
+    // We want to support some retries to observe
+    private val clientWithRetry = {
+      val max             = 4
+      var attemptsCounter = 1
+      val policy          = RetryPolicy[F] { (attempts: Int) =>
+        if (attempts >= max) None
+        else {
+          attemptsCounter = attemptsCounter + 1
+          10.milliseconds.some
+        }
+      }
+      Retry[F](policy)(systems.client)
+    }
+
+    private def postTelescopeGuideConfig(gc: GuideConfig): F[Unit] = {
+      val postRequest: Request[F] =
+        POST(
+          gc.asJson,
+          conf.observe / "api" / "observe" / "guide"
+        )
+
+      // Update guide state in observe if not simulated
+      (Logger[F].info(s"Update guide state in observe") *>
+        clientWithRetry
+          .expect[String](postRequest)
+          .void
+          .handleErrorWith(r => Logger[F].error(r)("Error posting guide configuration to observe")))
+        .whenA(conf.systemControl.observe === ControlStrategy.FullControl)
+    }
+
     override def eventStream: Stream[F, NavigateEvent] =
       engine.process(startState)
 
@@ -229,14 +271,14 @@ object NavigateEngine {
       EnableGuide,
       systems.tcsSouth.enableGuide(config),
       Focus[State](_.enableGuide)
-    )
+    ) *> postTelescopeGuideConfig(GuideConfig(config, None))
 
     override def disableGuide: F[Unit] = command(
       engine,
       DisableGuide,
       systems.tcsSouth.disableGuide,
       Focus[State](_.disableGuide)
-    )
+    ) *> postTelescopeGuideConfig(GuideConfig.defaultGuideConfig)
 
     override def oiwfsObserve(period: TimeSpan): F[Unit] = command(
       engine,
@@ -255,7 +297,7 @@ object NavigateEngine {
     override def getGuideState: F[GuideState] = systems.tcsSouth.getGuideState
   }
 
-  def build[F[_]: Concurrent: Logger](
+  def build[F[_]: Concurrent: Temporal: Logger](
     site:    Site,
     systems: Systems[F],
     conf:    NavigateEngineConfiguration

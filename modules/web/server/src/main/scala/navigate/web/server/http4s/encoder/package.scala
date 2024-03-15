@@ -7,10 +7,10 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import io.circe.Encoder
 import io.circe.Json
 import io.circe.syntax.*
+import lucuma.core.model.M1GuideConfig
+import lucuma.core.model.M2GuideConfig
 import lucuma.core.util.Timestamp
 import navigate.server.tcs.GuideState
-import navigate.server.tcs.M1GuideConfig
-import navigate.server.tcs.M2GuideConfig
 
 package object encoder {
 

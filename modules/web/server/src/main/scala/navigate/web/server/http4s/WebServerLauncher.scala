@@ -16,6 +16,7 @@ import fs2.compression.Compression
 import fs2.concurrent.Topic
 import fs2.io.file.Files
 import fs2.io.net.Network
+import fs2.io.net.tls.TLSContext
 import natchez.Trace.Implicits.noop
 import navigate.model.NavigateEvent
 import navigate.model.config.*
@@ -213,7 +214,14 @@ object WebServerLauncher extends IOApp with LogInitialization {
 
     // Override the default client config
     def client(timeout: Duration): Resource[IO, Client[IO]] =
-      EmberClientBuilder.default[IO].withTimeout(timeout).build
+      // Insecure as we call observe with self signed certificates
+      TLSContext.Builder.forAsync[IO].insecureResource.flatMap { tls =>
+        EmberClientBuilder
+          .default[IO]
+          .withTLSContext(tls)
+          .withTimeout(timeout)
+          .build
+      }
 
     def engineIO(
       conf:       NavigateConfiguration,
