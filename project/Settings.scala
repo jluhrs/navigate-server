@@ -14,7 +14,7 @@ object Settings {
     val catsEffect = "3.5.4"
     val cats       = "2.10.0"
     val mouse      = "1.2.3"
-    val fs2        = "3.9.4"
+    val fs2        = "3.10.0"
     val catsTime   = "0.5.1"
 
     // Logging
@@ -54,7 +54,7 @@ object Settings {
     val jca = "2.4.9"
 
     // Lucuma
-    val lucumaCore    = "0.93.1"
+    val lucumaCore    = "0.94.1"
     val lucumaSchemas = "0.77.2"
     val lucumaAgs     = "0.44.7"
 
