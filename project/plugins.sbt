@@ -8,4 +8,4 @@ addSbtPlugin("io.spray"       % "sbt-revolver"        % "0.10.0")
 addSbtPlugin("com.github.sbt" % "sbt-native-packager" % "1.9.16")
 
 // Extract metadata from sbt and make it available to the code
-addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.11.0")
+addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.12.0")
