@@ -91,7 +91,7 @@ lazy val navigate_web_server = project
   .enablePlugins(GitBranchPrompt)
   .settings(commonSettings: _*)
   .settings(
-    name                 := "navigate_web_server",
+    name                := "navigate_web_server",
     libraryDependencies ++= Seq(
       Log4CatsNoop.value,
       CatsEffect.value,
@@ -103,8 +103,7 @@ lazy val navigate_web_server = project
     ) ++
       Http4sClient ++ Http4s ++ PureConfig ++ Logging.value ++ MUnit.value ++ Grackle.value,
     // Supports launching the server in the background
-    reStart / mainClass  := Some("navigate.web.server.http4s.WebServerLauncher"),
-    Compile / bspEnabled := false,
+    reStart / mainClass := Some("navigate.web.server.http4s.WebServerLauncher"),
     // Don't include configuration files in the JAR. We want them outside, so they are editable.
     Compile / packageBin / mappings ~= {
       _.filterNot(f => f._1.getName.endsWith(".conf") || f._1.getName.endsWith("logback.xml"))
@@ -151,7 +150,7 @@ lazy val navigate_server = project
       CatsEffect.value,
       Fs2,
       Log4Cats.value,
-      LucumaAgs
+      Http4sCirce
     ) ++ MUnit.value ++ LucumaCore.value ++ Http4sClient
   )
   .dependsOn(navigate_model % "compile->compile;test->test")

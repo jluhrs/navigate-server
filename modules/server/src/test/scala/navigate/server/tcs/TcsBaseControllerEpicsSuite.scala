@@ -6,11 +6,20 @@ package navigate.server.tcs
 import cats.effect.IO
 import cats.effect.Ref
 import cats.syntax.all.*
-import lucuma.ags.GuideProbe
+import lucuma.core.enums.ComaOption
+import lucuma.core.enums.GuideProbe
+import lucuma.core.enums.M1Source
+import lucuma.core.enums.MountGuideOption
+import lucuma.core.enums.TipTiltSource
 import lucuma.core.math.Angle
 import lucuma.core.math.Coordinates
 import lucuma.core.math.Epoch
 import lucuma.core.math.Wavelength
+import lucuma.core.model.M1GuideConfig
+import lucuma.core.model.M2GuideConfig
+import lucuma.core.model.M2GuideConfig.M2GuideOn
+import lucuma.core.model.ProbeGuide
+import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.Enumerated
 import lucuma.core.util.TimeSpan
 import monocle.syntax.all.*
@@ -19,9 +28,7 @@ import munit.CatsEffectSuite
 import navigate.epics.TestChannel
 import navigate.model.Distance
 import navigate.model.enums.DomeMode
-import navigate.model.enums.M1Source
 import navigate.model.enums.ShutterMode
-import navigate.model.enums.TipTiltSource
 import navigate.server.acm.CadDirective
 import navigate.server.epicsdata
 import navigate.server.epicsdata.BinaryOnOff
@@ -32,7 +39,6 @@ import scala.concurrent.duration.FiniteDuration
 
 import Target.SiderealTarget
 import TcsBaseController.*
-import M2GuideConfig.M2GuideOn
 import TestTcsEpicsSystem.GuideConfigState
 
 class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
@@ -572,9 +578,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Enable and disable guiding default gains") {
     val guideCfg = TelescopeGuideConfig(
-      mountGuide = true,
-      m1Guide = M1GuideConfig.M1GuideOn(M1Source.Oiwfs),
-      m2Guide = M2GuideOn(true, Set(TipTiltSource.Oiwfs)),
+      mountGuide = MountGuideOption.MountGuideOn,
+      m1Guide = M1GuideConfig.M1GuideOn(M1Source.OIWFS),
+      m2Guide = M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
       dayTimeMode = false,
       probeGuide = none
     )
@@ -614,14 +620,14 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
       assertEquals(r1.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
       assertEquals(r1.m1GuideConfig.source.value.flatMap(Enumerated[M1Source].fromTag),
-                   M1Source.Oiwfs.some
+                   M1Source.OIWFS.some
       )
       assertEquals(r1.m1GuideConfig.frames.value.flatMap(_.toIntOption), 1.some)
       assertEquals(r1.m1GuideConfig.weighting.value, "none".some)
       assertEquals(r1.m1GuideConfig.filename.value, "".some)
       assertEquals(r1.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
       assertEquals(r1.m2GuideConfig.source.value.flatMap(Enumerated[TipTiltSource].fromTag),
-                   TipTiltSource.Oiwfs.some
+                   TipTiltSource.OIWFS.some
       )
       assertEquals(r1.m2GuideConfig.beam.value, "B".some)
       assertEquals(r1.m2GuideConfig.filter.value, "raw".some)
@@ -659,9 +665,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Enable and disable guiding day mode") {
     val guideCfg = TelescopeGuideConfig(
-      mountGuide = true,
-      m1Guide = M1GuideConfig.M1GuideOn(M1Source.Oiwfs),
-      m2Guide = M2GuideOn(true, Set(TipTiltSource.Oiwfs)),
+      mountGuide = MountGuideOption.MountGuideOn,
+      m1Guide = M1GuideConfig.M1GuideOn(M1Source.OIWFS),
+      m2Guide = M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
       dayTimeMode = true,
       probeGuide = none
     )
@@ -701,14 +707,14 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
       assertEquals(r1.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
       assertEquals(r1.m1GuideConfig.source.value.flatMap(Enumerated[M1Source].fromTag),
-                   M1Source.Oiwfs.some
+                   M1Source.OIWFS.some
       )
       assertEquals(r1.m1GuideConfig.frames.value.flatMap(_.toIntOption), 1.some)
       assertEquals(r1.m1GuideConfig.weighting.value, "none".some)
       assertEquals(r1.m1GuideConfig.filename.value, "".some)
       assertEquals(r1.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
       assertEquals(r1.m2GuideConfig.source.value.flatMap(Enumerated[TipTiltSource].fromTag),
-                   TipTiltSource.Oiwfs.some
+                   TipTiltSource.OIWFS.some
       )
       assertEquals(r1.m2GuideConfig.beam.value, "B".some)
       assertEquals(r1.m2GuideConfig.filter.value, "raw".some)
@@ -746,9 +752,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Enable and disable guiding") {
     val guideCfg = TelescopeGuideConfig(
-      mountGuide = true,
-      m1Guide = M1GuideConfig.M1GuideOn(M1Source.Oiwfs),
-      m2Guide = M2GuideOn(true, Set(TipTiltSource.Oiwfs)),
+      mountGuide = MountGuideOption.MountGuideOn,
+      m1Guide = M1GuideConfig.M1GuideOn(M1Source.OIWFS),
+      m2Guide = M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
       dayTimeMode = false,
       probeGuide = none
     )
@@ -780,14 +786,14 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
       assertEquals(r1.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
       assertEquals(r1.m1GuideConfig.source.value.flatMap(Enumerated[M1Source].fromTag),
-                   M1Source.Oiwfs.some
+                   M1Source.OIWFS.some
       )
       assertEquals(r1.m1GuideConfig.frames.value.flatMap(_.toIntOption), 1.some)
       assertEquals(r1.m1GuideConfig.weighting.value, "none".some)
       assertEquals(r1.m1GuideConfig.filename.value, "".some)
       assertEquals(r1.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
       assertEquals(r1.m2GuideConfig.source.value.flatMap(Enumerated[TipTiltSource].fromTag),
-                   TipTiltSource.Oiwfs.some
+                   TipTiltSource.OIWFS.some
       )
       assertEquals(r1.m2GuideConfig.beam.value, "B".some)
       assertEquals(r1.m2GuideConfig.filter.value, "raw".some)
@@ -817,11 +823,11 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Set guide mode OIWFS to OIWFS") {
     val guideCfg = TelescopeGuideConfig(
-      mountGuide = true,
-      m1Guide = M1GuideConfig.M1GuideOn(M1Source.Oiwfs),
-      m2Guide = M2GuideOn(true, Set(TipTiltSource.Oiwfs)),
+      mountGuide = MountGuideOption.MountGuideOn,
+      m1Guide = M1GuideConfig.M1GuideOn(M1Source.OIWFS),
+      m2Guide = M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
       dayTimeMode = false,
-      probeGuide = ProbeGuide(GuideProbe.GmosOiwfs, GuideProbe.GmosOiwfs).some
+      probeGuide = ProbeGuide(GuideProbe.GmosOIWFS, GuideProbe.GmosOIWFS).some
     )
 
     for {
@@ -842,11 +848,11 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Set guide mode PWFS1 to PWFS2") {
     val guideCfg = TelescopeGuideConfig(
-      mountGuide = true,
-      m1Guide = M1GuideConfig.M1GuideOn(M1Source.Oiwfs),
-      m2Guide = M2GuideOn(true, Set(TipTiltSource.Oiwfs)),
+      mountGuide = MountGuideOption.MountGuideOn,
+      m1Guide = M1GuideConfig.M1GuideOn(M1Source.OIWFS),
+      m2Guide = M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
       dayTimeMode = false,
-      probeGuide = ProbeGuide(GuideProbe.Pwfs1, GuideProbe.Pwfs2).some
+      probeGuide = ProbeGuide(GuideProbe.PWFS1, GuideProbe.PWFS2).some
     )
 
     for {
@@ -925,9 +931,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     )
 
     val testGuide = GuideState(
-      true,
-      M1GuideConfig.M1GuideOn(M1Source.Oiwfs),
-      M2GuideConfig.M2GuideOn(true, Set(TipTiltSource.Oiwfs))
+      MountGuideOption.MountGuideOn,
+      M1GuideConfig.M1GuideOn(M1Source.OIWFS),
+      M2GuideConfig.M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS))
     )
 
     for {

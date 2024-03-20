@@ -7,6 +7,9 @@ import cats.Applicative
 import cats.effect.Ref
 import cats.effect.Sync
 import cats.syntax.all.*
+import lucuma.core.enums.MountGuideOption
+import lucuma.core.model.M1GuideConfig
+import lucuma.core.model.M2GuideConfig
 
 class TcsSouthControllerSim[F[_]: Applicative](guideRef: Ref[F, GuideState])
     extends TcsBaseControllerSim[F](guideRef)
@@ -14,6 +17,8 @@ class TcsSouthControllerSim[F[_]: Applicative](guideRef: Ref[F, GuideState])
 
 object TcsSouthControllerSim {
   def build[F[_]: Sync]: F[TcsSouthControllerSim[F]] = Ref
-    .of(GuideState(false, M1GuideConfig.M1GuideOff, M2GuideConfig.M2GuideOff))
+    .of(
+      GuideState(MountGuideOption.MountGuideOff, M1GuideConfig.M1GuideOff, M2GuideConfig.M2GuideOff)
+    )
     .map(new TcsSouthControllerSim(_))
 }

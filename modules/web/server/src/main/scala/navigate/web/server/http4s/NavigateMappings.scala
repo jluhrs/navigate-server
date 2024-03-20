@@ -27,7 +27,11 @@ import grackle.Value.StringValue
 import grackle.circe.CirceMapping
 import grackle.syntax.given
 import io.circe.syntax.*
-import lucuma.ags.GuideProbe
+import lucuma.core.enums.ComaOption
+import lucuma.core.enums.GuideProbe
+import lucuma.core.enums.M1Source
+import lucuma.core.enums.MountGuideOption
+import lucuma.core.enums.TipTiltSource
 import lucuma.core.math.Coordinates
 import lucuma.core.math.Declination
 import lucuma.core.math.Epoch
@@ -36,11 +40,14 @@ import lucuma.core.math.ProperMotion
 import lucuma.core.math.RadialVelocity
 import lucuma.core.math.RightAscension
 import lucuma.core.math.Wavelength
+import lucuma.core.model.M1GuideConfig
+import lucuma.core.model.M1GuideConfig.M1GuideOn
+import lucuma.core.model.M2GuideConfig
+import lucuma.core.model.ProbeGuide
+import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.TimeSpan
 import mouse.boolean.given
 import navigate.model.Distance
-import navigate.model.enums.M1Source
-import navigate.model.enums.TipTiltSource
 import navigate.server.NavigateEngine
 import navigate.server.tcs.AutoparkAowfs
 import navigate.server.tcs.AutoparkGems
@@ -51,12 +58,8 @@ import navigate.server.tcs.FollowStatus
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuiderConfig
 import navigate.server.tcs.InstrumentSpecifics
-import navigate.server.tcs.M1GuideConfig
-import navigate.server.tcs.M1GuideConfig.M1GuideOn
-import navigate.server.tcs.M2GuideConfig
 import navigate.server.tcs.Origin
 import navigate.server.tcs.ParkStatus
-import navigate.server.tcs.ProbeGuide
 import navigate.server.tcs.ResetPointing
 import navigate.server.tcs.RotatorTrackConfig
 import navigate.server.tcs.RotatorTrackingMode
@@ -66,7 +69,6 @@ import navigate.server.tcs.SlewOptions
 import navigate.server.tcs.StopGuide
 import navigate.server.tcs.Target
 import navigate.server.tcs.TcsBaseController.TcsConfig
-import navigate.server.tcs.TelescopeGuideConfig
 import navigate.server.tcs.TrackingConfig
 import navigate.server.tcs.ZeroChopThrow
 import navigate.server.tcs.ZeroGuideOffset
@@ -674,11 +676,11 @@ object NavigateMappings extends GrackleParsers {
     l.collectFirst { case ("mountOffload", BooleanValue(v)) => v }
       .map { mount =>
         TelescopeGuideConfig(
-          mount,
+          MountGuideOption.fromBoolean(mount),
           m1.map(M1GuideConfig.M1GuideOn(_)).getOrElse(M1GuideConfig.M1GuideOff),
           m2.isEmpty.fold(
             M2GuideConfig.M2GuideOff,
-            M2GuideConfig.M2GuideOn(coma && m1.isDefined, m2.toSet)
+            M2GuideConfig.M2GuideOn(ComaOption.fromBoolean(coma && m1.isDefined), m2.toSet)
           ),
           dayTimeMode,
           probeGuide

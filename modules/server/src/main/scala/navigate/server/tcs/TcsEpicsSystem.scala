@@ -10,8 +10,9 @@ import cats.effect.Resource
 import cats.effect.Temporal
 import cats.effect.std.Dispatcher
 import eu.timepit.refined.types.string.NonEmptyString
-import lucuma.ags.GuideProbe
+import lucuma.core.enums.GuideProbe
 import lucuma.core.math.Angle
+import lucuma.core.model.ProbeGuide
 import mouse.all.*
 import navigate.epics.Channel
 import navigate.epics.EpicsService
@@ -929,9 +930,9 @@ object TcsEpicsSystem {
     channels: TcsChannels[F]
   ) extends TcsEpics[F] {
     given Encoder[GuideProbe, String] = _ match {
-      case GuideProbe.GmosOiwfs => "OIWFS"
-      case GuideProbe.Pwfs1     => "PWFS1"
-      case GuideProbe.Pwfs2     => "PWFS2"
+      case GuideProbe.GmosOIWFS => "OIWFS"
+      case GuideProbe.PWFS1     => "PWFS1"
+      case GuideProbe.PWFS2     => "PWFS2"
     }
 
     override def post(timeout: FiniteDuration): VerifiedEpics[F, F, ApplyCommandResult] =

@@ -56,7 +56,6 @@ object Settings {
     // Lucuma
     val lucumaCore    = "0.94.1"
     val lucumaSchemas = "0.77.2"
-    val lucumaAgs     = "0.44.7"
 
     val grackle = "0.18.1"
 
@@ -176,9 +175,6 @@ object Settings {
       )
     )
     val LucumaSchemas = "edu.gemini" %% "lucuma-schemas" % LibraryVersions.lucumaSchemas
-
-    val LucumaAgs =
-      "edu.gemini" %% "lucuma-ags" % LibraryVersions.lucumaAgs
 
     val Grackle = Def.setting(
       Seq(
