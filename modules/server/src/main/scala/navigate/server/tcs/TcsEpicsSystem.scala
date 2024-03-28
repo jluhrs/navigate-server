@@ -184,9 +184,9 @@ object TcsEpicsSystem {
     // def p2Parked: F[Boolean]
     // def oiName: F[String]
     // def oiParked: F[Boolean]
-    // def pwfs1On: F[BinaryYesNo]
-    // def pwfs2On: F[BinaryYesNo]
-    // def oiwfsOn: F[BinaryYesNo]
+    def pwfs1On: VerifiedEpics[F, F, BinaryYesNo]
+    def pwfs2On: VerifiedEpics[F, F, BinaryYesNo]
+    def oiwfsOn: VerifiedEpics[F, F, BinaryYesNo]
     // def sfName: F[String]
     // def sfParked: F[Int]
     // def agHwName: F[String]
@@ -329,6 +329,12 @@ object TcsEpicsSystem {
           VerifiedEpics.readChannel(channels.telltale, channels.guide.m2ComaCorrection)
         override def m2GuideState: VerifiedEpics[F, F, BinaryOnOff] =
           VerifiedEpics.readChannel(channels.telltale, channels.guide.m2State)
+        override def pwfs1On: VerifiedEpics[F, F, BinaryYesNo]      =
+          VerifiedEpics.readChannel(channels.telltale, channels.guide.pwfs1Integrating)
+        override def pwfs2On: VerifiedEpics[F, F, BinaryYesNo]      =
+          VerifiedEpics.readChannel(channels.telltale, channels.guide.pwfs2Integrating)
+        override def oiwfsOn: VerifiedEpics[F, F, BinaryYesNo]      =
+          VerifiedEpics.readChannel(channels.telltale, channels.guide.oiwfsIntegrating)
       }
   }
 
