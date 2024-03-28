@@ -8,6 +8,7 @@ import cats.effect.Ref
 import cats.syntax.all.*
 import lucuma.core.enums.ComaOption
 import lucuma.core.enums.GuideProbe
+import lucuma.core.enums.Instrument
 import lucuma.core.enums.M1Source
 import lucuma.core.enums.MountGuideOption
 import lucuma.core.enums.TipTiltSource
@@ -193,7 +194,8 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
                       target,
                       instrumentSpecifics,
                       GuiderConfig(oiwfsTarget, oiwfsTracking).some,
-                      RotatorTrackConfig(Angle.Angle90, RotatorTrackingMode.Tracking)
+                      RotatorTrackConfig(Angle.Angle90, RotatorTrackingMode.Tracking),
+                      Instrument.GmosNorth
                     )
                   )
       rs       <- st.get
@@ -402,6 +404,12 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       )
       assert(rs.rotator.system.value.exists(_ === SystemDefault))
       assert(rs.rotator.equinox.value.exists(_ === EquinoxDefault))
+      
+      // OIWFS selection
+      assert(rs.oiwfsSelect.oiwfsName.connected)
+      assert(rs.oiwfsSelect.output.connected)
+      assert(rs.oiwfsSelect.oiwfsName.value.exists(_ === "GMOS"))
+      assert(rs.oiwfsSelect.output.value.exists(_ === "WFS"))
     }
   }
 

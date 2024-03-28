@@ -7,6 +7,7 @@ import cats.Parallel
 import cats.effect.Async
 import cats.syntax.all.*
 import lucuma.core.enums.ComaOption
+import lucuma.core.enums.Instrument
 import lucuma.core.enums.M1Source
 import lucuma.core.enums.MountGuideOption
 import lucuma.core.enums.TipTiltSource
@@ -36,8 +37,7 @@ import navigate.server.tcs.TcsEpicsSystem.TargetCommand
 import navigate.server.tcs.TcsEpicsSystem.TcsCommands
 
 import scala.concurrent.duration.FiniteDuration
-
-import TcsBaseController.{EquinoxDefault, FixedSystem, SystemDefault}
+import TcsBaseController.{EquinoxDefault, FixedSystem, SystemDefault, TcsConfig}
 
 /* This class implements the common TCS commands */
 class TcsBaseControllerEpics[F[_]: Async: Parallel](
@@ -234,36 +234,14 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
 
   protected def applyTcsConfig(
     config: TcsBaseController.TcsConfig
-  ): VerifiedEpics[F, F, ApplyCommandResult] =
+  ): TcsCommands[F] => TcsCommands[F] =
     setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.sourceACmd),
               config.sourceATarget
     ).compose(config.sourceATarget.wavelength.map(setSourceAWalength).getOrElse(identity))
       .compose(setRotatorTrackingConfig(config.rotatorTrackConfig))
-      .compose(setInstrumentSpecifics(config.instrumentSpecifics))(
-        tcsEpics.startCommand(timeout)
-      )
-      .post
-
-  override def tcsConfig(config: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
-    setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.sourceACmd),
-              config.sourceATarget
-    ).compose(config.sourceATarget.wavelength.map(setSourceAWalength).getOrElse(identity))(
-      tcsEpics.startCommand(timeout)
-    ).post
-      .verifiedRun(ConnectionTimeout)
-
-  override def slew(
-    slewOptions: SlewOptions,
-    tcsConfig:   TcsBaseController.TcsConfig
-  ): F[ApplyCommandResult] =
-    setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.sourceACmd),
-              tcsConfig.sourceATarget
-    )
-      .compose(tcsConfig.sourceATarget.wavelength.map(setSourceAWalength).getOrElse(identity))
-      .compose(setSlewOptions(slewOptions))
-      .compose(setInstrumentSpecifics(tcsConfig.instrumentSpecifics))
+      .compose(setInstrumentSpecifics(config.instrumentSpecifics))
       .compose(
-        tcsConfig.oiwfs
+        config.oiwfs
           .map(o =>
             setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.oiwfsTargetCmd),
                       o.target
@@ -278,11 +256,23 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
           )
           .getOrElse(identity[TcsCommands[F]])
       )
-      .compose(setRotatorTrackingConfig(tcsConfig.rotatorTrackConfig))(
+
+  override def tcsConfig(config: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
+    (selectOiwfs(config) *>
+      applyTcsConfig(config)(
         tcsEpics.startCommand(timeout)
-      )
-      .post
-      .verifiedRun(ConnectionTimeout)
+      ).post).verifiedRun(ConnectionTimeout)
+
+  override def slew(
+    slewOptions: SlewOptions,
+    tcsConfig:   TcsBaseController.TcsConfig
+  ): F[ApplyCommandResult] =
+    (selectOiwfs(tcsConfig) *>
+      setSlewOptions(slewOptions)
+        .compose(applyTcsConfig(tcsConfig))(
+          tcsEpics.startCommand(timeout)
+        )
+        .post).verifiedRun(ConnectionTimeout)
 
   protected def setInstrumentSpecifics(
     config: InstrumentSpecifics
@@ -514,6 +504,15 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
     .post
     .verifiedRun(ConnectionTimeout)
 
+  private def selectOiwfs(tcsConfig: TcsConfig): VerifiedEpics[F, F, ApplyCommandResult] =
+    tcsEpics
+      .startCommand(timeout)
+      .oiwfsSelectCommand
+      .oiwfsName(TcsBaseControllerEpics.encodeOiwfsSelect(tcsConfig.oiwfs, tcsConfig.instrument))
+      .oiwfsSelectCommand
+      .output("WFS")
+      .post
+
   private def calcM1Guide(m1: BinaryOnOff, m1src: String): M1GuideConfig =
     if (m1 === BinaryOnOff.Off) M1GuideConfig.M1GuideOff
     else
@@ -583,5 +582,22 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
 
     x.verifiedRun(ConnectionTimeout)
   }
+
+}
+
+object TcsBaseControllerEpics {
+
+  def encodeOiwfsSelect(oiGuideConfig: Option[GuiderConfig], instrument: Instrument): String =
+    oiGuideConfig
+      .flatMap { _ =>
+        instrument match
+          case Instrument.GmosNorth | Instrument.GmosSouth => "GMOS".some
+          case Instrument.Nifs                             => "NIFS".some
+          case Instrument.Gnirs                            => "GNIRS".some
+          case Instrument.Niri                             => "NIRI".some
+          case Instrument.Flamingos2                       => "F2".some
+          case _                                           => None
+      }
+      .getOrElse("None")
 
 }
