@@ -933,7 +933,10 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     val testGuide = GuideState(
       MountGuideOption.MountGuideOn,
       M1GuideConfig.M1GuideOn(M1Source.OIWFS),
-      M2GuideConfig.M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS))
+      M2GuideConfig.M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
+      false,
+      false,
+      true
     )
 
     for {

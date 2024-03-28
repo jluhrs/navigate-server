@@ -491,21 +491,36 @@ class NavigateMappingsTest extends CatsEffectSuite {
   test("Provide guide state subscription") {
 
     val changes: List[GuideState] = List(
-      GuideState(MountGuideOption.MountGuideOn,
-                 M1GuideConfig.M1GuideOn(M1Source.OIWFS),
-                 M2GuideConfig.M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS))
+      GuideState(
+        MountGuideOption.MountGuideOn,
+        M1GuideConfig.M1GuideOn(M1Source.OIWFS),
+        M2GuideConfig.M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
+        false,
+        false,
+        false
       ),
       GuideState(MountGuideOption.MountGuideOff,
                  M1GuideConfig.M1GuideOff,
-                 M2GuideConfig.M2GuideOff
+                 M2GuideConfig.M2GuideOff,
+                 false,
+                 false,
+                 false
       ),
-      GuideState(MountGuideOption.MountGuideOff,
-                 M1GuideConfig.M1GuideOn(M1Source.OIWFS),
-                 M2GuideConfig.M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS))
+      GuideState(
+        MountGuideOption.MountGuideOff,
+        M1GuideConfig.M1GuideOn(M1Source.OIWFS),
+        M2GuideConfig.M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
+        false,
+        false,
+        false
       ),
-      GuideState(MountGuideOption.MountGuideOff,
-                 M1GuideConfig.M1GuideOn(M1Source.OIWFS),
-                 M2GuideConfig.M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS))
+      GuideState(
+        MountGuideOption.MountGuideOff,
+        M1GuideConfig.M1GuideOn(M1Source.OIWFS),
+        M2GuideConfig.M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
+        false,
+        false,
+        false
       )
     )
 
@@ -687,7 +702,13 @@ object NavigateMappingsTest {
 
   def buildServer: IO[NavigateEngine[IO]] = Ref
     .of[IO, GuideState](
-      GuideState(MountGuideOption.MountGuideOff, M1GuideConfig.M1GuideOff, M2GuideConfig.M2GuideOff)
+      GuideState(MountGuideOption.MountGuideOff,
+                 M1GuideConfig.M1GuideOff,
+                 M2GuideConfig.M2GuideOff,
+                 false,
+                 false,
+                 false
+      )
     )
     .map(r =>
       new NavigateEngine[IO] {
@@ -737,21 +758,21 @@ object NavigateMappingsTest {
 
         override def rotTrackingConfig(cfg: RotatorTrackConfig): IO[Unit] = IO.unit
 
-        override def enableGuide(config: TelescopeGuideConfig): IO[Unit] = r.set(
-          GuideState(
-            config.mountGuide,
-            config.m1Guide,
-            config.m2Guide
+        override def enableGuide(config: TelescopeGuideConfig): IO[Unit] = r.update(
+          _.copy(
+            mountOffload = config.mountGuide,
+            m1Guide = config.m1Guide,
+            m2Guide = config.m2Guide
           )
         )
 
-        override def disableGuide: IO[Unit] =
-          r.set(
-            GuideState(MountGuideOption.MountGuideOff,
-                       M1GuideConfig.M1GuideOff,
-                       M2GuideConfig.M2GuideOff
-            )
+        override def disableGuide: IO[Unit] = r.update(
+          _.copy(
+            mountOffload = MountGuideOption.MountGuideOff,
+            m1Guide = M1GuideConfig.M1GuideOff,
+            m2Guide = M2GuideConfig.M2GuideOff
           )
+        )
 
         override def tcsConfig(config: TcsConfig): IO[Unit] = IO.unit
 
@@ -841,7 +862,10 @@ object NavigateMappingsTest {
         m2.map(l =>
           if (l.isEmpty) M2GuideConfig.M2GuideOff
           else M2GuideConfig.M2GuideOn(ComaOption.fromBoolean(cm.exists(identity)), l.toSet)
-        ).getOrElse(M2GuideConfig.M2GuideOff)
+        ).getOrElse(M2GuideConfig.M2GuideOff),
+        false,
+        false,
+        false
       )
     }
 

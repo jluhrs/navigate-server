@@ -36,7 +36,14 @@ package object encoder {
       case M1GuideConfig.M1GuideOn(source) => List("m1Input" -> source.asJson)
     }
 
-    Json.fromFields(m2fields ++ m1field :+ ("mountOffload", s.mountOffload.asJson))
+    Json.fromFields(
+      m2fields ++ m1field ++ List(
+        "mountOffload"  -> s.mountOffload.asJson,
+        "p1Integrating" -> s.p1Integrating.asJson,
+        "p2Integrating" -> s.p2Integrating.asJson,
+        "oiIntegrating" -> s.oiIntegrating.asJson
+      )
+    )
   }
 
 }

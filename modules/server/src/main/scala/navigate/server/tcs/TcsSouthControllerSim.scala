@@ -18,7 +18,13 @@ class TcsSouthControllerSim[F[_]: Applicative](guideRef: Ref[F, GuideState])
 object TcsSouthControllerSim {
   def build[F[_]: Sync]: F[TcsSouthControllerSim[F]] = Ref
     .of(
-      GuideState(MountGuideOption.MountGuideOff, M1GuideConfig.M1GuideOff, M2GuideConfig.M2GuideOff)
+      GuideState(MountGuideOption.MountGuideOff,
+                 M1GuideConfig.M1GuideOff,
+                 M2GuideConfig.M2GuideOff,
+                 false,
+                 false,
+                 false
+      )
     )
     .map(new TcsSouthControllerSim(_))
 }

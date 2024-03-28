@@ -143,6 +143,12 @@ type GuideConfigurationState {
     m1Input: M1CorrectionSource
     """Tip-tilt offload to the mount enabled"""
     mountOffload: Boolean!
+    """Is PWFS1 integrating?"""
+    p1Integrating: Boolean!
+    """Is PWFS2 integrating?"""
+    p2Integrating: Boolean!
+    """Is OIWFS integrating?"""
+    oiIntegrating: Boolean!
 }
 
 input GuideConfigurationInput {

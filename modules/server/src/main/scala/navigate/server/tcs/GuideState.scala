@@ -10,7 +10,10 @@ import lucuma.core.model.M1GuideConfig
 import lucuma.core.model.M2GuideConfig
 
 case class GuideState(
-  mountOffload: MountGuideOption,
-  m1Guide:      M1GuideConfig,
-  m2Guide:      M2GuideConfig
+  mountOffload:  MountGuideOption,
+  m1Guide:       M1GuideConfig,
+  m2Guide:       M2GuideConfig,
+  p1Integrating: Boolean,
+  p2Integrating: Boolean,
+  oiIntegrating: Boolean
 ) derives Eq

@@ -77,26 +77,27 @@ class TcsBaseControllerSim[F[_]: Applicative](guideRef: Ref[F, GuideState])
     Applicative[F].pure(ApplyCommandResult.Completed)
 
   override def enableGuide(config: TelescopeGuideConfig): F[ApplyCommandResult] = guideRef
-    .set(
-      GuideState(
-        config.mountGuide,
-        config.m1Guide,
-        config.m2Guide
-      )
+    .update(
+      _.copy(mountOffload = config.mountGuide, m1Guide = config.m1Guide, m2Guide = config.m2Guide)
     )
     .as(ApplyCommandResult.Completed)
 
   override def disableGuide: F[ApplyCommandResult] = guideRef
-    .set(
-      GuideState(MountGuideOption.MountGuideOff, M1GuideConfig.M1GuideOff, M2GuideConfig.M2GuideOff)
+    .update(
+      _.copy(mountOffload = MountGuideOption.MountGuideOff,
+             m1Guide = M1GuideConfig.M1GuideOff,
+             m2Guide = M2GuideConfig.M2GuideOff
+      )
     )
     .as(ApplyCommandResult.Completed)
 
-  override def oiwfsObserve(exposureTime: TimeSpan, isQL: Boolean): F[ApplyCommandResult] =
-    Applicative[F].pure(ApplyCommandResult.Completed)
+  override def oiwfsObserve(exposureTime: TimeSpan, isQL: Boolean): F[ApplyCommandResult] = guideRef
+    .update(_.copy(oiIntegrating = true))
+    .as(ApplyCommandResult.Completed)
 
-  override def oiwfsStopObserve: F[ApplyCommandResult] =
-    Applicative[F].pure(ApplyCommandResult.Completed)
+  override def oiwfsStopObserve: F[ApplyCommandResult] = guideRef
+    .update(_.copy(oiIntegrating = false))
+    .as(ApplyCommandResult.Completed)
 
   override def getGuideState: F[GuideState] = guideRef.get
 }

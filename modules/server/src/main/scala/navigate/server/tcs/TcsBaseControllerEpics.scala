@@ -29,6 +29,7 @@ import navigate.model.enums.ShutterMode
 import navigate.server.ApplyCommandResult
 import navigate.server.ConnectionTimeout
 import navigate.server.epicsdata.BinaryOnOff
+import navigate.server.epicsdata.BinaryYesNo
 import navigate.server.tcs.Target.*
 import navigate.server.tcs.TcsEpicsSystem.ProbeTrackingCommand
 import navigate.server.tcs.TcsEpicsSystem.TargetCommand
@@ -555,6 +556,9 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
       fg <- tcsEpics.status.comaCorrect
       fh <- tcsEpics.status.m1GuideSource
       fi <- tcsEpics.status.m2GuideState
+      fj <- tcsEpics.status.pwfs1On
+      fk <- tcsEpics.status.pwfs2On
+      fl <- tcsEpics.status.oiwfsOn
     } yield for {
       a <- fa
       b <- fb
@@ -565,10 +569,16 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
       g <- fg
       h <- fh
       i <- fi
+      j <- fj
+      k <- fk
+      l <- fl
     } yield GuideState(
       MountGuideOption.fromBoolean(f =!= 0),
       calcM1Guide(a, h),
-      calcM2Guide(i, d, e, c, b, g)
+      calcM2Guide(i, d, e, c, b, g),
+      j === BinaryYesNo.Yes,
+      k === BinaryYesNo.Yes,
+      l === BinaryYesNo.Yes
     )
 
     x.verifiedRun(ConnectionTimeout)
