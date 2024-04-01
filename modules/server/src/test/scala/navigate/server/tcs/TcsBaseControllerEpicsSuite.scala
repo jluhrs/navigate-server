@@ -404,7 +404,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       )
       assert(rs.rotator.system.value.exists(_ === SystemDefault))
       assert(rs.rotator.equinox.value.exists(_ === EquinoxDefault))
-      
+
       // OIWFS selection
       assert(rs.oiwfsSelect.oiwfsName.connected)
       assert(rs.oiwfsSelect.output.connected)
