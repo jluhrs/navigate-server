@@ -18,25 +18,23 @@ import navigate.server.acm.CadDirective
 import navigate.server.acm.GeminiApplyCommand
 import navigate.server.epicsdata.BinaryOnOff
 import navigate.server.epicsdata.BinaryYesNo
-import navigate.server.tcs.TcsChannels.{
-  EnclosureChannels,
-  GuideConfigStatusChannels,
-  GuiderGainsChannels,
-  M1GuideConfigChannels,
-  M2GuideConfigChannels,
-  MountGuideChannels,
-  OiwfsSelectChannels,
-  OriginChannels,
-  ProbeChannels,
-  ProbeGuideModeChannels,
-  ProbeTrackingChannels,
-  RotatorChannels,
-  SlewChannels,
-  TargetChannels,
-  WfsChannels,
-  WfsClosedLoopChannels,
-  WfsObserveChannels
-}
+import navigate.server.tcs.TcsChannels.EnclosureChannels
+import navigate.server.tcs.TcsChannels.GuideConfigStatusChannels
+import navigate.server.tcs.TcsChannels.GuiderGainsChannels
+import navigate.server.tcs.TcsChannels.M1GuideConfigChannels
+import navigate.server.tcs.TcsChannels.M2GuideConfigChannels
+import navigate.server.tcs.TcsChannels.MountGuideChannels
+import navigate.server.tcs.TcsChannels.OiwfsSelectChannels
+import navigate.server.tcs.TcsChannels.OriginChannels
+import navigate.server.tcs.TcsChannels.ProbeChannels
+import navigate.server.tcs.TcsChannels.ProbeGuideModeChannels
+import navigate.server.tcs.TcsChannels.ProbeTrackingChannels
+import navigate.server.tcs.TcsChannels.RotatorChannels
+import navigate.server.tcs.TcsChannels.SlewChannels
+import navigate.server.tcs.TcsChannels.TargetChannels
+import navigate.server.tcs.TcsChannels.WfsChannels
+import navigate.server.tcs.TcsChannels.WfsClosedLoopChannels
+import navigate.server.tcs.TcsChannels.WfsObserveChannels
 
 import scala.concurrent.duration.FiniteDuration
 

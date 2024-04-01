@@ -37,6 +37,7 @@ import navigate.server.tcs.TcsEpicsSystem.TargetCommand
 import navigate.server.tcs.TcsEpicsSystem.TcsCommands
 
 import scala.concurrent.duration.FiniteDuration
+
 import TcsBaseController.{EquinoxDefault, FixedSystem, SystemDefault, TcsConfig}
 
 /* This class implements the common TCS commands */
