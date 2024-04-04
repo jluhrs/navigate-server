@@ -3,6 +3,7 @@
 
 package navigate.server.tcs
 
+import lucuma.core.enums.Instrument
 import lucuma.core.math.Angle
 import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.TimeSpan
@@ -49,7 +50,8 @@ object TcsBaseController {
     sourceATarget:       Target,
     instrumentSpecifics: InstrumentSpecifics,
     oiwfs:               Option[GuiderConfig],
-    rotatorTrackConfig:  RotatorTrackConfig
+    rotatorTrackConfig:  RotatorTrackConfig,
+    instrument:          Instrument
   )
 
   val SystemDefault: String  = "FK5"

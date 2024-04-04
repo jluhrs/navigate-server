@@ -180,6 +180,7 @@ class NavigateMappingsTest extends CatsEffectSuite {
                 |      }
                 |      mode: TRACKING
                 |    }
+                |    instrument: GMOS_NORTH
                 |  }
                 |) {
                 |  result
@@ -259,6 +260,7 @@ class NavigateMappingsTest extends CatsEffectSuite {
           |    }
           |    mode: TRACKING
           |  }
+          |  instrument: GMOS_NORTH
           |} ) {
           |  result
           |} }

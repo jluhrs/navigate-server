@@ -50,7 +50,8 @@ case class TcsChannels[F[_]](
   oiwfs:            WfsChannels[F],
   guide:            GuideConfigStatusChannels[F],
   guiderGains:      GuiderGainsChannels[F],
-  probeGuideMode:   ProbeGuideModeChannels[F]
+  probeGuideMode:   ProbeGuideModeChannels[F],
+  oiwfsSelect:      OiwfsSelectChannels[F]
 )
 
 object TcsChannels {
@@ -119,6 +120,21 @@ object TcsChannels {
       p1 <- service.getChannel[String](top.value, "mountGuideMode.C")
       p2 <- service.getChannel[String](top.value, "mountGuideMode.D")
     } yield MountGuideChannels(mn, sr, p1, p2)
+  }
+
+  case class OiwfsSelectChannels[F[_]](
+    oiName: Channel[F, String],
+    output: Channel[F, String]
+  )
+
+  object OiwfsSelectChannels {
+    def build[F[_]](
+      service: EpicsService[F],
+      top:     TcsTop
+    ): Resource[F, OiwfsSelectChannels[F]] = for {
+      oi  <- service.getChannel[String](top.value, "oiwfsSelect.A")
+      out <- service.getChannel[String](top.value, "oiwfsSelect.B")
+    } yield OiwfsSelectChannels(oi, out)
   }
 
   case class EnclosureChannels[F[_]](
@@ -278,10 +294,10 @@ object TcsChannels {
     top:     TcsTop,
     name:    String
   ): Resource[F, ProbeTrackingChannels[F]] = for {
-    aa <- service.getChannel[String](top.value, s"config${name}.A")
-    ab <- service.getChannel[String](top.value, s"config${name}.B")
-    ba <- service.getChannel[String](top.value, s"config${name}.D")
-    bb <- service.getChannel[String](top.value, s"config${name}.E")
+    aa <- service.getChannel[String](top.value, s"config$name.A")
+    ab <- service.getChannel[String](top.value, s"config$name.B")
+    ba <- service.getChannel[String](top.value, s"config$name.D")
+    bb <- service.getChannel[String](top.value, s"config$name.E")
   } yield ProbeTrackingChannels(aa, ab, ba, bb)
 
   def buildSlewChannels[F[_]](
@@ -620,6 +636,7 @@ object TcsChannels {
       gd   <- GuideConfigStatusChannels.build(service, tcsTop)
       gg   <- GuiderGains.build(service, pwfs1Top, pwfs2Top, oiTop)
       gm   <- ProbeGuideModeChannels.build(service, tcsTop)
+      os   <- OiwfsSelectChannels.build(service, tcsTop)
     } yield TcsChannels[F](
       tt,
       p1tt,
@@ -651,7 +668,8 @@ object TcsChannels {
       oi,
       gd,
       gg,
-      gm
+      gm,
+      os
     )
   }
 }

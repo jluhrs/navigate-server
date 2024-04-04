@@ -1,6 +1,7 @@
 #import NonEmptyString, Sidereal, GuideProbe, TargetId, Nonsidereal from "lucuma/schemas/ObservationDB.graphql"
 #import SiderealInput, NonsiderealInput, WavelengthInput, AngleInput from "lucuma/schemas/ObservationDB.graphql"
 #import Long, BigDecimal, Timestamp, TimeSpanInput from "lucuma/schemas/ObservationDB.graphql"
+#import Instrument from "lucuma/schemas/ObservationDB.graphql"
 
 """Target properties input"""
 input TargetPropertiesInput {
@@ -93,6 +94,7 @@ input TcsConfigInput {
     instParams: InstrumentSpecificsInput!
     oiwfs: GuiderConfig
     rotator: RotatorTrackingInput!
+    instrument: Instrument!
 }
 
 enum RotatorTrackingMode {

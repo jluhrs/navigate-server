@@ -92,6 +92,7 @@ object TcsEpicsSystem {
     val p2GuiderGainsCmd: Command3Channels[F, Double, Double, Double]
     val oiGuiderGainsCmd: Command3Channels[F, Double, Double, Double]
     val probeGuideModeCmd: Command3Channels[F, BinaryOnOff, GuideProbe, GuideProbe]
+    val oiwfsSelectCmd: Command2Channels[F, String, String]
 
     // val offsetACmd: OffsetCmd[F]
     // val offsetBCmd: OffsetCmd[F]
@@ -921,6 +922,16 @@ object TcsEpicsSystem {
             )
           )
       }
+
+    override val oiwfsSelectCommand: OiwfsSelectCommand[F, TcsCommands[F]] =
+      new OiwfsSelectCommand[F, TcsCommands[F]] {
+        override def oiwfsName(v: String): TcsCommands[F] = addParam(
+          tcsEpics.oiwfsSelectCmd.setParam1(v)
+        )
+        override def output(v: String): TcsCommands[F]    = addParam(
+          tcsEpics.oiwfsSelectCmd.setParam2(v)
+        )
+      }
   }
 
   class TcsEpicsSystemImpl[F[_]: Monad: Parallel](epics: TcsEpics[F], st: TcsStatus[F])
@@ -1111,6 +1122,11 @@ object TcsEpicsSystem {
         channels.probeGuideMode.from,
         channels.probeGuideMode.to
       )
+    override val oiwfsSelectCmd: Command2Channels[F, String, String]                         = Command2Channels(
+      channels.telltale,
+      channels.oiwfsSelect.oiName,
+      channels.oiwfsSelect.output
+    )
   }
 
   case class ParameterlessCommandChannels[F[_]: Monad](
@@ -1573,6 +1589,11 @@ object TcsEpicsSystem {
     val closedLoop: WfsClosedLoopCommand[F, S]
   }
 
+  trait OiwfsSelectCommand[F[_], +S] {
+    def oiwfsName(v: String): S
+    def output(v:    String): S
+  }
+
   trait TcsCommands[F[_]] {
     def post: VerifiedEpics[F, F, ApplyCommandResult]
     val mcsParkCommand: BaseCommand[F, TcsCommands[F]]
@@ -1604,6 +1625,7 @@ object TcsEpicsSystem {
     val oiWfsCommands: WfsCommands[F, TcsCommands[F]]
     val guiderGainsCommands: GuiderGainsCommand[F, TcsCommands[F]]
     val probeGuideModeCommand: ProbeGuideModeCommand[F, TcsCommands[F]]
+    val oiwfsSelectCommand: OiwfsSelectCommand[F, TcsCommands[F]]
   }
   /*
 

@@ -29,6 +29,7 @@ import grackle.syntax.given
 import io.circe.syntax.*
 import lucuma.core.enums.ComaOption
 import lucuma.core.enums.GuideProbe
+import lucuma.core.enums.Instrument
 import lucuma.core.enums.M1Source
 import lucuma.core.enums.MountGuideOption
 import lucuma.core.enums.TipTiltSource
@@ -639,18 +640,21 @@ object NavigateMappings extends GrackleParsers {
   } yield RotatorTrackConfig(ipa, mode)
 
   def parseTcsConfigInput(l: List[(String, Value)]): Option[TcsConfig] = for {
-    t  <- l.collectFirst { case ("sourceATarget", ObjectValue(v)) => parseTargetInput(v) }.flatten
-    in <- l.collectFirst { case ("instParams", ObjectValue(v)) =>
-            parseInstrumentSpecificsInput(v)
-          }.flatten
-    oi <-
+    t   <- l.collectFirst { case ("sourceATarget", ObjectValue(v)) => parseTargetInput(v) }.flatten
+    inp <- l.collectFirst { case ("instParams", ObjectValue(v)) =>
+             parseInstrumentSpecificsInput(v)
+           }.flatten
+    oi  <-
       l.collectFirst { case ("oiwfs", ObjectValue(v)) => parseGuiderConfig(v) } match {
         case Some(None) => None
         case None       => Some(None)
         case x          => x
       }
-    rc <- l.collectFirst { case ("rotator", ObjectValue(v)) => parseRotatorConfig(v) }.flatten
-  } yield TcsConfig(t, in, oi, rc)
+    rc  <- l.collectFirst { case ("rotator", ObjectValue(v)) => parseRotatorConfig(v) }.flatten
+    ins <- l.collectFirst { case ("instrument", EnumValue(v)) =>
+             parseEnumerated[Instrument](v)
+           }.flatten
+  } yield TcsConfig(t, inp, oi, rc, ins)
 
   def parseProbeGuide(l: List[(String, Value)]): Option[ProbeGuide] = for {
     f <- l.collectFirst { case ("from", EnumValue(v)) => parseEnumerated[GuideProbe](v) }.flatten
