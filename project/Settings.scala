@@ -30,7 +30,7 @@ object Settings {
     val logstash    = "7.0"
     val pureConfig  = "0.17.6"
     val monocle     = "3.2.0"
-    val circe       = "0.14.6"
+    val circe       = "0.14.7"
 
     // test libraries
     val scalaMock              = "5.2.0"
@@ -54,12 +54,12 @@ object Settings {
     val jca = "2.4.9"
 
     // Lucuma
-    val lucumaCore    = "0.96.1"
+    val lucumaCore    = "0.96.4"
     val lucumaSchemas = "0.81.5"
 
     val grackle = "0.18.1"
 
-    val graphQLRoutes = "0.8.7"
+    val graphQLRoutes = "0.8.8"
 
     val clue = "0.35.0"
 
