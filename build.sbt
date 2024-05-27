@@ -114,7 +114,9 @@ lazy val navigate_web_server = project
     buildInfoKeys ++= Seq[BuildInfoKey](name, version, buildInfoBuildNumber),
     buildInfoOptions += BuildInfoOption.BuildTime,
     buildInfoObject           := "OcsBuildInfo",
-    buildInfoPackage          := "navigate.web.server"
+    buildInfoPackage          := "navigate.web.server",
+    // Make UI available in development mode, as long as navigate-ui is in a sibling directory.
+    javaOptions += "-Dnavigate.ui.path=../../../../navigate-ui"
   )
   .dependsOn(navigate_server)
   .dependsOn(navigate_model % "compile->compile;test->test")

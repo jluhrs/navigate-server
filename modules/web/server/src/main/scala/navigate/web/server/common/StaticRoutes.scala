@@ -33,7 +33,7 @@ class StaticRoutes[F[_]: Sync: Compression: Files]:
 
   def localFile(path: String, req: Request[F]): OptionT[F, Response[F]] =
     OptionT
-      .liftF(baseDir)
+      .liftF(uiBaseDir)
       .flatMap: dir =>
         StaticFile.fromPath(
           Path.fromNioPath(dir.resolve(DistDir).resolve(path.stripPrefix("/"))),
