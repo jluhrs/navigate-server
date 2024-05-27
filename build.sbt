@@ -171,13 +171,7 @@ lazy val deploy_navigate_server = preventPublication(project.in(file("deploy/nav
   .settings(
     description          := "Navigate server",
     Docker / packageName := "navigate-server",
-    dockerUpdateLatest   := true,
-    Universal / mappings ++= {
-      // Navigate UI project must be in sibling folder and be already built. See its README.md.
-      val clientDir = (ThisBuild / baseDirectory).value.getParentFile / "navigate-ui" / "dist"
-      directory(clientDir)
-        .map(path => path._1 -> ("app/" + path._1.relativeTo(clientDir).get.getPath))
-    }
+    dockerUpdateLatest   := true
   )
 
 // Mappings for a particular release.
