@@ -589,7 +589,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       mountGuide = MountGuideOption.MountGuideOn,
       m1Guide = M1GuideConfig.M1GuideOn(M1Source.OIWFS),
       m2Guide = M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
-      dayTimeMode = false,
+      dayTimeMode = Some(false),
       probeGuide = none
     )
 
@@ -676,7 +676,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       mountGuide = MountGuideOption.MountGuideOn,
       m1Guide = M1GuideConfig.M1GuideOn(M1Source.OIWFS),
       m2Guide = M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
-      dayTimeMode = true,
+      dayTimeMode = Some(true),
       probeGuide = none
     )
 
@@ -763,7 +763,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       mountGuide = MountGuideOption.MountGuideOn,
       m1Guide = M1GuideConfig.M1GuideOn(M1Source.OIWFS),
       m2Guide = M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
-      dayTimeMode = false,
+      dayTimeMode = Some(false),
       probeGuide = none
     )
 
@@ -834,7 +834,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       mountGuide = MountGuideOption.MountGuideOn,
       m1Guide = M1GuideConfig.M1GuideOn(M1Source.OIWFS),
       m2Guide = M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
-      dayTimeMode = false,
+      dayTimeMode = Some(false),
       probeGuide = ProbeGuide(GuideProbe.GmosOIWFS, GuideProbe.GmosOIWFS).some
     )
 
@@ -859,7 +859,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       mountGuide = MountGuideOption.MountGuideOn,
       m1Guide = M1GuideConfig.M1GuideOn(M1Source.OIWFS),
       m2Guide = M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
-      dayTimeMode = false,
+      dayTimeMode = Some(false),
       probeGuide = ProbeGuide(GuideProbe.PWFS1, GuideProbe.PWFS2).some
     )
 
