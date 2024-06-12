@@ -12,7 +12,7 @@ object Settings {
 
     // Scala libraries
     val catsEffect = "3.5.4"
-    val cats       = "2.10.0"
+    val cats       = "2.12.0"
     val mouse      = "1.2.3"
     val fs2        = "3.10.2"
     val catsTime   = "0.5.1"
@@ -28,7 +28,7 @@ object Settings {
     val logback     = "1.5.6"
     val janino      = "3.1.12"
     val logstash    = "7.0"
-    val pureConfig  = "0.17.6"
+    val pureConfig  = "0.17.7"
     val monocle     = "3.2.0"
     val circe       = "0.14.7"
 
@@ -51,11 +51,11 @@ object Settings {
 
     // EPICS Libraries
     val ca  = "1.3.2"
-    val jca = "2.4.9"
+    val jca = "2.4.10"
 
     // Lucuma
     val lucumaCore    = "0.99.0"
-    val lucumaSchemas = "0.81.5"
+    val lucumaSchemas = "0.87.0"
 
     val grackle = "0.18.1"
 
