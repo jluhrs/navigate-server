@@ -51,7 +51,7 @@ object Settings {
 
     // EPICS Libraries
     val ca  = "1.3.2"
-    val jca = "2.4.9"
+    val jca = "2.4.10"
 
     // Lucuma
     val lucumaCore    = "0.96.4"
