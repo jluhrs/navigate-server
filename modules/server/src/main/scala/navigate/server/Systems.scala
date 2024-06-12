@@ -8,6 +8,7 @@ import cats.effect.Async
 import cats.effect.Resource
 import cats.effect.std.Dispatcher
 import cats.syntax.all.*
+import eu.timepit.refined.types.string.NonEmptyString
 import lucuma.core.enums.Site
 import navigate.epics.EpicsService
 import navigate.model.config.ControlStrategy
@@ -38,13 +39,43 @@ object Systems {
 
     def buildTcsSouthController: Resource[F, TcsSouthController[F]] =
       if (conf.systemControl.tcs === ControlStrategy.FullControl)
-        TcsEpicsSystem.build(epicsSrv, tops).map(new TcsSouthControllerEpics(_, conf.ioTimeout))
+        for {
+          tcs <- TcsEpicsSystem.build(epicsSrv, tops)
+          p1  <- WfsEpicsSystem.build(epicsSrv,
+                                      "PWFS1",
+                                      readTop(tops, NonEmptyString.unsafeFrom("pwfs1"))
+                 )
+          p2  <- WfsEpicsSystem.build(epicsSrv,
+                                      "PWFS2",
+                                      readTop(tops, NonEmptyString.unsafeFrom("pwfs2"))
+                 )
+          oi  <- WfsEpicsSystem.build(epicsSrv,
+                                      "OIWFS",
+                                      readTop(tops, NonEmptyString.unsafeFrom("oiwfs")),
+                                      NonEmptyString.unsafeFrom("dc:initSigInit.MARK")
+                 )
+        } yield new TcsSouthControllerEpics(tcs, p1, p2, oi, conf.ioTimeout)
       else
         Resource.eval(TcsSouthControllerSim.build)
 
     def buildTcsNorthController: Resource[F, TcsNorthController[F]] =
       if (conf.systemControl.tcs === ControlStrategy.FullControl)
-        TcsEpicsSystem.build(epicsSrv, tops).map(new TcsNorthControllerEpics(_, conf.ioTimeout))
+        for {
+          tcs <- TcsEpicsSystem.build(epicsSrv, tops)
+          p1  <- WfsEpicsSystem.build(epicsSrv,
+                                      "PWFS1",
+                                      readTop(tops, NonEmptyString.unsafeFrom("pwfs1"))
+                 )
+          p2  <- WfsEpicsSystem.build(epicsSrv,
+                                      "PWFS2",
+                                      readTop(tops, NonEmptyString.unsafeFrom("pwfs2"))
+                 )
+          oi  <- WfsEpicsSystem.build(epicsSrv,
+                                      "OIWFS",
+                                      readTop(tops, NonEmptyString.unsafeFrom("oiwfs")),
+                                      NonEmptyString.unsafeFrom("dc:initSigInit.MARK")
+                 )
+        } yield new TcsNorthControllerEpics(tcs, p1, p2, oi, conf.ioTimeout)
       else
         Resource.eval(TcsNorthControllerSim.build)
 

@@ -6,6 +6,7 @@ package navigate.server.tcs
 import cats.effect.IO
 import cats.effect.Ref
 import cats.syntax.all.*
+import eu.timepit.refined.types.string.NonEmptyString
 import lucuma.core.enums.ComaOption
 import lucuma.core.enums.GuideProbe
 import lucuma.core.enums.Instrument
@@ -55,7 +56,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       (st, ctr) = x
       _        <- ctr.mcsPark
       _        <- ctr.mcsFollow(enable = true)
-      rs       <- st.get
+      rs       <- st.tcs.get
     } yield {
       assert(rs.telescopeParkDir.connected)
       assertEquals(rs.telescopeParkDir.value.get, CadDirective.MARK)
@@ -74,7 +75,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       _        <- ctr.rotFollow(enable = true)
       _        <- ctr.rotStop(useBrakes = true)
       _        <- ctr.rotMove(testAngle)
-      rs       <- st.get
+      rs       <- st.tcs.get
     } yield {
       assert(rs.rotParkDir.connected)
       assertEquals(rs.rotParkDir.value.get, CadDirective.MARK)
@@ -105,7 +106,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
                                       shutterEnable = true
                   )
       _        <- ctr.ecsVentGatesMove(testVentEast, testVentWest)
-      rs       <- st.get
+      rs       <- st.tcs.get
     } yield {
       assert(rs.enclosure.ecsDomeMode.connected)
       assert(rs.enclosure.ecsShutterMode.connected)
@@ -198,7 +199,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
                       Instrument.GmosNorth
                     )
                   )
-      rs       <- st.get
+      rs       <- st.tcs.get
     } yield {
       // Base Target
       assert(rs.sourceA.objectName.connected)
@@ -425,7 +426,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       x        <- createController
       (st, ctr) = x
       _        <- ctr.instrumentSpecifics(instrumentSpecifics)
-      rs       <- st.get
+      rs       <- st.tcs.get
     } yield {
       assert(
         rs.rotator.iaa.value.exists(x =>
@@ -485,7 +486,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       x        <- createController
       (st, ctr) = x
       _        <- ctr.oiwfsTarget(oiwfsTarget)
-      rs       <- st.get
+      rs       <- st.tcs.get
     } yield {
       assert(rs.oiwfsTarget.objectName.connected)
       assert(rs.oiwfsTarget.brightness.connected)
@@ -531,7 +532,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       x        <- createController
       (st, ctr) = x
       _        <- ctr.oiwfsProbeTracking(trackingConfig)
-      rs       <- st.get
+      rs       <- st.tcs.get
     } yield {
       assert(rs.oiwfsTracking.nodAchopA.connected)
       assert(rs.oiwfsTracking.nodAchopB.connected)
@@ -558,7 +559,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       x        <- createController
       (st, ctr) = x
       _        <- ctr.oiwfsPark
-      rs       <- st.get
+      rs       <- st.tcs.get
     } yield {
       assert(rs.oiwfsProbe.parkDir.connected)
       assertEquals(rs.oiwfsProbe.parkDir.value, CadDirective.MARK.some)
@@ -570,9 +571,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       x        <- createController
       (st, ctr) = x
       _        <- ctr.oiwfsFollow(true)
-      r1       <- st.get
+      r1       <- st.tcs.get
       _        <- ctr.oiwfsFollow(false)
-      r2       <- st.get
+      r2       <- st.tcs.get
     } yield {
       assert(r1.oiwfsProbe.follow.connected)
       assertEquals(r1.oiwfsProbe.follow.value.flatMap(Enumerated[BinaryOnOff].fromTag),
@@ -597,9 +598,12 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       x        <- createController
       (st, ctr) = x
       _        <- ctr.enableGuide(guideCfg)
-      r1       <- st.get
+      r1       <- st.tcs.get
+      p1_1     <- st.p1.get
+      p2_1     <- st.p2.get
+      oi_1     <- st.oi.get
       _        <- ctr.disableGuide
-      r2       <- st.get
+      r2       <- st.tcs.get
     } yield {
       assert(r1.m1Guide.connected)
       assert(r1.m1GuideConfig.source.connected)
@@ -616,15 +620,15 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assert(r1.m2GuideReset.connected)
       assert(r1.mountGuide.mode.connected)
       assert(r1.mountGuide.source.connected)
-      assert(r1.guiderGains.p1TipGain.connected)
-      assert(r1.guiderGains.p1TiltGain.connected)
-      assert(r1.guiderGains.p1FocusGain.connected)
-      assert(r1.guiderGains.p2TipGain.connected)
-      assert(r1.guiderGains.p2TiltGain.connected)
-      assert(r1.guiderGains.p2FocusGain.connected)
-      assert(r1.guiderGains.oiTipGain.connected)
-      assert(r1.guiderGains.oiTiltGain.connected)
-      assert(r1.guiderGains.oiFocusGain.connected)
+      assert(p1_1.tipGain.connected)
+      assert(p1_1.tiltGain.connected)
+      assert(p1_1.focusGain.connected)
+      assert(p2_1.tipGain.connected)
+      assert(p2_1.tiltGain.connected)
+      assert(p2_1.focusGain.connected)
+      assert(oi_1.tipGain.connected)
+      assert(oi_1.tiltGain.connected)
+      assert(oi_1.focusGain.connected)
 
       assertEquals(r1.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
       assertEquals(r1.m1GuideConfig.source.value.flatMap(Enumerated[M1Source].fromTag),
@@ -657,17 +661,17 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assertEquals(r2.mountGuide.mode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.Off.some
       )
-      assertEquals(r1.guiderGains.p1TipGain.value, "0.03".some)
-      assertEquals(r1.guiderGains.p1TiltGain.value, "0.03".some)
-      assertEquals(r1.guiderGains.p1FocusGain.value, "2.0E-5".some)
+      assertEquals(p1_1.tipGain.value, "0.03".some)
+      assertEquals(p1_1.tiltGain.value, "0.03".some)
+      assertEquals(p1_1.focusGain.value, "2.0E-5".some)
 
-      assertEquals(r1.guiderGains.p2TipGain.value, "0.05".some)
-      assertEquals(r1.guiderGains.p2TiltGain.value, "0.05".some)
-      assertEquals(r1.guiderGains.p2FocusGain.value, "1.0E-4".some)
+      assertEquals(p2_1.tipGain.value, "0.05".some)
+      assertEquals(p2_1.tiltGain.value, "0.05".some)
+      assertEquals(p2_1.focusGain.value, "1.0E-4".some)
 
-      assertEquals(r1.guiderGains.oiTipGain.value, "0.08".some)
-      assertEquals(r1.guiderGains.oiTiltGain.value, "0.08".some)
-      assertEquals(r1.guiderGains.oiFocusGain.value, "1.5E-4".some)
+      assertEquals(oi_1.tipGain.value, "0.08".some)
+      assertEquals(oi_1.tiltGain.value, "0.08".some)
+      assertEquals(oi_1.focusGain.value, "1.5E-4".some)
     }
   }
 
@@ -684,9 +688,12 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       x        <- createController
       (st, ctr) = x
       _        <- ctr.enableGuide(guideCfg)
-      r1       <- st.get
+      r1       <- st.tcs.get
+      p1_1     <- st.p1.get
+      p2_1     <- st.p2.get
+      oi_1     <- st.oi.get
       _        <- ctr.disableGuide
-      r2       <- st.get
+      r2       <- st.tcs.get
     } yield {
       assert(r1.m1Guide.connected)
       assert(r1.m1GuideConfig.source.connected)
@@ -703,15 +710,15 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assert(r1.m2GuideReset.connected)
       assert(r1.mountGuide.mode.connected)
       assert(r1.mountGuide.source.connected)
-      assert(r1.guiderGains.p1TipGain.connected)
-      assert(r1.guiderGains.p1TiltGain.connected)
-      assert(r1.guiderGains.p1FocusGain.connected)
-      assert(r1.guiderGains.p2TipGain.connected)
-      assert(r1.guiderGains.p2TiltGain.connected)
-      assert(r1.guiderGains.p2FocusGain.connected)
-      assert(r1.guiderGains.oiTipGain.connected)
-      assert(r1.guiderGains.oiTiltGain.connected)
-      assert(r1.guiderGains.oiFocusGain.connected)
+      assert(p1_1.tipGain.connected)
+      assert(p1_1.tiltGain.connected)
+      assert(p1_1.focusGain.connected)
+      assert(p2_1.tipGain.connected)
+      assert(p2_1.tiltGain.connected)
+      assert(p2_1.focusGain.connected)
+      assert(oi_1.tipGain.connected)
+      assert(oi_1.tiltGain.connected)
+      assert(oi_1.focusGain.connected)
 
       assertEquals(r1.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
       assertEquals(r1.m1GuideConfig.source.value.flatMap(Enumerated[M1Source].fromTag),
@@ -744,17 +751,17 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assertEquals(r2.mountGuide.mode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.Off.some
       )
-      assertEquals(r1.guiderGains.p1TipGain.value, "0.0".some)
-      assertEquals(r1.guiderGains.p1TiltGain.value, "0.0".some)
-      assertEquals(r1.guiderGains.p1FocusGain.value, "0.0".some)
+      assertEquals(p1_1.tipGain.value, "0.0".some)
+      assertEquals(p1_1.tiltGain.value, "0.0".some)
+      assertEquals(p1_1.focusGain.value, "0.0".some)
 
-      assertEquals(r1.guiderGains.p2TipGain.value, "0.0".some)
-      assertEquals(r1.guiderGains.p2TiltGain.value, "0.0".some)
-      assertEquals(r1.guiderGains.p2FocusGain.value, "0.0".some)
+      assertEquals(p2_1.tipGain.value, "0.0".some)
+      assertEquals(p2_1.tiltGain.value, "0.0".some)
+      assertEquals(p2_1.focusGain.value, "0.0".some)
 
-      assertEquals(r1.guiderGains.oiTipGain.value, "0.0".some)
-      assertEquals(r1.guiderGains.oiTiltGain.value, "0.0".some)
-      assertEquals(r1.guiderGains.oiFocusGain.value, "0.0".some)
+      assertEquals(oi_1.tipGain.value, "0.0".some)
+      assertEquals(oi_1.tiltGain.value, "0.0".some)
+      assertEquals(oi_1.focusGain.value, "0.0".some)
     }
   }
 
@@ -771,9 +778,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       x        <- createController
       (st, ctr) = x
       _        <- ctr.enableGuide(guideCfg)
-      r1       <- st.get
+      r1       <- st.tcs.get
       _        <- ctr.disableGuide
-      r2       <- st.get
+      r2       <- st.tcs.get
     } yield {
       assert(r1.m1Guide.connected)
       assert(r1.m1GuideConfig.source.connected)
@@ -842,7 +849,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       x        <- createController
       (st, ctr) = x
       _        <- ctr.enableGuide(guideCfg)
-      r1       <- st.get
+      r1       <- st.tcs.get
     } yield {
       assert(r1.probeGuideMode.state.connected)
 
@@ -867,7 +874,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       x        <- createController
       (st, ctr) = x
       _        <- ctr.enableGuide(guideCfg)
-      r1       <- st.get
+      r1       <- st.tcs.get
     } yield {
       assert(r1.probeGuideMode.state.connected)
 
@@ -886,7 +893,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       x        <- createController
       (st, ctr) = x
       _        <- ctr.oiwfsObserve(testVal, true)
-      rs       <- st.get
+      rs       <- st.tcs.get
     } yield {
       assert(rs.oiWfs.observe.path.connected)
       assert(rs.oiWfs.observe.label.connected)
@@ -907,7 +914,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       x        <- createController
       (st, ctr) = x
       _        <- ctr.oiwfsStopObserve
-      rs       <- st.get
+      rs       <- st.tcs.get
     } yield {
       assert(rs.oiWfs.stop.connected)
       assertEquals(rs.oiWfs.stop.value, CadDirective.MARK.some)
@@ -950,9 +957,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     for {
       x        <- createController
       (st, ctr) = x
-      _        <- st.update(_.focus(_.guideStatus).replace(testValue1))
+      _        <- st.tcs.update(_.focus(_.guideStatus).replace(testValue1))
       g        <- ctr.getGuideState
-      r1       <- st.get
+      r1       <- st.tcs.get
     } yield {
       assert(r1.guideStatus.m2State.connected)
       assert(r1.guideStatus.absorbTipTilt.connected)
@@ -964,10 +971,27 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     }
   }
 
-  def createController: IO[(Ref[IO, TestTcsEpicsSystem.State], TcsBaseControllerEpics[IO])] =
-    Ref.of[IO, TestTcsEpicsSystem.State](TestTcsEpicsSystem.defaultState).map { st =>
-      val sys = TestTcsEpicsSystem.build(st)
-      (st, new TcsBaseControllerEpics[IO](sys, DefaultTimeout))
-    }
+  case class StateRefs[F[_]](
+    tcs: Ref[F, TestTcsEpicsSystem.State],
+    p1:  Ref[F, TestWfsEpicsSystem.State],
+    p2:  Ref[F, TestWfsEpicsSystem.State],
+    oi:  Ref[F, TestWfsEpicsSystem.State]
+  )
+
+  def createController: IO[(StateRefs[IO], TcsBaseControllerEpics[IO])] = for {
+    tcs <- Ref.of[IO, TestTcsEpicsSystem.State](TestTcsEpicsSystem.defaultState)
+    p1  <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
+    p2  <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
+    oi  <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
+  } yield (
+    StateRefs(tcs, p1, p2, oi),
+    new TcsBaseControllerEpics[IO](
+      TestTcsEpicsSystem.build(tcs),
+      TestWfsEpicsSystem.build("PWFS1", NonEmptyString.unsafeFrom("p1:"), p1),
+      TestWfsEpicsSystem.build("PWFS2", NonEmptyString.unsafeFrom("p2:"), p2),
+      TestWfsEpicsSystem.build("OIWFS", NonEmptyString.unsafeFrom("oi:"), oi),
+      DefaultTimeout
+    )
+  )
 
 }

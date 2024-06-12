@@ -21,9 +21,6 @@ case class TcsChannels[F[_]](
    * List of all TcsChannels. Channel -> Defines a raw channel Other cases -> Group of channels
    */
   telltale:         TelltaleChannel[F],
-  pwfs1Telltale:    TelltaleChannel[F],
-  pwfs2Telltale:    TelltaleChannel[F],
-  oiwfsTelltale:    TelltaleChannel[F],
   telescopeParkDir: Channel[F, CadDirective],
   mountFollow:      Channel[F, String],
   rotStopBrake:     Channel[F, String],
@@ -49,7 +46,7 @@ case class TcsChannels[F[_]](
   mountGuide:       MountGuideChannels[F],
   oiwfs:            WfsChannels[F],
   guide:            GuideConfigStatusChannels[F],
-  guiderGains:      GuiderGainsChannels[F],
+  // guiderGains:      GuiderGainsChannels[F],
   probeGuideMode:   ProbeGuideModeChannels[F],
   oiwfsSelect:      OiwfsSelectChannels[F]
 )
@@ -452,7 +449,7 @@ object TcsChannels {
     ): Resource[F, WfsChannels[F]] = for {
       ob <- WfsObserveChannels.build(service, top, wfsl)
       st <- service.getChannel[CadDirective](top.value, s"${wfsl}StopObserve${DirSuffix}")
-      pr <- service.getChannel[String](top.value, s"${wfss}DetSigInit.A")
+      pr <- service.getChannel[String](top.value, s"${wfss}detSigInit.A")
       dk <- service.getChannel[String](top.value, s"${wfss}SeqDark.A")
       cl <- WfsClosedLoopChannels.build(service, top, wfss)
     } yield WfsChannels(ob, st, pr, dk, cl)
@@ -594,21 +591,15 @@ object TcsChannels {
    * @return
    */
   def buildChannels[F[_]](
-    service:  EpicsService[F],
-    tcsTop:   TcsTop,
-    pwfs1Top: Pwfs1Top,
-    pwfs2Top: Pwfs2Top,
-    oiTop:    OiwfsTop,
-    agTop:    AgTop
+    service: EpicsService[F],
+    tcsTop:  TcsTop,
+    agTop:   AgTop
   ): Resource[F, TcsChannels[F]] = {
     def telltaleChannel(top: NonEmptyString, channel: String): Resource[F, TelltaleChannel[F]] =
       service.getChannel[String](top, channel).map(TelltaleChannel(sysName, _))
 
     for {
       tt   <- telltaleChannel(tcsTop.value, "sad:health.VAL")
-      p1tt <- telltaleChannel(pwfs1Top.value, "health.VAL")
-      p2tt <- telltaleChannel(pwfs2Top.value, "health.VAL")
-      oitt <- telltaleChannel(agTop.value, "hlth:oiwfs:health.VAL")
       tpd  <- service.getChannel[CadDirective](tcsTop.value, s"telpark$DirSuffix")
       mf   <- service.getChannel[String](tcsTop.value, "mcFollow.A")
       rsb  <- service.getChannel[String](tcsTop.value, "rotStop.B")
@@ -634,14 +625,10 @@ object TcsChannels {
       mng  <- MountGuideChannels.build(service, tcsTop)
       oi   <- WfsChannels.build(service, tcsTop, "oiwfs", "oi")
       gd   <- GuideConfigStatusChannels.build(service, tcsTop)
-      gg   <- GuiderGains.build(service, pwfs1Top, pwfs2Top, oiTop)
       gm   <- ProbeGuideModeChannels.build(service, tcsTop)
       os   <- OiwfsSelectChannels.build(service, tcsTop)
     } yield TcsChannels[F](
       tt,
-      p1tt,
-      p2tt,
-      oitt,
       tpd,
       mf,
       rsb,
@@ -667,7 +654,6 @@ object TcsChannels {
       mng,
       oi,
       gd,
-      gg,
       gm,
       os
     )

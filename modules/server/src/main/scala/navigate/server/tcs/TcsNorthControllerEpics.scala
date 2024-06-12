@@ -10,6 +10,9 @@ import scala.concurrent.duration.FiniteDuration
 
 class TcsNorthControllerEpics[F[_]: Async: Parallel](
   tcsEpics: TcsEpicsSystem[F],
+  pwfs1:    WfsEpicsSystem[F],
+  pwfs2:    WfsEpicsSystem[F],
+  oiwfs:    WfsEpicsSystem[F],
   timeout:  FiniteDuration
-) extends TcsBaseControllerEpics[F](tcsEpics, timeout)
+) extends TcsBaseControllerEpics[F](tcsEpics, pwfs1, pwfs2, oiwfs, timeout)
     with TcsNorthController[F] {}
