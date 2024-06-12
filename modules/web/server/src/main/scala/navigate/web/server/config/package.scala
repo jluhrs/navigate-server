@@ -49,6 +49,8 @@ given ConfigReader[ControlStrategy] =
     }
   }
 
+given ConfigReader[TLSConfig] = ConfigReader.derived
+
 def loadConfiguration[F[_]: Sync](config: ConfigObjectSource): F[NavigateConfiguration] = {
   given ConfigReader[NavigateConfiguration] =
     ConfigReader.derived[NavigateConfiguration]
