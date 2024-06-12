@@ -45,11 +45,9 @@ case class WebServerConfiguration(
   port:            Int,
   insecurePort:    Int,
   externalBaseUrl: String,
-  proxyBaseUri:    Uri
-) {
-  // FIXME Pureconfig can't load this anymore
-  val tls: Option[TLSConfig] = None
-}
+  proxyBaseUri:    Uri,
+  tls:             Option[TLSConfig] = None
+)
 
 object WebServerConfiguration {
   given Eq[WebServerConfiguration] =

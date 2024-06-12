@@ -48,6 +48,7 @@ import pureconfig.ConfigObjectSource
 import pureconfig.ConfigSource
 
 import java.io.FileInputStream
+import java.nio.file.Files as JavaFiles
 import java.nio.file.Path as FilePath
 import java.security.KeyStore
 import java.security.Security
@@ -63,17 +64,24 @@ object WebServerLauncher extends IOApp with LogInitialization {
 
   private given Logger[IO] = Slf4jLogger.getLoggerFromName[IO]("navigate")
 
-  // Attempt to get the configuration file relative to the base dir
-  def configurationFile[F[_]: Sync]: F[FilePath] =
-    baseDir[F].map(_.resolve("conf").resolve("app.conf"))
-
-  def config[F[_]: Sync]: F[ConfigObjectSource] =
-    val defaultConfig = ConfigSource.resources("app.conf").pure[F]
-    val fileConfig    = configurationFile.map(ConfigSource.file)
-
-    // ConfigSource, first attempt the file or default to the classpath/resources file
-    (fileConfig, defaultConfig).mapN: (file, default) =>
-      file.optional.withFallback(default.optional)
+  // Try to load configs for deployment and staging and fall back to the common one in the class path
+  private def config[F[_]: Sync: Logger]: F[ConfigObjectSource] =
+    for
+      confDir <- baseDir[F].map(_.resolve("conf"))
+      deploy   = confDir.resolve("local").resolve("app.conf")
+      staging  = confDir.resolve("app.conf")
+      _       <- Logger[F].info("Loading configuration:")
+      _       <- Logger[F].info(s" - $deploy (present: ${JavaFiles.exists(deploy)}), with fallback:")
+      _       <- Logger[F].info(s" - $staging (present: ${JavaFiles.exists(staging)}), with fallback:")
+      _       <- Logger[F].info(s" - <resources>/app.conf")
+    yield ConfigSource
+      .file(deploy)
+      .optional
+      .withFallback:
+        ConfigSource
+          .file(staging)
+          .optional
+          .withFallback(ConfigSource.resources("app.conf").optional)
 
   def makeContext[F[_]: Sync](tls: TLSConfig): F[SSLContext] = Sync[F].delay {
     val ksStream   = new FileInputStream(tls.keyStore.toFile.getAbsolutePath)
