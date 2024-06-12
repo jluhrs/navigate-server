@@ -686,7 +686,7 @@ object NavigateMappings extends GrackleParsers {
             M2GuideConfig.M2GuideOff,
             M2GuideConfig.M2GuideOn(ComaOption.fromBoolean(coma && m1.isDefined), m2.toSet)
           ),
-          dayTimeMode,
+          Some(dayTimeMode),
           probeGuide
         )
       }

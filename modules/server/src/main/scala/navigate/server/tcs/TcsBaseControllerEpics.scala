@@ -362,7 +362,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
 
   override def enableGuide(config: TelescopeGuideConfig): F[ApplyCommandResult] = {
     val gains = (x: TcsCommands[F]) =>
-      if (config.dayTimeMode)
+      if (config.dayTimeMode.exists(_ === true))
         x.guiderGainsCommands.dayTimeGains
       else
         x.guiderGainsCommands.defaultGains
