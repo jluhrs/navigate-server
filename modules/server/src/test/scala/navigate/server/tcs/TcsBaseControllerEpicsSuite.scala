@@ -892,7 +892,8 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     for {
       x        <- createController
       (st, ctr) = x
-      _        <- ctr.oiwfsObserve(testVal, true)
+      _        <- st.tcs.update(_.focus(_.guideStatus).replace(defaultGuideState))
+      _        <- ctr.oiwfsObserve(testVal)
       rs       <- st.tcs.get
     } yield {
       assert(rs.oiWfs.observe.path.connected)
@@ -921,30 +922,40 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     }
   }
 
-  test("Read guide state") {
-    val testValue1 = GuideConfigState(
-      pwfs1Integrating = TestChannel.State.of(BinaryYesNo.No),
-      pwfs2Integrating = TestChannel.State.of(BinaryYesNo.No),
-      oiwfsIntegrating = TestChannel.State.of(BinaryYesNo.Yes),
-      m2State = TestChannel.State.of(BinaryOnOff.On),
-      absorbTipTilt = TestChannel.State.of(1),
-      m2ComaCorrection = TestChannel.State.of(BinaryOnOff.On),
-      m1State = TestChannel.State.of(BinaryOnOff.On),
-      m1Source = TestChannel.State.of("OIWFS"),
-      p1ProbeGuide = TestChannel.State.of(0.0),
-      p2ProbeGuide = TestChannel.State.of(0.0),
-      oiProbeGuide = TestChannel.State.of(0.0),
-      p1ProbeGuided = TestChannel.State.of(0.0),
-      p2ProbeGuided = TestChannel.State.of(0.0),
-      oiProbeGuided = TestChannel.State.of(0.0),
-      mountP1Weight = TestChannel.State.of(0.0),
-      mountP2Weight = TestChannel.State.of(0.0),
-      m2P1Guide = TestChannel.State.of("OFF"),
-      m2P2Guide = TestChannel.State.of("OFF"),
-      m2OiGuide = TestChannel.State.of("RAW A-AUTO B-OFF C-OFF"),
-      m2AoGuide = TestChannel.State.of("OFF")
-    )
+  private val defaultGuideState = GuideConfigState(
+    pwfs1Integrating = TestChannel.State.of(BinaryYesNo.No),
+    pwfs2Integrating = TestChannel.State.of(BinaryYesNo.No),
+    oiwfsIntegrating = TestChannel.State.of(BinaryYesNo.No),
+    m2State = TestChannel.State.of(BinaryOnOff.Off),
+    absorbTipTilt = TestChannel.State.of(0),
+    m2ComaCorrection = TestChannel.State.of(BinaryOnOff.Off),
+    m1State = TestChannel.State.of(BinaryOnOff.Off),
+    m1Source = TestChannel.State.of(""),
+    p1ProbeGuide = TestChannel.State.of(0.0),
+    p2ProbeGuide = TestChannel.State.of(0.0),
+    oiProbeGuide = TestChannel.State.of(0.0),
+    p1ProbeGuided = TestChannel.State.of(0.0),
+    p2ProbeGuided = TestChannel.State.of(0.0),
+    oiProbeGuided = TestChannel.State.of(0.0),
+    mountP1Weight = TestChannel.State.of(0.0),
+    mountP2Weight = TestChannel.State.of(0.0),
+    m2P1Guide = TestChannel.State.of("OFF"),
+    m2P2Guide = TestChannel.State.of("OFF"),
+    m2OiGuide = TestChannel.State.of("OFF"),
+    m2AoGuide = TestChannel.State.of("OFF")
+  )
 
+  private val guideWithOiState = defaultGuideState.copy(
+    oiwfsIntegrating = TestChannel.State.of(BinaryYesNo.Yes),
+    m2State = TestChannel.State.of(BinaryOnOff.On),
+    absorbTipTilt = TestChannel.State.of(1),
+    m2ComaCorrection = TestChannel.State.of(BinaryOnOff.On),
+    m1State = TestChannel.State.of(BinaryOnOff.On),
+    m1Source = TestChannel.State.of("OIWFS"),
+    m2OiGuide = TestChannel.State.of("RAW A-AUTO B-OFF C-OFF")
+  )
+
+  test("Read guide state") {
     val testGuide = GuideState(
       MountGuideOption.MountGuideOn,
       M1GuideConfig.M1GuideOn(M1Source.OIWFS),
@@ -957,7 +968,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     for {
       x        <- createController
       (st, ctr) = x
-      _        <- st.tcs.update(_.focus(_.guideStatus).replace(testValue1))
+      _        <- st.tcs.update(_.focus(_.guideStatus).replace(guideWithOiState))
       g        <- ctr.getGuideState
       r1       <- st.tcs.get
     } yield {
@@ -968,6 +979,68 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assert(r1.guideStatus.m1Source.connected)
       assert(r1.guideStatus.m2OiGuide.connected)
       assertEquals(g, testGuide)
+    }
+  }
+
+  test("Automatically set OIWFS QL") {
+    val testExpTime = TimeSpan.unsafeFromMicroseconds(12345)
+    val guideCfg    = TelescopeGuideConfig(
+      mountGuide = MountGuideOption.MountGuideOn,
+      m1Guide = M1GuideConfig.M1GuideOn(M1Source.OIWFS),
+      m2Guide = M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
+      dayTimeMode = Some(false),
+      probeGuide = none
+    )
+
+    for {
+      x        <- createController
+      (st, ctr) = x
+      _        <- st.tcs.update(_.focus(_.guideStatus).replace(defaultGuideState))
+      _        <- ctr.oiwfsObserve(testExpTime)
+      r00      <- st.tcs.get
+      _        <- ctr.enableGuide(guideCfg)
+      r01      <- st.tcs.get
+      _        <- st.tcs.update(_.focus(_.guideStatus).replace(guideWithOiState))
+      _        <- ctr.oiwfsStopObserve
+      r02      <- st.tcs.get
+      _        <- ctr.disableGuide
+      r03      <- st.tcs.get
+      _        <- st.tcs.update(_.focus(_.guideStatus).replace(defaultGuideState))
+      _        <- ctr.enableGuide(guideCfg)
+      r10      <- st.tcs.get
+      _        <- st.tcs.update(_.focus(_.guideStatus).replace(guideWithOiState))
+      _        <- ctr.oiwfsObserve(testExpTime)
+      r11      <- st.tcs.get
+      _        <- ctr.disableGuide
+      r12      <- st.tcs.get
+      _        <- st.tcs.update(_.focus(_.guideStatus).replace(defaultGuideState))
+      _        <- ctr.oiwfsStopObserve
+      r13      <- st.tcs.get
+    } yield {
+      assertEquals(r00.oiWfs.observe.output.value, "QL".some)
+      assertEquals(r00.oiWfs.observe.options.value, "DHS".some)
+      assertEquals(r00.oiWfs.closedLoop.zernikes2m2.value, "0".some)
+      assertEquals(r01.oiWfs.observe.output.value, "".some)
+      assertEquals(r01.oiWfs.observe.options.value, "NONE".some)
+      assertEquals(r01.oiWfs.closedLoop.zernikes2m2.value, "1".some)
+      assertEquals(r02.oiWfs.observe.output.value, "".some)
+      assertEquals(r02.oiWfs.observe.options.value, "NONE".some)
+      assertEquals(r02.oiWfs.closedLoop.zernikes2m2.value, "1".some)
+      assertEquals(r03.oiWfs.observe.output.value, "".some)
+      assertEquals(r03.oiWfs.observe.options.value, "NONE".some)
+      assertEquals(r03.oiWfs.closedLoop.zernikes2m2.value, "1".some)
+      assertEquals(r10.oiWfs.observe.output.value, "".some)
+      assertEquals(r10.oiWfs.observe.options.value, "NONE".some)
+      assertEquals(r10.oiWfs.closedLoop.zernikes2m2.value, "1".some)
+      assertEquals(r11.oiWfs.observe.output.value, "".some)
+      assertEquals(r11.oiWfs.observe.options.value, "NONE".some)
+      assertEquals(r11.oiWfs.closedLoop.zernikes2m2.value, "1".some)
+      assertEquals(r12.oiWfs.observe.output.value, "QL".some)
+      assertEquals(r12.oiWfs.observe.options.value, "DHS".some)
+      assertEquals(r12.oiWfs.closedLoop.zernikes2m2.value, "0".some)
+      assertEquals(r13.oiWfs.observe.output.value, "QL".some)
+      assertEquals(r13.oiWfs.observe.options.value, "DHS".some)
+      assertEquals(r13.oiWfs.closedLoop.zernikes2m2.value, "0".some)
     }
   }
 
@@ -983,6 +1056,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     p1  <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
     p2  <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
     oi  <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
+    st  <- Ref.of[IO, TcsBaseControllerEpics.State](TcsBaseControllerEpics.State.default)
   } yield (
     StateRefs(tcs, p1, p2, oi),
     new TcsBaseControllerEpics[IO](
@@ -990,7 +1064,8 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       TestWfsEpicsSystem.build("PWFS1", NonEmptyString.unsafeFrom("p1:"), p1),
       TestWfsEpicsSystem.build("PWFS2", NonEmptyString.unsafeFrom("p2:"), p2),
       TestWfsEpicsSystem.build("OIWFS", NonEmptyString.unsafeFrom("oi:"), oi),
-      DefaultTimeout
+      DefaultTimeout,
+      st
     )
   )
 

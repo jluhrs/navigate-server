@@ -91,7 +91,7 @@ class TcsBaseControllerSim[F[_]: Applicative](guideRef: Ref[F, GuideState])
     )
     .as(ApplyCommandResult.Completed)
 
-  override def oiwfsObserve(exposureTime: TimeSpan, isQL: Boolean): F[ApplyCommandResult] = guideRef
+  override def oiwfsObserve(exposureTime: TimeSpan): F[ApplyCommandResult] = guideRef
     .update(_.copy(oiIntegrating = true))
     .as(ApplyCommandResult.Completed)
 

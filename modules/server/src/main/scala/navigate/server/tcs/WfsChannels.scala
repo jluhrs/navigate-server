@@ -13,30 +13,30 @@ import navigate.server.acm.CadDirective
 import navigate.server.epicsdata.BinaryYesNo
 
 case class WfsChannels[F[_]](
-  telltale: TelltaleChannel[F],
-  tipGain: Channel[F, String],
-  tiltGain: Channel[F, String],
+  telltale:  TelltaleChannel[F],
+  tipGain:   Channel[F, String],
+  tiltGain:  Channel[F, String],
   focusGain: Channel[F, String],
-  reset: Channel[F, BinaryYesNo],
-  gainsDir: Channel[F, CadDirective],
-  resetDir: Channel[F, CadDirective]
+  reset:     Channel[F, BinaryYesNo],
+  gainsDir:  Channel[F, CadDirective],
+  resetDir:  Channel[F, CadDirective]
 )
 
 object WfsChannels {
   def build[F[_]](
-    service:  EpicsService[F],
-    sysName: String,
-    top: NonEmptyString,
+    service:      EpicsService[F],
+    sysName:      String,
+    top:          NonEmptyString,
     telltaleName: NonEmptyString
   ): Resource[F, WfsChannels[F]] =
     for {
-      tell <- service.getChannel[String](top, telltaleName.value).map(TelltaleChannel(sysName, _))
-      tipG <- service.getChannel[String](top, "dc:detSigInitFgGain.A")
-      tiltG <- service.getChannel[String](top, "dc:detSigInitFgGain.B")
+      tell   <- service.getChannel[String](top, telltaleName.value).map(TelltaleChannel(sysName, _))
+      tipG   <- service.getChannel[String](top, "dc:detSigInitFgGain.A")
+      tiltG  <- service.getChannel[String](top, "dc:detSigInitFgGain.B")
       focusG <- service.getChannel[String](top, "dc:detSigInitFgGain.C")
-      gDir <- service.getChannel[CadDirective](top, "dc:detSigInitFgGain.DIR")
-      rst <- service.getChannel[BinaryYesNo](top, "dc:initSigInit.J")
-      rDir <- service.getChannel[CadDirective](top, "dc:initSigInit.DIR")
+      gDir   <- service.getChannel[CadDirective](top, "dc:detSigInitFgGain.DIR")
+      rst    <- service.getChannel[BinaryYesNo](top, "dc:initSigInit.J")
+      rDir   <- service.getChannel[CadDirective](top, "dc:initSigInit.DIR")
     } yield WfsChannels[F](
       telltale = tell,
       tipGain = tipG,
@@ -45,5 +45,5 @@ object WfsChannels {
       reset = rst,
       gainsDir = gDir,
       resetDir = rDir
-  )
+    )
 }

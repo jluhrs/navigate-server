@@ -54,7 +54,8 @@ object Systems {
                                       readTop(tops, NonEmptyString.unsafeFrom("oiwfs")),
                                       NonEmptyString.unsafeFrom("dc:initSigInit.MARK")
                  )
-        } yield new TcsSouthControllerEpics(tcs, p1, p2, oi, conf.ioTimeout)
+          r   <- Resource.eval(TcsSouthControllerEpics.build(tcs, p1, p2, oi, conf.ioTimeout))
+        } yield r
       else
         Resource.eval(TcsSouthControllerSim.build)
 
@@ -75,7 +76,8 @@ object Systems {
                                       readTop(tops, NonEmptyString.unsafeFrom("oiwfs")),
                                       NonEmptyString.unsafeFrom("dc:initSigInit.MARK")
                  )
-        } yield new TcsNorthControllerEpics(tcs, p1, p2, oi, conf.ioTimeout)
+          r   <- Resource.eval(TcsNorthControllerEpics.build(tcs, p1, p2, oi, conf.ioTimeout))
+        } yield r
       else
         Resource.eval(TcsNorthControllerSim.build)
 

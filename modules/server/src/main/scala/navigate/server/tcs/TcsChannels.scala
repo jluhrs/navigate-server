@@ -46,7 +46,6 @@ case class TcsChannels[F[_]](
   mountGuide:       MountGuideChannels[F],
   oiwfs:            WfsChannels[F],
   guide:            GuideConfigStatusChannels[F],
-  // guiderGains:      GuiderGainsChannels[F],
   probeGuideMode:   ProbeGuideModeChannels[F],
   oiwfsSelect:      OiwfsSelectChannels[F]
 )
