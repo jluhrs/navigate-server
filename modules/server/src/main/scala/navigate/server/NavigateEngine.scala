@@ -430,6 +430,25 @@ object NavigateEngine {
     guideConfig = GuideConfig.defaultGuideConfig
   )
 
+  /**
+   * This is used for simple commands, just an F that executes the command when evaluated, producing
+   * a result. The method takes care of setting/releasing guard flags in the global state and
+   * surrounding the evaluation with log messages. An important distinction with the new command
+   * method is that here, the command code does not have access to the global state.
+   *
+   * @param engine
+   *   The state machine.
+   * @param cmdType:
+   *   The command type, used for logs.
+   * @param cmd:
+   *   The actual command, wrapped in effect F.
+   * @param f:
+   *   Lens to the command guard flag in the global state.
+   * @tparam F:
+   *   Type of effect that wraps the command execution.
+   * @return
+   *   Effect that, when evaluated, will schedule the execution of the command in the state machine.
+   */
   private def simpleCommand[F[_]: MonadThrow: Logger](
     engine:  StateEngine[F, State, NavigateEvent],
     cmdType: NavigateCommand,
@@ -464,6 +483,23 @@ object NavigateEngine {
     }
   )
 
+  /**
+   * Similar to simple command, but here the command is a Handler, executed in the state machine.
+   * This gives the command access to the global state, and allows it to have several stages.
+   * @param engine
+   *   The state machine.
+   * @param cmdType:
+   *   The command type, used for logs.
+   * @param cmd:
+   *   The actual command, wrapped in a Handle. The command is responsible for generating the Stream
+   *   for later scheduling, although there is a helper method for that: transformCommand
+   * @param f:
+   *   Lens to the command guard flag in the global state.
+   * @tparam F:
+   *   Type of effect that wraps the command execution.
+   * @return
+   *   Effect that, when evaluated, will schedule the execution of the command in the state machine.
+   */
   private def command[F[_]: MonadThrow: Logger](
     engine:  StateEngine[F, State, NavigateEvent],
     cmdType: NavigateCommand,

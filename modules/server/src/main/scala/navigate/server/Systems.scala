@@ -8,8 +8,8 @@ import cats.effect.Async
 import cats.effect.Resource
 import cats.effect.std.Dispatcher
 import cats.syntax.all.*
-import eu.timepit.refined.types.string.NonEmptyString
 import lucuma.core.enums.Site
+import lucuma.refined.*
 import navigate.epics.EpicsService
 import navigate.model.config.ControlStrategy
 import navigate.model.config.NavigateEngineConfiguration
@@ -41,18 +41,12 @@ object Systems {
       if (conf.systemControl.tcs === ControlStrategy.FullControl)
         for {
           tcs <- TcsEpicsSystem.build(epicsSrv, tops)
-          p1  <- WfsEpicsSystem.build(epicsSrv,
-                                      "PWFS1",
-                                      readTop(tops, NonEmptyString.unsafeFrom("pwfs1"))
-                 )
-          p2  <- WfsEpicsSystem.build(epicsSrv,
-                                      "PWFS2",
-                                      readTop(tops, NonEmptyString.unsafeFrom("pwfs2"))
-                 )
+          p1  <- WfsEpicsSystem.build(epicsSrv, "PWFS1", readTop(tops, "pwfs1".refined))
+          p2  <- WfsEpicsSystem.build(epicsSrv, "PWFS2", readTop(tops, "pwfs2".refined))
           oi  <- WfsEpicsSystem.build(epicsSrv,
                                       "OIWFS",
-                                      readTop(tops, NonEmptyString.unsafeFrom("oiwfs")),
-                                      NonEmptyString.unsafeFrom("dc:initSigInit.MARK")
+                                      readTop(tops, "oiwfs".refined),
+                                      "dc:initSigInit.MARK".refined
                  )
           r   <- Resource.eval(TcsSouthControllerEpics.build(tcs, p1, p2, oi, conf.ioTimeout))
         } yield r
@@ -63,18 +57,12 @@ object Systems {
       if (conf.systemControl.tcs === ControlStrategy.FullControl)
         for {
           tcs <- TcsEpicsSystem.build(epicsSrv, tops)
-          p1  <- WfsEpicsSystem.build(epicsSrv,
-                                      "PWFS1",
-                                      readTop(tops, NonEmptyString.unsafeFrom("pwfs1"))
-                 )
-          p2  <- WfsEpicsSystem.build(epicsSrv,
-                                      "PWFS2",
-                                      readTop(tops, NonEmptyString.unsafeFrom("pwfs2"))
-                 )
+          p1  <- WfsEpicsSystem.build(epicsSrv, "PWFS1", readTop(tops, "pwfs1".refined))
+          p2  <- WfsEpicsSystem.build(epicsSrv, "PWFS2", readTop(tops, "pwfs2".refined))
           oi  <- WfsEpicsSystem.build(epicsSrv,
                                       "OIWFS",
-                                      readTop(tops, NonEmptyString.unsafeFrom("oiwfs")),
-                                      NonEmptyString.unsafeFrom("dc:initSigInit.MARK")
+                                      readTop(tops, "oiwfs".refined),
+                                      "dc:initSigInit.MARK".refined
                  )
           r   <- Resource.eval(TcsNorthControllerEpics.build(tcs, p1, p2, oi, conf.ioTimeout))
         } yield r

@@ -10,6 +10,7 @@ import cats.effect.Temporal
 import cats.effect.std.Dispatcher
 import cats.syntax.all.*
 import eu.timepit.refined.types.string.NonEmptyString
+import lucuma.refined.*
 import navigate.epics.EpicsService
 import navigate.epics.VerifiedEpics
 import navigate.epics.VerifiedEpics.VerifiedEpics
@@ -52,7 +53,7 @@ object WfsEpicsSystem {
     service:             EpicsService[F],
     sysName:             String,
     top:                 NonEmptyString,
-    telltaleChannelName: NonEmptyString = NonEmptyString.unsafeFrom("health.VAL")
+    telltaleChannelName: NonEmptyString = "health.VAL".refined
   ): Resource[F, WfsEpicsSystem[F]] = for {
     channels <- WfsChannels.build(service, sysName, top, telltaleChannelName)
   } yield buildSystem(channels)

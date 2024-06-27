@@ -6,7 +6,6 @@ package navigate.server.tcs
 import cats.effect.IO
 import cats.effect.Ref
 import cats.syntax.all.*
-import eu.timepit.refined.types.string.NonEmptyString
 import lucuma.core.enums.ComaOption
 import lucuma.core.enums.GuideProbe
 import lucuma.core.enums.Instrument
@@ -24,6 +23,7 @@ import lucuma.core.model.ProbeGuide
 import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.Enumerated
 import lucuma.core.util.TimeSpan
+import lucuma.refined.*
 import monocle.syntax.all.*
 import mouse.boolean.given
 import munit.CatsEffectSuite
@@ -1061,9 +1061,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     StateRefs(tcs, p1, p2, oi),
     new TcsBaseControllerEpics[IO](
       TestTcsEpicsSystem.build(tcs),
-      TestWfsEpicsSystem.build("PWFS1", NonEmptyString.unsafeFrom("p1:"), p1),
-      TestWfsEpicsSystem.build("PWFS2", NonEmptyString.unsafeFrom("p2:"), p2),
-      TestWfsEpicsSystem.build("OIWFS", NonEmptyString.unsafeFrom("oi:"), oi),
+      TestWfsEpicsSystem.build("PWFS1", "p1:".refined, p1),
+      TestWfsEpicsSystem.build("PWFS2", "p2:".refined, p2),
+      TestWfsEpicsSystem.build("OIWFS", "oi:".refined, oi),
       DefaultTimeout,
       st
     )
