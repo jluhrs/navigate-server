@@ -11,7 +11,7 @@ import fs2.Stream
 import navigate.stateengine.Handler.RetVal
 
 /**
- * Type constructor where all Observe side effect are managed. Handler is a State machine inside a
+ * Type constructor where all Navigate side effect are managed. Handler is a State machine inside a
  * F, which can produce Streams as output. It is combined with the input stream to run observe
  * engine.
  *
@@ -105,6 +105,9 @@ object Handler {
 
   def get[F[_], D, V]: Handler[F, D, V, D] =
     State.get[D].toHandle
+
+  def replace[F[_], D, V](d: D): Handler[F, D, V, Unit] =
+    State.set[D](d).toHandle
 
   def inspect[F[_], D, V, A](f: D => A): Handler[F, D, V, A] =
     State.inspect[D, A](f).toHandle

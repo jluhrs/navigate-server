@@ -5,6 +5,7 @@ package navigate.server.tcs
 
 import cats.Parallel
 import cats.effect.Async
+import cats.effect.Ref
 import cats.syntax.all.*
 import lucuma.core.enums.ComaOption
 import lucuma.core.enums.Instrument
@@ -22,7 +23,9 @@ import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.Enumerated
 import lucuma.core.util.TimeSpan
 import monocle.Getter
+import monocle.syntax.all.*
 import mouse.boolean.given
+import navigate.epics.VerifiedEpics
 import navigate.epics.VerifiedEpics.*
 import navigate.model.Distance
 import navigate.model.enums.DomeMode
@@ -43,7 +46,11 @@ import TcsBaseController.{EquinoxDefault, FixedSystem, SystemDefault, TcsConfig}
 /* This class implements the common TCS commands */
 class TcsBaseControllerEpics[F[_]: Async: Parallel](
   tcsEpics: TcsEpicsSystem[F],
-  timeout:  FiniteDuration
+  pwfs1:    WfsEpicsSystem[F],
+  pwfs2:    WfsEpicsSystem[F],
+  oiwfs:    WfsEpicsSystem[F],
+  timeout:  FiniteDuration,
+  stateRef: Ref[F, TcsBaseControllerEpics.State]
 ) extends TcsBaseController[F] {
   override def mcsPark: F[ApplyCommandResult] =
     tcsEpics
@@ -361,11 +368,11 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
       .verifiedRun(ConnectionTimeout)
 
   override def enableGuide(config: TelescopeGuideConfig): F[ApplyCommandResult] = {
-    val gains = (x: TcsCommands[F]) =>
+    val gains =
       if (config.dayTimeMode.exists(_ === true))
-        x.guiderGainsCommands.dayTimeGains
+        dayTimeGains
       else
-        x.guiderGainsCommands.defaultGains
+        defaultGains
 
     val m1 = (x: TcsCommands[F]) =>
       config.m1Guide match {
@@ -388,7 +395,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
 
     config.m2Guide match {
       case M2GuideConfig.M2GuideOff               =>
-        (gains >>> m1)(tcsEpics.startCommand(timeout)).m2GuideCommand
+        (gains *> m1(tcsEpics.startCommand(timeout)).m2GuideCommand
           .state(false)
           .m2GuideModeCommand
           .coma(false)
@@ -398,7 +405,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
           .source("SCS")
           .probeGuideModeCommand
           .setMode(config.probeGuide)
-          .post
+          .post)
           .verifiedRun(ConnectionTimeout)
       case M2GuideConfig.M2GuideOn(coma, sources) =>
         val requireReset: Boolean = true // Use current state
@@ -420,10 +427,9 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
               // Set tip-tilt guide for each source on each beam
               // TCC adds a delay between each call. Is it necessary?
               (r === ApplyCommandResult.Completed).fold(
-                gains(
-                  tcsEpics
-                    .startCommand(timeout)
-                ).m2GuideConfigCommand
+                tcsEpics
+                  .startCommand(timeout)
+                  .m2GuideConfigCommand
                   .source(src.tag)
                   .m2GuideConfigCommand
                   .sampleFreq(200.0)
@@ -441,7 +447,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
               )
             }.flatMap { r =>
               (r === ApplyCommandResult.Completed).fold(
-                (gains >>> m1)(tcsEpics.startCommand(timeout)).m2GuideCommand
+                (gains *> m1(tcsEpics.startCommand(timeout)).m2GuideCommand
                   .state(true)
                   .m2GuideModeCommand
                   .coma(coma === ComaOption.ComaOn)
@@ -451,9 +457,18 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
                   .source("SCS")
                   .probeGuideModeCommand
                   .setMode(config.probeGuide)
-                  .post
-                  .verifiedRun(ConnectionTimeout),
-                ApplyCommandResult.Completed.pure[F]
+                  .post).verifiedRun(ConnectionTimeout) <*
+                  stateRef.get.flatMap { s =>
+                    s.oiwfs.period
+                      .flatMap(p =>
+                        guideUsesOiwfs(config.m1Guide, config.m2Guide)
+                          .option(setupOiwfsObserve(p, false))
+                      )
+                      .getOrElse(
+                        ApplyCommandResult.Completed.pure[F]
+                      )
+                  },
+                r.pure[F]
               )
             }
           }
@@ -469,33 +484,102 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
     .mountGuideCommand
     .mode(false)
     .post
-    .verifiedRun(ConnectionTimeout)
+    .verifiedRun(ConnectionTimeout) <*
+    stateRef.get.flatMap { s =>
+      s.oiwfs.period
+        .map(setupOiwfsObserve(_, true))
+        .getOrElse(
+          ApplyCommandResult.Completed.pure[F]
+        )
+    }
 
-  override def oiwfsObserve(exposureTime: TimeSpan, isQL: Boolean): F[ApplyCommandResult] = tcsEpics
-    .startCommand(timeout)
-    .oiWfsCommands
-    .observe
-    .interval(exposureTime.toSeconds.toDouble)
-    .oiWfsCommands
-    .observe
-    .output(isQL.fold("QL", ""))
-    .oiWfsCommands
-    .observe
-    .options(isQL.fold("DHS", "NONE"))
-    .oiWfsCommands
-    .observe
-    .numberOfExposures(-1)
-    .oiWfsCommands
-    .observe
-    .path("")
-    .oiWfsCommands
-    .observe
-    .fileName("")
-    .oiWfsCommands
-    .observe
-    .label("")
-    .post
-    .verifiedRun(ConnectionTimeout)
+  def darkFileName(prefix: String, exposureTime: TimeSpan): String =
+    if (exposureTime > TimeSpan.unsafeFromMicroseconds(1000))
+      s"${prefix}_${math.round(1000.0 / exposureTime.toSeconds.toDouble)}mHz.fits"
+    else
+      s"${prefix}_${math.round(1.0 / exposureTime.toSeconds.toDouble)}Hz.fits"
+
+  val oiPrefix: String = "oi"
+
+  def setupOiwfsObserve(exposureTime: TimeSpan, isQL: Boolean): F[ApplyCommandResult] =
+    stateRef.get.flatMap { st =>
+      val expTimeChange   = st.oiwfs.period.forall(_ =!= exposureTime).option(exposureTime)
+      val qlChange        = st.oiwfs.configuredForQl.forall(_ =!= isQL).option(isQL)
+      val setDarkFilename = (c: TcsCommands[F]) =>
+        expTimeChange.fold(c)(t =>
+          c.oiWfsCommands.signalProc
+            .darkFilename(darkFileName(oiPrefix, t))
+        )
+      val setSigProc      = qlChange
+        .map(
+          _.fold(
+            tcsEpics.startCommand(timeout).oiWfsCommands.closedLoop.zernikes2m2(0),
+            setDarkFilename(
+              tcsEpics
+                .startCommand(timeout)
+                .oiWfsCommands
+                .closedLoop
+                .zernikes2m2(1)
+            )
+          ).post
+        )
+        .getOrElse(VerifiedEpics.pureF[F, F, ApplyCommandResult](ApplyCommandResult.Completed))
+      val setInterval     = (c: TcsCommands[F]) =>
+        expTimeChange.fold(c)(t => c.oiWfsCommands.observe.interval(t.toSeconds.toDouble))
+      val setQl           = (c: TcsCommands[F]) =>
+        qlChange.fold(c)(i =>
+          c.oiWfsCommands.observe
+            .output(i.fold("QL", ""))
+            .oiWfsCommands
+            .observe
+            .options(i.fold("DHS", "NONE"))
+        )
+
+      val setup = setSigProc *>
+        (setInterval >>> setQl)(tcsEpics.startCommand(timeout)).oiWfsCommands.observe
+          .numberOfExposures(-1)
+          .oiWfsCommands
+          .observe
+          .path("")
+          .oiWfsCommands
+          .observe
+          .fileName("")
+          .oiWfsCommands
+          .observe
+          .label("")
+          .post
+
+      (for {
+        oiActive <- tcsEpics.status.oiwfsOn.map(_.map(_ === BinaryYesNo.Yes))
+        ret      <- VerifiedEpics.ifF[F, F, ApplyCommandResult](
+                      oiActive.map(_ && qlChange.isEmpty && expTimeChange.isEmpty)
+                    ) {
+                      VerifiedEpics.pureF[F, F, ApplyCommandResult](ApplyCommandResult.Completed)
+                    } {
+                      VerifiedEpics.ifF(oiActive) {
+                        tcsEpics
+                          .startCommand(timeout)
+                          .oiWfsCommands
+                          .stop
+                          .mark
+                          .post
+                      } {
+                        VerifiedEpics.pureF[F, F, ApplyCommandResult](ApplyCommandResult.Completed)
+                      } *>
+                        setup
+                    }
+      } yield ret).verifiedRun(ConnectionTimeout) <*
+        stateRef.update(
+          _.focus(_.oiwfs.period)
+            .replace(exposureTime.some)
+            .focus(_.oiwfs.configuredForQl)
+            .replace(isQL.some)
+        )
+    }
+
+  def oiwfsObserve(exposureTime: TimeSpan): F[ApplyCommandResult] = getGuideState.flatMap { g =>
+    setupOiwfsObserve(exposureTime, !guideUsesOiwfs(g.m1Guide, g.m2Guide))
+  }
 
   override def oiwfsStopObserve: F[ApplyCommandResult] = tcsEpics
     .startCommand(timeout)
@@ -503,7 +587,13 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
     .stop
     .mark
     .post
-    .verifiedRun(ConnectionTimeout)
+    .verifiedRun(ConnectionTimeout) <*
+    stateRef.update(
+      _.focus(_.oiwfs.period)
+        .replace(None)
+        .focus(_.oiwfs.configuredForQl)
+        .replace(None)
+    )
 
   private def selectOiwfs(tcsConfig: TcsConfig): VerifiedEpics[F, F, ApplyCommandResult] =
     tcsEpics
@@ -584,6 +674,68 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
     x.verifiedRun(ConnectionTimeout)
   }
 
+  def dayTimeGains: VerifiedEpics[F, F, ApplyCommandResult] =
+    pwfs1
+      .startCommand(timeout)
+      .gains
+      .setTipGain(0.0)
+      .gains
+      .setTiltGain(0.0)
+      .gains
+      .setFocusGain(0.0)
+      .post *>
+      pwfs2
+        .startCommand(timeout)
+        .gains
+        .setTipGain(0.0)
+        .gains
+        .setTiltGain(0.0)
+        .gains
+        .setFocusGain(0.0)
+        .post *>
+      oiwfs
+        .startCommand(timeout)
+        .gains
+        .setTipGain(0.0)
+        .gains
+        .setTiltGain(0.0)
+        .gains
+        .setFocusGain(0.0)
+        .post
+
+  // TODO These hardcoded value should be configurable
+  def defaultGains: VerifiedEpics[F, F, ApplyCommandResult] =
+    pwfs1
+      .startCommand(timeout)
+      .gains
+      .setTipGain(0.03)
+      .gains
+      .setTiltGain(0.03)
+      .gains
+      .setFocusGain(0.00002)
+      .post *>
+      pwfs2
+        .startCommand(timeout)
+        .gains
+        .setTipGain(0.05)
+        .gains
+        .setTiltGain(0.05)
+        .gains
+        .setFocusGain(0.0001)
+        .post *>
+      oiwfs
+        .startCommand(timeout)
+        .gains
+        .setTipGain(0.08)
+        .gains
+        .setTiltGain(0.08)
+        .gains
+        .setFocusGain(0.00015)
+        .post
+
+  private def guideUsesOiwfs(m1Guide: M1GuideConfig, m2Guide: M2GuideConfig): Boolean =
+    m1Guide.uses(M1Source.OIWFS) || m2Guide.uses(TipTiltSource.OIWFS)
+
 }
 
 object TcsBaseControllerEpics {
@@ -600,5 +752,24 @@ object TcsBaseControllerEpics {
           case _                                           => None
       }
       .getOrElse("None")
+
+  case class WfsConfigState(
+    period:          Option[TimeSpan],
+    configuredForQl: Option[Boolean]
+  )
+
+  case class State(
+    pwfs1: WfsConfigState,
+    pwfs2: WfsConfigState,
+    oiwfs: WfsConfigState
+  )
+
+  object State {
+    val default: State = State(
+      WfsConfigState(None, None),
+      WfsConfigState(None, None),
+      WfsConfigState(None, None)
+    )
+  }
 
 }

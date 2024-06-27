@@ -3,7 +3,6 @@
 
 package navigate.server.tcs
 
-import cats.Applicative
 import cats.Monad
 import cats.Parallel
 import cats.effect.Resource
@@ -14,7 +13,6 @@ import lucuma.core.enums.GuideProbe
 import lucuma.core.math.Angle
 import lucuma.core.model.ProbeGuide
 import mouse.all.*
-import navigate.epics.Channel
 import navigate.epics.EpicsService
 import navigate.epics.EpicsSystem.TelltaleChannel
 import navigate.epics.VerifiedEpics
@@ -23,7 +21,6 @@ import navigate.model.Distance
 import navigate.model.enums.DomeMode
 import navigate.model.enums.ShutterMode
 import navigate.server.ApplyCommandResult
-import navigate.server.acm.CadDirective
 import navigate.server.acm.Encoder
 import navigate.server.acm.Encoder.given
 import navigate.server.acm.GeminiApplyCommand
@@ -88,9 +85,6 @@ object TcsEpicsSystem {
     ]
     val m2GuideResetCmd: ParameterlessCommandChannels[F]
     val mountGuideCmd: Command4Channels[F, BinaryOnOff, String, Double, Double]
-    val p1GuiderGainsCmd: Command3Channels[F, Double, Double, Double]
-    val p2GuiderGainsCmd: Command3Channels[F, Double, Double, Double]
-    val oiGuiderGainsCmd: Command3Channels[F, Double, Double, Double]
     val probeGuideModeCmd: Command3Channels[F, BinaryOnOff, GuideProbe, GuideProbe]
     val oiwfsSelectCmd: Command2Channels[F, String, String]
 
@@ -357,19 +351,14 @@ object TcsEpicsSystem {
         .flatMap(NonEmptyString.from(_).toOption)
         .getOrElse(NonEmptyString.unsafeFrom(s"${key}:"))
 
-    val top   = readTop("tcs")
-    val pwfs1 = readTop("pwfs1")
-    val pwfs2 = readTop("pwfs2")
-    val oi    = readTop("oiwfs")
-    val ag    = readTop("ag")
+    val top = readTop("tcs")
+    val ag  = readTop("ag")
 
     for {
-      channels <- TcsChannels.buildChannels(service,
-                                            TcsTop(top),
-                                            Pwfs1Top(pwfs1),
-                                            Pwfs2Top(pwfs2),
-                                            OiwfsTop(oi),
-                                            AgTop(ag)
+      channels <- TcsChannels.buildChannels(
+                    service,
+                    TcsTop(top),
+                    AgTop(ag)
                   )
       applyCmd <-
         GeminiApplyCommand.build(service, channels.telltale, s"${top}apply", s"${top}applyC")
@@ -873,41 +862,6 @@ object TcsEpicsSystem {
           }
       }
 
-    override val guiderGainsCommands: GuiderGainsCommand[F, TcsCommands[F]] =
-      new GuiderGainsCommand[F, TcsCommands[F]] {
-        override def dayTimeGains: TcsCommands[F] =
-          addMultipleParams(
-            List(
-              tcsEpics.p1GuiderGainsCmd.setParam1(0.0),
-              tcsEpics.p1GuiderGainsCmd.setParam2(0.0),
-              tcsEpics.p1GuiderGainsCmd.setParam3(0.0),
-              tcsEpics.p2GuiderGainsCmd.setParam1(0.0),
-              tcsEpics.p2GuiderGainsCmd.setParam2(0.0),
-              tcsEpics.p2GuiderGainsCmd.setParam3(0.0),
-              tcsEpics.oiGuiderGainsCmd.setParam1(0.0),
-              tcsEpics.oiGuiderGainsCmd.setParam2(0.0),
-              tcsEpics.oiGuiderGainsCmd.setParam3(0.0)
-            )
-          )
-
-        // TODO These hardcoded value should be configurable
-        override def defaultGains: TcsCommands[F] =
-          addMultipleParams(
-            List(
-              tcsEpics.p1GuiderGainsCmd.setParam1(0.03),
-              tcsEpics.p1GuiderGainsCmd.setParam2(0.03),
-              tcsEpics.p1GuiderGainsCmd.setParam3(0.00002),
-              tcsEpics.p2GuiderGainsCmd.setParam1(0.05),
-              tcsEpics.p2GuiderGainsCmd.setParam2(0.05),
-              tcsEpics.p2GuiderGainsCmd.setParam3(0.0001),
-              tcsEpics.oiGuiderGainsCmd.setParam1(0.08),
-              tcsEpics.oiGuiderGainsCmd.setParam2(0.08),
-              tcsEpics.oiGuiderGainsCmd.setParam3(0.00015)
-            )
-          )
-
-      }
-
     override val probeGuideModeCommand: ProbeGuideModeCommand[F, TcsCommands[F]] =
       new ProbeGuideModeCommand[F, TcsCommands[F]] {
         override def setMode(pg: Option[ProbeGuide]): TcsCommands[F] =
@@ -1091,30 +1045,6 @@ object TcsEpicsSystem {
     override val oiWfsCmds: WfsCommandsChannels[F]                                       =
       WfsCommandsChannels.build(channels.telltale, channels.oiwfs)
 
-    override val p1GuiderGainsCmd: Command3Channels[F, Double, Double, Double] =
-      Command3Channels(
-        channels.pwfs1Telltale,
-        channels.guiderGains.p1TipGain,
-        channels.guiderGains.p1TiltGain,
-        channels.guiderGains.p1FocusGain
-      )
-
-    override val p2GuiderGainsCmd: Command3Channels[F, Double, Double, Double] =
-      Command3Channels(
-        channels.pwfs2Telltale,
-        channels.guiderGains.p2TipGain,
-        channels.guiderGains.p2TiltGain,
-        channels.guiderGains.p2FocusGain
-      )
-
-    override val oiGuiderGainsCmd: Command3Channels[F, Double, Double, Double] =
-      Command3Channels(
-        channels.oiwfsTelltale,
-        channels.guiderGains.oiTipGain,
-        channels.guiderGains.oiTiltGain,
-        channels.guiderGains.oiFocusGain
-      )
-
     override val probeGuideModeCmd: Command3Channels[F, BinaryOnOff, GuideProbe, GuideProbe] =
       Command3Channels(
         channels.telltale,
@@ -1127,154 +1057,6 @@ object TcsEpicsSystem {
       channels.oiwfsSelect.oiName,
       channels.oiwfsSelect.output
     )
-  }
-
-  case class ParameterlessCommandChannels[F[_]: Monad](
-    tt:         TelltaleChannel[F],
-    dirChannel: Channel[F, CadDirective]
-  ) {
-    val mark: VerifiedEpics[F, F, Unit] =
-      writeChannel[F, CadDirective](tt, dirChannel)(Applicative[F].pure(CadDirective.MARK))
-  }
-
-  case class Command1Channels[F[_]: Monad, A: Encoder[*, String]](
-    tt:            TelltaleChannel[F],
-    param1Channel: Channel[F, String]
-  ) {
-    def setParam1(v: A): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, A](tt, param1Channel)(v)
-  }
-
-  case class Command2Channels[F[_]: Monad, A: Encoder[*, String], B: Encoder[*, String]](
-    tt:            TelltaleChannel[F],
-    param1Channel: Channel[F, String],
-    param2Channel: Channel[F, String]
-  ) {
-    def setParam1(v: A): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, A](tt, param1Channel)(v)
-    def setParam2(v: B): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, B](tt, param2Channel)(v)
-  }
-
-  case class Command3Channels[F[_]: Monad, A: Encoder[*, String], B: Encoder[*, String], C: Encoder[
-    *,
-    String
-  ]](
-    tt:            TelltaleChannel[F],
-    param1Channel: Channel[F, String],
-    param2Channel: Channel[F, String],
-    param3Channel: Channel[F, String]
-  ) {
-    def setParam1(v: A): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, A](tt, param1Channel)(v)
-    def setParam2(v: B): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, B](tt, param2Channel)(v)
-    def setParam3(v: C): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, C](tt, param3Channel)(v)
-  }
-
-  case class Command4Channels[F[_]: Monad, A: Encoder[*, String], B: Encoder[*, String], C: Encoder[
-    *,
-    String
-  ], D: Encoder[*, String]](
-    tt:            TelltaleChannel[F],
-    param1Channel: Channel[F, String],
-    param2Channel: Channel[F, String],
-    param3Channel: Channel[F, String],
-    param4Channel: Channel[F, String]
-  ) {
-    def setParam1(v: A): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, A](tt, param1Channel)(v)
-    def setParam2(v: B): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, B](tt, param2Channel)(v)
-    def setParam3(v: C): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, C](tt, param3Channel)(v)
-    def setParam4(v: D): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, D](tt, param4Channel)(v)
-  }
-
-  case class Command5Channels[F[_]: Monad, A: Encoder[*, String], B: Encoder[*, String], C: Encoder[
-    *,
-    String
-  ], D: Encoder[*, String], E: Encoder[*, String]](
-    tt:            TelltaleChannel[F],
-    param1Channel: Channel[F, String],
-    param2Channel: Channel[F, String],
-    param3Channel: Channel[F, String],
-    param4Channel: Channel[F, String],
-    param5Channel: Channel[F, String]
-  ) {
-    def setParam1(v: A): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, A](tt, param1Channel)(v)
-    def setParam2(v: B): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, B](tt, param2Channel)(v)
-    def setParam3(v: C): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, C](tt, param3Channel)(v)
-    def setParam4(v: D): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, D](tt, param4Channel)(v)
-    def setParam5(v: E): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, E](tt, param5Channel)(v)
-  }
-
-  case class Command6Channels[F[_]: Monad, A: Encoder[*, String], B: Encoder[*, String], C: Encoder[
-    *,
-    String
-  ], D: Encoder[*, String], E: Encoder[*, String], G: Encoder[*, String]](
-    tt:            TelltaleChannel[F],
-    param1Channel: Channel[F, String],
-    param2Channel: Channel[F, String],
-    param3Channel: Channel[F, String],
-    param4Channel: Channel[F, String],
-    param5Channel: Channel[F, String],
-    param6Channel: Channel[F, String]
-  ) {
-    def setParam1(v: A): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, A](tt, param1Channel)(v)
-    def setParam2(v: B): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, B](tt, param2Channel)(v)
-    def setParam3(v: C): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, C](tt, param3Channel)(v)
-    def setParam4(v: D): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, D](tt, param4Channel)(v)
-    def setParam5(v: E): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, E](tt, param5Channel)(v)
-    def setParam6(v: G): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, G](tt, param6Channel)(v)
-  }
-
-  case class Command7Channels[F[_]: Monad, A: Encoder[*, String], B: Encoder[*, String], C: Encoder[
-    *,
-    String
-  ], D: Encoder[*, String], E: Encoder[*, String], G: Encoder[*, String], H: Encoder[*, String]](
-    tt:            TelltaleChannel[F],
-    param1Channel: Channel[F, String],
-    param2Channel: Channel[F, String],
-    param3Channel: Channel[F, String],
-    param4Channel: Channel[F, String],
-    param5Channel: Channel[F, String],
-    param6Channel: Channel[F, String],
-    param7Channel: Channel[F, String]
-  ) {
-    def setParam1(v: A): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, A](tt, param1Channel)(v)
-
-    def setParam2(v: B): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, B](tt, param2Channel)(v)
-
-    def setParam3(v: C): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, C](tt, param3Channel)(v)
-
-    def setParam4(v: D): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, D](tt, param4Channel)(v)
-
-    def setParam5(v: E): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, E](tt, param5Channel)(v)
-
-    def setParam6(v: G): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, G](tt, param6Channel)(v)
-
-    def setParam7(v: H): VerifiedEpics[F, F, Unit] =
-      writeCadParam[F, H](tt, param7Channel)(v)
   }
 
   case class TargetCommandChannels[F[_]: Monad](
@@ -1411,10 +1193,6 @@ object TcsEpicsSystem {
     )
   }
 
-  trait BaseCommand[F[_], +S] {
-    def mark: S
-  }
-
   trait FollowCommand[F[_], +S] {
     def setFollow(enable: Boolean): S
   }
@@ -1519,11 +1297,6 @@ object TcsEpicsSystem {
     def state(v: Boolean): S
   }
 
-  trait GuiderGainsCommand[F[_], +S] {
-    def dayTimeGains: S
-    def defaultGains: S
-  }
-
   trait M1GuideConfigCommand[F[_], +S] {
     def weighting(v: String): S
     def source(v:    String): S
@@ -1623,7 +1396,7 @@ object TcsEpicsSystem {
     val m2GuideResetCommand: BaseCommand[F, TcsCommands[F]]
     val mountGuideCommand: MountGuideCommand[F, TcsCommands[F]]
     val oiWfsCommands: WfsCommands[F, TcsCommands[F]]
-    val guiderGainsCommands: GuiderGainsCommand[F, TcsCommands[F]]
+    // val guiderGainsCommands: GuiderGainsCommand[F, TcsCommands[F]]
     val probeGuideModeCommand: ProbeGuideModeCommand[F, TcsCommands[F]]
     val oiwfsSelectCommand: OiwfsSelectCommand[F, TcsCommands[F]]
   }

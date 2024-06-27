@@ -9,6 +9,7 @@ import cats.effect.Resource
 import cats.effect.std.Dispatcher
 import cats.syntax.all.*
 import lucuma.core.enums.Site
+import lucuma.refined.*
 import navigate.epics.EpicsService
 import navigate.model.config.ControlStrategy
 import navigate.model.config.NavigateEngineConfiguration
@@ -38,13 +39,33 @@ object Systems {
 
     def buildTcsSouthController: Resource[F, TcsSouthController[F]] =
       if (conf.systemControl.tcs === ControlStrategy.FullControl)
-        TcsEpicsSystem.build(epicsSrv, tops).map(new TcsSouthControllerEpics(_, conf.ioTimeout))
+        for {
+          tcs <- TcsEpicsSystem.build(epicsSrv, tops)
+          p1  <- WfsEpicsSystem.build(epicsSrv, "PWFS1", readTop(tops, "pwfs1".refined))
+          p2  <- WfsEpicsSystem.build(epicsSrv, "PWFS2", readTop(tops, "pwfs2".refined))
+          oi  <- WfsEpicsSystem.build(epicsSrv,
+                                      "OIWFS",
+                                      readTop(tops, "oiwfs".refined),
+                                      "dc:initSigInit.MARK".refined
+                 )
+          r   <- Resource.eval(TcsSouthControllerEpics.build(tcs, p1, p2, oi, conf.ioTimeout))
+        } yield r
       else
         Resource.eval(TcsSouthControllerSim.build)
 
     def buildTcsNorthController: Resource[F, TcsNorthController[F]] =
       if (conf.systemControl.tcs === ControlStrategy.FullControl)
-        TcsEpicsSystem.build(epicsSrv, tops).map(new TcsNorthControllerEpics(_, conf.ioTimeout))
+        for {
+          tcs <- TcsEpicsSystem.build(epicsSrv, tops)
+          p1  <- WfsEpicsSystem.build(epicsSrv, "PWFS1", readTop(tops, "pwfs1".refined))
+          p2  <- WfsEpicsSystem.build(epicsSrv, "PWFS2", readTop(tops, "pwfs2".refined))
+          oi  <- WfsEpicsSystem.build(epicsSrv,
+                                      "OIWFS",
+                                      readTop(tops, "oiwfs".refined),
+                                      "dc:initSigInit.MARK".refined
+                 )
+          r   <- Resource.eval(TcsNorthControllerEpics.build(tcs, p1, p2, oi, conf.ioTimeout))
+        } yield r
       else
         Resource.eval(TcsNorthControllerSim.build)
 

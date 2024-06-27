@@ -82,6 +82,11 @@ object VerifiedEpics {
     }
   }
 
+  case class LiftF[F[_], G[_]: FlatMap, A, B](fa: G[A]) extends VerifiedEpics[F, G, A] {
+    override val systems: Map[TelltaleChannel[F], Set[RemoteChannel[F]]] = Map.empty
+    override val run: G[A]                                               = fa
+  }
+
   case class BindF[F[_], G[_]: FlatMap, A, B](
     fa:   VerifiedEpics[F, G, A],
     fafb: G[A] => ChannelTracker[F, A => G[B]]
@@ -121,8 +126,9 @@ object VerifiedEpics {
   }
 
   def pureF[F[_], G[_]: Applicative, A](v: A): VerifiedEpics[F, G, A] = pure[F, G[A]](v.pure[G])
-  def unit[F[_], G[_]: Applicative]: VerifiedEpics[F, G, Unit]                                =
+  def unit[F[_], G[_]: Applicative]: VerifiedEpics[F, G, Unit] =
     pure[F, G[Unit]](Applicative[G].unit)
+  def liftF[F[_], G[_]: Monad, A](f: G[A]): VerifiedEpics[F, G, A] = LiftF(f)
   def readChannel[F[_], A](tt: TelltaleChannel[F], ch: Channel[F, A]): VerifiedEpics[F, F, A] =
     Get(tt, ch)
   def writeChannel[F[_]: FlatMap, A](tt: TelltaleChannel[F], ch: Channel[F, A])(

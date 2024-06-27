@@ -6,7 +6,7 @@ package navigate.server
 import cats.data.State
 import cats.syntax.all.*
 import monocle.Lens
-import navigate.server.tcs.TcsEpicsSystem.BaseCommand
+import navigate.server.tcs.BaseCommand
 
 case class TestEpicsCommands[S, E](cmds: List[State[S, E]]) {
   def post(s0: S): (S, List[E])                      = cmds.sequence.run(s0).value
