@@ -55,12 +55,10 @@ import navigate.server.tcs.AutoparkGems
 import navigate.server.tcs.AutoparkOiwfs
 import navigate.server.tcs.AutoparkPwfs1
 import navigate.server.tcs.AutoparkPwfs2
-import navigate.server.tcs.FollowStatus
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuiderConfig
 import navigate.server.tcs.InstrumentSpecifics
 import navigate.server.tcs.Origin
-import navigate.server.tcs.ParkStatus
 import navigate.server.tcs.ResetPointing
 import navigate.server.tcs.RotatorTrackConfig
 import navigate.server.tcs.RotatorTrackingMode
@@ -457,14 +455,7 @@ class NavigateMappings[F[_]: Sync](
             .map(Result.success)
         }
       )
-    ),
-    LeafMapping[ParkStatus](ParkStatusType),
-    LeafMapping[FollowStatus](FollowStatusType),
-    LeafMapping[OperationOutcome](OperationOutcomeType),
-    LeafMapping[OperationResult](OperationResultType),
-    LeafMapping[RotatorTrackingMode](RotatorTrackingModeType),
-    LeafMapping[M1Source](M1SourceType),
-    LeafMapping[TipTiltSource](TipTiltSourceType)
+    )
   )
 }
 

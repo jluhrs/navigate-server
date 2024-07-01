@@ -7,8 +7,8 @@ import cats.effect.implicits.*
 import cats.implicits.*
 import cats.kernel.Eq
 import org.epics.ca.AccessRights
+import org.epics.ca.Channel as CaChannel
 import org.epics.ca.ConnectionState
-import org.epics.ca.{Channel => CaChannel}
 
 import scala.concurrent.duration.FiniteDuration
 

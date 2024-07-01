@@ -59,8 +59,6 @@ class NavigateMappingsTest extends CatsEffectSuite {
   import NavigateMappingsTest.*
   import NavigateMappingsTest.given
 
-  override val munitTimeout = Duration(1800, "s")
-
   def extractResult[T: Decoder](j: Json, mutation: String): Option[T] = j.hcursor
     .downField("data")
     .downField(mutation)

@@ -46,8 +46,8 @@ import navigate.server.tcs.TrackingConfig
 import navigate.stateengine.Handler
 import navigate.stateengine.StateEngine
 import navigate.stateengine.StateEngine.Event
-import org.http4s.EntityDecoder
 import org.http4s.*
+import org.http4s.EntityDecoder
 import org.http4s.circe.*
 import org.http4s.client.dsl.Http4sClientDsl
 import org.http4s.client.middleware.Retry

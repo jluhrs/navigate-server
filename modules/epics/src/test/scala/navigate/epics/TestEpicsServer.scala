@@ -15,9 +15,9 @@ import gov.aps.jca.dbr.DBRType
 import gov.aps.jca.dbr.DBR_Int
 import lucuma.core.util.Enumerated
 
-import java.lang.{Double => JDouble}
-import java.lang.{Float => JFloat}
-import java.lang.{Integer => JInteger}
+import java.lang.Double as JDouble
+import java.lang.Float as JFloat
+import java.lang.Integer as JInteger
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
 

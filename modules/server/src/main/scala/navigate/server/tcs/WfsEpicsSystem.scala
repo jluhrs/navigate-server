@@ -13,8 +13,8 @@ import eu.timepit.refined.types.string.NonEmptyString
 import lucuma.refined.*
 import navigate.epics.EpicsService
 import navigate.epics.VerifiedEpics
+import navigate.epics.VerifiedEpics.*
 import navigate.epics.VerifiedEpics.VerifiedEpics
-import navigate.epics.VerifiedEpics._
 import navigate.server.ApplyCommandResult
 import navigate.server.acm.CadDirective
 import navigate.server.acm.ParameterList.*

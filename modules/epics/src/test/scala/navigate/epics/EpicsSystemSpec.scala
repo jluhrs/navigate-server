@@ -14,7 +14,7 @@ import scala.concurrent.duration.FiniteDuration
 
 class EpicsSystemSpec extends CatsEffectSuite {
 
-  private val epicsServer = ResourceFixture(
+  private val epicsServer = ResourceFunFixture(
     TestEpicsServer.init("test:").flatMap(_ => EpicsService.getBuilder.build[IO])
   )
 
