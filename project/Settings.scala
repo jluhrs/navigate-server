@@ -30,7 +30,7 @@ object Settings {
     val logstash    = "7.0"
     val pureConfig  = "0.17.7"
     val monocle     = "3.2.0"
-    val circe       = "0.14.8"
+    val circe       = "0.14.9"
 
     // test libraries
     val scalaMock              = "5.2.0"
