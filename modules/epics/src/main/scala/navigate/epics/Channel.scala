@@ -15,11 +15,11 @@ import fs2.Stream
 import mouse.all.*
 import navigate.epics.Channel.StreamEvent
 import navigate.epics.RemoteChannel.RemoteChannelImpl
+import org.epics.ca.Channel as CaChannel
 import org.epics.ca.Severity
 import org.epics.ca.Status
-import org.epics.ca.{Channel => CaChannel}
 
-import java.lang.{Boolean => JBoolean}
+import java.lang.Boolean as JBoolean
 import scala.concurrent.duration.FiniteDuration
 
 trait Channel[F[_], T] extends RemoteChannel[F] {

@@ -20,16 +20,17 @@ import Channel.StreamEvent.given
 
 class ChannelSpec extends CatsEffectSuite {
 
-  private val epicsServer: SyncIO[FunFixture[(ServerContext, EpicsService[IO])]] = ResourceFixture(
-    TestEpicsServer
-      .init("test:")
-      .flatMap(x =>
-        EpicsService.getBuilder
-          .withConnectionTimeout(FiniteDuration(1, TimeUnit.SECONDS))
-          .build[IO]
-          .map((x, _))
-      )
-  )
+  private val epicsServer: SyncIO[FunFixture[(ServerContext, EpicsService[IO])]] =
+    ResourceFunFixture(
+      TestEpicsServer
+        .init("test:")
+        .flatMap(x =>
+          EpicsService.getBuilder
+            .withConnectionTimeout(FiniteDuration(1, TimeUnit.SECONDS))
+            .build[IO]
+            .map((x, _))
+        )
+    )
 
   epicsServer.test("Read stream of channel events") { case (serverCtx, srv) =>
     assertIOBoolean(

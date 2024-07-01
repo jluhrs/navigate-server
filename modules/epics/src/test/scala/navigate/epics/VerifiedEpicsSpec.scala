@@ -16,7 +16,7 @@ import scala.concurrent.duration.FiniteDuration
 
 class VerifiedEpicsSpec extends CatsEffectSuite {
 
-  private val epicsService = ResourceFixture(EpicsService.getBuilder.build[IO])
+  private val epicsService = ResourceFunFixture(EpicsService.getBuilder.build[IO])
 
   /* This test works by creating the client channels before starting the test EPICS server. That way we are sure the
    * channels are disconnected by the time we try to use them, proving that verifiedRun works.

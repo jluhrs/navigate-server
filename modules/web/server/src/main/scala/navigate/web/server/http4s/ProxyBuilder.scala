@@ -11,7 +11,7 @@ import fs2.io.net.Network
 import org.http4s.HttpRoutes
 import org.http4s.Uri
 import org.http4s.ember.client.EmberClientBuilder
-import org.http4s.headers._
+import org.http4s.headers.*
 
 object ProxyBuilder:
   def buildService[F[_]: Async: Network](

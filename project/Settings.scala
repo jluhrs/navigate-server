@@ -13,7 +13,7 @@ object Settings {
     // Scala libraries
     val catsEffect = "3.5.4"
     val cats       = "2.12.0"
-    val mouse      = "1.2.3"
+    val mouse      = "1.3.0"
     val fs2        = "3.10.2"
     val catsTime   = "0.5.1"
 
@@ -34,7 +34,7 @@ object Settings {
 
     // test libraries
     val scalaMock              = "5.2.0"
-    val munitCatsEffectVersion = "1.0.7"
+    val munitCatsEffectVersion = "2.0.0"
 
     val gmpCommandRecords   = "0.7.7"
     val giapi               = "1.1.7"
@@ -77,7 +77,7 @@ object Settings {
     )
     val MUnit            = Def.setting(
       Seq(
-        "org.typelevel" %% "munit-cats-effect-3" % LibraryVersions.munitCatsEffectVersion % Test
+        "org.typelevel" %% "munit-cats-effect" % LibraryVersions.munitCatsEffectVersion % Test
       )
     )
     val ScalaMock        = "org.scalamock" %% "scalamock"    % LibraryVersions.scalaMock % "test"
