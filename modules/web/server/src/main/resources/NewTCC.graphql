@@ -198,6 +198,17 @@ type OperationOutcome {
     msg: String
 }
 
+type GuideQuality {
+    flux: Int!
+    centroidDetected: Boolean!
+}
+
+type GuidersQualityValues {
+    pwfs1: GuideQuality!
+    pwfs2: GuideQuality!
+    oiwfs: GuideQuality!
+}
+
 type Query {
     """telescopeStatus: TelescopeStatus!"""
     guideState: GuideConfigurationState!
@@ -225,4 +236,5 @@ type Mutation {
 type Subscription {
     logMessage: LogMessage!
     guideState: GuideConfigurationState!
+    guidersQualityValues: GuidersQualityValues!
 }

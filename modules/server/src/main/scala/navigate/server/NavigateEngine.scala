@@ -37,6 +37,8 @@ import navigate.model.config.NavigateEngineConfiguration
 import navigate.model.enums.DomeMode
 import navigate.model.enums.ShutterMode
 import navigate.server.tcs.GuideState
+import navigate.server.tcs.GuidersQualityValues
+import navigate.server.tcs.GuidersQualityValues.GuiderQuality
 import navigate.server.tcs.InstrumentSpecifics
 import navigate.server.tcs.RotatorTrackConfig
 import navigate.server.tcs.SlewOptions
@@ -90,6 +92,7 @@ trait NavigateEngine[F[_]] {
   def oiwfsObserve(period:                           TimeSpan): F[Unit]
   def oiwfsStopObserve: F[Unit]
   def getGuideState: F[GuideState]
+  def getGuidersQuality: F[GuidersQualityValues]
 }
 
 object NavigateEngine {
@@ -345,6 +348,19 @@ object NavigateEngine {
     )
 
     override def getGuideState: F[GuideState] = systems.tcsSouth.getGuideState
+
+    // This implementation in temporary
+    override def getGuidersQuality: F[GuidersQualityValues] =
+      for {
+        p1Cnts <- (1000 + scala.util.Random.between(-100, 100)).pure[F]
+        p2Cnts <- (1000 + scala.util.Random.between(-100, 100)).pure[F]
+        oiCnts <- (1000 + scala.util.Random.between(-100, 100)).pure[F]
+      } yield GuidersQualityValues(
+        pwfs1 = GuiderQuality(p1Cnts, false),
+        pwfs2 = GuiderQuality(p2Cnts, false),
+        oiwfs = GuiderQuality(oiCnts, false)
+      )
+
   }
 
   def build[F[_]: Concurrent: Temporal: Logger](

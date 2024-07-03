@@ -36,6 +36,7 @@ import navigate.server.NavigateEngine
 import navigate.server.OdbProxy
 import navigate.server.Systems
 import navigate.server.tcs.GuideState
+import navigate.server.tcs.GuidersQualityValues
 import navigate.server.tcs.InstrumentSpecifics
 import navigate.server.tcs.RotatorTrackConfig
 import navigate.server.tcs.SlewOptions
@@ -70,7 +71,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
       eng <- buildServer
       log <- Topic[IO, ILoggingEvent]
       gd  <- Topic[IO, GuideState]
-      mp  <- NavigateMappings[IO](eng, log, gd)
+      gq  <- Topic[IO, GuidersQualityValues]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq)
       r   <- mp.compileAndRun("mutation { mountFollow(enable: true) { result } }")
     } yield assert(
       extractResult[OperationOutcome](r, "mountFollow").exists(_ === OperationOutcome.success)
@@ -83,7 +85,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
       eng <- buildServer
       log <- Topic[IO, ILoggingEvent]
       gd  <- Topic[IO, GuideState]
-      mp  <- NavigateMappings[IO](eng, log, gd)
+      gq  <- Topic[IO, GuidersQualityValues]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq)
       r   <- mp.compileAndRun("mutation { mountPark { result } }")
     } yield assert(
       extractResult[OperationOutcome](r, "mountPark").exists(_ === OperationOutcome.success)
@@ -96,7 +99,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
       eng <- buildServer
       log <- Topic[IO, ILoggingEvent]
       gd  <- Topic[IO, GuideState]
-      mp  <- NavigateMappings[IO](eng, log, gd)
+      gq  <- Topic[IO, GuidersQualityValues]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq)
       r   <- mp.compileAndRun(
                """
                 |mutation { slew (
@@ -195,7 +199,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
       eng <- buildServer
       log <- Topic[IO, ILoggingEvent]
       gd  <- Topic[IO, GuideState]
-      mp  <- NavigateMappings[IO](eng, log, gd)
+      gq  <- Topic[IO, GuidersQualityValues]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq)
       r   <- mp.compileAndRun(
                """
           |mutation { tcsConfig ( config: {
@@ -274,7 +279,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
       eng <- buildServer
       log <- Topic[IO, ILoggingEvent]
       gd  <- Topic[IO, GuideState]
-      mp  <- NavigateMappings[IO](eng, log, gd)
+      gq  <- Topic[IO, GuidersQualityValues]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq)
       r   <- mp.compileAndRun(
                """
                 |mutation { instrumentSpecifics (instrumentSpecificsParams: {
@@ -310,7 +316,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
       eng <- buildServer
       log <- Topic[IO, ILoggingEvent]
       gd  <- Topic[IO, GuideState]
-      mp  <- NavigateMappings[IO](eng, log, gd)
+      gq  <- Topic[IO, GuidersQualityValues]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq)
       r   <- mp.compileAndRun(
                """
                 |mutation { oiwfsTarget (target: {
@@ -343,7 +350,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
       eng <- buildServer
       log <- Topic[IO, ILoggingEvent]
       gd  <- Topic[IO, GuideState]
-      mp  <- NavigateMappings[IO](eng, log, gd)
+      gq  <- Topic[IO, GuidersQualityValues]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq)
       r   <- mp.compileAndRun(
                """
           |mutation { oiwfsProbeTracking (config: {
@@ -368,7 +376,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
       eng <- buildServer
       log <- Topic[IO, ILoggingEvent]
       gd  <- Topic[IO, GuideState]
-      mp  <- NavigateMappings[IO](eng, log, gd)
+      gq  <- Topic[IO, GuidersQualityValues]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq)
 
       r <- mp.compileAndRun("mutation { oiwfsFollow(enable: true) { result } }")
     } yield assert(
@@ -381,7 +390,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
       eng <- buildServer
       log <- Topic[IO, ILoggingEvent]
       gd  <- Topic[IO, GuideState]
-      mp  <- NavigateMappings[IO](eng, log, gd)
+      gq  <- Topic[IO, GuidersQualityValues]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq)
 
       r <- mp.compileAndRun("mutation { oiwfsPark { result } }")
     } yield assert(
@@ -394,7 +404,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
       eng <- buildServer
       log <- Topic[IO, ILoggingEvent]
       gd  <- Topic[IO, GuideState]
-      mp  <- NavigateMappings[IO](eng, log, gd)
+      gq  <- Topic[IO, GuidersQualityValues]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq)
       r   <- mp.compileAndRun("mutation { rotatorFollow(enable: true) { result } }")
     } yield assert(
       extractResult[OperationOutcome](r, "rotatorFollow").exists(_ === OperationOutcome.success)
@@ -406,7 +417,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
       eng <- buildServer
       log <- Topic[IO, ILoggingEvent]
       gd  <- Topic[IO, GuideState]
-      mp  <- NavigateMappings[IO](eng, log, gd)
+      gq  <- Topic[IO, GuidersQualityValues]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq)
       r   <- mp.compileAndRun("mutation { rotatorPark { result } }")
     } yield assert(
       extractResult[OperationOutcome](r, "rotatorPark").exists(_ === OperationOutcome.success)
@@ -418,7 +430,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
       eng <- buildServer
       log <- Topic[IO, ILoggingEvent]
       gd  <- Topic[IO, GuideState]
-      mp  <- NavigateMappings[IO](eng, log, gd)
+      gq  <- Topic[IO, GuidersQualityValues]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq)
       r   <- mp.compileAndRun(
                """
           |mutation { rotatorConfig( config: {
@@ -455,7 +468,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
       eng  <- buildServer
       log  <- Topic[IO, ILoggingEvent]
       gd   <- Topic[IO, GuideState]
-      mp   <- NavigateMappings[IO](eng, log, gd)
+      gq   <- Topic[IO, GuidersQualityValues]
+      mp   <- NavigateMappings[IO](eng, log, gd, gq)
       logs <- mp.compileAndRunSubscription(
                 """
           | subscription {
@@ -531,7 +545,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
       eng <- buildServer
       log <- Topic[IO, ILoggingEvent]
       gd  <- Topic[IO, GuideState]
-      mp  <- NavigateMappings[IO](eng, log, gd)
+      gq  <- Topic[IO, GuidersQualityValues]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq)
       up  <- mp.compileAndRunSubscription(
                """
             | subscription {
@@ -565,7 +580,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
       eng <- buildServer
       log <- Topic[IO, ILoggingEvent]
       gd  <- Topic[IO, GuideState]
-      mp  <- NavigateMappings[IO](eng, log, gd)
+      gq  <- Topic[IO, GuidersQualityValues]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq)
       r   <- mp.compileAndRun("mutation { guideDisable { result } }")
     } yield assert(
       extractResult[OperationOutcome](r, "guideDisable").exists(_ === OperationOutcome.success)
@@ -577,7 +593,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
       eng <- buildServer
       log <- Topic[IO, ILoggingEvent]
       gd  <- Topic[IO, GuideState]
-      mp  <- NavigateMappings[IO](eng, log, gd)
+      gq  <- Topic[IO, GuidersQualityValues]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq)
       r   <- mp.compileAndRun(
                """
           |mutation { guideEnable( config: {
@@ -602,7 +619,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
       eng <- buildServer
       log <- Topic[IO, ILoggingEvent]
       gd  <- Topic[IO, GuideState]
-      mp  <- NavigateMappings[IO](eng, log, gd)
+      gq  <- Topic[IO, GuidersQualityValues]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq)
       r   <- mp.compileAndRun(
                """
           |mutation { oiwfsObserve( period: {
@@ -623,7 +641,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
       eng <- buildServer
       log <- Topic[IO, ILoggingEvent]
       gd  <- Topic[IO, GuideState]
-      mp  <- NavigateMappings[IO](eng, log, gd)
+      gq  <- Topic[IO, GuidersQualityValues]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq)
       r   <- mp.compileAndRun(
                """
           |mutation { oiwfsStopObserve {
@@ -641,7 +660,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
       eng <- buildServer
       log <- Topic[IO, ILoggingEvent]
       gd  <- Topic[IO, GuideState]
-      mp  <- NavigateMappings[IO](eng, log, gd)
+      gq  <- Topic[IO, GuidersQualityValues]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq)
       r   <- mp.compileAndRun(
                """
           |mutation { guideEnable( config: {
@@ -670,7 +690,8 @@ class NavigateMappingsTest extends CatsEffectSuite {
       eng <- buildServer
       log <- Topic[IO, ILoggingEvent]
       gd  <- Topic[IO, GuideState]
-      mp  <- NavigateMappings[IO](eng, log, gd)
+      gq  <- Topic[IO, GuidersQualityValues]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq)
       r   <- mp.compileAndRun(
                """
           |mutation { guideEnable( config: {
@@ -700,89 +721,96 @@ object NavigateMappingsTest {
 
   val dummyClient = Client.fromHttpApp(HttpApp.notFound[IO])
 
-  def buildServer: IO[NavigateEngine[IO]] = Ref
-    .of[IO, GuideState](
-      GuideState(MountGuideOption.MountGuideOff,
-                 M1GuideConfig.M1GuideOff,
-                 M2GuideConfig.M2GuideOff,
-                 false,
-                 false,
-                 false
+  def buildServer: IO[NavigateEngine[IO]] = for {
+    r <- Ref.of[IO, GuideState](
+           GuideState(MountGuideOption.MountGuideOff,
+                      M1GuideConfig.M1GuideOff,
+                      M2GuideConfig.M2GuideOff,
+                      false,
+                      false,
+                      false
+           )
+         )
+    q <- Ref.of[IO, GuidersQualityValues](
+           GuidersQualityValues(
+             GuidersQualityValues.GuiderQuality(0, false),
+             GuidersQualityValues.GuiderQuality(0, false),
+             GuidersQualityValues.GuiderQuality(0, false)
+           )
+         )
+  } yield new NavigateEngine[IO] {
+    override val systems: Systems[IO] = Systems(
+      OdbProxy.dummy[IO],
+      dummyClient,
+      new TcsSouthControllerSim[IO](r),
+      new TcsNorthControllerSim[IO](r)
+    )
+
+    override def eventStream: Stream[IO, NavigateEvent] = Stream.empty
+
+    override def mcsPark: IO[Unit] = IO.unit
+
+    override def mcsFollow(enable: Boolean): IO[Unit] = IO.unit
+
+    override def rotStop(useBrakes: Boolean): IO[Unit] = IO.unit
+
+    override def rotPark: IO[Unit] = IO.unit
+
+    override def rotFollow(enable: Boolean): IO[Unit] = IO.unit
+
+    override def rotMove(angle: Angle): IO[Unit] = IO.unit
+
+    override def ecsCarouselMode(
+      domeMode:      DomeMode,
+      shutterMode:   ShutterMode,
+      slitHeight:    Double,
+      domeEnable:    Boolean,
+      shutterEnable: Boolean
+    ): IO[Unit] = IO.unit
+
+    override def ecsVentGatesMove(gateEast: Double, westGate: Double): IO[Unit] = IO.unit
+
+    override def slew(slewOptions: SlewOptions, config: TcsConfig): IO[Unit] = IO.unit
+
+    override def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): IO[Unit] =
+      IO.unit
+
+    override def oiwfsTarget(target: Target): IO[Unit] = IO.unit
+
+    override def oiwfsProbeTracking(config: TrackingConfig): IO[Unit] = IO.unit
+
+    override def oiwfsPark: IO[Unit] = IO.unit
+
+    override def oiwfsFollow(enable: Boolean): IO[Unit] = IO.unit
+
+    override def rotTrackingConfig(cfg: RotatorTrackConfig): IO[Unit] = IO.unit
+
+    override def enableGuide(config: TelescopeGuideConfig): IO[Unit] = r.update(
+      _.copy(
+        mountOffload = config.mountGuide,
+        m1Guide = config.m1Guide,
+        m2Guide = config.m2Guide
       )
     )
-    .map(r =>
-      new NavigateEngine[IO] {
-        override val systems: Systems[IO] = Systems(
-          OdbProxy.dummy[IO],
-          dummyClient,
-          new TcsSouthControllerSim[IO](r),
-          new TcsNorthControllerSim[IO](r)
-        )
 
-        override def eventStream: Stream[IO, NavigateEvent] = Stream.empty
-
-        override def mcsPark: IO[Unit] = IO.unit
-
-        override def mcsFollow(enable: Boolean): IO[Unit] = IO.unit
-
-        override def rotStop(useBrakes: Boolean): IO[Unit] = IO.unit
-
-        override def rotPark: IO[Unit] = IO.unit
-
-        override def rotFollow(enable: Boolean): IO[Unit] = IO.unit
-
-        override def rotMove(angle: Angle): IO[Unit] = IO.unit
-
-        override def ecsCarouselMode(
-          domeMode:      DomeMode,
-          shutterMode:   ShutterMode,
-          slitHeight:    Double,
-          domeEnable:    Boolean,
-          shutterEnable: Boolean
-        ): IO[Unit] = IO.unit
-
-        override def ecsVentGatesMove(gateEast: Double, westGate: Double): IO[Unit] = IO.unit
-
-        override def slew(slewOptions: SlewOptions, config: TcsConfig): IO[Unit] = IO.unit
-
-        override def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): IO[Unit] =
-          IO.unit
-
-        override def oiwfsTarget(target: Target): IO[Unit] = IO.unit
-
-        override def oiwfsProbeTracking(config: TrackingConfig): IO[Unit] = IO.unit
-
-        override def oiwfsPark: IO[Unit] = IO.unit
-
-        override def oiwfsFollow(enable: Boolean): IO[Unit] = IO.unit
-
-        override def rotTrackingConfig(cfg: RotatorTrackConfig): IO[Unit] = IO.unit
-
-        override def enableGuide(config: TelescopeGuideConfig): IO[Unit] = r.update(
-          _.copy(
-            mountOffload = config.mountGuide,
-            m1Guide = config.m1Guide,
-            m2Guide = config.m2Guide
-          )
-        )
-
-        override def disableGuide: IO[Unit] = r.update(
-          _.copy(
-            mountOffload = MountGuideOption.MountGuideOff,
-            m1Guide = M1GuideConfig.M1GuideOff,
-            m2Guide = M2GuideConfig.M2GuideOff
-          )
-        )
-
-        override def tcsConfig(config: TcsConfig): IO[Unit] = IO.unit
-
-        override def oiwfsObserve(period: TimeSpan): IO[Unit] = IO.unit
-
-        override def oiwfsStopObserve: IO[Unit] = IO.unit
-
-        override def getGuideState: IO[GuideState] = r.get
-      }
+    override def disableGuide: IO[Unit] = r.update(
+      _.copy(
+        mountOffload = MountGuideOption.MountGuideOff,
+        m1Guide = M1GuideConfig.M1GuideOff,
+        m2Guide = M2GuideConfig.M2GuideOff
+      )
     )
+
+    override def tcsConfig(config: TcsConfig): IO[Unit] = IO.unit
+
+    override def oiwfsObserve(period: TimeSpan): IO[Unit] = IO.unit
+
+    override def oiwfsStopObserve: IO[Unit] = IO.unit
+
+    override def getGuideState: IO[GuideState] = r.get
+
+    override def getGuidersQuality: IO[GuidersQualityValues] = q.get
+  }
 
   given Decoder[OperationOutcome] = Decoder.instance(h =>
     h.downField("result")

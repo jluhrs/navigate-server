@@ -57,6 +57,7 @@ import navigate.server.tcs.AutoparkPwfs1
 import navigate.server.tcs.AutoparkPwfs2
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuiderConfig
+import navigate.server.tcs.GuidersQualityValues
 import navigate.server.tcs.InstrumentSpecifics
 import navigate.server.tcs.Origin
 import navigate.server.tcs.ResetPointing
@@ -85,7 +86,8 @@ import encoder.given
 class NavigateMappings[F[_]: Sync](
   server:              NavigateEngine[F],
   logTopic:            Topic[F, ILoggingEvent],
-  guideStateTopic:     Topic[F, GuideState]
+  guideStateTopic:     Topic[F, GuideState],
+  guidersQualityTopic: Topic[F, GuidersQualityValues]
 )(
   override val schema: Schema
 ) extends CirceMapping[F] {
@@ -453,6 +455,13 @@ class NavigateMappings[F[_]: Sync](
             .map(_.asJson)
             .map(circeCursor(p, env, _))
             .map(Result.success)
+        },
+        RootStream.computeCursor("guidersQualityValues") { (p, env) =>
+          guidersQualityTopic
+            .subscribe(10)
+            .map(_.asJson)
+            .map(circeCursor(p, env, _))
+            .map(Result.success)
         }
       )
     )
@@ -466,14 +475,17 @@ object NavigateMappings extends GrackleParsers {
     .build
 
   def apply[F[_]: Sync](
-    server:          NavigateEngine[F],
-    logTopic:        Topic[F, ILoggingEvent],
-    guideStateTopic: Topic[F, GuideState]
+    server:              NavigateEngine[F],
+    logTopic:            Topic[F, ILoggingEvent],
+    guideStateTopic:     Topic[F, GuideState],
+    guidersQualityTopic: Topic[F, GuidersQualityValues]
   ): F[NavigateMappings[F]] = loadSchema.flatMap {
     case Result.Success(schema)           =>
-      new NavigateMappings[F](server, logTopic, guideStateTopic)(schema).pure[F]
+      new NavigateMappings[F](server, logTopic, guideStateTopic, guidersQualityTopic)(schema)
+        .pure[F]
     case Result.Warning(problems, schema) =>
-      new NavigateMappings[F](server, logTopic, guideStateTopic)(schema).pure[F]
+      new NavigateMappings[F](server, logTopic, guideStateTopic, guidersQualityTopic)(schema)
+        .pure[F]
     case Result.Failure(problems)         =>
       Sync[F].raiseError[NavigateMappings[F]](
         new Throwable(
