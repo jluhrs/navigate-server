@@ -25,6 +25,7 @@ import navigate.server.NavigateEngine
 import navigate.server.NavigateFailure
 import navigate.server.Systems
 import navigate.server.tcs.GuideState
+import navigate.server.tcs.GuidersQualityValues
 import navigate.web.server.OcsBuildInfo
 import navigate.web.server.common.LogInitialization
 import navigate.web.server.common.RedirectToHttpsRoutes
@@ -117,18 +118,20 @@ object WebServerLauncher extends IOApp with LogInitialization {
 
   /** Resource that yields the running web server */
   def webServer[F[_]: Logger: Async: Dns: Files: Compression: Network](
-    conf:       NavigateConfiguration,
-    outputs:    Topic[F, NavigateEvent],
-    logTopic:   Topic[F, ILoggingEvent],
-    guideTopic: Topic[F, GuideState],
-    se:         NavigateEngine[F],
-    clientsDb:  ClientsSetDb[F]
+    conf:                NavigateConfiguration,
+    outputs:             Topic[F, NavigateEvent],
+    logTopic:            Topic[F, ILoggingEvent],
+    guideTopic:          Topic[F, GuideState],
+    guidersQualityTopic: Topic[F, GuidersQualityValues],
+    se:                  NavigateEngine[F],
+    clientsDb:           ClientsSetDb[F]
   ): Resource[F, Server] = {
     val ssl: F[Option[SSLContext]] = conf.webServer.tls.map(makeContext[F]).sequence
 
     def router(wsBuilder: WebSocketBuilder2[F], proxyService: HttpRoutes[F]) = Router[F](
       "/"                 -> new StaticRoutes().service,
-      "/navigate"         -> new GraphQlRoutes(se, logTopic, guideTopic).service(wsBuilder),
+      "/navigate"         -> new GraphQlRoutes(se, logTopic, guideTopic, guidersQualityTopic)
+        .service(wsBuilder),
       ProxyRoute.toString -> proxyService
     )
 
@@ -263,6 +266,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
         out    <- Resource.eval(Topic[IO, NavigateEvent])
         log    <- Resource.eval(Topic[IO, ILoggingEvent])
         gd     <- Resource.eval(Topic[IO, GuideState])
+        gq     <- Resource.eval(Topic[IO, GuidersQualityValues])
         dsp    <- Dispatcher.sequential[IO]
         _      <- Resource.eval(logToClients(log, dsp))
         cs     <- Resource.eval(
@@ -270,7 +274,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
                   )
         _      <- Resource.eval(publishStats(cs).compile.drain.start)
         engine <- engineIO(conf, cli)
-        _      <- webServer[IO](conf, out, log, gd, engine, cs)
+        _      <- webServer[IO](conf, out, log, gd, gq, engine, cs)
         _      <- Resource.eval(
                     out.subscribers
                       .evalMap(l => Logger[IO].debug(s"Subscribers amount: $l").whenA(l > 1))
@@ -280,6 +284,9 @@ object WebServerLauncher extends IOApp with LogInitialization {
                   )
         _      <- Resource.eval(
                     guideStatePoll(engine, gd).compile.drain.start
+                  )
+        _      <- Resource.eval(
+                    guiderQualityPoll(engine, gq).compile.drain.start
                   )
         f      <- Resource.eval(
                     engine.eventStream.through(out.publish).compile.drain.onError(logError).start
@@ -302,6 +309,18 @@ object WebServerLauncher extends IOApp with LogInitialization {
     Stream
       .fixedRate[IO](FiniteDuration(1, TimeUnit.SECONDS))
       .evalMap(_ => eng.getGuideState)
+      .evalMapAccumulate(none) { (acc, gs) =>
+        (if (acc.contains(gs)) IO.unit else t.publish1(gs).void).as(gs.some, ())
+      }
+      .void
+
+  def guiderQualityPoll(
+    eng: NavigateEngine[IO],
+    t:   Topic[IO, GuidersQualityValues]
+  ): Stream[IO, Unit] =
+    Stream
+      .fixedRate[IO](FiniteDuration(1, TimeUnit.SECONDS))
+      .evalMap(_ => eng.getGuidersQuality)
       .evalMapAccumulate(none) { (acc, gs) =>
         (if (acc.contains(gs)) IO.unit else t.publish1(gs).void).as(gs.some, ())
       }

@@ -11,6 +11,7 @@ import lucuma.core.model.M1GuideConfig
 import lucuma.core.model.M2GuideConfig
 import lucuma.core.util.Timestamp
 import navigate.server.tcs.GuideState
+import navigate.server.tcs.GuidersQualityValues
 
 package object encoder {
 
@@ -45,5 +46,18 @@ package object encoder {
       )
     )
   }
+
+  given Encoder[GuidersQualityValues.GuiderQuality] = s =>
+    Json.obj(
+      "flux"             -> s.flux.asJson,
+      "centroidDetected" -> s.centroidDetected.asJson
+    )
+
+  given Encoder[GuidersQualityValues] = s =>
+    Json.obj(
+      "pwfs1" -> s.pwfs1.asJson,
+      "pwfs2" -> s.pwfs2.asJson,
+      "oiwfs" -> s.oiwfs.asJson
+    )
 
 }
