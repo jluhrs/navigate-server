@@ -24,6 +24,7 @@ import scala.concurrent.duration.FiniteDuration
 
 trait WfsEpicsSystem[F[_]] {
   def startCommand(timeout: FiniteDuration): WfsEpicsSystem.WfsCommands[F]
+  def getQualityStatus: WfsEpicsSystem.WfsQualityStatus[F]
 }
 
 object WfsEpicsSystem {
@@ -47,15 +48,26 @@ object WfsEpicsSystem {
         new WfsEpicsImpl[F](channels),
         timeout
       )
+
+    override def getQualityStatus: WfsQualityStatus[F] = new WfsQualityStatus[F] {
+      override val flux: VerifiedEpics[F, F, Int]                 =
+        VerifiedEpics.readChannel(channels.telltale, channels.flux)
+      override val centroidDetected: VerifiedEpics[F, F, Boolean] = VerifiedEpics
+        .readChannel(channels.telltale, channels.centroidDetected)
+        .flatMap(x => VerifiedEpics.liftF[F, F, Boolean](x.map(_ =!= 0)))
+    }
   }
 
   def build[F[_]: Dispatcher: Temporal: Parallel](
     service:             EpicsService[F],
     sysName:             String,
     top:                 NonEmptyString,
+    fluxName:            NonEmptyString = "dc:fgDiag1PW.VALQ".refined,
+    centroidName:        NonEmptyString = "dc:fgDiag1PW.VALB".refined,
     telltaleChannelName: NonEmptyString = "health.VAL".refined
   ): Resource[F, WfsEpicsSystem[F]] = for {
-    channels <- WfsChannels.build(service, sysName, top, telltaleChannelName)
+    channels <-
+      WfsChannels.build(service, sysName, top, telltaleChannelName, fluxName, centroidName)
   } yield buildSystem(channels)
 
   trait WfsEpics[F[_]] {
@@ -107,6 +119,11 @@ object WfsEpicsSystem {
         wfsEpics.gainsCmd.setParam3(v)
       )
     }
+  }
+
+  trait WfsQualityStatus[F[_]] {
+    val flux: VerifiedEpics[F, F, Int]
+    val centroidDetected: VerifiedEpics[F, F, Boolean]
   }
 
 }

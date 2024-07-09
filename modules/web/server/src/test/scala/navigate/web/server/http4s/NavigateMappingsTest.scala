@@ -738,78 +738,83 @@ object NavigateMappingsTest {
              GuidersQualityValues.GuiderQuality(0, false)
            )
          )
-  } yield new NavigateEngine[IO] {
-    override val systems: Systems[IO] = Systems(
-      OdbProxy.dummy[IO],
-      dummyClient,
-      new TcsSouthControllerSim[IO](r),
-      new TcsNorthControllerSim[IO](r)
-    )
+  } yield {
+    val tcsSouth = new TcsSouthControllerSim[IO](r, q)
+    new NavigateEngine[IO] {
 
-    override def eventStream: Stream[IO, NavigateEvent] = Stream.empty
-
-    override def mcsPark: IO[Unit] = IO.unit
-
-    override def mcsFollow(enable: Boolean): IO[Unit] = IO.unit
-
-    override def rotStop(useBrakes: Boolean): IO[Unit] = IO.unit
-
-    override def rotPark: IO[Unit] = IO.unit
-
-    override def rotFollow(enable: Boolean): IO[Unit] = IO.unit
-
-    override def rotMove(angle: Angle): IO[Unit] = IO.unit
-
-    override def ecsCarouselMode(
-      domeMode:      DomeMode,
-      shutterMode:   ShutterMode,
-      slitHeight:    Double,
-      domeEnable:    Boolean,
-      shutterEnable: Boolean
-    ): IO[Unit] = IO.unit
-
-    override def ecsVentGatesMove(gateEast: Double, westGate: Double): IO[Unit] = IO.unit
-
-    override def slew(slewOptions: SlewOptions, config: TcsConfig): IO[Unit] = IO.unit
-
-    override def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): IO[Unit] =
-      IO.unit
-
-    override def oiwfsTarget(target: Target): IO[Unit] = IO.unit
-
-    override def oiwfsProbeTracking(config: TrackingConfig): IO[Unit] = IO.unit
-
-    override def oiwfsPark: IO[Unit] = IO.unit
-
-    override def oiwfsFollow(enable: Boolean): IO[Unit] = IO.unit
-
-    override def rotTrackingConfig(cfg: RotatorTrackConfig): IO[Unit] = IO.unit
-
-    override def enableGuide(config: TelescopeGuideConfig): IO[Unit] = r.update(
-      _.copy(
-        mountOffload = config.mountGuide,
-        m1Guide = config.m1Guide,
-        m2Guide = config.m2Guide
+      override val systems: Systems[IO] = Systems(
+        OdbProxy.dummy[IO],
+        dummyClient,
+        tcsSouth,
+        tcsSouth,
+        new TcsNorthControllerSim[IO](r, q)
       )
-    )
 
-    override def disableGuide: IO[Unit] = r.update(
-      _.copy(
-        mountOffload = MountGuideOption.MountGuideOff,
-        m1Guide = M1GuideConfig.M1GuideOff,
-        m2Guide = M2GuideConfig.M2GuideOff
+      override def eventStream: Stream[IO, NavigateEvent] = Stream.empty
+
+      override def mcsPark: IO[Unit] = IO.unit
+
+      override def mcsFollow(enable: Boolean): IO[Unit] = IO.unit
+
+      override def rotStop(useBrakes: Boolean): IO[Unit] = IO.unit
+
+      override def rotPark: IO[Unit] = IO.unit
+
+      override def rotFollow(enable: Boolean): IO[Unit] = IO.unit
+
+      override def rotMove(angle: Angle): IO[Unit] = IO.unit
+
+      override def ecsCarouselMode(
+        domeMode:      DomeMode,
+        shutterMode:   ShutterMode,
+        slitHeight:    Double,
+        domeEnable:    Boolean,
+        shutterEnable: Boolean
+      ): IO[Unit] = IO.unit
+
+      override def ecsVentGatesMove(gateEast: Double, westGate: Double): IO[Unit] = IO.unit
+
+      override def slew(slewOptions: SlewOptions, config: TcsConfig): IO[Unit] = IO.unit
+
+      override def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): IO[Unit] =
+        IO.unit
+
+      override def oiwfsTarget(target: Target): IO[Unit] = IO.unit
+
+      override def oiwfsProbeTracking(config: TrackingConfig): IO[Unit] = IO.unit
+
+      override def oiwfsPark: IO[Unit] = IO.unit
+
+      override def oiwfsFollow(enable: Boolean): IO[Unit] = IO.unit
+
+      override def rotTrackingConfig(cfg: RotatorTrackConfig): IO[Unit] = IO.unit
+
+      override def enableGuide(config: TelescopeGuideConfig): IO[Unit] = r.update(
+        _.copy(
+          mountOffload = config.mountGuide,
+          m1Guide = config.m1Guide,
+          m2Guide = config.m2Guide
+        )
       )
-    )
 
-    override def tcsConfig(config: TcsConfig): IO[Unit] = IO.unit
+      override def disableGuide: IO[Unit] = r.update(
+        _.copy(
+          mountOffload = MountGuideOption.MountGuideOff,
+          m1Guide = M1GuideConfig.M1GuideOff,
+          m2Guide = M2GuideConfig.M2GuideOff
+        )
+      )
 
-    override def oiwfsObserve(period: TimeSpan): IO[Unit] = IO.unit
+      override def tcsConfig(config: TcsConfig): IO[Unit] = IO.unit
 
-    override def oiwfsStopObserve: IO[Unit] = IO.unit
+      override def oiwfsObserve(period: TimeSpan): IO[Unit] = IO.unit
 
-    override def getGuideState: IO[GuideState] = r.get
+      override def oiwfsStopObserve: IO[Unit] = IO.unit
 
-    override def getGuidersQuality: IO[GuidersQualityValues] = q.get
+      override def getGuideState: IO[GuideState] = r.get
+
+      override def getGuidersQuality: IO[GuidersQualityValues] = q.get
+    }
   }
 
   given Decoder[OperationOutcome] = Decoder.instance(h =>

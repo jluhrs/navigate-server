@@ -24,10 +24,14 @@ object TestWfsEpicsSystem {
     focusGain: TestChannel.State[String],
     reset:     TestChannel.State[BinaryYesNo],
     gainsDir:  TestChannel.State[CadDirective],
-    resetDir:  TestChannel.State[CadDirective]
+    resetDir:  TestChannel.State[CadDirective],
+    flux:      TestChannel.State[Int],
+    centroid:  TestChannel.State[Int]
   )
 
   val defaultState: State = State(
+    TestChannel.State.default,
+    TestChannel.State.default,
     TestChannel.State.default,
     TestChannel.State.default,
     TestChannel.State.default,
@@ -49,7 +53,9 @@ object TestWfsEpicsSystem {
     focusGain = new TestChannel[F, State, String](s, Focus[State](_.focusGain)),
     reset = new TestChannel[F, State, BinaryYesNo](s, Focus[State](_.reset)),
     gainsDir = new TestChannel[F, State, CadDirective](s, Focus[State](_.gainsDir)),
-    resetDir = new TestChannel[F, State, CadDirective](s, Focus[State](_.resetDir))
+    resetDir = new TestChannel[F, State, CadDirective](s, Focus[State](_.resetDir)),
+    flux = new TestChannel[F, State, Int](s, Focus[State](_.flux)),
+    centroidDetected = new TestChannel[F, State, Int](s, Focus[State](_.centroid))
   )
 
   def build[F[_]: Monad: Temporal: Parallel](
