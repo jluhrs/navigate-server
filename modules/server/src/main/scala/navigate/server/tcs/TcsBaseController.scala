@@ -42,6 +42,7 @@ trait TcsBaseController[F[_]] {
   def oiwfsStopObserve: F[ApplyCommandResult]
 
   def getGuideState: F[GuideState]
+  def getGuideQuality: F[GuidersQualityValues]
 }
 
 object TcsBaseController {

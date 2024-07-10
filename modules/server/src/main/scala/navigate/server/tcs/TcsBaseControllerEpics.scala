@@ -736,6 +736,28 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
   private def guideUsesOiwfs(m1Guide: M1GuideConfig, m2Guide: M2GuideConfig): Boolean =
     m1Guide.uses(M1Source.OIWFS) || m2Guide.uses(TipTiltSource.OIWFS)
 
+  override def getGuideQuality: F[GuidersQualityValues] = (
+    for {
+      p1_fF <- pwfs1.getQualityStatus.flux
+      p1_cF <- pwfs1.getQualityStatus.centroidDetected
+      p2_fF <- pwfs2.getQualityStatus.flux
+      p2_cF <- pwfs2.getQualityStatus.centroidDetected
+      oi_fF <- oiwfs.getQualityStatus.flux
+      oi_cF <- oiwfs.getQualityStatus.centroidDetected
+    } yield for {
+      p1_f <- p1_fF
+      p1_c <- p1_cF
+      p2_f <- p2_fF
+      p2_c <- p2_cF
+      oi_f <- oi_fF
+      oi_c <- oi_cF
+    } yield GuidersQualityValues(
+      GuidersQualityValues.GuiderQuality(p1_f, p1_c),
+      GuidersQualityValues.GuiderQuality(p2_f, p2_c),
+      GuidersQualityValues.GuiderQuality(oi_f, oi_c)
+    )
+  ).verifiedRun(ConnectionTimeout)
+
 }
 
 object TcsBaseControllerEpics {

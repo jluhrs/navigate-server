@@ -16,8 +16,10 @@ import navigate.model.enums.DomeMode
 import navigate.model.enums.ShutterMode
 import navigate.server.ApplyCommandResult
 
-class TcsBaseControllerSim[F[_]: Applicative](guideRef: Ref[F, GuideState])
-    extends TcsBaseController[F] {
+class TcsBaseControllerSim[F[_]: Applicative](
+  guideRef:          Ref[F, GuideState],
+  guidersQualityRef: Ref[F, GuidersQualityValues]
+) extends TcsBaseController[F] {
   override def mcsPark: F[ApplyCommandResult] = Applicative[F].pure(ApplyCommandResult.Completed)
 
   override def mcsFollow(enable: Boolean): F[ApplyCommandResult] =
@@ -100,4 +102,6 @@ class TcsBaseControllerSim[F[_]: Applicative](guideRef: Ref[F, GuideState])
     .as(ApplyCommandResult.Completed)
 
   override def getGuideState: F[GuideState] = guideRef.get
+
+  override def getGuideQuality: F[GuidersQualityValues] = guidersQualityRef.get
 }

@@ -11,20 +11,30 @@ import lucuma.core.enums.MountGuideOption
 import lucuma.core.model.M1GuideConfig
 import lucuma.core.model.M2GuideConfig
 
-class TcsSouthControllerSim[F[_]: Applicative](guideRef: Ref[F, GuideState])
-    extends TcsBaseControllerSim[F](guideRef)
+class TcsSouthControllerSim[F[_]: Applicative](
+  guideRef:          Ref[F, GuideState],
+  guidersQualityRef: Ref[F, GuidersQualityValues]
+) extends TcsBaseControllerSim[F](guideRef, guidersQualityRef)
     with TcsSouthController[F] {}
 
 object TcsSouthControllerSim {
-  def build[F[_]: Sync]: F[TcsSouthControllerSim[F]] = Ref
-    .of(
-      GuideState(MountGuideOption.MountGuideOff,
-                 M1GuideConfig.M1GuideOff,
-                 M2GuideConfig.M2GuideOff,
-                 false,
-                 false,
-                 false
-      )
-    )
-    .map(new TcsSouthControllerSim(_))
+  def build[F[_]: Sync]: F[TcsSouthControllerSim[F]] = for {
+    x <- Ref.of(
+           GuideState(
+             MountGuideOption.MountGuideOff,
+             M1GuideConfig.M1GuideOff,
+             M2GuideConfig.M2GuideOff,
+             false,
+             false,
+             false
+           )
+         )
+    y <- Ref.of(
+           GuidersQualityValues(
+             GuidersQualityValues.GuiderQuality(0, false),
+             GuidersQualityValues.GuiderQuality(0, false),
+             GuidersQualityValues.GuiderQuality(0, false)
+           )
+         )
+  } yield new TcsSouthControllerSim(x, y)
 }

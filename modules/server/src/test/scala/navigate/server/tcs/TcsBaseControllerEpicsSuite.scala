@@ -982,6 +982,48 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     }
   }
 
+  test("Read guide quality values") {
+    val testGuideQuality = GuidersQualityValues(
+      GuidersQualityValues.GuiderQuality(1000, true),
+      GuidersQualityValues.GuiderQuality(500, false),
+      GuidersQualityValues.GuiderQuality(1500, true)
+    )
+    for {
+      x        <- createController
+      (st, ctr) = x
+      _        <- st.p1.update(
+                    _.copy(
+                      flux = TestChannel.State.of(testGuideQuality.pwfs1.flux),
+                      centroid = TestChannel.State.of(testGuideQuality.pwfs1.centroidDetected.fold(1, 0))
+                    )
+                  )
+      _        <- st.p2.update(
+                    _.copy(
+                      flux = TestChannel.State.of(testGuideQuality.pwfs2.flux),
+                      centroid = TestChannel.State.of(testGuideQuality.pwfs2.centroidDetected.fold(1, 0))
+                    )
+                  )
+      _        <- st.oi.update(
+                    _.copy(
+                      flux = TestChannel.State.of(testGuideQuality.oiwfs.flux),
+                      centroid = TestChannel.State.of(testGuideQuality.oiwfs.centroidDetected.fold(1, 0))
+                    )
+                  )
+      g        <- ctr.getGuideQuality
+      rp1      <- st.p1.get
+      rp2      <- st.p2.get
+      roi      <- st.oi.get
+    } yield {
+      assert(rp1.flux.connected)
+      assert(rp1.centroid.connected)
+      assert(rp2.flux.connected)
+      assert(rp2.centroid.connected)
+      assert(roi.flux.connected)
+      assert(roi.centroid.connected)
+      assertEquals(g, testGuideQuality)
+    }
+  }
+
   test("Automatically set OIWFS QL") {
     val testExpTime = TimeSpan.unsafeFromMicroseconds(12345)
     val guideCfg    = TelescopeGuideConfig(

@@ -164,36 +164,36 @@ object NavigateEngine {
       engine.process(startState)
 
     override def mcsPark: F[Unit] =
-      simpleCommand(engine, McsPark, systems.tcsSouth.mcsPark, Focus[State](_.mcsParkInProgress))
+      simpleCommand(engine, McsPark, systems.tcsCommon.mcsPark, Focus[State](_.mcsParkInProgress))
 
     override def mcsFollow(enable: Boolean): F[Unit] =
       simpleCommand(engine,
                     McsFollow(enable),
-                    systems.tcsSouth.mcsFollow(enable),
+                    systems.tcsCommon.mcsFollow(enable),
                     Focus[State](_.mcsFollowInProgress)
       )
 
     override def rotStop(useBrakes: Boolean): F[Unit] =
       simpleCommand(engine,
                     CrcsStop(useBrakes),
-                    systems.tcsSouth.rotStop(useBrakes),
+                    systems.tcsCommon.rotStop(useBrakes),
                     Focus[State](_.rotStopInProgress)
       )
 
     override def rotPark: F[Unit] =
-      simpleCommand(engine, CrcsPark, systems.tcsSouth.rotPark, Focus[State](_.rotParkInProgress))
+      simpleCommand(engine, CrcsPark, systems.tcsCommon.rotPark, Focus[State](_.rotParkInProgress))
 
     override def rotFollow(enable: Boolean): F[Unit] =
       simpleCommand(engine,
                     CrcsFollow(enable),
-                    systems.tcsSouth.rotFollow(enable),
+                    systems.tcsCommon.rotFollow(enable),
                     Focus[State](_.rotFollowInProgress)
       )
 
     override def rotMove(angle: Angle): F[Unit] =
       simpleCommand(engine,
                     CrcsMove(angle),
-                    systems.tcsSouth.rotMove(angle),
+                    systems.tcsCommon.rotMove(angle),
                     Focus[State](_.rotMoveInProgress)
       )
 
@@ -206,11 +206,11 @@ object NavigateEngine {
     ): F[Unit] = simpleCommand(
       engine,
       EcsCarouselMode(domeMode, shutterMode, slitHeight, domeEnable, shutterEnable),
-      systems.tcsSouth.ecsCarouselMode(domeMode,
-                                       shutterMode,
-                                       slitHeight,
-                                       domeEnable,
-                                       shutterEnable
+      systems.tcsCommon.ecsCarouselMode(domeMode,
+                                        shutterMode,
+                                        slitHeight,
+                                        domeEnable,
+                                        shutterEnable
       ),
       Focus[State](_.ecsDomeModeInProgress)
     )
@@ -221,14 +221,14 @@ object NavigateEngine {
     override def tcsConfig(config: TcsConfig): F[Unit] = simpleCommand(
       engine,
       TcsConfigure,
-      systems.tcsSouth.tcsConfig(config),
+      systems.tcsCommon.tcsConfig(config),
       Focus[State](_.tcsConfigInProgress)
     )
 
     override def slew(slewOptions: SlewOptions, tcsConfig: TcsConfig): F[Unit] = simpleCommand(
       engine,
       Slew,
-      systems.tcsSouth.slew(slewOptions, tcsConfig),
+      systems.tcsCommon.slew(slewOptions, tcsConfig),
       Focus[State](_.slewInProgress)
     )
 
@@ -236,35 +236,35 @@ object NavigateEngine {
       simpleCommand(
         engine,
         InstSpecifics,
-        systems.tcsSouth.instrumentSpecifics(instrumentSpecificsParams),
+        systems.tcsCommon.instrumentSpecifics(instrumentSpecificsParams),
         Focus[State](_.instrumentSpecificsInProgress)
       )
 
     override def oiwfsTarget(target: Target): F[Unit] = simpleCommand(
       engine,
       OiwfsTarget,
-      systems.tcsSouth.oiwfsTarget(target),
+      systems.tcsCommon.oiwfsTarget(target),
       Focus[State](_.oiwfsInProgress)
     )
 
     override def oiwfsProbeTracking(config: TrackingConfig): F[Unit] = simpleCommand(
       engine,
       OiwfsProbeTracking,
-      systems.tcsSouth.oiwfsProbeTracking(config),
+      systems.tcsCommon.oiwfsProbeTracking(config),
       Focus[State](_.oiwfsProbeTrackingInProgress)
     )
 
     override def oiwfsPark: F[Unit] = simpleCommand(
       engine,
       OiwfsPark,
-      systems.tcsSouth.oiwfsPark,
+      systems.tcsCommon.oiwfsPark,
       Focus[State](_.oiwfsParkInProgress)
     )
 
     override def oiwfsFollow(enable: Boolean): F[Unit] = simpleCommand(
       engine,
       OiwfsFollow(enable),
-      systems.tcsSouth.oiwfsFollow(enable),
+      systems.tcsCommon.oiwfsFollow(enable),
       Focus[State](_.oiwfsFollowInProgress)
     )
 
@@ -272,7 +272,7 @@ object NavigateEngine {
       simpleCommand(
         engine,
         RotatorTrackingConfig,
-        systems.tcsSouth.rotTrackingConfig(cfg),
+        systems.tcsCommon.rotTrackingConfig(cfg),
         Focus[State](_.rotTrackingConfigInProgress)
       )
 
@@ -286,7 +286,7 @@ object NavigateEngine {
             Handler.replace(st.focus(_.guideConfig.tcsGuide).replace(config)) *>
               Handler.fromStream(
                 Stream.eval(
-                  systems.tcsSouth.enableGuide(config)
+                  systems.tcsCommon.enableGuide(config)
                 )
               )
           },
@@ -314,7 +314,7 @@ object NavigateEngine {
           ) *>
             Handler.fromStream(
               Stream.eval(
-                systems.tcsSouth.disableGuide
+                systems.tcsCommon.disableGuide
               )
             )
         },
@@ -331,7 +331,7 @@ object NavigateEngine {
         Handler.get[F, State, ApplyCommandResult].flatMap { st =>
           Handler.fromStream(
             Stream.eval(
-              systems.tcsSouth.oiwfsObserve(period)
+              systems.tcsCommon.oiwfsObserve(period)
             )
           )
         },
@@ -343,13 +343,12 @@ object NavigateEngine {
     override def oiwfsStopObserve: F[Unit] = simpleCommand(
       engine,
       OiwfsStopObserve,
-      systems.tcsSouth.oiwfsStopObserve,
+      systems.tcsCommon.oiwfsStopObserve,
       Focus[State](_.oiwfsStopObserve)
     )
 
-    override def getGuideState: F[GuideState] = systems.tcsSouth.getGuideState
+    override def getGuideState: F[GuideState] = systems.tcsCommon.getGuideState
 
-    // This implementation in temporary
     override def getGuidersQuality: F[GuidersQualityValues] =
       for {
         p1Cnts <- (1000 + scala.util.Random.between(-100, 100)).pure[F]
