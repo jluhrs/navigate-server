@@ -265,22 +265,30 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
           .getOrElse(identity[TcsCommands[F]])
       )
 
+  // This is an experiment, to see if unselecting the OIWFS before configuring the telescope gets rid of the
+  // "OIWFS X/Y exceeded" error
   override def tcsConfig(config: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
-    (selectOiwfs(config) *>
-      applyTcsConfig(config)(
-        tcsEpics.startCommand(timeout)
-      ).post).verifiedRun(ConnectionTimeout)
+    (
+      unselectOiwfs *>
+        applyTcsConfig(config)(
+          tcsEpics.startCommand(timeout)
+        ).post *>
+        selectOiwfs(config)
+    ).verifiedRun(ConnectionTimeout)
 
   override def slew(
     slewOptions: SlewOptions,
     tcsConfig:   TcsBaseController.TcsConfig
   ): F[ApplyCommandResult] =
-    (selectOiwfs(tcsConfig) *>
-      setSlewOptions(slewOptions)
-        .compose(applyTcsConfig(tcsConfig))(
-          tcsEpics.startCommand(timeout)
-        )
-        .post).verifiedRun(ConnectionTimeout)
+    (
+      unselectOiwfs *>
+        setSlewOptions(slewOptions)
+          .compose(applyTcsConfig(tcsConfig))(
+            tcsEpics.startCommand(timeout)
+          )
+          .post *>
+        selectOiwfs(tcsConfig)
+    ).verifiedRun(ConnectionTimeout)
 
   protected def setInstrumentSpecifics(
     config: InstrumentSpecifics
@@ -600,6 +608,15 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
       .startCommand(timeout)
       .oiwfsSelectCommand
       .oiwfsName(TcsBaseControllerEpics.encodeOiwfsSelect(tcsConfig.oiwfs, tcsConfig.instrument))
+      .oiwfsSelectCommand
+      .output("WFS")
+      .post
+
+  private def unselectOiwfs: VerifiedEpics[F, F, ApplyCommandResult] =
+    tcsEpics
+      .startCommand(timeout)
+      .oiwfsSelectCommand
+      .oiwfsName("None")
       .oiwfsSelectCommand
       .output("WFS")
       .post
