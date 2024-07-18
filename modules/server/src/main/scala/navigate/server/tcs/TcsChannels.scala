@@ -47,7 +47,8 @@ case class TcsChannels[F[_]](
   oiwfs:            WfsChannels[F],
   guide:            GuideConfigStatusChannels[F],
   probeGuideMode:   ProbeGuideModeChannels[F],
-  oiwfsSelect:      OiwfsSelectChannels[F]
+  oiwfsSelect:      OiwfsSelectChannels[F],
+  m2Baffles:        M2BafflesChannels[F]
 )
 
 object TcsChannels {
@@ -528,6 +529,21 @@ object TcsChannels {
     } yield ProbeGuideModeChannels(state, from, to)
   }
 
+  case class M2BafflesChannels[F[_]](
+    deployBaffle: Channel[F, String],
+    centralBaffle: Channel[F, String]
+  )
+
+  object M2BafflesChannels {
+    def build[F[_]](
+      service: EpicsService[F],
+      top:     TcsTop
+    ): Resource[F, M2BafflesChannels[F]] = for {
+      dpl <- service.getChannel[String](top.value, "m2Baffle.A")
+      cnt  <- service.getChannel[String](top.value, "m2Baffle.B")
+    } yield M2BafflesChannels(dpl, cnt)
+  }
+
   /**
    * Build all TcsChannels It will construct the desired raw channel or call the build function for
    * channels group
@@ -575,6 +591,7 @@ object TcsChannels {
       gd   <- GuideConfigStatusChannels.build(service, tcsTop)
       gm   <- ProbeGuideModeChannels.build(service, tcsTop)
       os   <- OiwfsSelectChannels.build(service, tcsTop)
+      bf   <- M2BafflesChannels.build(service, tcsTop)
     } yield TcsChannels[F](
       tt,
       tpd,
@@ -603,7 +620,8 @@ object TcsChannels {
       oi,
       gd,
       gm,
-      os
+      os,
+      bf
     )
   }
 }

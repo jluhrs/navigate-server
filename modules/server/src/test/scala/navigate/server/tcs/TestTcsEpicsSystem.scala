@@ -18,22 +18,7 @@ import navigate.server.acm.CadDirective
 import navigate.server.acm.GeminiApplyCommand
 import navigate.server.epicsdata.BinaryOnOff
 import navigate.server.epicsdata.BinaryYesNo
-import navigate.server.tcs.TcsChannels.EnclosureChannels
-import navigate.server.tcs.TcsChannels.GuideConfigStatusChannels
-import navigate.server.tcs.TcsChannels.M1GuideConfigChannels
-import navigate.server.tcs.TcsChannels.M2GuideConfigChannels
-import navigate.server.tcs.TcsChannels.MountGuideChannels
-import navigate.server.tcs.TcsChannels.OiwfsSelectChannels
-import navigate.server.tcs.TcsChannels.OriginChannels
-import navigate.server.tcs.TcsChannels.ProbeChannels
-import navigate.server.tcs.TcsChannels.ProbeGuideModeChannels
-import navigate.server.tcs.TcsChannels.ProbeTrackingChannels
-import navigate.server.tcs.TcsChannels.RotatorChannels
-import navigate.server.tcs.TcsChannels.SlewChannels
-import navigate.server.tcs.TcsChannels.TargetChannels
-import navigate.server.tcs.TcsChannels.WfsChannels
-import navigate.server.tcs.TcsChannels.WfsClosedLoopChannels
-import navigate.server.tcs.TcsChannels.WfsObserveChannels
+import navigate.server.tcs.TcsChannels.{EnclosureChannels, GuideConfigStatusChannels, M1GuideConfigChannels, M2BafflesChannels, M2GuideConfigChannels, MountGuideChannels, OiwfsSelectChannels, OriginChannels, ProbeChannels, ProbeGuideModeChannels, ProbeTrackingChannels, RotatorChannels, SlewChannels, TargetChannels, WfsChannels, WfsClosedLoopChannels, WfsObserveChannels}
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -182,6 +167,18 @@ object TestTcsEpicsSystem {
       TestChannel.State.default
     )
   }
+  
+  case class M2BafflesState(
+    deployBaffle: TestChannel.State[String],
+    centralBaffle: TestChannel.State[String]
+  )
+  
+  object M2BafflesState {
+    val default: M2BafflesState = M2BafflesState(
+      TestChannel.State.default,
+      TestChannel.State.default
+    )
+  }
 
   case class WfsChannelState(
     observe:    WfsObserveChannelState,
@@ -229,7 +226,8 @@ object TestTcsEpicsSystem {
     mountGuide:       MountGuideState,
     guideStatus:      GuideConfigState,
     probeGuideMode:   ProbeGuideModeState,
-    oiwfsSelect:      OiwfsSelectState
+    oiwfsSelect:      OiwfsSelectState,
+    m2Baffles: M2BafflesState
   )
 
   val defaultState: State = State(
@@ -332,7 +330,8 @@ object TestTcsEpicsSystem {
     mountGuide = MountGuideState.default,
     guideStatus = GuideConfigState.default,
     probeGuideMode = ProbeGuideModeState.default,
-    oiwfsSelect = OiwfsSelectState.default
+    oiwfsSelect = OiwfsSelectState.default,
+    m2Baffles = M2BafflesState.default
   )
 
   def buildEnclosureChannels[F[_]: Applicative](s: Ref[F, State]): EnclosureChannels[F] =
@@ -681,6 +680,14 @@ object TestTcsEpicsSystem {
     new TestChannel[F, State, String](s, l.andThen(Focus[OiwfsSelectState](_.oiwfsName))),
     new TestChannel[F, State, String](s, l.andThen(Focus[OiwfsSelectState](_.output)))
   )
+  
+  def buildM2BafflesChannels[F[_]: Applicative](
+      s: Ref[F, State],
+      l: Lens[State, M2BafflesState]
+  ): M2BafflesChannels[F] = M2BafflesChannels(
+    new TestChannel[F, State, String](s, l.andThen(Focus[M2BafflesState](_.deployBaffle))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[M2BafflesState](_.centralBaffle)))
+  )
 
   def buildChannels[F[_]: Applicative](s: Ref[F, State]): TcsChannels[F] =
     TcsChannels(
@@ -713,7 +720,8 @@ object TestTcsEpicsSystem {
       oiwfs = buildWfsChannels(s, Focus[State](_.oiWfs)),
       guide = buildGuideStateChannels(s, Focus[State](_.guideStatus)),
       probeGuideMode = buildGuideModeChannels(s, Focus[State](_.probeGuideMode)),
-      oiwfsSelect = buildOiwfsSelectChannels(s, Focus[State](_.oiwfsSelect))
+      oiwfsSelect = buildOiwfsSelectChannels(s, Focus[State](_.oiwfsSelect)),
+      m2Baffles = buildM2BafflesChannels(s, Focus[State](_.m2Baffles))
     )
 
   def build[F[_]: Monad: Parallel](s: Ref[F, State]): TcsEpicsSystem[F] =
