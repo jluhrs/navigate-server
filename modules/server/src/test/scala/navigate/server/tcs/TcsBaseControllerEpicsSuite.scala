@@ -12,7 +12,11 @@ import lucuma.core.enums.Instrument
 import lucuma.core.enums.M1Source
 import lucuma.core.enums.MountGuideOption
 import lucuma.core.enums.TipTiltSource
-import lucuma.core.math.{Angle, Coordinates, Epoch, HourAngle, Wavelength}
+import lucuma.core.math.Angle
+import lucuma.core.math.Coordinates
+import lucuma.core.math.Epoch
+import lucuma.core.math.HourAngle
+import lucuma.core.math.Wavelength
 import lucuma.core.model.M1GuideConfig
 import lucuma.core.model.M2GuideConfig
 import lucuma.core.model.M2GuideConfig.M2GuideOn
@@ -35,6 +39,7 @@ import navigate.server.epicsdata.BinaryYesNo
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
+
 import Target.SiderealTarget
 import TcsBaseController.*
 import TestTcsEpicsSystem.GuideConfigState

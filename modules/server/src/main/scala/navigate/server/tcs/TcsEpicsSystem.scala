@@ -32,10 +32,10 @@ import navigate.server.epicsdata.BinaryYesNo
 import navigate.server.epicsdata.BinaryYesNo.given
 import navigate.server.tcs.TcsEpicsSystem.TcsStatus
 
-import scala.concurrent.duration.FiniteDuration
-import TcsChannels.{ProbeChannels, ProbeTrackingChannels, SlewChannels, TargetChannels, WfsChannels}
-
 import java.util.Locale
+import scala.concurrent.duration.FiniteDuration
+
+import TcsChannels.{ProbeChannels, ProbeTrackingChannels, SlewChannels, TargetChannels, WfsChannels}
 
 trait TcsEpicsSystem[F[_]] {
   // TcsCommands accumulates the list of channels that need to be written to set parameters.
