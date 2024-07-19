@@ -15,6 +15,7 @@ import lucuma.core.enums.TipTiltSource
 import lucuma.core.math.Angle
 import lucuma.core.math.Coordinates
 import lucuma.core.math.Epoch
+import lucuma.core.math.HourAngle
 import lucuma.core.math.Wavelength
 import lucuma.core.model.M1GuideConfig
 import lucuma.core.model.M2GuideConfig
@@ -215,15 +216,13 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assert(rs.sourceA.coordSystem.connected)
       assert(rs.sourceA.ephemerisFile.connected)
       assertEquals(rs.sourceA.objectName.value, target.objectName.some)
-      assert(
-        rs.sourceA.coord1.value.exists(x =>
-          compareDouble(x.toDouble, target.coordinates.ra.toHourAngle.toDoubleHours)
-        )
+      assertEquals(
+        rs.sourceA.coord1.value.flatMap(HourAngle.fromStringHMS.getOption),
+        Some(target.coordinates.ra.toHourAngle)
       )
-      assert(
-        rs.sourceA.coord2.value.exists(x =>
-          compareDouble(x.toDouble, target.coordinates.dec.toAngle.toDoubleDegrees)
-        )
+      assertEquals(
+        rs.sourceA.coord2.value.flatMap(Angle.fromStringSignedDMS.getOption),
+        Some(target.coordinates.dec.toAngle)
       )
       assert(rs.sourceA.properMotion1.value.exists(x => compareDouble(x.toDouble, 0.0)))
       assert(rs.sourceA.properMotion2.value.exists(x => compareDouble(x.toDouble, 0.0)))
@@ -247,15 +246,13 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assert(rs.oiwfsTarget.coordSystem.connected)
       assert(rs.oiwfsTarget.ephemerisFile.connected)
       assertEquals(rs.oiwfsTarget.objectName.value, oiwfsTarget.objectName.some)
-      assert(
-        rs.oiwfsTarget.coord1.value.exists(x =>
-          compareDouble(x.toDouble, oiwfsTarget.coordinates.ra.toHourAngle.toDoubleHours)
-        )
+      assertEquals(
+        rs.oiwfsTarget.coord1.value.flatMap(HourAngle.fromStringHMS.getOption),
+        Some(oiwfsTarget.coordinates.ra.toHourAngle)
       )
-      assert(
-        rs.oiwfsTarget.coord2.value.exists(x =>
-          compareDouble(x.toDouble, oiwfsTarget.coordinates.dec.toAngle.toDoubleDegrees)
-        )
+      assertEquals(
+        rs.oiwfsTarget.coord2.value.flatMap(Angle.fromStringSignedDMS.getOption),
+        Some(oiwfsTarget.coordinates.dec.toAngle)
       )
       assert(rs.oiwfsTarget.properMotion1.value.exists(x => compareDouble(x.toDouble, 0.0)))
       assert(rs.oiwfsTarget.properMotion2.value.exists(x => compareDouble(x.toDouble, 0.0)))
@@ -501,15 +498,13 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assert(rs.oiwfsTarget.coordSystem.connected)
       assert(rs.oiwfsTarget.ephemerisFile.connected)
       assertEquals(rs.oiwfsTarget.objectName.value, oiwfsTarget.objectName.some)
-      assert(
-        rs.oiwfsTarget.coord1.value.exists(x =>
-          compareDouble(x.toDouble, oiwfsTarget.coordinates.ra.toHourAngle.toDoubleHours)
-        )
+      assertEquals(
+        rs.oiwfsTarget.coord1.value.flatMap(HourAngle.fromStringHMS.getOption),
+        Some(oiwfsTarget.coordinates.ra.toHourAngle)
       )
-      assert(
-        rs.oiwfsTarget.coord2.value.exists(x =>
-          compareDouble(x.toDouble, oiwfsTarget.coordinates.dec.toAngle.toDoubleDegrees)
-        )
+      assertEquals(
+        rs.oiwfsTarget.coord2.value.flatMap(Angle.fromStringSignedDMS.getOption),
+        Some(oiwfsTarget.coordinates.dec.toAngle)
       )
       assert(rs.oiwfsTarget.properMotion1.value.exists(x => compareDouble(x.toDouble, 0.0)))
       assert(rs.oiwfsTarget.properMotion2.value.exists(x => compareDouble(x.toDouble, 0.0)))

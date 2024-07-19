@@ -32,6 +32,7 @@ import navigate.server.epicsdata.BinaryYesNo
 import navigate.server.epicsdata.BinaryYesNo.given
 import navigate.server.tcs.TcsEpicsSystem.TcsStatus
 
+import java.util.Locale
 import scala.concurrent.duration.FiniteDuration
 
 import TcsChannels.{ProbeChannels, ProbeTrackingChannels, SlewChannels, TargetChannels, WfsChannels}
@@ -1059,6 +1060,17 @@ object TcsEpicsSystem {
     )
   }
 
+  def formatAngleCoord(d: Double): String = {
+    val absVal = scala.math.abs(d)
+    val sign   = scala.math.signum(d)
+
+    val deg = scala.math.floor(absVal)
+    val min = scala.math.floor((absVal - deg) * 60.0)
+    val sec = ((absVal - deg) * 60.0 - min) * 60.0
+
+    f"${(deg * sign).toInt}%d:${min.toInt}%02d:" + "%02f".formatLocal(Locale.US, sec)
+  }
+
   case class TargetCommandChannels[F[_]: Monad](
     tt:             TelltaleChannel[F],
     targetChannels: TargetChannels[F]
@@ -1068,9 +1080,9 @@ object TcsEpicsSystem {
     def coordSystem(v: String): VerifiedEpics[F, F, Unit]    =
       writeCadParam[F, String](tt, targetChannels.coordSystem)(v)
     def coord1(v: Double): VerifiedEpics[F, F, Unit]         =
-      writeCadParam[F, Double](tt, targetChannels.coord1)(v)
+      writeCadParam[F, String](tt, targetChannels.coord1)(formatAngleCoord(v))
     def coord2(v: Double): VerifiedEpics[F, F, Unit]         =
-      writeCadParam[F, Double](tt, targetChannels.coord2)(v)
+      writeCadParam[F, String](tt, targetChannels.coord2)(formatAngleCoord(v))
     def epoch(v: Double): VerifiedEpics[F, F, Unit]          =
       writeCadParam[F, Double](tt, targetChannels.epoch)(v)
     def equinox(v: String): VerifiedEpics[F, F, Unit]        =
