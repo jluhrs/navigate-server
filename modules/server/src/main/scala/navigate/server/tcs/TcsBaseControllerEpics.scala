@@ -6,6 +6,7 @@ package navigate.server.tcs
 import cats.Parallel
 import cats.effect.Async
 import cats.effect.Ref
+import cats.effect.Temporal
 import cats.syntax.all.*
 import lucuma.core.enums.ComaOption
 import lucuma.core.enums.Instrument
@@ -39,12 +40,12 @@ import navigate.server.tcs.TcsEpicsSystem.ProbeTrackingCommand
 import navigate.server.tcs.TcsEpicsSystem.TargetCommand
 import navigate.server.tcs.TcsEpicsSystem.TcsCommands
 
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.*
 
 import TcsBaseController.{EquinoxDefault, FixedSystem, SystemDefault, TcsConfig}
 
 /* This class implements the common TCS commands */
-class TcsBaseControllerEpics[F[_]: Async: Parallel](
+class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
   tcsEpics: TcsEpicsSystem[F],
   pwfs1:    WfsEpicsSystem[F],
   pwfs2:    WfsEpicsSystem[F],
@@ -265,15 +266,14 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
           .getOrElse(identity[TcsCommands[F]])
       )
 
-  // This is an experiment, to see if unselecting the OIWFS before configuring the telescope gets rid of the
-  // "OIWFS X/Y exceeded" error
+  // Added a 1.5 s wait between selecting the OIWFS and setting targets, to copy TCC
   override def tcsConfig(config: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
     (
-      unselectOiwfs *>
+      selectOiwfs(config) *>
+        VerifiedEpics.liftF(Temporal[F].sleep(1500.milliseconds)) *>
         applyTcsConfig(config)(
           tcsEpics.startCommand(timeout)
-        ).post *>
-        selectOiwfs(config)
+        ).post
     ).verifiedRun(ConnectionTimeout)
 
   override def slew(
@@ -281,13 +281,13 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
     tcsConfig:   TcsBaseController.TcsConfig
   ): F[ApplyCommandResult] =
     (
-      unselectOiwfs *>
+      selectOiwfs(tcsConfig) *>
+        VerifiedEpics.liftF(Temporal[F].sleep(1500.milliseconds)) *>
         setSlewOptions(slewOptions)
           .compose(applyTcsConfig(tcsConfig))(
             tcsEpics.startCommand(timeout)
           )
-          .post *>
-        selectOiwfs(tcsConfig)
+          .post
     ).verifiedRun(ConnectionTimeout)
 
   protected def setInstrumentSpecifics(
@@ -608,15 +608,6 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel](
       .startCommand(timeout)
       .oiwfsSelectCommand
       .oiwfsName(TcsBaseControllerEpics.encodeOiwfsSelect(tcsConfig.oiwfs, tcsConfig.instrument))
-      .oiwfsSelectCommand
-      .output("WFS")
-      .post
-
-  private def unselectOiwfs: VerifiedEpics[F, F, ApplyCommandResult] =
-    tcsEpics
-      .startCommand(timeout)
-      .oiwfsSelectCommand
-      .oiwfsName("None")
       .oiwfsSelectCommand
       .output("WFS")
       .post
