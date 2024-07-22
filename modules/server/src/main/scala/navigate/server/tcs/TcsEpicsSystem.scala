@@ -1068,7 +1068,7 @@ object TcsEpicsSystem {
     val min = scala.math.floor((absVal - deg) * 60.0)
     val sec = ((absVal - deg) * 60.0 - min) * 60.0
 
-    f"${(deg * sign).toInt}%d:${min.toInt}%02d:" + "%02f".formatLocal(Locale.US, sec)
+    f"${(deg * sign).toInt}%d:${min.toInt}%02d:" + "%09.6f".formatLocal(Locale.US, sec)
   }
 
   case class TargetCommandChannels[F[_]: Monad](
