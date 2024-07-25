@@ -32,6 +32,7 @@ object WfsEpicsSystem {
   trait WfsCommands[F[_]] {
     def post: VerifiedEpics[F, F, ApplyCommandResult]
     val gains: GainsCommand[F, WfsCommands[F]]
+    def resetGain: WfsCommands[F]
   }
 
   trait GainsCommand[F[_], +S] {
@@ -73,6 +74,7 @@ object WfsEpicsSystem {
   trait WfsEpics[F[_]] {
     def post(timeout: FiniteDuration): VerifiedEpics[F, F, ApplyCommandResult]
     val gainsCmd: Command3Channels[F, Double, Double, Double]
+    val resetGainCmd: VerifiedEpics[F, F, Unit]
   }
 
   // There is no CAR associated these commands. Without feedback, we can only wait and pray.
@@ -85,9 +87,6 @@ object WfsEpicsSystem {
       VerifiedEpics.writeChannel(channels.telltale, channels.gainsDir)(
         CadDirective.START.pure[F]
       ) *>
-        VerifiedEpics.writeChannel(channels.telltale, channels.resetDir)(
-          CadDirective.START.pure[F]
-        ) *>
         VerifiedEpics.liftF(Temporal[F].sleep(commandWaitTime).as(ApplyCommandResult.Completed))
 
     override val gainsCmd: Command3Channels[F, Double, Double, Double] =
@@ -97,6 +96,10 @@ object WfsEpicsSystem {
         channels.tiltGain,
         channels.focusGain
       )
+    override val resetGainCmd: VerifiedEpics[F, F, Unit]               = writeChannel[F, Double](
+      channels.telltale,
+      channels.reset
+    )(1.0.pure[F])
   }
 
   private class WfsCommandsImpl[F[_]: Monad: Parallel](
@@ -119,6 +122,7 @@ object WfsEpicsSystem {
         wfsEpics.gainsCmd.setParam3(v)
       )
     }
+    override def resetGain: WfsCommands[F]              = addParam(wfsEpics.resetGainCmd)
   }
 
   trait WfsQualityStatus[F[_]] {

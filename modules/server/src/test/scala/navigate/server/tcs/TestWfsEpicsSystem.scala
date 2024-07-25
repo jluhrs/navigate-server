@@ -14,7 +14,6 @@ import navigate.epics.EpicsSystem
 import navigate.epics.EpicsSystem.TelltaleChannel
 import navigate.epics.TestChannel
 import navigate.server.acm.CadDirective
-import navigate.server.epicsdata.BinaryYesNo
 
 object TestWfsEpicsSystem {
   case class State(
@@ -22,15 +21,13 @@ object TestWfsEpicsSystem {
     tipGain:   TestChannel.State[String],
     tiltGain:  TestChannel.State[String],
     focusGain: TestChannel.State[String],
-    reset:     TestChannel.State[BinaryYesNo],
+    reset:     TestChannel.State[Double],
     gainsDir:  TestChannel.State[CadDirective],
-    resetDir:  TestChannel.State[CadDirective],
     flux:      TestChannel.State[Int],
     centroid:  TestChannel.State[Int]
   )
 
   val defaultState: State = State(
-    TestChannel.State.default,
     TestChannel.State.default,
     TestChannel.State.default,
     TestChannel.State.default,
@@ -51,9 +48,8 @@ object TestWfsEpicsSystem {
     tipGain = new TestChannel[F, State, String](s, Focus[State](_.tipGain)),
     tiltGain = new TestChannel[F, State, String](s, Focus[State](_.tiltGain)),
     focusGain = new TestChannel[F, State, String](s, Focus[State](_.focusGain)),
-    reset = new TestChannel[F, State, BinaryYesNo](s, Focus[State](_.reset)),
+    reset = new TestChannel[F, State, Double](s, Focus[State](_.reset)),
     gainsDir = new TestChannel[F, State, CadDirective](s, Focus[State](_.gainsDir)),
-    resetDir = new TestChannel[F, State, CadDirective](s, Focus[State](_.resetDir)),
     flux = new TestChannel[F, State, Int](s, Focus[State](_.flux)),
     centroidDetected = new TestChannel[F, State, Int](s, Focus[State](_.centroid))
   )
