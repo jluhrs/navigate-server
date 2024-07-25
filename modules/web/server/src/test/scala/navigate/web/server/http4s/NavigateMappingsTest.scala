@@ -178,7 +178,7 @@ class NavigateMappingsTest extends CatsEffectSuite {
                 |    }
                 |    rotator: {
                 |      ipa: {
-                |        microarcseconds: 89.76
+                |        degrees: 89.76
                 |      }
                 |      mode: TRACKING
                 |    }

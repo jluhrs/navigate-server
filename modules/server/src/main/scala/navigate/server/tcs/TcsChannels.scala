@@ -208,21 +208,6 @@ object TcsChannels {
     follow:  Channel[F, String]
   )
 
-  case class GuiderGainsChannels[F[_]](
-    p1TipGain:   Channel[F, String],
-    p1TiltGain:  Channel[F, String],
-    p1FocusGain: Channel[F, String],
-    p1Reset:     Channel[F, BinaryYesNo],
-    p2TipGain:   Channel[F, String],
-    p2TiltGain:  Channel[F, String],
-    p2FocusGain: Channel[F, String],
-    p2Reset:     Channel[F, BinaryYesNo],
-    oiTipGain:   Channel[F, String],
-    oiTiltGain:  Channel[F, String],
-    oiFocusGain: Channel[F, String],
-    oiReset:     Channel[F, BinaryYesNo]
-  )
-
   // Build functions to construct each epics channel for each
   // channels group
   def buildEnclosureChannels[F[_]](
@@ -541,42 +526,6 @@ object TcsChannels {
       from  <- service.getChannel[String](top.value, "wfsGuideMode.B")
       to    <- service.getChannel[String](top.value, "wfsGuideMode.C")
     } yield ProbeGuideModeChannels(state, from, to)
-  }
-
-  object GuiderGains {
-    def build[F[_]](
-      service:  EpicsService[F],
-      pwfs1Top: Pwfs1Top,
-      pwfs2Top: Pwfs2Top,
-      oiTop:    OiwfsTop
-    ): Resource[F, GuiderGainsChannels[F]] =
-      for {
-        p1tipGain   <- service.getChannel[String](pwfs1Top.value, "dc:detSigInitFgGain.A")
-        p1tiltGain  <- service.getChannel[String](pwfs1Top.value, "dc:detSigInitFgGain.B")
-        p1FocusGain <- service.getChannel[String](pwfs1Top.value, "dc:detSigInitFgGain.C")
-        p1Reset     <- service.getChannel[BinaryYesNo](pwfs1Top.value, "dc:initSigInit.J")
-        p2tipGain   <- service.getChannel[String](pwfs2Top.value, "dc:detSigInitFgGain.A")
-        p2tiltGain  <- service.getChannel[String](pwfs2Top.value, "dc:detSigInitFgGain.B")
-        p2FocusGain <- service.getChannel[String](pwfs2Top.value, "dc:detSigInitFgGain.C")
-        p2Reset     <- service.getChannel[BinaryYesNo](pwfs2Top.value, "dc:initSigInit.J")
-        oitipGain   <- service.getChannel[String](oiTop.value, "dc:detSigInitFgGain.A")
-        oitiltGain  <- service.getChannel[String](oiTop.value, "dc:detSigInitFgGain.B")
-        oiFocusGain <- service.getChannel[String](oiTop.value, "dc:detSigInitFgGain.C")
-        oiReset     <- service.getChannel[BinaryYesNo](oiTop.value, "dc:initSigInit.J")
-      } yield GuiderGainsChannels(
-        p1tipGain,
-        p1tiltGain,
-        p1FocusGain,
-        p1Reset,
-        p2tipGain,
-        p2tiltGain,
-        p2FocusGain,
-        p2Reset,
-        oitipGain,
-        oitiltGain,
-        oiFocusGain,
-        oiReset
-      )
   }
 
   /**

@@ -1408,7 +1408,6 @@ object TcsEpicsSystem {
     val m2GuideResetCommand: BaseCommand[F, TcsCommands[F]]
     val mountGuideCommand: MountGuideCommand[F, TcsCommands[F]]
     val oiWfsCommands: WfsCommands[F, TcsCommands[F]]
-    // val guiderGainsCommands: GuiderGainsCommand[F, TcsCommands[F]]
     val probeGuideModeCommand: ProbeGuideModeCommand[F, TcsCommands[F]]
     val oiwfsSelectCommand: OiwfsSelectCommand[F, TcsCommands[F]]
   }

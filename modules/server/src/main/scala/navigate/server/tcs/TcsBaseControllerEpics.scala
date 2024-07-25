@@ -711,34 +711,18 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
         .setFocusGain(0.0)
         .post
 
-  // TODO These hardcoded value should be configurable
   def defaultGains: VerifiedEpics[F, F, ApplyCommandResult] =
     pwfs1
       .startCommand(timeout)
-      .gains
-      .setTipGain(0.03)
-      .gains
-      .setTiltGain(0.03)
-      .gains
-      .setFocusGain(0.00002)
+      .resetGain
       .post *>
       pwfs2
         .startCommand(timeout)
-        .gains
-        .setTipGain(0.05)
-        .gains
-        .setTiltGain(0.05)
-        .gains
-        .setFocusGain(0.0001)
+        .resetGain
         .post *>
       oiwfs
         .startCommand(timeout)
-        .gains
-        .setTipGain(0.08)
-        .gains
-        .setTiltGain(0.08)
-        .gains
-        .setFocusGain(0.00015)
+        .resetGain
         .post
 
   private def guideUsesOiwfs(m1Guide: M1GuideConfig, m2Guide: M2GuideConfig): Boolean =

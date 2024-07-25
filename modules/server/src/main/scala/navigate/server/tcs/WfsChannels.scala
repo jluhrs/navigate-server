@@ -10,16 +10,14 @@ import navigate.epics.EpicsService
 import navigate.epics.EpicsSystem.TelltaleChannel
 import navigate.epics.given
 import navigate.server.acm.CadDirective
-import navigate.server.epicsdata.BinaryYesNo
 
 case class WfsChannels[F[_]](
   telltale:         TelltaleChannel[F],
   tipGain:          Channel[F, String],
   tiltGain:         Channel[F, String],
   focusGain:        Channel[F, String],
-  reset:            Channel[F, BinaryYesNo],
+  reset:            Channel[F, Double],
   gainsDir:         Channel[F, CadDirective],
-  resetDir:         Channel[F, CadDirective],
   flux:             Channel[F, Int],
   centroidDetected: Channel[F, Int]
 )
@@ -39,8 +37,7 @@ object WfsChannels {
       tiltG  <- service.getChannel[String](top, "dc:detSigInitFgGain.B")
       focusG <- service.getChannel[String](top, "dc:detSigInitFgGain.C")
       gDir   <- service.getChannel[CadDirective](top, "dc:detSigInitFgGain.DIR")
-      rst    <- service.getChannel[BinaryYesNo](top, "dc:initSigInit.J")
-      rDir   <- service.getChannel[CadDirective](top, "dc:initSigInit.DIR")
+      rst    <- service.getChannel[Double](top, "dc:initSigInit.J")
       fx     <- service.getChannel[Int](top, fluxName.value)
       ct     <- service.getChannel[Int](top, centroidName.value)
     } yield WfsChannels[F](
@@ -50,7 +47,6 @@ object WfsChannels {
       focusGain = focusG,
       reset = rst,
       gainsDir = gDir,
-      resetDir = rDir,
       flux = fx,
       centroidDetected = ct
     )

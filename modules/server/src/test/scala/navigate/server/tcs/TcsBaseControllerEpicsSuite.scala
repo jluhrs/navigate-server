@@ -615,15 +615,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assert(r1.m2GuideReset.connected)
       assert(r1.mountGuide.mode.connected)
       assert(r1.mountGuide.source.connected)
-      assert(p1_1.tipGain.connected)
-      assert(p1_1.tiltGain.connected)
-      assert(p1_1.focusGain.connected)
-      assert(p2_1.tipGain.connected)
-      assert(p2_1.tiltGain.connected)
-      assert(p2_1.focusGain.connected)
-      assert(oi_1.tipGain.connected)
-      assert(oi_1.tiltGain.connected)
-      assert(oi_1.focusGain.connected)
+      assert(p1_1.reset.connected)
+      assert(p2_1.reset.connected)
+      assert(oi_1.reset.connected)
 
       assertEquals(r1.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
       assertEquals(r1.m1GuideConfig.source.value.flatMap(Enumerated[M1Source].fromTag),
@@ -656,17 +650,11 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assertEquals(r2.mountGuide.mode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.Off.some
       )
-      assertEquals(p1_1.tipGain.value, "0.03".some)
-      assertEquals(p1_1.tiltGain.value, "0.03".some)
-      assertEquals(p1_1.focusGain.value, "2.0E-5".some)
+      assertEquals(p1_1.reset.value, 1.0.some)
 
-      assertEquals(p2_1.tipGain.value, "0.05".some)
-      assertEquals(p2_1.tiltGain.value, "0.05".some)
-      assertEquals(p2_1.focusGain.value, "1.0E-4".some)
+      assertEquals(p2_1.reset.value, 1.0.some)
 
-      assertEquals(oi_1.tipGain.value, "0.08".some)
-      assertEquals(oi_1.tiltGain.value, "0.08".some)
-      assertEquals(oi_1.focusGain.value, "1.5E-4".some)
+      assertEquals(oi_1.reset.value, 1.0.some)
     }
   }
 
