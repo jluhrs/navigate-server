@@ -18,6 +18,8 @@ import navigate.epics.EpicsSystem.TelltaleChannel
 import navigate.epics.VerifiedEpics
 import navigate.epics.VerifiedEpics.*
 import navigate.model.Distance
+import navigate.model.enums.CentralBafflePosition
+import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
 import navigate.model.enums.ShutterMode
 import navigate.server.ApplyCommandResult
@@ -88,6 +90,7 @@ object TcsEpicsSystem {
     val mountGuideCmd: Command4Channels[F, BinaryOnOff, String, Double, Double]
     val probeGuideModeCmd: Command3Channels[F, BinaryOnOff, GuideProbe, GuideProbe]
     val oiwfsSelectCmd: Command2Channels[F, String, String]
+    val bafflesCmd: Command2Channels[F, CentralBafflePosition, DeployableBafflePosition]
 
     // val offsetACmd: OffsetCmd[F]
     // val offsetBCmd: OffsetCmd[F]
@@ -887,6 +890,18 @@ object TcsEpicsSystem {
           tcsEpics.oiwfsSelectCmd.setParam2(v)
         )
       }
+
+    override val bafflesCommand: BafflesCommand[F, TcsCommands[F]] =
+      new BafflesCommand[F, TcsCommands[F]] {
+
+        override def central(v: CentralBafflePosition): TcsCommands[F] = addParam(
+          tcsEpics.bafflesCmd.setParam1(v)
+        )
+
+        override def deployable(v: DeployableBafflePosition): TcsCommands[F] = addParam(
+          tcsEpics.bafflesCmd.setParam2(v)
+        )
+      }
   }
 
   class TcsEpicsSystemImpl[F[_]: Monad: Parallel](epics: TcsEpics[F], st: TcsStatus[F])
@@ -905,6 +920,18 @@ object TcsEpicsSystem {
       case GuideProbe.GmosOIWFS => "OIWFS"
       case GuideProbe.PWFS1     => "PWFS1"
       case GuideProbe.PWFS2     => "PWFS2"
+    }
+
+    given Encoder[CentralBafflePosition, String] = _ match {
+      case CentralBafflePosition.Open   => "Open"
+      case CentralBafflePosition.Closed => "Closed"
+    }
+
+    given Encoder[DeployableBafflePosition, String] = _ match {
+      case DeployableBafflePosition.ThermalIR => "Retracted"
+      case DeployableBafflePosition.NearIR    => "Near IR"
+      case DeployableBafflePosition.Visible   => "Visible"
+      case DeployableBafflePosition.Extended  => "Extended"
     }
 
     override def post(timeout: FiniteDuration): VerifiedEpics[F, F, ApplyCommandResult] =
@@ -1046,18 +1073,24 @@ object TcsEpicsSystem {
     override val oiWfsCmds: WfsCommandsChannels[F]                                       =
       WfsCommandsChannels.build(channels.telltale, channels.oiwfs)
 
-    override val probeGuideModeCmd: Command3Channels[F, BinaryOnOff, GuideProbe, GuideProbe] =
+    override val probeGuideModeCmd: Command3Channels[F, BinaryOnOff, GuideProbe, GuideProbe]      =
       Command3Channels(
         channels.telltale,
         channels.probeGuideMode.state,
         channels.probeGuideMode.from,
         channels.probeGuideMode.to
       )
-    override val oiwfsSelectCmd: Command2Channels[F, String, String]                         = Command2Channels(
+    override val oiwfsSelectCmd: Command2Channels[F, String, String]                              = Command2Channels(
       channels.telltale,
       channels.oiwfsSelect.oiName,
       channels.oiwfsSelect.output
     )
+    override val bafflesCmd: Command2Channels[F, CentralBafflePosition, DeployableBafflePosition] =
+      Command2Channels(
+        channels.telltale,
+        channels.m2Baffles.centralBaffle,
+        channels.m2Baffles.deployBaffle
+      )
   }
 
   def formatAngleCoord(d: Double): String = {
@@ -1337,6 +1370,11 @@ object TcsEpicsSystem {
     def p2Weight(v: Double): S
   }
 
+  trait BafflesCommand[F[_], +S] {
+    def central(v:    CentralBafflePosition): S
+    def deployable(v: DeployableBafflePosition): S
+  }
+
   trait WfsObserveCommand[F[_], +S] {
     def numberOfExposures(v: Int): S
     def interval(v:          Double): S
@@ -1410,6 +1448,7 @@ object TcsEpicsSystem {
     val oiWfsCommands: WfsCommands[F, TcsCommands[F]]
     val probeGuideModeCommand: ProbeGuideModeCommand[F, TcsCommands[F]]
     val oiwfsSelectCommand: OiwfsSelectCommand[F, TcsCommands[F]]
+    val bafflesCommand: BafflesCommand[F, TcsCommands[F]]
   }
   /*
 

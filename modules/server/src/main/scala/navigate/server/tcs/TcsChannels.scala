@@ -530,7 +530,7 @@ object TcsChannels {
   }
 
   case class M2BafflesChannels[F[_]](
-    deployBaffle: Channel[F, String],
+    deployBaffle:  Channel[F, String],
     centralBaffle: Channel[F, String]
   )
 
@@ -540,7 +540,7 @@ object TcsChannels {
       top:     TcsTop
     ): Resource[F, M2BafflesChannels[F]] = for {
       dpl <- service.getChannel[String](top.value, "m2Baffle.A")
-      cnt  <- service.getChannel[String](top.value, "m2Baffle.B")
+      cnt <- service.getChannel[String](top.value, "m2Baffle.B")
     } yield M2BafflesChannels(dpl, cnt)
   }
 

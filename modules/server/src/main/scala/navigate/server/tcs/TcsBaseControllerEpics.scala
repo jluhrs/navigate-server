@@ -29,6 +29,8 @@ import mouse.boolean.given
 import navigate.epics.VerifiedEpics
 import navigate.epics.VerifiedEpics.*
 import navigate.model.Distance
+import navigate.model.enums.CentralBafflePosition
+import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
 import navigate.model.enums.ShutterMode
 import navigate.server.ApplyCommandResult
@@ -749,6 +751,19 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
       GuidersQualityValues.GuiderQuality(oi_f, oi_c)
     )
   ).verifiedRun(ConnectionTimeout)
+
+  override def baffles(
+    central:    CentralBafflePosition,
+    deployable: DeployableBafflePosition
+  ): F[ApplyCommandResult] =
+    tcsEpics
+      .startCommand(timeout)
+      .bafflesCommand
+      .central(central)
+      .bafflesCommand
+      .deployable(deployable)
+      .post
+      .verifiedRun(ConnectionTimeout)
 
 }
 

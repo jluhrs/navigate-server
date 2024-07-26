@@ -30,6 +30,8 @@ import mouse.boolean.given
 import munit.CatsEffectSuite
 import navigate.epics.TestChannel
 import navigate.model.Distance
+import navigate.model.enums.CentralBafflePosition
+import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
 import navigate.model.enums.ShutterMode
 import navigate.server.acm.CadDirective
@@ -1066,6 +1068,30 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assertEquals(r13.oiWfs.observe.output.value, "QL".some)
       assertEquals(r13.oiWfs.observe.options.value, "DHS".some)
       assertEquals(r13.oiWfs.closedLoop.zernikes2m2.value, "0".some)
+    }
+  }
+
+  test("Set baffles") {
+    for {
+      x        <- createController
+      (st, ctr) = x
+      _        <- ctr.baffles(CentralBafflePosition.Open, DeployableBafflePosition.ThermalIR)
+      r0       <- st.tcs.get
+      _        <- ctr.baffles(CentralBafflePosition.Closed, DeployableBafflePosition.NearIR)
+      r1       <- st.tcs.get
+      _        <- ctr.baffles(CentralBafflePosition.Open, DeployableBafflePosition.Visible)
+      r2       <- st.tcs.get
+      _        <- ctr.baffles(CentralBafflePosition.Open, DeployableBafflePosition.Extended)
+      r3       <- st.tcs.get
+    } yield {
+      assert(r0.m2Baffles.centralBaffle.connected)
+      assert(r0.m2Baffles.deployBaffle.connected)
+      assertEquals(r0.m2Baffles.centralBaffle.value, "Open".some)
+      assertEquals(r0.m2Baffles.deployBaffle.value, "Retracted".some)
+      assertEquals(r1.m2Baffles.centralBaffle.value, "Closed".some)
+      assertEquals(r1.m2Baffles.deployBaffle.value, "Near IR".some)
+      assertEquals(r2.m2Baffles.deployBaffle.value, "Visible".some)
+      assertEquals(r3.m2Baffles.deployBaffle.value, "Extended".some)
     }
   }
 
