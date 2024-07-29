@@ -8,13 +8,7 @@ import lucuma.core.util.Enumerated
 /**
  * Operating mode of the navigate, development or production
  */
-sealed abstract class Mode(val tag: String) extends Product with Serializable
-
-object Mode {
-  case object Production  extends Mode("production")
-  case object Development extends Mode("development")
-
-  given Enumerated[Mode] =
-    Enumerated.from(Production, Development).withTag(_.tag)
-
+enum Mode(val tag: String) extends Product with Serializable derives Enumerated {
+  case Production  extends Mode("production")
+  case Development extends Mode("development")
 }

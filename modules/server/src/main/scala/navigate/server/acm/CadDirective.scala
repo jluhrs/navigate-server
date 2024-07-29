@@ -3,20 +3,12 @@
 
 package navigate.server.acm
 
-import cats.Eq
 import lucuma.core.util.Enumerated
 
-sealed abstract class CadDirective(val tag: String) extends Product with Serializable
-
-object CadDirective {
-  case object MARK   extends CadDirective("mark")
-  case object CLEAR  extends CadDirective("clear")
-  case object PRESET extends CadDirective("preset")
-  case object START  extends CadDirective("start")
-  case object STOP   extends CadDirective("stop")
-
-  given Eq[CadDirective] = Eq.fromUniversalEquals
-
-  given Enumerated[CadDirective] =
-    Enumerated.from(MARK, CLEAR, PRESET, START, STOP).withTag(_.tag)
+enum CadDirective(val tag: String) extends Product with Serializable derives Enumerated {
+  case MARK   extends CadDirective("mark")
+  case CLEAR  extends CadDirective("clear")
+  case PRESET extends CadDirective("preset")
+  case START  extends CadDirective("start")
+  case STOP   extends CadDirective("stop")
 }

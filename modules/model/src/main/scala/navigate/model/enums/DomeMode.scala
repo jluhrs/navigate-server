@@ -3,24 +3,10 @@
 
 package navigate.model.enums
 
-import cats.Eq
 import lucuma.core.util.Enumerated
 
-sealed abstract class DomeMode(val tag: String) extends Product with Serializable
-
-object DomeMode {
-  case object Basic        extends DomeMode("Basic")
-  case object MinScatter   extends DomeMode("MinScatter")
-  case object MinVibration extends DomeMode("MinVibration")
-
-  given Eq[DomeMode] = Eq.instance {
-    case (Basic, Basic)               => true
-    case (MinScatter, MinScatter)     => true
-    case (MinVibration, MinVibration) => true
-    case _                            => false
-  }
-
-  given Enumerated[DomeMode] =
-    Enumerated.from(Basic, MinScatter, MinVibration).withTag(_.tag)
-
+enum DomeMode(val tag: String) extends Product with Serializable derives Enumerated {
+  case Basic        extends DomeMode("Basic")
+  case MinScatter   extends DomeMode("MinScatter")
+  case MinVibration extends DomeMode("MinVibration")
 }

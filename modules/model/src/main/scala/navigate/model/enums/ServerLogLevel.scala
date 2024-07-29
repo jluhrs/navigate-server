@@ -5,15 +5,8 @@ package navigate.model.enums
 
 import lucuma.core.util.Enumerated
 
-sealed abstract class ServerLogLevel(val label: String) extends Product with Serializable
-
-object ServerLogLevel {
-
-  case object INFO  extends ServerLogLevel("INFO")
-  case object WARN  extends ServerLogLevel("WARNING")
-  case object ERROR extends ServerLogLevel("ERROR")
-
-  /** @group Typeclass Instances */
-  given Enumerated[ServerLogLevel] =
-    Enumerated.from(INFO, WARN, ERROR).withTag(_.label)
+enum ServerLogLevel(val tag: String) extends Product with Serializable derives Enumerated {
+  case INFO  extends ServerLogLevel("INFO")
+  case WARN  extends ServerLogLevel("WARNING")
+  case ERROR extends ServerLogLevel("ERROR")
 }

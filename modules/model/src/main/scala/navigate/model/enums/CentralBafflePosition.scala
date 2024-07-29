@@ -3,16 +3,9 @@
 
 package navigate.model.enums
 
-import cats.Eq
-import cats.derived.*
 import lucuma.core.util.Enumerated
 
-sealed abstract class CentralBafflePosition(val tag: String) extends Product with Serializable
-    derives Eq
-
-object CentralBafflePosition {
-  case object Open   extends CentralBafflePosition("Open")
-  case object Closed extends CentralBafflePosition("Closed")
-
-  given Enumerated[CentralBafflePosition] = Enumerated.from(Open, Closed).withTag(_.tag)
+enum CentralBafflePosition(val tag: String) extends Product with Serializable derives Enumerated {
+  case Open   extends CentralBafflePosition("Open")
+  case Closed extends CentralBafflePosition("Closed")
 }

@@ -6,15 +6,16 @@ package navigate.model.config
 import cats.syntax.all.*
 import lucuma.core.util.Enumerated
 
-sealed abstract class ControlStrategy(val tag: String) extends Product with Serializable
+enum ControlStrategy(val tag: String) extends Product with Serializable derives Enumerated {
+  // System will be fully controlled by Navigate
+  case FullControl extends ControlStrategy("full")
+  // Navigate connects to system, but only to read values
+  case ReadOnly    extends ControlStrategy("readOnly")
+  // All system interactions are internally simulated
+  case Simulated   extends ControlStrategy("simulated")
+}
 
 object ControlStrategy {
-  // System will be fully controlled by Navigate
-  case object FullControl extends ControlStrategy("full")
-  // Navigate connects to system, but only to read values
-  case object ReadOnly    extends ControlStrategy("readOnly")
-  // All system interactions are internally simulated
-  case object Simulated   extends ControlStrategy("simulated")
 
   def fromString(v: String): Option[ControlStrategy] = v match {
     case "full"      => Some(FullControl)
@@ -22,9 +23,6 @@ object ControlStrategy {
     case "simulated" => Some(Simulated)
     case _           => None
   }
-
-  given Enumerated[ControlStrategy] =
-    Enumerated.from(FullControl, ReadOnly, Simulated).withTag(_.tag)
 
   extension (v: ControlStrategy) {
     def connect: Boolean      = v =!= ControlStrategy.Simulated

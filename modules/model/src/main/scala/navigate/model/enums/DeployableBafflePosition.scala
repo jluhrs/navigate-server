@@ -3,19 +3,12 @@
 
 package navigate.model.enums
 
-import cats.Eq
-import cats.derived.*
 import lucuma.core.util.Enumerated
 
-sealed abstract class DeployableBafflePosition(val tag: String) extends Product with Serializable
-    derives Eq
-
-object DeployableBafflePosition {
-  case object ThermalIR extends DeployableBafflePosition("ThermalIR")
-  case object NearIR    extends DeployableBafflePosition("NearIR")
-  case object Visible   extends DeployableBafflePosition("Visible")
-  case object Extended  extends DeployableBafflePosition("Extended")
-
-  given Enumerated[DeployableBafflePosition] =
-    Enumerated.from(ThermalIR, NearIR, Visible, Extended).withTag(_.tag)
+enum DeployableBafflePosition(val tag: String) extends Product with Serializable
+    derives Enumerated {
+  case ThermalIR extends DeployableBafflePosition("ThermalIR")
+  case NearIR    extends DeployableBafflePosition("NearIR")
+  case Visible   extends DeployableBafflePosition("Visible")
+  case Extended  extends DeployableBafflePosition("Extended")
 }
