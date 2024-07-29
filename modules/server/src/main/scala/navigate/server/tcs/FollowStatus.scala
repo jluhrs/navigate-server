@@ -3,21 +3,9 @@
 
 package navigate.server.tcs
 
-import cats.Eq
 import lucuma.core.util.Enumerated
 
-sealed abstract class FollowStatus(val tag: String) extends Product with Serializable
-
-object FollowStatus {
-  case object NotFollowing extends FollowStatus("NotFollowing")
-  case object Following    extends FollowStatus("Following")
-
-  given Eq[FollowStatus] = Eq.instance {
-    case (NotFollowing, NotFollowing) => true
-    case (Following, Following)       => true
-    case _                            => false
-  }
-
-  given Enumerated[FollowStatus] =
-    Enumerated.from[FollowStatus](NotFollowing, Following).withTag(_.tag)
+enum FollowStatus(val tag: String) extends Product with Serializable derives Enumerated {
+  case NotFollowing extends FollowStatus("NotFollowing")
+  case Following    extends FollowStatus("Following")
 }

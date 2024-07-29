@@ -7,6 +7,8 @@ import lucuma.core.enums.Instrument
 import lucuma.core.math.Angle
 import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.TimeSpan
+import navigate.model.enums.CentralBafflePosition
+import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
 import navigate.model.enums.ShutterMode
 import navigate.server.ApplyCommandResult
@@ -40,6 +42,10 @@ trait TcsBaseController[F[_]] {
   def disableGuide: F[ApplyCommandResult]
   def oiwfsObserve(exposureTime:  TimeSpan): F[ApplyCommandResult]
   def oiwfsStopObserve: F[ApplyCommandResult]
+  def baffles(
+    central:    CentralBafflePosition,
+    deployable: DeployableBafflePosition
+  ): F[ApplyCommandResult]
 
   def getGuideState: F[GuideState]
   def getGuideQuality: F[GuidersQualityValues]

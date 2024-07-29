@@ -12,6 +12,8 @@ import lucuma.core.model.M1GuideConfig
 import lucuma.core.model.M2GuideConfig
 import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.TimeSpan
+import navigate.model.enums.CentralBafflePosition
+import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
 import navigate.model.enums.ShutterMode
 import navigate.server.ApplyCommandResult
@@ -104,4 +106,9 @@ class TcsBaseControllerSim[F[_]: Applicative](
   override def getGuideState: F[GuideState] = guideRef.get
 
   override def getGuideQuality: F[GuidersQualityValues] = guidersQualityRef.get
+
+  override def baffles(
+    central:    CentralBafflePosition,
+    deployable: DeployableBafflePosition
+  ): F[ApplyCommandResult] = Applicative[F].pure(ApplyCommandResult.Completed)
 }

@@ -3,22 +3,9 @@
 
 package navigate.server.tcs
 
-import cats.Eq
 import lucuma.core.util.Enumerated
 
-sealed abstract class ParkStatus(val tag: String) extends Product with Serializable
-
-object ParkStatus {
-  case object NotParked extends ParkStatus("NotParked")
-  case object Parked    extends ParkStatus("Parked")
-
-  given Eq[ParkStatus] = Eq.instance {
-    case (NotParked, NotParked) => true
-    case (Parked, Parked)       => true
-    case _                      => false
-  }
-
-  given Enumerated[ParkStatus] =
-    Enumerated.from(NotParked, Parked).withTag(_.tag)
-
+enum ParkStatus(val tag: String) extends Product with Serializable derives Enumerated {
+  case NotParked extends ParkStatus("NotParked")
+  case Parked    extends ParkStatus("Parked")
 }
