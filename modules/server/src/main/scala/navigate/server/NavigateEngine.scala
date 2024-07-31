@@ -44,6 +44,7 @@ import navigate.server.tcs.RotatorTrackConfig
 import navigate.server.tcs.SlewOptions
 import navigate.server.tcs.Target
 import navigate.server.tcs.TcsBaseController.TcsConfig
+import navigate.server.tcs.TelescopeState
 import navigate.server.tcs.TrackingConfig
 import navigate.stateengine.Handler
 import navigate.stateengine.StateEngine
@@ -93,6 +94,7 @@ trait NavigateEngine[F[_]] {
   def oiwfsStopObserve: F[Unit]
   def getGuideState: F[GuideState]
   def getGuidersQuality: F[GuidersQualityValues]
+  def getTelescopeState: F[TelescopeState]
 }
 
 object NavigateEngine {
@@ -360,6 +362,7 @@ object NavigateEngine {
         oiwfs = GuiderQuality(oiCnts, false)
       )
 
+    override def getTelescopeState: F[TelescopeState] = ???
   }
 
   def build[F[_]: Concurrent: Temporal: Logger](

@@ -49,6 +49,7 @@ trait TcsBaseController[F[_]] {
 
   def getGuideState: F[GuideState]
   def getGuideQuality: F[GuidersQualityValues]
+  def getTelescopeState: F[TelescopeState]
 }
 
 object TcsBaseController {

@@ -24,7 +24,6 @@ import lucuma.core.model.ProbeGuide
 import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.Enumerated
 import lucuma.core.util.TimeSpan
-import lucuma.refined.*
 import monocle.syntax.all.*
 import mouse.boolean.given
 import munit.CatsEffectSuite
@@ -38,6 +37,10 @@ import navigate.server.acm.CadDirective
 import navigate.server.epicsdata
 import navigate.server.epicsdata.BinaryOnOff
 import navigate.server.epicsdata.BinaryYesNo
+import navigate.server.tcs.FollowStatus.Following
+import navigate.server.tcs.FollowStatus.NotFollowing
+import navigate.server.tcs.ParkStatus.NotParked
+import navigate.server.tcs.ParkStatus.Parked
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
@@ -967,6 +970,44 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     }
   }
 
+  test("Read telescope state") {
+    val testTelState = TelescopeState(
+      mount = MechSystemState(NotParked, Following),
+      scs = MechSystemState(NotParked, Following),
+      crcs = MechSystemState(NotParked, Following),
+      pwfs1 = MechSystemState(Parked, NotFollowing),
+      pwfs2 = MechSystemState(Parked, NotFollowing),
+      oiwfs = MechSystemState(NotParked, Following)
+    )
+
+    for {
+      x        <- createController
+      (st, ctr) = x
+      _        <- st.mcs.update(_.focus(_.follow).replace(TestChannel.State.of("ON")))
+      _        <- st.scs.update(_.focus(_.follow).replace(TestChannel.State.of("ON")))
+      _        <- st.crcs.update(_.focus(_.follow).replace(TestChannel.State.of("ON")))
+      _        <- st.ags.update(
+                    _.copy(oiParked = TestChannel.State.of(0), oiFollow = TestChannel.State.of("ON"))
+                  )
+      s        <- ctr.getTelescopeState
+      r0       <- st.mcs.get
+      r1       <- st.scs.get
+      r2       <- st.crcs.get
+      r3       <- st.ags.get
+    } yield {
+      assert(r0.follow.connected)
+      assert(r1.follow.connected)
+      assert(r2.follow.connected)
+      assert(r3.p1Parked.connected)
+      assert(r3.p1Follow.connected)
+      assert(r3.p2Parked.connected)
+      assert(r3.p2Follow.connected)
+      assert(r3.oiParked.connected)
+      assert(r3.oiFollow.connected)
+      assertEquals(s, testTelState)
+    }
+  }
+
   test("Read guide quality values") {
     val testGuideQuality = GuidersQualityValues(
       GuidersQualityValues.GuiderQuality(1000, true),
@@ -1096,25 +1137,39 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
   }
 
   case class StateRefs[F[_]](
-    tcs: Ref[F, TestTcsEpicsSystem.State],
-    p1:  Ref[F, TestWfsEpicsSystem.State],
-    p2:  Ref[F, TestWfsEpicsSystem.State],
-    oi:  Ref[F, TestWfsEpicsSystem.State]
+    tcs:  Ref[F, TestTcsEpicsSystem.State],
+    p1:   Ref[F, TestWfsEpicsSystem.State],
+    p2:   Ref[F, TestWfsEpicsSystem.State],
+    oi:   Ref[F, TestWfsEpicsSystem.State],
+    mcs:  Ref[F, TestMcsEpicsSystem.State],
+    scs:  Ref[F, TestScsEpicsSystem.State],
+    crcs: Ref[F, TestCrcsEpicsSystem.State],
+    ags:  Ref[F, TestAgsEpicsSystem.State]
   )
 
   def createController: IO[(StateRefs[IO], TcsBaseControllerEpics[IO])] = for {
-    tcs <- Ref.of[IO, TestTcsEpicsSystem.State](TestTcsEpicsSystem.defaultState)
-    p1  <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
-    p2  <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
-    oi  <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
-    st  <- Ref.of[IO, TcsBaseControllerEpics.State](TcsBaseControllerEpics.State.default)
+    tcs  <- Ref.of[IO, TestTcsEpicsSystem.State](TestTcsEpicsSystem.defaultState)
+    p1   <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
+    p2   <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
+    oi   <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
+    mcs  <- Ref.of[IO, TestMcsEpicsSystem.State](TestMcsEpicsSystem.defaultState)
+    scs  <- Ref.of[IO, TestScsEpicsSystem.State](TestScsEpicsSystem.defaultState)
+    crcs <- Ref.of[IO, TestCrcsEpicsSystem.State](TestCrcsEpicsSystem.defaultState)
+    ags  <- Ref.of[IO, TestAgsEpicsSystem.State](TestAgsEpicsSystem.defaultState)
+    st   <- Ref.of[IO, TcsBaseControllerEpics.State](TcsBaseControllerEpics.State.default)
   } yield (
-    StateRefs(tcs, p1, p2, oi),
+    StateRefs(tcs, p1, p2, oi, mcs, scs, crcs, ags),
     new TcsBaseControllerEpics[IO](
-      TestTcsEpicsSystem.build(tcs),
-      TestWfsEpicsSystem.build("PWFS1", "p1:".refined, p1),
-      TestWfsEpicsSystem.build("PWFS2", "p2:".refined, p2),
-      TestWfsEpicsSystem.build("OIWFS", "oi:".refined, oi),
+      EpicsSystems(
+        TestTcsEpicsSystem.build(tcs),
+        TestWfsEpicsSystem.build("PWFS1", p1),
+        TestWfsEpicsSystem.build("PWFS2", p2),
+        TestWfsEpicsSystem.build("OIWFS", oi),
+        TestMcsEpicsSystem.build(mcs),
+        TestScsEpicsSystem.build(scs),
+        TestCrcsEpicsSystem.build(crcs),
+        TestAgsEpicsSystem.build(ags)
+      ),
       DefaultTimeout,
       st
     )

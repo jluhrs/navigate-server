@@ -37,6 +37,7 @@ import navigate.server.ApplyCommandResult
 import navigate.server.ConnectionTimeout
 import navigate.server.epicsdata.BinaryOnOff
 import navigate.server.epicsdata.BinaryYesNo
+import navigate.server.tcs.ParkStatus.NotParked
 import navigate.server.tcs.Target.*
 import navigate.server.tcs.TcsEpicsSystem.ProbeTrackingCommand
 import navigate.server.tcs.TcsEpicsSystem.TargetCommand
@@ -48,15 +49,12 @@ import TcsBaseController.{EquinoxDefault, FixedSystem, SystemDefault, TcsConfig}
 
 /* This class implements the common TCS commands */
 class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
-  tcsEpics: TcsEpicsSystem[F],
-  pwfs1:    WfsEpicsSystem[F],
-  pwfs2:    WfsEpicsSystem[F],
-  oiwfs:    WfsEpicsSystem[F],
+  sys:      EpicsSystems[F],
   timeout:  FiniteDuration,
   stateRef: Ref[F, TcsBaseControllerEpics.State]
 ) extends TcsBaseController[F] {
   override def mcsPark: F[ApplyCommandResult] =
-    tcsEpics
+    sys.tcsEpics
       .startCommand(timeout)
       .mcsParkCommand
       .mark
@@ -64,7 +62,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
       .verifiedRun(ConnectionTimeout)
 
   override def mcsFollow(enable: Boolean): F[ApplyCommandResult] =
-    tcsEpics
+    sys.tcsEpics
       .startCommand(timeout)
       .mcsFollowCommand
       .setFollow(enable)
@@ -72,7 +70,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
       .verifiedRun(ConnectionTimeout)
 
   override def rotStop(useBrakes: Boolean): F[ApplyCommandResult] =
-    tcsEpics
+    sys.tcsEpics
       .startCommand(timeout)
       .rotStopCommand
       .setBrakes(useBrakes)
@@ -80,7 +78,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
       .verifiedRun(ConnectionTimeout)
 
   override def rotPark: F[ApplyCommandResult] =
-    tcsEpics
+    sys.tcsEpics
       .startCommand(timeout)
       .rotParkCommand
       .mark
@@ -88,7 +86,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
       .verifiedRun(ConnectionTimeout)
 
   override def rotFollow(enable: Boolean): F[ApplyCommandResult] =
-    tcsEpics
+    sys.tcsEpics
       .startCommand(timeout)
       .rotFollowCommand
       .setFollow(enable)
@@ -96,7 +94,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
       .verifiedRun(ConnectionTimeout)
 
   override def rotMove(angle: Angle): F[ApplyCommandResult] =
-    tcsEpics
+    sys.tcsEpics
       .startCommand(timeout)
       .rotMoveCommand
       .setAngle(angle)
@@ -110,7 +108,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
     domeEnable:    Boolean,
     shutterEnable: Boolean
   ): F[ApplyCommandResult] =
-    tcsEpics
+    sys.tcsEpics
       .startCommand(timeout)
       .ecsCarouselModeCmd
       .setDomeMode(domeMode)
@@ -126,7 +124,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
       .verifiedRun(ConnectionTimeout)
 
   override def ecsVentGatesMove(gateEast: Double, gateWest: Double): F[ApplyCommandResult] =
-    tcsEpics
+    sys.tcsEpics
       .startCommand(timeout)
       .ecsVenGatesMoveCmd
       .setVentGateEast(gateEast)
@@ -274,7 +272,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
       selectOiwfs(config) *>
         VerifiedEpics.liftF(Temporal[F].sleep(1500.milliseconds)) *>
         applyTcsConfig(config)(
-          tcsEpics.startCommand(timeout)
+          sys.tcsEpics.startCommand(timeout)
         ).post
     ).verifiedRun(ConnectionTimeout)
 
@@ -287,7 +285,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
         VerifiedEpics.liftF(Temporal[F].sleep(1500.milliseconds)) *>
         setSlewOptions(slewOptions)
           .compose(applyTcsConfig(tcsConfig))(
-            tcsEpics.startCommand(timeout)
+            sys.tcsEpics.startCommand(timeout)
           )
           .post
     ).verifiedRun(ConnectionTimeout)
@@ -301,19 +299,19 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
 
   override def instrumentSpecifics(config: InstrumentSpecifics): F[ApplyCommandResult] =
     setInstrumentSpecifics(config)(
-      tcsEpics.startCommand(timeout)
+      sys.tcsEpics.startCommand(timeout)
     ).post
       .verifiedRun(ConnectionTimeout)
 
   override def oiwfsTarget(target: Target): F[ApplyCommandResult] =
     setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.oiwfsTargetCmd), target)(
-      tcsEpics.startCommand(timeout)
+      sys.tcsEpics.startCommand(timeout)
     ).post
       .verifiedRun(ConnectionTimeout)
 
   override def rotIaa(angle: Angle): F[ApplyCommandResult] =
     setRotatorIaa(angle)(
-      tcsEpics.startCommand(timeout)
+      sys.tcsEpics.startCommand(timeout)
     ).post
       .verifiedRun(ConnectionTimeout)
 
@@ -332,12 +330,12 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
       Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](_.oiwfsProbeTrackingCommand),
       config
     )(
-      tcsEpics.startCommand(timeout)
+      sys.tcsEpics.startCommand(timeout)
     ).post
       .verifiedRun(ConnectionTimeout)
 
   override def oiwfsPark: F[ApplyCommandResult] =
-    tcsEpics
+    sys.tcsEpics
       .startCommand(timeout)
       .oiwfsProbeCommands
       .park
@@ -346,7 +344,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
       .verifiedRun(ConnectionTimeout)
 
   override def oiwfsFollow(enable: Boolean): F[ApplyCommandResult] =
-    tcsEpics
+    sys.tcsEpics
       .startCommand(timeout)
       .oiwfsProbeCommands
       .follow
@@ -374,7 +372,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
       }
 
   override def rotTrackingConfig(cfg: RotatorTrackConfig): F[ApplyCommandResult] =
-    setRotatorTrackingConfig(cfg)(tcsEpics.startCommand(timeout)).post
+    setRotatorTrackingConfig(cfg)(sys.tcsEpics.startCommand(timeout)).post
       .verifiedRun(ConnectionTimeout)
 
   override def enableGuide(config: TelescopeGuideConfig): F[ApplyCommandResult] = {
@@ -405,7 +403,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
 
     config.m2Guide match {
       case M2GuideConfig.M2GuideOff               =>
-        (gains *> m1(tcsEpics.startCommand(timeout)).m2GuideCommand
+        (gains *> m1(sys.tcsEpics.startCommand(timeout)).m2GuideCommand
           .state(false)
           .m2GuideModeCommand
           .coma(false)
@@ -424,7 +422,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
           .flatMap(x => beams.map(y => (x, y)))
           .foldLeft(
             requireReset.fold(
-              tcsEpics
+              sys.tcsEpics
                 .startCommand(timeout)
                 .m2GuideResetCommand
                 .mark
@@ -437,7 +435,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
               // Set tip-tilt guide for each source on each beam
               // TCC adds a delay between each call. Is it necessary?
               (r === ApplyCommandResult.Completed).fold(
-                tcsEpics
+                sys.tcsEpics
                   .startCommand(timeout)
                   .m2GuideConfigCommand
                   .source(src.tag)
@@ -457,7 +455,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
               )
             }.flatMap { r =>
               (r === ApplyCommandResult.Completed).fold(
-                (gains *> m1(tcsEpics.startCommand(timeout)).m2GuideCommand
+                (gains *> m1(sys.tcsEpics.startCommand(timeout)).m2GuideCommand
                   .state(true)
                   .m2GuideModeCommand
                   .coma(coma === ComaOption.ComaOn)
@@ -485,7 +483,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
     }
   }
 
-  override def disableGuide: F[ApplyCommandResult] = tcsEpics
+  override def disableGuide: F[ApplyCommandResult] = sys.tcsEpics
     .startCommand(timeout)
     .m1GuideCommand
     .state(false)
@@ -523,9 +521,9 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
       val setSigProc      = qlChange
         .map(
           _.fold(
-            tcsEpics.startCommand(timeout).oiWfsCommands.closedLoop.zernikes2m2(0),
+            sys.tcsEpics.startCommand(timeout).oiWfsCommands.closedLoop.zernikes2m2(0),
             setDarkFilename(
-              tcsEpics
+              sys.tcsEpics
                 .startCommand(timeout)
                 .oiWfsCommands
                 .closedLoop
@@ -546,7 +544,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
         )
 
       val setup = setSigProc *>
-        (setInterval >>> setQl)(tcsEpics.startCommand(timeout)).oiWfsCommands.observe
+        (setInterval >>> setQl)(sys.tcsEpics.startCommand(timeout)).oiWfsCommands.observe
           .numberOfExposures(-1)
           .oiWfsCommands
           .observe
@@ -560,14 +558,14 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
           .post
 
       (for {
-        oiActive <- tcsEpics.status.oiwfsOn.map(_.map(_ === BinaryYesNo.Yes))
+        oiActive <- sys.tcsEpics.status.oiwfsOn.map(_.map(_ === BinaryYesNo.Yes))
         ret      <- VerifiedEpics.ifF[F, F, ApplyCommandResult](
                       oiActive.map(_ && qlChange.isEmpty && expTimeChange.isEmpty)
                     ) {
                       VerifiedEpics.pureF[F, F, ApplyCommandResult](ApplyCommandResult.Completed)
                     } {
                       VerifiedEpics.ifF(oiActive) {
-                        tcsEpics
+                        sys.tcsEpics
                           .startCommand(timeout)
                           .oiWfsCommands
                           .stop
@@ -591,7 +589,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
     setupOiwfsObserve(exposureTime, !guideUsesOiwfs(g.m1Guide, g.m2Guide))
   }
 
-  override def oiwfsStopObserve: F[ApplyCommandResult] = tcsEpics
+  override def oiwfsStopObserve: F[ApplyCommandResult] = sys.tcsEpics
     .startCommand(timeout)
     .oiWfsCommands
     .stop
@@ -606,7 +604,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
     )
 
   private def selectOiwfs(tcsConfig: TcsConfig): VerifiedEpics[F, F, ApplyCommandResult] =
-    tcsEpics
+    sys.tcsEpics
       .startCommand(timeout)
       .oiwfsSelectCommand
       .oiwfsName(TcsBaseControllerEpics.encodeOiwfsSelect(tcsConfig.oiwfs, tcsConfig.instrument))
@@ -647,18 +645,18 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
 
   override def getGuideState: F[GuideState] = {
     val x = for {
-      fa <- tcsEpics.status.m1Guide
-      fb <- tcsEpics.status.m2aoGuide
-      fc <- tcsEpics.status.m2oiGuide
-      fd <- tcsEpics.status.m2p1Guide
-      fe <- tcsEpics.status.m2p2Guide
-      ff <- tcsEpics.status.absorbTipTilt
-      fg <- tcsEpics.status.comaCorrect
-      fh <- tcsEpics.status.m1GuideSource
-      fi <- tcsEpics.status.m2GuideState
-      fj <- tcsEpics.status.pwfs1On
-      fk <- tcsEpics.status.pwfs2On
-      fl <- tcsEpics.status.oiwfsOn
+      fa <- sys.tcsEpics.status.m1Guide
+      fb <- sys.tcsEpics.status.m2aoGuide
+      fc <- sys.tcsEpics.status.m2oiGuide
+      fd <- sys.tcsEpics.status.m2p1Guide
+      fe <- sys.tcsEpics.status.m2p2Guide
+      ff <- sys.tcsEpics.status.absorbTipTilt
+      fg <- sys.tcsEpics.status.comaCorrect
+      fh <- sys.tcsEpics.status.m1GuideSource
+      fi <- sys.tcsEpics.status.m2GuideState
+      fj <- sys.tcsEpics.status.pwfs1On
+      fk <- sys.tcsEpics.status.pwfs2On
+      fl <- sys.tcsEpics.status.oiwfsOn
     } yield for {
       a <- fa
       b <- fb
@@ -685,7 +683,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
   }
 
   def dayTimeGains: VerifiedEpics[F, F, ApplyCommandResult] =
-    pwfs1
+    sys.pwfs1
       .startCommand(timeout)
       .gains
       .setTipGain(0.0)
@@ -694,7 +692,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
       .gains
       .setFocusGain(0.0)
       .post *>
-      pwfs2
+      sys.pwfs2
         .startCommand(timeout)
         .gains
         .setTipGain(0.0)
@@ -703,7 +701,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
         .gains
         .setFocusGain(0.0)
         .post *>
-      oiwfs
+      sys.oiwfs
         .startCommand(timeout)
         .gains
         .setTipGain(0.0)
@@ -714,15 +712,15 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
         .post
 
   def defaultGains: VerifiedEpics[F, F, ApplyCommandResult] =
-    pwfs1
+    sys.pwfs1
       .startCommand(timeout)
       .resetGain
       .post *>
-      pwfs2
+      sys.pwfs2
         .startCommand(timeout)
         .resetGain
         .post *>
-      oiwfs
+      sys.oiwfs
         .startCommand(timeout)
         .resetGain
         .post
@@ -732,12 +730,12 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
 
   override def getGuideQuality: F[GuidersQualityValues] = (
     for {
-      p1_fF <- pwfs1.getQualityStatus.flux
-      p1_cF <- pwfs1.getQualityStatus.centroidDetected
-      p2_fF <- pwfs2.getQualityStatus.flux
-      p2_cF <- pwfs2.getQualityStatus.centroidDetected
-      oi_fF <- oiwfs.getQualityStatus.flux
-      oi_cF <- oiwfs.getQualityStatus.centroidDetected
+      p1_fF <- sys.pwfs1.getQualityStatus.flux
+      p1_cF <- sys.pwfs1.getQualityStatus.centroidDetected
+      p2_fF <- sys.pwfs2.getQualityStatus.flux
+      p2_cF <- sys.pwfs2.getQualityStatus.centroidDetected
+      oi_fF <- sys.oiwfs.getQualityStatus.flux
+      oi_cF <- sys.oiwfs.getQualityStatus.centroidDetected
     } yield for {
       p1_f <- p1_fF
       p1_c <- p1_cF
@@ -756,7 +754,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
     central:    CentralBafflePosition,
     deployable: DeployableBafflePosition
   ): F[ApplyCommandResult] =
-    tcsEpics
+    sys.tcsEpics
       .startCommand(timeout)
       .bafflesCommand
       .central(central)
@@ -765,6 +763,36 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
       .post
       .verifiedRun(ConnectionTimeout)
 
+  override def getTelescopeState: F[TelescopeState] = (
+    for {
+      mcsfF  <- sys.mcs.getFollowingState
+      scsfF  <- sys.scs.getFollowingState
+      crcsfF <- sys.crcs.getFollowingState
+      p1fF   <- sys.ags.status.p1Follow
+      p1pF   <- sys.ags.status.p1Parked
+      p2fF   <- sys.ags.status.p2Follow
+      p2pF   <- sys.ags.status.p2Parked
+      oifF   <- sys.ags.status.oiFollow
+      oipF   <- sys.ags.status.oiParked
+    } yield for {
+      mcsf  <- mcsfF
+      scsf  <- scsfF
+      crcsf <- crcsfF
+      p1f   <- p1fF
+      p1p   <- p1pF
+      p2f   <- p2fF
+      p2p   <- p2pF
+      oif   <- oifF
+      oip   <- oipF
+    } yield TelescopeState(
+      mount = MechSystemState(NotParked, mcsf),
+      scs = MechSystemState(NotParked, scsf),
+      crcs = MechSystemState(NotParked, crcsf),
+      pwfs1 = MechSystemState(p1p, p1f),
+      pwfs2 = MechSystemState(p2p, p2f),
+      oiwfs = MechSystemState(oip, oif)
+    )
+  ).verifiedRun(ConnectionTimeout)
 }
 
 object TcsBaseControllerEpics {

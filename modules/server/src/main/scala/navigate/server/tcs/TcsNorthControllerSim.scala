@@ -13,8 +13,9 @@ import lucuma.core.model.M2GuideConfig
 
 class TcsNorthControllerSim[F[_]: Applicative](
   guideRef:          Ref[F, GuideState],
-  guidersQualityRef: Ref[F, GuidersQualityValues]
-) extends TcsBaseControllerSim[F](guideRef, guidersQualityRef)
+  guidersQualityRef: Ref[F, GuidersQualityValues],
+  telStateRef:       Ref[F, TelescopeState]
+) extends TcsBaseControllerSim[F](guideRef, guidersQualityRef, telStateRef)
     with TcsNorthController[F] {}
 
 object TcsNorthControllerSim {
@@ -36,5 +37,6 @@ object TcsNorthControllerSim {
              GuidersQualityValues.GuiderQuality(0, false)
            )
          )
-  } yield new TcsNorthControllerSim(x, y)
+    z <- Ref.of(TelescopeState.default)
+  } yield new TcsNorthControllerSim(x, y, z)
 }

@@ -44,6 +44,7 @@ import navigate.server.tcs.Target
 import navigate.server.tcs.TcsBaseController.TcsConfig
 import navigate.server.tcs.TcsNorthControllerSim
 import navigate.server.tcs.TcsSouthControllerSim
+import navigate.server.tcs.TelescopeState
 import navigate.server.tcs.TrackingConfig
 import org.http4s.HttpApp
 import org.http4s.client.Client
@@ -738,8 +739,9 @@ object NavigateMappingsTest {
              GuidersQualityValues.GuiderQuality(0, false)
            )
          )
+    p <- Ref.of[IO, TelescopeState](TelescopeState.default)
   } yield {
-    val tcsSouth = new TcsSouthControllerSim[IO](r, q)
+    val tcsSouth = new TcsSouthControllerSim[IO](r, q, p)
     new NavigateEngine[IO] {
 
       override val systems: Systems[IO] = Systems(
@@ -747,7 +749,7 @@ object NavigateMappingsTest {
         dummyClient,
         tcsSouth,
         tcsSouth,
-        new TcsNorthControllerSim[IO](r, q)
+        new TcsNorthControllerSim[IO](r, q, p)
       )
 
       override def eventStream: Stream[IO, NavigateEvent] = Stream.empty
@@ -814,6 +816,8 @@ object NavigateMappingsTest {
       override def getGuideState: IO[GuideState] = r.get
 
       override def getGuidersQuality: IO[GuidersQualityValues] = q.get
+
+      override def getTelescopeState: IO[TelescopeState] = p.get
     }
   }
 

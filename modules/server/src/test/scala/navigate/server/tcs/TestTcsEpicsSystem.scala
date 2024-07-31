@@ -708,7 +708,7 @@ object TestTcsEpicsSystem {
   def buildChannels[F[_]: Applicative](s: Ref[F, State]): TcsChannels[F] =
     TcsChannels(
       telltale =
-        TelltaleChannel[F]("dummy", new TestChannel[F, State, String](s, Focus[State](_.telltale))),
+        TelltaleChannel[F]("TCS", new TestChannel[F, State, String](s, Focus[State](_.telltale))),
       telescopeParkDir =
         new TestChannel[F, State, CadDirective](s, Focus[State](_.telescopeParkDir)),
       mountFollow = new TestChannel[F, State, String](s, Focus[State](_.mountFollow)),

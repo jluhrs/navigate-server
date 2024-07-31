@@ -11,28 +11,26 @@ import cats.syntax.all.*
 import scala.concurrent.duration.FiniteDuration
 
 class TcsNorthControllerEpics[F[_]: Async: Parallel](
-  tcsEpics: TcsEpicsSystem[F],
-  pwfs1:    WfsEpicsSystem[F],
-  pwfs2:    WfsEpicsSystem[F],
-  oiwfs:    WfsEpicsSystem[F],
+  sys:      EpicsSystems[F],
   timeout:  FiniteDuration,
   stateRef: Ref[F, TcsBaseControllerEpics.State]
-) extends TcsBaseControllerEpics[F](tcsEpics, pwfs1, pwfs2, oiwfs, timeout, stateRef)
+) extends TcsBaseControllerEpics[F](
+      sys,
+      timeout,
+      stateRef
+    )
     with TcsNorthController[F] {}
 
 object TcsNorthControllerEpics {
 
   def build[F[_]: Async: Parallel](
-    tcsEpics: TcsEpicsSystem[F],
-    pwfs1:    WfsEpicsSystem[F],
-    pwfs2:    WfsEpicsSystem[F],
-    oiwfs:    WfsEpicsSystem[F],
-    timeout:  FiniteDuration
+    sys:     EpicsSystems[F],
+    timeout: FiniteDuration
   ): F[TcsNorthControllerEpics[F]] =
     Ref
       .of[F, TcsBaseControllerEpics.State](TcsBaseControllerEpics.State.default)
       .map(
-        new TcsNorthControllerEpics(tcsEpics, pwfs1, pwfs2, oiwfs, timeout, _)
+        new TcsNorthControllerEpics(sys, timeout, _)
       )
 
 }
