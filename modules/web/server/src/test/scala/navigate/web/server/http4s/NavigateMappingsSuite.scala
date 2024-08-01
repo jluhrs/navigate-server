@@ -16,6 +16,7 @@ import fs2.Stream
 import fs2.concurrent.Topic
 import io.circe.Decoder
 import io.circe.Decoder.Result
+import io.circe.DecodingFailure
 import io.circe.Json
 import lucuma.core.enums.ComaOption
 import lucuma.core.enums.M1Source
@@ -35,9 +36,12 @@ import navigate.model.enums.ShutterMode
 import navigate.server.NavigateEngine
 import navigate.server.OdbProxy
 import navigate.server.Systems
+import navigate.server.tcs.FollowStatus
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuidersQualityValues
 import navigate.server.tcs.InstrumentSpecifics
+import navigate.server.tcs.MechSystemState
+import navigate.server.tcs.ParkStatus
 import navigate.server.tcs.RotatorTrackConfig
 import navigate.server.tcs.SlewOptions
 import navigate.server.tcs.Target
@@ -57,7 +61,7 @@ import scala.jdk.CollectionConverters.given
 
 import NavigateMappings.*
 
-class NavigateMappingsTest extends CatsEffectSuite {
+class NavigateMappingsSuit extends CatsEffectSuite {
   import NavigateMappingsTest.*
   import NavigateMappingsTest.given
 
@@ -576,6 +580,50 @@ class NavigateMappingsTest extends CatsEffectSuite {
 
   }
 
+  test("Query telescope state") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      gd  <- Topic[IO, GuideState]
+      gq  <- Topic[IO, GuidersQualityValues]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq)
+      r   <- mp.compileAndRun(
+               """
+          | query {
+          |   telescopeState {
+          |     mount {
+          |       parked
+          |       follow
+          |     }
+          |     scs {
+          |       parked
+          |       follow
+          |     }
+          |     crcs {
+          |       parked
+          |       follow
+          |     }
+          |     pwfs1 {
+          |       parked
+          |       follow
+          |     }
+          |     pwfs2 {
+          |       parked
+          |       follow
+          |     }
+          |     oiwfs {
+          |       parked
+          |       follow
+          |     }
+          |   }
+          | }
+          |""".stripMargin
+             )
+    } yield assertEquals(r.hcursor.downField("data").downField("telescopeState").as[TelescopeState],
+                         TelescopeState.default.asRight[DecodingFailure]
+    )
+  }
+
   test("Process guide disable command") {
     for {
       eng <- buildServer
@@ -905,5 +953,28 @@ object NavigateMappingsTest {
         false
       )
     }
+
+  given Decoder[MechSystemState] = h =>
+    for {
+      prk <- h.downField("parked").as[ParkStatus]
+      flw <- h.downField("follow").as[FollowStatus]
+    } yield MechSystemState(prk, flw)
+
+  given Decoder[TelescopeState] = h =>
+    for {
+      mnt  <- h.downField("mount").as[MechSystemState]
+      scs  <- h.downField("scs").as[MechSystemState]
+      crcs <- h.downField("crcs").as[MechSystemState]
+      p1   <- h.downField("pwfs1").as[MechSystemState]
+      p2   <- h.downField("pwfs2").as[MechSystemState]
+      oi   <- h.downField("oiwfs").as[MechSystemState]
+    } yield TelescopeState(
+      mnt,
+      scs,
+      crcs,
+      p1,
+      p2,
+      oi
+    )
 
 }

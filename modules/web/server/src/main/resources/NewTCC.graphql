@@ -75,18 +75,18 @@ enum FollowStatus {
     FOLLOWING
 }
 
-type MechSystemStatus {
+type MechSystemState {
     parked: ParkStatus!
     follow: FollowStatus!
 }
 
-type TelescopeStatus {
-    mount: MechSystemStatus!
-    scs: MechSystemStatus!
-    crcs: MechSystemStatus!
-    pwfs1: MechSystemStatus!
-    pwfs2: MechSystemStatus!
-    oiwfs: MechSystemStatus!
+type TelescopeState {
+    mount: MechSystemState!
+    scs: MechSystemState!
+    crcs: MechSystemState!
+    pwfs1: MechSystemState!
+    pwfs2: MechSystemState!
+    oiwfs: MechSystemState!
 }
 
 input GuiderConfig{
@@ -215,7 +215,7 @@ type GuidersQualityValues {
 }
 
 type Query {
-    telescopeStatus: TelescopeStatus!
+    telescopeState: TelescopeState!
     guideState: GuideConfigurationState!
 }
 

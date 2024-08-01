@@ -69,6 +69,7 @@ import navigate.server.tcs.SlewOptions
 import navigate.server.tcs.StopGuide
 import navigate.server.tcs.Target
 import navigate.server.tcs.TcsBaseController.TcsConfig
+import navigate.server.tcs.TelescopeState
 import navigate.server.tcs.TrackingConfig
 import navigate.server.tcs.ZeroChopThrow
 import navigate.server.tcs.ZeroGuideOffset
@@ -95,6 +96,9 @@ class NavigateMappings[F[_]: Sync](
 
   def guideState(p: Path, env: Env): F[Result[GuideState]] =
     server.getGuideState.attempt.map(_.fold(Result.internalError, Result.success))
+
+  def telescopeState(p: Path, env: Env): F[Result[TelescopeState]] =
+    server.getTelescopeState.attempt.map(_.fold(Result.internalError, Result.success))
 
   def mountPark(p: Path, env: Env): F[Result[OperationOutcome]] =
     server.mcsPark.attempt
@@ -415,7 +419,8 @@ class NavigateMappings[F[_]: Sync](
     ObjectMapping(
       tpe = QueryType,
       fieldMappings = List(
-        RootEffect.computeEncodable("guideState")((p, env) => guideState(p, env))
+        RootEffect.computeEncodable("guideState")((p, env) => guideState(p, env)),
+        RootEffect.computeEncodable("telescopeState")((p, env) => telescopeState(p, env))
       )
     ),
     ObjectMapping(
