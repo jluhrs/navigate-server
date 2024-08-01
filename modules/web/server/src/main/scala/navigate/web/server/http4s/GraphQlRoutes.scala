@@ -14,6 +14,7 @@ import natchez.Trace
 import navigate.server.NavigateEngine
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuidersQualityValues
+import navigate.server.tcs.TelescopeState
 import org.http4s.HttpRoutes
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.middleware.GZip
@@ -24,15 +25,17 @@ class GraphQlRoutes[F[_]: Async: Logger: Trace: Compression](
   eng:                 NavigateEngine[F],
   logTopic:            Topic[F, ILoggingEvent],
   guideStateTopic:     Topic[F, GuideState],
-  guidersQualityTopic: Topic[F, GuidersQualityValues]
+  guidersQualityTopic: Topic[F, GuidersQualityValues],
+  telescopeStateTopic: Topic[F, TelescopeState]
 ) extends Http4sDsl[F] {
 
   private def commandServices(wsb: WebSocketBuilder2[F]): HttpRoutes[F] = GZip(
     Routes.forService(
       _ =>
-        NavigateMappings(eng, logTopic, guideStateTopic, guidersQualityTopic).map(
-          GraphQLService[F](_).some
-        ),
+        NavigateMappings(eng, logTopic, guideStateTopic, guidersQualityTopic, telescopeStateTopic)
+          .map(
+            GraphQLService[F](_).some
+          ),
       wsb
     )
   )

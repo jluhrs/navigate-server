@@ -88,7 +88,8 @@ class NavigateMappings[F[_]: Sync](
   server:              NavigateEngine[F],
   logTopic:            Topic[F, ILoggingEvent],
   guideStateTopic:     Topic[F, GuideState],
-  guidersQualityTopic: Topic[F, GuidersQualityValues]
+  guidersQualityTopic: Topic[F, GuidersQualityValues],
+  telescopeStateTopic: Topic[F, TelescopeState]
 )(
   override val schema: Schema
 ) extends CirceMapping[F] {
@@ -467,6 +468,13 @@ class NavigateMappings[F[_]: Sync](
             .map(_.asJson)
             .map(circeCursor(p, env, _))
             .map(Result.success)
+        },
+        RootStream.computeCursor("telescopeState") { (p, env) =>
+          telescopeStateTopic
+            .subscribe(10)
+            .map(_.asJson)
+            .map(circeCursor(p, env, _))
+            .map(Result.success)
         }
       )
     )
@@ -483,13 +491,24 @@ object NavigateMappings extends GrackleParsers {
     server:              NavigateEngine[F],
     logTopic:            Topic[F, ILoggingEvent],
     guideStateTopic:     Topic[F, GuideState],
-    guidersQualityTopic: Topic[F, GuidersQualityValues]
+    guidersQualityTopic: Topic[F, GuidersQualityValues],
+    telescopeStateTopic: Topic[F, TelescopeState]
   ): F[NavigateMappings[F]] = loadSchema.flatMap {
     case Result.Success(schema)           =>
-      new NavigateMappings[F](server, logTopic, guideStateTopic, guidersQualityTopic)(schema)
+      new NavigateMappings[F](server,
+                              logTopic,
+                              guideStateTopic,
+                              guidersQualityTopic,
+                              telescopeStateTopic
+      )(schema)
         .pure[F]
     case Result.Warning(problems, schema) =>
-      new NavigateMappings[F](server, logTopic, guideStateTopic, guidersQualityTopic)(schema)
+      new NavigateMappings[F](server,
+                              logTopic,
+                              guideStateTopic,
+                              guidersQualityTopic,
+                              telescopeStateTopic
+      )(schema)
         .pure[F]
     case Result.Failure(problems)         =>
       Sync[F].raiseError[NavigateMappings[F]](

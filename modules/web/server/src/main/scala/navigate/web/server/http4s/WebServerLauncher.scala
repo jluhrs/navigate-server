@@ -26,6 +26,7 @@ import navigate.server.NavigateFailure
 import navigate.server.Systems
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuidersQualityValues
+import navigate.server.tcs.TelescopeState
 import navigate.web.server.OcsBuildInfo
 import navigate.web.server.common.LogInitialization
 import navigate.web.server.common.RedirectToHttpsRoutes
@@ -123,6 +124,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
     logTopic:            Topic[F, ILoggingEvent],
     guideTopic:          Topic[F, GuideState],
     guidersQualityTopic: Topic[F, GuidersQualityValues],
+    telescopeStateTopic: Topic[F, TelescopeState],
     se:                  NavigateEngine[F],
     clientsDb:           ClientsSetDb[F]
   ): Resource[F, Server] = {
@@ -130,7 +132,12 @@ object WebServerLauncher extends IOApp with LogInitialization {
 
     def router(wsBuilder: WebSocketBuilder2[F], proxyService: HttpRoutes[F]) = Router[F](
       "/"                 -> new StaticRoutes().service,
-      "/navigate"         -> new GraphQlRoutes(se, logTopic, guideTopic, guidersQualityTopic)
+      "/navigate"         -> new GraphQlRoutes(se,
+                                       logTopic,
+                                       guideTopic,
+                                       guidersQualityTopic,
+                                       telescopeStateTopic
+      )
         .service(wsBuilder),
       ProxyRoute.toString -> proxyService
     )
@@ -267,6 +274,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
         log    <- Resource.eval(Topic[IO, ILoggingEvent])
         gd     <- Resource.eval(Topic[IO, GuideState])
         gq     <- Resource.eval(Topic[IO, GuidersQualityValues])
+        ts     <- Resource.eval(Topic[IO, TelescopeState])
         dsp    <- Dispatcher.sequential[IO]
         _      <- Resource.eval(logToClients(log, dsp))
         cs     <- Resource.eval(
@@ -274,7 +282,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
                   )
         _      <- Resource.eval(publishStats(cs).compile.drain.start)
         engine <- engineIO(conf, cli)
-        _      <- webServer[IO](conf, out, log, gd, gq, engine, cs)
+        _      <- webServer[IO](conf, out, log, gd, gq, ts, engine, cs)
         _      <- Resource.eval(
                     out.subscribers
                       .evalMap(l => Logger[IO].debug(s"Subscribers amount: $l").whenA(l > 1))
@@ -287,6 +295,9 @@ object WebServerLauncher extends IOApp with LogInitialization {
                   )
         _      <- Resource.eval(
                     guiderQualityPoll(engine, gq).compile.drain.start
+                  )
+        _      <- Resource.eval(
+                    telescopeStatePoll(engine, ts).compile.drain.start
                   )
         f      <- Resource.eval(
                     engine.eventStream.through(out.publish).compile.drain.onError(logError).start
@@ -323,6 +334,18 @@ object WebServerLauncher extends IOApp with LogInitialization {
       .evalMap(_ => eng.getGuidersQuality)
       .evalMapAccumulate(none) { (acc, gs) =>
         (if (acc.contains(gs)) IO.unit else t.publish1(gs).void).as(gs.some, ())
+      }
+      .void
+
+  def telescopeStatePoll(
+    eng: NavigateEngine[IO],
+    t:   Topic[IO, TelescopeState]
+  ): Stream[IO, Unit] =
+    Stream
+      .fixedRate[IO](FiniteDuration(1, TimeUnit.SECONDS))
+      .evalMap(_ => eng.getTelescopeState)
+      .evalMapAccumulate(none) { (acc, ts) =>
+        (if (acc.contains(ts)) IO.unit else t.publish1(ts).void).as(ts.some, ())
       }
       .void
 

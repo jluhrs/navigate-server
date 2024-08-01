@@ -242,4 +242,5 @@ type Subscription {
     logMessage: LogMessage!
     guideState: GuideConfigurationState!
     guidersQualityValues: GuidersQualityValues!
+    telescopeState: TelescopeState!
 }
