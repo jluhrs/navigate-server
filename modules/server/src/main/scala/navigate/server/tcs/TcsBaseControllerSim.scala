@@ -3,8 +3,8 @@
 
 package navigate.server.tcs
 
-import cats.Applicative
 import cats.effect.Ref
+import cats.effect.Sync
 import cats.syntax.all.*
 import lucuma.core.enums.MountGuideOption
 import lucuma.core.math.Angle
@@ -20,12 +20,12 @@ import navigate.model.enums.DomeMode
 import navigate.model.enums.ShutterMode
 import navigate.server.ApplyCommandResult
 import navigate.server.tcs.FollowStatus.*
+import navigate.server.tcs.GuidersQualityValues.GuiderQuality
 import navigate.server.tcs.ParkStatus.*
 
-class TcsBaseControllerSim[F[_]: Applicative](
-  guideRef:          Ref[F, GuideState],
-  guidersQualityRef: Ref[F, GuidersQualityValues],
-  telStateRef:       Ref[F, TelescopeState]
+class TcsBaseControllerSim[F[_]: Sync](
+  guideRef:    Ref[F, GuideState],
+  telStateRef: Ref[F, TelescopeState]
 ) extends TcsBaseController[F] {
   override def mcsPark: F[ApplyCommandResult] = telStateRef
     .update(
@@ -70,31 +70,31 @@ class TcsBaseControllerSim[F[_]: Applicative](
     domeEnable:    Boolean,
     shutterEnable: Boolean
   ): F[ApplyCommandResult] =
-    Applicative[F].pure(ApplyCommandResult.Completed)
+    ApplyCommandResult.Completed.pure[F]
 
   override def ecsVentGatesMove(gateEast: Double, westGate: Double): F[ApplyCommandResult] =
-    Applicative[F].pure(ApplyCommandResult.Completed)
+    ApplyCommandResult.Completed.pure[F]
 
   override def tcsConfig(config: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
-    Applicative[F].pure(ApplyCommandResult.Completed)
+    ApplyCommandResult.Completed.pure[F]
 
   override def slew(
     slewOptions: SlewOptions,
     tcsConfig:   TcsBaseController.TcsConfig
   ): F[ApplyCommandResult] =
-    Applicative[F].pure(ApplyCommandResult.Completed)
+    ApplyCommandResult.Completed.pure[F]
 
   override def instrumentSpecifics(config: InstrumentSpecifics): F[ApplyCommandResult] =
-    Applicative[F].pure(ApplyCommandResult.Completed)
+    ApplyCommandResult.Completed.pure[F]
 
   override def oiwfsTarget(target: Target): F[ApplyCommandResult] =
-    Applicative[F].pure(ApplyCommandResult.Completed)
+    ApplyCommandResult.Completed.pure[F]
 
   override def rotIaa(angle: Angle): F[ApplyCommandResult] =
-    Applicative[F].pure(ApplyCommandResult.Completed)
+    ApplyCommandResult.Completed.pure[F]
 
   override def oiwfsProbeTracking(config: TrackingConfig): F[ApplyCommandResult] =
-    Applicative[F].pure(ApplyCommandResult.Completed)
+    ApplyCommandResult.Completed.pure[F]
 
   override def oiwfsPark: F[ApplyCommandResult] = telStateRef
     .update(
@@ -109,7 +109,7 @@ class TcsBaseControllerSim[F[_]: Applicative](
     .as(ApplyCommandResult.Completed)
 
   override def rotTrackingConfig(cfg: RotatorTrackConfig): F[ApplyCommandResult] =
-    Applicative[F].pure(ApplyCommandResult.Completed)
+    ApplyCommandResult.Completed.pure[F]
 
   override def enableGuide(config: TelescopeGuideConfig): F[ApplyCommandResult] = guideRef
     .update(
@@ -136,12 +136,21 @@ class TcsBaseControllerSim[F[_]: Applicative](
 
   override def getGuideState: F[GuideState] = guideRef.get
 
-  override def getGuideQuality: F[GuidersQualityValues] = guidersQualityRef.get
+  override def getGuideQuality: F[GuidersQualityValues] =
+    for {
+      p1Cnts <- Sync[F].delay(1000 + scala.util.Random.between(-100, 100))
+      p2Cnts <- Sync[F].delay(1000 + scala.util.Random.between(-100, 100))
+      oiCnts <- Sync[F].delay(1000 + scala.util.Random.between(-100, 100))
+    } yield GuidersQualityValues(
+      pwfs1 = GuiderQuality(p1Cnts, false),
+      pwfs2 = GuiderQuality(p2Cnts, false),
+      oiwfs = GuiderQuality(oiCnts, false)
+    )
 
   override def baffles(
     central:    CentralBafflePosition,
     deployable: DeployableBafflePosition
-  ): F[ApplyCommandResult] = Applicative[F].pure(ApplyCommandResult.Completed)
+  ): F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
 
   override def getTelescopeState: F[TelescopeState] = telStateRef.get
 }

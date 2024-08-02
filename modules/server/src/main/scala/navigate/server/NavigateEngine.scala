@@ -38,7 +38,6 @@ import navigate.model.enums.DomeMode
 import navigate.model.enums.ShutterMode
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuidersQualityValues
-import navigate.server.tcs.GuidersQualityValues.GuiderQuality
 import navigate.server.tcs.InstrumentSpecifics
 import navigate.server.tcs.RotatorTrackConfig
 import navigate.server.tcs.SlewOptions
@@ -351,18 +350,9 @@ object NavigateEngine {
 
     override def getGuideState: F[GuideState] = systems.tcsCommon.getGuideState
 
-    override def getGuidersQuality: F[GuidersQualityValues] =
-      for {
-        p1Cnts <- (1000 + scala.util.Random.between(-100, 100)).pure[F]
-        p2Cnts <- (1000 + scala.util.Random.between(-100, 100)).pure[F]
-        oiCnts <- (1000 + scala.util.Random.between(-100, 100)).pure[F]
-      } yield GuidersQualityValues(
-        pwfs1 = GuiderQuality(p1Cnts, false),
-        pwfs2 = GuiderQuality(p2Cnts, false),
-        oiwfs = GuiderQuality(oiCnts, false)
-      )
+    override def getGuidersQuality: F[GuidersQualityValues] = systems.tcsCommon.getGuideQuality
 
-    override def getTelescopeState: F[TelescopeState] = ???
+    override def getTelescopeState: F[TelescopeState] = systems.tcsCommon.getTelescopeState
   }
 
   def build[F[_]: Concurrent: Temporal: Logger](

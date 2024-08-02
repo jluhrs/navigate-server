@@ -892,6 +892,7 @@ object NavigateMappingsTest {
                       false
            )
          )
+    p <- Ref.of[IO, TelescopeState](TelescopeState.default)
     q <- Ref.of[IO, GuidersQualityValues](
            GuidersQualityValues(
              GuidersQualityValues.GuiderQuality(0, false),
@@ -899,9 +900,8 @@ object NavigateMappingsTest {
              GuidersQualityValues.GuiderQuality(0, false)
            )
          )
-    p <- Ref.of[IO, TelescopeState](TelescopeState.default)
   } yield {
-    val tcsSouth = new TcsSouthControllerSim[IO](r, q, p)
+    val tcsSouth = new TcsSouthControllerSim[IO](r, p)
     new NavigateEngine[IO] {
 
       override val systems: Systems[IO] = Systems(
@@ -909,7 +909,7 @@ object NavigateMappingsTest {
         dummyClient,
         tcsSouth,
         tcsSouth,
-        new TcsNorthControllerSim[IO](r, q, p)
+        new TcsNorthControllerSim[IO](r, p)
       )
 
       override def eventStream: Stream[IO, NavigateEvent] = Stream.empty
