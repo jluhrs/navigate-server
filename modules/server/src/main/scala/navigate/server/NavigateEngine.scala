@@ -67,6 +67,7 @@ trait NavigateEngine[F[_]] {
   def eventStream: Stream[F, NavigateEvent]
   def mcsPark: F[Unit]
   def mcsFollow(enable:                              Boolean): F[Unit]
+  def scsFollow(enable:                              Boolean): F[Unit]
   def rotStop(useBrakes:                             Boolean): F[Unit]
   def rotPark: F[Unit]
   def rotFollow(enable:                              Boolean): F[Unit]
@@ -172,6 +173,13 @@ object NavigateEngine {
                     McsFollow(enable),
                     systems.tcsCommon.mcsFollow(enable),
                     Focus[State](_.mcsFollowInProgress)
+      )
+
+    override def scsFollow(enable: Boolean): F[Unit] =
+      simpleCommand(engine,
+                    ScsFollow(enable),
+                    systems.tcsCommon.scsFollow(enable),
+                    Focus[State](_.scsFollowInProgress)
       )
 
     override def rotStop(useBrakes: Boolean): F[Unit] =
@@ -371,6 +379,7 @@ object NavigateEngine {
   case class State(
     mcsParkInProgress:             Boolean,
     mcsFollowInProgress:           Boolean,
+    scsFollowInProgress:           Boolean,
     rotStopInProgress:             Boolean,
     rotParkInProgress:             Boolean,
     rotFollowInProgress:           Boolean,
@@ -417,6 +426,7 @@ object NavigateEngine {
   val startState: State = State(
     mcsParkInProgress = false,
     mcsFollowInProgress = false,
+    scsFollowInProgress = false,
     rotStopInProgress = false,
     rotParkInProgress = false,
     rotFollowInProgress = false,

@@ -168,6 +168,23 @@ class NavigateMappings[F[_]: Sync](
         Result.failure("rotatorConfig parameter could not be parsed.").pure[F]
       )
 
+  def scsFollow(p: Path, env: Env): F[Result[OperationOutcome]] =
+    env
+      .get[Boolean]("enable")
+      .map { en =>
+        server
+          .scsFollow(en)
+          .attempt
+          .map(x =>
+            Result.success(
+              x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+            )
+          )
+      }
+      .getOrElse(
+        Result.failure[OperationOutcome]("scsFollow parameter could not be parsed.").pure[F]
+      )
+
   def instrumentSpecifics(p: Path, env: Env): F[Result[OperationOutcome]] =
     env
       .get[InstrumentSpecifics]("instrumentSpecificsParams")(using classTag[InstrumentSpecifics])
@@ -352,6 +369,8 @@ class NavigateMappings[F[_]: Sync](
              )
         _ <- Elab.env("config", x)
       } yield ()
+    case (MutationType, "scsFollow", List(Binding("enable", BooleanValue(en))))             =>
+      Elab.env("enable" -> en)
     case (MutationType, "tcsConfig", List(Binding("config", ObjectValue(fields))))          =>
       for {
         x <-
@@ -432,6 +451,7 @@ class NavigateMappings[F[_]: Sync](
         RootEffect.computeEncodable("rotatorPark")((p, env) => rotatorPark(p, env)),
         RootEffect.computeEncodable("rotatorFollow")((p, env) => rotatorFollow(p, env)),
         RootEffect.computeEncodable("rotatorConfig")((p, env) => rotatorConfig(p, env)),
+        RootEffect.computeEncodable("scsFollow")((p, env) => scsFollow(p, env)),
         RootEffect.computeEncodable("tcsConfig")((p, env) => tcsConfig(p, env)),
         RootEffect.computeEncodable("slew")((p, env) => slew(p, env)),
         RootEffect.computeEncodable("instrumentSpecifics")((p, env) => instrumentSpecifics(p, env)),

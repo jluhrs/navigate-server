@@ -153,4 +153,10 @@ class TcsBaseControllerSim[F[_]: Sync](
   ): F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
 
   override def getTelescopeState: F[TelescopeState] = telStateRef.get
+
+  override def scsFollow(enable: Boolean): F[ApplyCommandResult] = telStateRef
+    .update(
+      _.focus(_.scs).replace(MechSystemState(NotParked, enable.fold(Following, NotFollowing)))
+    )
+    .as(ApplyCommandResult.Completed)
 }

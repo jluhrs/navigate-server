@@ -87,6 +87,7 @@ object TcsEpicsSystem {
                                            BinaryOnOff
     ]
     val m2GuideResetCmd: ParameterlessCommandChannels[F]
+    val m2FollowCmd: Command1Channels[F, BinaryOnOff]
     val mountGuideCmd: Command4Channels[F, BinaryOnOff, String, Double, Double]
     val probeGuideModeCmd: Command3Channels[F, BinaryOnOff, GuideProbe, GuideProbe]
     val oiwfsSelectCmd: Command2Channels[F, String, String]
@@ -902,6 +903,11 @@ object TcsEpicsSystem {
           tcsEpics.bafflesCmd.setParam2(v)
         )
       }
+    override val m2FollowCommand: FollowCommand[F, TcsCommands[F]] =
+      (enable: Boolean) =>
+        addParam(
+          tcsEpics.m2FollowCmd.setParam1(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+        )
   }
 
   class TcsEpicsSystemImpl[F[_]: Monad: Parallel](epics: TcsEpics[F], st: TcsStatus[F])
@@ -1091,6 +1097,10 @@ object TcsEpicsSystem {
         channels.m2Baffles.centralBaffle,
         channels.m2Baffles.deployBaffle
       )
+    override val m2FollowCmd: Command1Channels[F, BinaryOnOff]                                    = Command1Channels(
+      channels.telltale,
+      channels.m2Follow
+    )
   }
 
   def formatAngleCoord(d: Double): String = {
@@ -1444,6 +1454,7 @@ object TcsEpicsSystem {
     val m2GuideModeCommand: M2GuideModeCommand[F, TcsCommands[F]]
     val m2GuideConfigCommand: M2GuideConfigCommand[F, TcsCommands[F]]
     val m2GuideResetCommand: BaseCommand[F, TcsCommands[F]]
+    val m2FollowCommand: FollowCommand[F, TcsCommands[F]]
     val mountGuideCommand: MountGuideCommand[F, TcsCommands[F]]
     val oiWfsCommands: WfsCommands[F, TcsCommands[F]]
     val probeGuideModeCommand: ProbeGuideModeCommand[F, TcsCommands[F]]
