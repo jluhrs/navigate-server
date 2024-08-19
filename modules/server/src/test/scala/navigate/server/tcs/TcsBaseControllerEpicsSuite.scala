@@ -71,6 +71,18 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     }
   }
 
+  test("SCS commands") {
+    for {
+      x        <- createController
+      (st, ctr) = x
+      _        <- ctr.scsFollow(enable = true)
+      rs       <- st.tcs.get
+    } yield {
+      assert(rs.m2Follow.connected)
+      assertEquals(rs.m2Follow.value.get, BinaryOnOff.On.tag)
+    }
+  }
+
   test("Rotator commands") {
     val testAngle = Angle.fromDoubleDegrees(123.456)
 

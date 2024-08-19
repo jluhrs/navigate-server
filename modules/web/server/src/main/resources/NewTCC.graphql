@@ -224,6 +224,7 @@ type Mutation {
     mountFollow(enable: Boolean!): OperationOutcome!
     rotatorPark: OperationOutcome!
     rotatorFollow(enable: Boolean!): OperationOutcome!
+    scsFollow(enable: Boolean!): OperationOutcome!
     slew(slewOptions: SlewOptionsInput!, config: TcsConfigInput!): OperationOutcome!
     tcsConfig(config: TcsConfigInput!): OperationOutcome!
     instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecificsInput!): OperationOutcome!

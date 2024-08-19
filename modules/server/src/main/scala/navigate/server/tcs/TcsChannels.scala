@@ -43,6 +43,7 @@ case class TcsChannels[F[_]](
   m2GuideMode:      Channel[F, String],
   m2GuideConfig:    M2GuideConfigChannels[F],
   m2GuideReset:     Channel[F, CadDirective],
+  m2Follow:         Channel[F, String],
   mountGuide:       MountGuideChannels[F],
   oiwfs:            WfsChannels[F],
   guide:            GuideConfigStatusChannels[F],
@@ -586,6 +587,7 @@ object TcsChannels {
       m2gm <- service.getChannel[String](tcsTop.value, "m2GuideMode.A")
       m2gc <- M2GuideConfigChannels.build(service, tcsTop)
       m2gr <- service.getChannel[CadDirective](tcsTop.value, s"m2GuideReset$DirSuffix")
+      m2f  <- service.getChannel[String](tcsTop.value, "m2Follow.A")
       mng  <- MountGuideChannels.build(service, tcsTop)
       oi   <- WfsChannels.build(service, tcsTop, "oiwfs", "oi")
       gd   <- GuideConfigStatusChannels.build(service, tcsTop)
@@ -616,6 +618,7 @@ object TcsChannels {
       m2gm,
       m2gc,
       m2gr,
+      m2f,
       mng,
       oi,
       gd,

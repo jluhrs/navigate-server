@@ -46,6 +46,7 @@ trait TcsBaseController[F[_]] {
     central:    CentralBafflePosition,
     deployable: DeployableBafflePosition
   ): F[ApplyCommandResult]
+  def scsFollow(enable:           Boolean): F[ApplyCommandResult]
 
   def getGuideState: F[GuideState]
   def getGuideQuality: F[GuidersQualityValues]

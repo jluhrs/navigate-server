@@ -793,6 +793,14 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
       oiwfs = MechSystemState(oip, oif)
     )
   ).verifiedRun(ConnectionTimeout)
+
+  override def scsFollow(enable: Boolean): F[ApplyCommandResult] =
+    sys.tcsEpics
+      .startCommand(timeout)
+      .m2FollowCommand
+      .setFollow(enable)
+      .post
+      .verifiedRun(ConnectionTimeout)
 }
 
 object TcsBaseControllerEpics {

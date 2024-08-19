@@ -105,6 +105,21 @@ class NavigateMappingsSuit extends CatsEffectSuite {
 
   }
 
+  test("Process SCS follow command") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      gd  <- Topic[IO, GuideState]
+      gq  <- Topic[IO, GuidersQualityValues]
+      ts  <- Topic[IO, TelescopeState]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts)
+      r   <- mp.compileAndRun("mutation { scsFollow(enable: true) { result } }")
+    } yield assert(
+      extractResult[OperationOutcome](r, "scsFollow").exists(_ === OperationOutcome.success)
+    )
+
+  }
+
   test("Process slew command") {
     for {
       eng <- buildServer
@@ -978,6 +993,8 @@ object NavigateMappingsTest {
       override def getGuidersQuality: IO[GuidersQualityValues] = q.get
 
       override def getTelescopeState: IO[TelescopeState] = p.get
+
+      override def scsFollow(enable: Boolean): IO[Unit] = IO.unit
     }
   }
 
