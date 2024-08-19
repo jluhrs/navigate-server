@@ -69,6 +69,7 @@ import navigate.server.tcs.SlewOptions
 import navigate.server.tcs.StopGuide
 import navigate.server.tcs.Target
 import navigate.server.tcs.TcsBaseController.TcsConfig
+import navigate.server.tcs.TelescopeState
 import navigate.server.tcs.TrackingConfig
 import navigate.server.tcs.ZeroChopThrow
 import navigate.server.tcs.ZeroGuideOffset
@@ -87,7 +88,8 @@ class NavigateMappings[F[_]: Sync](
   server:              NavigateEngine[F],
   logTopic:            Topic[F, ILoggingEvent],
   guideStateTopic:     Topic[F, GuideState],
-  guidersQualityTopic: Topic[F, GuidersQualityValues]
+  guidersQualityTopic: Topic[F, GuidersQualityValues],
+  telescopeStateTopic: Topic[F, TelescopeState]
 )(
   override val schema: Schema
 ) extends CirceMapping[F] {
@@ -95,6 +97,9 @@ class NavigateMappings[F[_]: Sync](
 
   def guideState(p: Path, env: Env): F[Result[GuideState]] =
     server.getGuideState.attempt.map(_.fold(Result.internalError, Result.success))
+
+  def telescopeState(p: Path, env: Env): F[Result[TelescopeState]] =
+    server.getTelescopeState.attempt.map(_.fold(Result.internalError, Result.success))
 
   def mountPark(p: Path, env: Env): F[Result[OperationOutcome]] =
     server.mcsPark.attempt
@@ -415,7 +420,8 @@ class NavigateMappings[F[_]: Sync](
     ObjectMapping(
       tpe = QueryType,
       fieldMappings = List(
-        RootEffect.computeEncodable("guideState")((p, env) => guideState(p, env))
+        RootEffect.computeEncodable("guideState")((p, env) => guideState(p, env)),
+        RootEffect.computeEncodable("telescopeState")((p, env) => telescopeState(p, env))
       )
     ),
     ObjectMapping(
@@ -462,6 +468,13 @@ class NavigateMappings[F[_]: Sync](
             .map(_.asJson)
             .map(circeCursor(p, env, _))
             .map(Result.success)
+        },
+        RootStream.computeCursor("telescopeState") { (p, env) =>
+          telescopeStateTopic
+            .subscribe(10)
+            .map(_.asJson)
+            .map(circeCursor(p, env, _))
+            .map(Result.success)
         }
       )
     )
@@ -478,13 +491,24 @@ object NavigateMappings extends GrackleParsers {
     server:              NavigateEngine[F],
     logTopic:            Topic[F, ILoggingEvent],
     guideStateTopic:     Topic[F, GuideState],
-    guidersQualityTopic: Topic[F, GuidersQualityValues]
+    guidersQualityTopic: Topic[F, GuidersQualityValues],
+    telescopeStateTopic: Topic[F, TelescopeState]
   ): F[NavigateMappings[F]] = loadSchema.flatMap {
     case Result.Success(schema)           =>
-      new NavigateMappings[F](server, logTopic, guideStateTopic, guidersQualityTopic)(schema)
+      new NavigateMappings[F](server,
+                              logTopic,
+                              guideStateTopic,
+                              guidersQualityTopic,
+                              telescopeStateTopic
+      )(schema)
         .pure[F]
     case Result.Warning(problems, schema) =>
-      new NavigateMappings[F](server, logTopic, guideStateTopic, guidersQualityTopic)(schema)
+      new NavigateMappings[F](server,
+                              logTopic,
+                              guideStateTopic,
+                              guidersQualityTopic,
+                              telescopeStateTopic
+      )(schema)
         .pure[F]
     case Result.Failure(problems)         =>
       Sync[F].raiseError[NavigateMappings[F]](

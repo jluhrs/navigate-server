@@ -3,7 +3,6 @@
 
 package navigate.server.tcs
 
-import cats.Applicative
 import cats.effect.Ref
 import cats.effect.Sync
 import cats.syntax.all.*
@@ -11,10 +10,10 @@ import lucuma.core.enums.MountGuideOption
 import lucuma.core.model.M1GuideConfig
 import lucuma.core.model.M2GuideConfig
 
-class TcsSouthControllerSim[F[_]: Applicative](
-  guideRef:          Ref[F, GuideState],
-  guidersQualityRef: Ref[F, GuidersQualityValues]
-) extends TcsBaseControllerSim[F](guideRef, guidersQualityRef)
+class TcsSouthControllerSim[F[_]: Sync](
+  guideRef:    Ref[F, GuideState],
+  telStateRef: Ref[F, TelescopeState]
+) extends TcsBaseControllerSim[F](guideRef, telStateRef)
     with TcsSouthController[F] {}
 
 object TcsSouthControllerSim {
@@ -29,12 +28,6 @@ object TcsSouthControllerSim {
              false
            )
          )
-    y <- Ref.of(
-           GuidersQualityValues(
-             GuidersQualityValues.GuiderQuality(0, false),
-             GuidersQualityValues.GuiderQuality(0, false),
-             GuidersQualityValues.GuiderQuality(0, false)
-           )
-         )
+    y <- Ref.of(TelescopeState.default)
   } yield new TcsSouthControllerSim(x, y)
 }

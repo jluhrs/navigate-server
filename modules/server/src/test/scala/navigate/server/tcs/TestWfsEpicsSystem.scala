@@ -8,7 +8,6 @@ import cats.Monad
 import cats.Parallel
 import cats.effect.Ref
 import cats.effect.Temporal
-import eu.timepit.refined.types.string.NonEmptyString
 import monocle.Focus
 import navigate.epics.EpicsSystem
 import navigate.epics.EpicsSystem.TelltaleChannel
@@ -40,11 +39,10 @@ object TestWfsEpicsSystem {
 
   def buildChannels[F[_]: Applicative](
     sysName: String,
-    top:     NonEmptyString,
     s:       Ref[F, State]
   ): WfsChannels[F] = WfsChannels(
     telltale =
-      TelltaleChannel[F]("sysName", new TestChannel[F, State, String](s, Focus[State](_.telltale))),
+      TelltaleChannel[F](sysName, new TestChannel[F, State, String](s, Focus[State](_.telltale))),
     tipGain = new TestChannel[F, State, String](s, Focus[State](_.tipGain)),
     tiltGain = new TestChannel[F, State, String](s, Focus[State](_.tiltGain)),
     focusGain = new TestChannel[F, State, String](s, Focus[State](_.focusGain)),
@@ -56,8 +54,7 @@ object TestWfsEpicsSystem {
 
   def build[F[_]: Monad: Temporal: Parallel](
     sysName: String,
-    top:     NonEmptyString,
     s:       Ref[F, State]
-  ): WfsEpicsSystem[F] = WfsEpicsSystem.buildSystem(buildChannels(sysName, top, s))
+  ): WfsEpicsSystem[F] = WfsEpicsSystem.buildSystem(buildChannels(sysName, s))
 
 }

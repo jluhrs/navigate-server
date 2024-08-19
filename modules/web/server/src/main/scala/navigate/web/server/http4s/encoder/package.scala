@@ -12,6 +12,8 @@ import lucuma.core.model.M2GuideConfig
 import lucuma.core.util.Timestamp
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuidersQualityValues
+import navigate.server.tcs.MechSystemState
+import navigate.server.tcs.TelescopeState
 
 package object encoder {
 
@@ -55,6 +57,22 @@ package object encoder {
 
   given Encoder[GuidersQualityValues] = s =>
     Json.obj(
+      "pwfs1" -> s.pwfs1.asJson,
+      "pwfs2" -> s.pwfs2.asJson,
+      "oiwfs" -> s.oiwfs.asJson
+    )
+
+  given Encoder[MechSystemState] = s =>
+    Json.obj(
+      "parked" -> s.parked.asJson,
+      "follow" -> s.following.asJson
+    )
+
+  given Encoder[TelescopeState] = s =>
+    Json.obj(
+      "mount" -> s.mount.asJson,
+      "scs"   -> s.scs.asJson,
+      "crcs"  -> s.crcs.asJson,
       "pwfs1" -> s.pwfs1.asJson,
       "pwfs2" -> s.pwfs2.asJson,
       "oiwfs" -> s.oiwfs.asJson
