@@ -995,6 +995,8 @@ object NavigateMappingsTest {
       override def getTelescopeState: IO[TelescopeState] = p.get
 
       override def scsFollow(enable: Boolean): IO[Unit] = IO.unit
+
+      override def swapTarget(target: Target): IO[Unit] = IO.unit
     }
   }
 

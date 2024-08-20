@@ -31,6 +31,7 @@ trait TcsBaseController[F[_]] {
   def ecsVentGatesMove(gateEast:  Double, westGate:       Double): F[ApplyCommandResult]
   def tcsConfig(config:           TcsConfig): F[ApplyCommandResult]
   def slew(slewOptions:           SlewOptions, tcsConfig: TcsConfig): F[ApplyCommandResult]
+  def swapTarget(target:          Target): F[ApplyCommandResult]
   def instrumentSpecifics(config: InstrumentSpecifics): F[ApplyCommandResult]
   def oiwfsTarget(target:         Target): F[ApplyCommandResult]
   def rotIaa(angle:               Angle): F[ApplyCommandResult]

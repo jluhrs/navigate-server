@@ -231,7 +231,26 @@ class NavigateMappings[F[_]: Sync](
       }
       .getOrElse(
         Result
-          .failure[OperationOutcome]("oiwfsProbeTracking parameters could not be parsed.")
+          .failure[OperationOutcome]("tcsConfig parameters could not be parsed.")
+          .pure[F]
+      )
+
+  def swapTarget(p: Path, env: Env): F[Result[OperationOutcome]] =
+    env
+      .get[Target]("guideTarget")(using classTag[Target])
+      .map { t =>
+        server
+          .swapTarget(t)
+          .attempt
+          .map(x =>
+            Result.success(
+              x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+            )
+          )
+      }
+      .getOrElse(
+        Result
+          .failure[OperationOutcome]("swapTarget parameters could not be parsed.")
           .pure[F]
       )
 

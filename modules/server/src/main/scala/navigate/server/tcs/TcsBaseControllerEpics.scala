@@ -33,6 +33,7 @@ import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
 import navigate.model.enums.ShutterMode
+import navigate.server
 import navigate.server.ApplyCommandResult
 import navigate.server.ConnectionTimeout
 import navigate.server.epicsdata.BinaryOnOff
@@ -268,27 +269,29 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
 
   // Added a 1.5 s wait between selecting the OIWFS and setting targets, to copy TCC
   override def tcsConfig(config: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
-    (
-      selectOiwfs(config) *>
-        VerifiedEpics.liftF(Temporal[F].sleep(1500.milliseconds)) *>
-        applyTcsConfig(config)(
-          sys.tcsEpics.startCommand(timeout)
-        ).post
-    ).verifiedRun(ConnectionTimeout)
+    disableGuide *>
+      (
+        selectOiwfs(config) *>
+          VerifiedEpics.liftF(Temporal[F].sleep(1500.milliseconds)) *>
+          applyTcsConfig(config)(
+            sys.tcsEpics.startCommand(timeout)
+          ).post
+      ).verifiedRun(ConnectionTimeout)
 
   override def slew(
     slewOptions: SlewOptions,
     tcsConfig:   TcsBaseController.TcsConfig
   ): F[ApplyCommandResult] =
-    (
-      selectOiwfs(tcsConfig) *>
-        VerifiedEpics.liftF(Temporal[F].sleep(1500.milliseconds)) *>
-        setSlewOptions(slewOptions)
-          .compose(applyTcsConfig(tcsConfig))(
-            sys.tcsEpics.startCommand(timeout)
-          )
-          .post
-    ).verifiedRun(ConnectionTimeout)
+    disableGuide *>
+      (
+        selectOiwfs(tcsConfig) *>
+          VerifiedEpics.liftF(Temporal[F].sleep(1500.milliseconds)) *>
+          setSlewOptions(slewOptions)
+            .compose(applyTcsConfig(tcsConfig))(
+              sys.tcsEpics.startCommand(timeout)
+            )
+            .post
+      ).verifiedRun(ConnectionTimeout)
 
   protected def setInstrumentSpecifics(
     config: InstrumentSpecifics
@@ -801,6 +804,16 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
       .setFollow(enable)
       .post
       .verifiedRun(ConnectionTimeout)
+
+  override def swapTarget(target: Target): F[ApplyCommandResult] =
+    disableGuide *>
+      setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.sourceACmd), target)
+        .compose(target.wavelength.map(setSourceAWalength).getOrElse(identity))(
+          sys.tcsEpics.startCommand(timeout)
+        )
+        .post
+        .verifiedRun(ConnectionTimeout)
+
 }
 
 object TcsBaseControllerEpics {

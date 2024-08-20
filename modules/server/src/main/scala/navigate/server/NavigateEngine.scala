@@ -92,6 +92,7 @@ trait NavigateEngine[F[_]] {
   def disableGuide: F[Unit]
   def oiwfsObserve(period:                           TimeSpan): F[Unit]
   def oiwfsStopObserve: F[Unit]
+  def swapTarget(target:                             Target): F[Unit]
   def getGuideState: F[GuideState]
   def getGuidersQuality: F[GuidersQualityValues]
   def getTelescopeState: F[TelescopeState]
@@ -239,6 +240,13 @@ object NavigateEngine {
       Slew,
       systems.tcsCommon.slew(slewOptions, tcsConfig),
       Focus[State](_.slewInProgress)
+    )
+
+    override def swapTarget(target: Target): F[Unit] = simpleCommand(
+      engine,
+      SwapTarget,
+      systems.tcsCommon.swapTarget(target),
+      Focus[State](_.swapInProgress)
     )
 
     override def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): F[Unit] =
@@ -398,7 +406,8 @@ object NavigateEngine {
     disableGuide:                  Boolean,
     oiwfsObserve:                  Boolean,
     oiwfsStopObserve:              Boolean,
-    guideConfig:                   GuideConfig
+    guideConfig:                   GuideConfig,
+    swapInProgress:                Boolean
   ) {
     lazy val tcsActionInProgress: Boolean =
       mcsParkInProgress ||
@@ -420,7 +429,8 @@ object NavigateEngine {
         enableGuide ||
         disableGuide ||
         oiwfsObserve ||
-        oiwfsStopObserve
+        oiwfsStopObserve ||
+        swapInProgress
   }
 
   val startState: State = State(
@@ -445,7 +455,8 @@ object NavigateEngine {
     disableGuide = false,
     oiwfsObserve = false,
     oiwfsStopObserve = false,
-    guideConfig = GuideConfig.defaultGuideConfig
+    guideConfig = GuideConfig.defaultGuideConfig,
+    swapInProgress = false
   )
 
   /**

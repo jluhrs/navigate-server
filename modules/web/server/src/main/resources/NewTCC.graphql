@@ -237,6 +237,7 @@ type Mutation {
     oiwfsStopObserve: OperationOutcome!
     guideEnable(config: GuideConfigurationInput!): OperationOutcome!
     guideDisable: OperationOutcome!
+    swapTarget(guideTarget: TargetPropertiesInput!): OperationOutcome!
 }
 
 type Subscription {

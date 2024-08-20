@@ -159,4 +159,7 @@ class TcsBaseControllerSim[F[_]: Sync](
       _.focus(_.scs).replace(MechSystemState(NotParked, enable.fold(Following, NotFollowing)))
     )
     .as(ApplyCommandResult.Completed)
+
+  override def swapTarget(target: Target): F[ApplyCommandResult] =
+    ApplyCommandResult.Completed.pure[F]
 }
