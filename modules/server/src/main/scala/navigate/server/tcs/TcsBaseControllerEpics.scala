@@ -10,6 +10,7 @@ import cats.effect.Temporal
 import cats.syntax.all.*
 import lucuma.core.enums.ComaOption
 import lucuma.core.enums.Instrument
+import lucuma.core.enums.LightSinkName
 import lucuma.core.enums.M1Source
 import lucuma.core.enums.MountGuideOption
 import lucuma.core.enums.TipTiltSource
@@ -29,9 +30,12 @@ import mouse.boolean.given
 import navigate.epics.VerifiedEpics
 import navigate.epics.VerifiedEpics.*
 import navigate.model.Distance
+import navigate.model.enums.AoFoldPosition
 import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
+import navigate.model.enums.HrwfsPickupPosition
+import navigate.model.enums.LightSource
 import navigate.model.enums.ShutterMode
 import navigate.server
 import navigate.server.ApplyCommandResult
@@ -814,6 +818,81 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
         .post
         .verifiedRun(ConnectionTimeout)
 
+  override def getInstrumentPorts: F[InstrumentPorts] = (for {
+    f2F <- sys.ags.status.flamingos2Port
+    ghF <- sys.ags.status.ghostPort
+    gmF <- sys.ags.status.gmosPort
+    gnF <- sys.ags.status.gnirsPort
+    gpF <- sys.ags.status.gpiPort
+    gsF <- sys.ags.status.gsaoiPort
+    nfF <- sys.ags.status.nifsPort
+    nrF <- sys.ags.status.niriPort
+  } yield for {
+    f2 <- f2F
+    gh <- ghF
+    gm <- gmF
+    gn <- gnF
+    gp <- gpF
+    gs <- gsF
+    nf <- nfF
+    nr <- nrF
+  } yield InstrumentPorts(
+    flamingos2Port = f2,
+    ghostPort = gh,
+    gmosPort = gm,
+    gnirsPort = gn,
+    gpiPort = gp,
+    gsaoiPort = gs,
+    nifsPort = nf,
+    niriPort = nr
+  )).verifiedRun(ConnectionTimeout)
+
+  override def lightPath(from: LightSource, to: LightSinkName): F[ApplyCommandResult] =
+    getInstrumentPorts.flatMap { ports =>
+      getPort(ports, to)
+        .map { p =>
+          val aoFold      = (s: TcsCommands[F]) =>
+            (from === LightSource.AO).fold(s.aoFoldCommands.move.setPosition(AoFoldPosition.In),
+                                           s.aoFoldCommands.park.mark
+            )
+          val hrwfsPickup = (s: TcsCommands[F]) =>
+            (to === LightSinkName.Hr || to === LightSinkName.Ac).fold(
+              s.hrwfsCommands.move.setPosition(HrwfsPickupPosition.In),
+              s.hrwfsCommands.park.mark
+            )
+          val scienceFold = (s: TcsCommands[F]) =>
+            (p === 1).fold(
+              s.scienceFoldCommands.park.mark,
+              s.scienceFoldCommands.move.setPosition(
+                ScienceFold.Position(from, to, p)
+              )
+            )
+
+          (aoFold >>> hrwfsPickup >>> scienceFold)(sys.tcsEpics.startCommand(timeout)).post
+            .verifiedRun(ConnectionTimeout)
+        }
+        .getOrElse(ApplyCommandResult.Completed.pure[F])
+    }
+
+  def getPort(instrumentPorts: InstrumentPorts, lightSinkName: LightSinkName): Option[Int] = {
+    val p = lightSinkName match {
+      case LightSinkName.Gmos | LightSinkName.Gmos_Ifu                             => instrumentPorts.gmosPort
+      case LightSinkName.Niri_f6 | LightSinkName.Niri_f14 | LightSinkName.Niri_f32 =>
+        instrumentPorts.niriPort
+      case LightSinkName.Ac                                                        => 1
+      case LightSinkName.Hr                                                        => 1
+      case LightSinkName.Nifs                                                      => instrumentPorts.nifsPort
+      case LightSinkName.Gnirs                                                     => instrumentPorts.gnirsPort
+      case LightSinkName.Visitor                                                   => 0
+      case LightSinkName.F2                                                        => instrumentPorts.flamingos2Port
+      case LightSinkName.Gsaoi                                                     => instrumentPorts.gsaoiPort
+      case LightSinkName.Gpi                                                       => instrumentPorts.gpiPort
+      case LightSinkName.Ghost                                                     => instrumentPorts.ghostPort
+      case _                                                                       => 0
+    }
+
+    (p > 0).option(p)
+  }
 }
 
 object TcsBaseControllerEpics {

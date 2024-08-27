@@ -11,6 +11,7 @@ import cats.effect.Temporal
 import monocle.Focus
 import navigate.epics.EpicsSystem.TelltaleChannel
 import navigate.epics.TestChannel
+import navigate.server.tcs.AgsChannels.InstrumentPortChannels
 
 object TestAgsEpicsSystem {
 
@@ -24,7 +25,15 @@ object TestAgsEpicsSystem {
     p2Parked:   TestChannel.State[Int],
     p2Follow:   TestChannel.State[String],
     oiParked:   TestChannel.State[Int],
-    oiFollow:   TestChannel.State[String]
+    oiFollow:   TestChannel.State[String],
+    f2Port:     TestChannel.State[Int],
+    ghostPort:  TestChannel.State[Int],
+    gmosPort:   TestChannel.State[Int],
+    gnirsPort:  TestChannel.State[Int],
+    gpiPort:    TestChannel.State[Int],
+    gsaoiPort:  TestChannel.State[Int],
+    nifsPort:   TestChannel.State[Int],
+    niriPort:   TestChannel.State[Int]
   )
 
   val defaultState: State = State(
@@ -37,7 +46,15 @@ object TestAgsEpicsSystem {
     TestChannel.State.of(1),
     TestChannel.State.of(""),
     TestChannel.State.of(1),
-    TestChannel.State.of("")
+    TestChannel.State.of(""),
+    TestChannel.State.of(1),
+    TestChannel.State.of(3),
+    TestChannel.State.of(0),
+    TestChannel.State.of(0),
+    TestChannel.State.of(5),
+    TestChannel.State.of(0),
+    TestChannel.State.of(0),
+    TestChannel.State.of(0)
   )
 
   def buildChannels[F[_]: Applicative](
@@ -53,7 +70,17 @@ object TestAgsEpicsSystem {
     p2Parked = new TestChannel[F, State, Int](s, Focus[State](_.p2Parked)),
     p2Follow = new TestChannel[F, State, String](s, Focus[State](_.p2Follow)),
     oiParked = new TestChannel[F, State, Int](s, Focus[State](_.oiParked)),
-    oiFollow = new TestChannel[F, State, String](s, Focus[State](_.oiFollow))
+    oiFollow = new TestChannel[F, State, String](s, Focus[State](_.oiFollow)),
+    instrumentPorts = InstrumentPortChannels[F](
+      gmos = new TestChannel[F, State, Int](s, Focus[State](_.gmosPort)),
+      gsaoi = new TestChannel[F, State, Int](s, Focus[State](_.gsaoiPort)),
+      gpi = new TestChannel[F, State, Int](s, Focus[State](_.gpiPort)),
+      f2 = new TestChannel[F, State, Int](s, Focus[State](_.f2Port)),
+      niri = new TestChannel[F, State, Int](s, Focus[State](_.niriPort)),
+      gnirs = new TestChannel[F, State, Int](s, Focus[State](_.gnirsPort)),
+      nifs = new TestChannel[F, State, Int](s, Focus[State](_.nifsPort)),
+      ghost = new TestChannel[F, State, Int](s, Focus[State](_.ghostPort))
+    )
   )
 
   def build[F[_]: Monad: Temporal: Parallel](

@@ -18,9 +18,11 @@ import navigate.epics.EpicsSystem.TelltaleChannel
 import navigate.epics.VerifiedEpics
 import navigate.epics.VerifiedEpics.*
 import navigate.model.Distance
+import navigate.model.enums.AoFoldPosition
 import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
+import navigate.model.enums.HrwfsPickupPosition
 import navigate.model.enums.ShutterMode
 import navigate.server.ApplyCommandResult
 import navigate.server.acm.Encoder
@@ -37,7 +39,15 @@ import navigate.server.tcs.TcsEpicsSystem.TcsStatus
 import java.util.Locale
 import scala.concurrent.duration.FiniteDuration
 
-import TcsChannels.{ProbeChannels, ProbeTrackingChannels, SlewChannels, TargetChannels, WfsChannels}
+import ScienceFoldPositionCodex.given
+import TcsChannels.{
+  AgMechChannels,
+  ProbeChannels,
+  ProbeTrackingChannels,
+  SlewChannels,
+  TargetChannels,
+  WfsChannels
+}
 
 trait TcsEpicsSystem[F[_]] {
   // TcsCommands accumulates the list of channels that need to be written to set parameters.
@@ -110,10 +120,9 @@ object TcsEpicsSystem {
     // val pwfs1ObserveCmd: WfsObserveCmd[F]
     // val pwfs2ObserveCmd: WfsObserveCmd[F]
     // val oiwfsObserveCmd: WfsObserveCmd[F]
-    // val hrwfsParkCmd: EpicsCommand[F]
-    // val hrwfsPosCmd: HrwfsPosCmd[F]
-    // val scienceFoldParkCmd: EpicsCommand[F]
-    // val scienceFoldPosCmd: ScienceFoldPosCmd[F]
+    val hrwfsCmds: AgMechCommandsChannels[F, HrwfsPickupPosition]
+    val scienceFoldCmds: AgMechCommandsChannels[F, ScienceFold.Position]
+    val aoFoldCmds: AgMechCommandsChannels[F, AoFoldPosition]
     // val observe: EpicsCommand[F]
     // val endObserve: EpicsCommand[F]
     // // GeMS Commands
@@ -892,7 +901,7 @@ object TcsEpicsSystem {
         )
       }
 
-    override val bafflesCommand: BafflesCommand[F, TcsCommands[F]] =
+    override val bafflesCommand: BafflesCommand[F, TcsCommands[F]]                            =
       new BafflesCommand[F, TcsCommands[F]] {
 
         override def central(v: CentralBafflePosition): TcsCommands[F] = addParam(
@@ -903,11 +912,36 @@ object TcsEpicsSystem {
           tcsEpics.bafflesCmd.setParam2(v)
         )
       }
-    override val m2FollowCommand: FollowCommand[F, TcsCommands[F]] =
+    override val m2FollowCommand: FollowCommand[F, TcsCommands[F]]                            =
       (enable: Boolean) =>
         addParam(
           tcsEpics.m2FollowCmd.setParam1(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
         )
+
+    private def buildAgMechCommands[A: Encoder[*, String]](
+      c: AgMechCommandsChannels[F, A]
+    ): AgMechCommands[F, A, TcsCommands[F]] =
+      new AgMechCommands[F, A, TcsCommands[F]] {
+        override val park: BaseCommand[F, TcsCommands[F]]    = new BaseCommand[F, TcsCommands[F]] {
+          override def mark: TcsCommands[F] = addParam(c.park.mark)
+        }
+        override val move: MoveCommand[F, A, TcsCommands[F]] =
+          new MoveCommand[F, A, TcsCommands[F]] {
+            override def setPosition(v: A): TcsCommands[F] = addParam(c.position.setParam1(v))
+          }
+      }
+    override val hrwfsCommands: AgMechCommands[F, HrwfsPickupPosition, TcsCommands[F]]        =
+      buildAgMechCommands(
+        tcsEpics.hrwfsCmds
+      )
+    override val scienceFoldCommands: AgMechCommands[F, ScienceFold.Position, TcsCommands[F]] =
+      buildAgMechCommands(
+        tcsEpics.scienceFoldCmds
+      )
+    override val aoFoldCommands: AgMechCommands[F, AoFoldPosition, TcsCommands[F]]            =
+      buildAgMechCommands(
+        tcsEpics.aoFoldCmds
+      )
   }
 
   class TcsEpicsSystemImpl[F[_]: Monad: Parallel](epics: TcsEpics[F], st: TcsStatus[F])
@@ -1101,6 +1135,12 @@ object TcsEpicsSystem {
       channels.telltale,
       channels.m2Follow
     )
+    override val hrwfsCmds: AgMechCommandsChannels[F, HrwfsPickupPosition]                        =
+      buildAgMechCommandsChannels(channels.telltale, channels.hrwfsMech)
+    override val scienceFoldCmds: AgMechCommandsChannels[F, ScienceFold.Position]                 =
+      buildAgMechCommandsChannels(channels.telltale, channels.scienceFoldMech)
+    override val aoFoldCmds: AgMechCommandsChannels[F, AoFoldPosition]                            =
+      buildAgMechCommandsChannels(channels.telltale, channels.aoFoldMech)
   }
 
   def formatAngleCoord(d: Double): String = {
@@ -1210,6 +1250,19 @@ object TcsEpicsSystem {
   ): ProbeCommandsChannels[F] = ProbeCommandsChannels(
     ParameterlessCommandChannels(tt, probeChannels.parkDir),
     Command1Channels(tt, probeChannels.follow)
+  )
+
+  case class AgMechCommandsChannels[F[_]: Monad, A](
+    park:     ParameterlessCommandChannels[F],
+    position: Command1Channels[F, A]
+  )
+
+  def buildAgMechCommandsChannels[F[_]: Monad, A: Encoder[*, String]](
+    tt:           TelltaleChannel[F],
+    mechChannels: AgMechChannels[F]
+  ): AgMechCommandsChannels[F, A] = AgMechCommandsChannels[F, A](
+    ParameterlessCommandChannels(tt, mechChannels.parkDir),
+    Command1Channels(tt, mechChannels.position)
   )
 
   case class WfsCommandsChannels[F[_]: Monad](
@@ -1348,6 +1401,15 @@ object TcsEpicsSystem {
     val follow: FollowCommand[F, TcsCommands[F]]
   }
 
+  trait MoveCommand[F[_], A: Encoder[*, String], +S] {
+    def setPosition(v: A): S
+  }
+
+  trait AgMechCommands[F[_], A: Encoder[*, String], +S] {
+    val park: BaseCommand[F, TcsCommands[F]]
+    val move: MoveCommand[F, A, TcsCommands[F]]
+  }
+
   trait GuideCommand[F[_], +S] {
     def state(v: Boolean): S
   }
@@ -1460,6 +1522,9 @@ object TcsEpicsSystem {
     val probeGuideModeCommand: ProbeGuideModeCommand[F, TcsCommands[F]]
     val oiwfsSelectCommand: OiwfsSelectCommand[F, TcsCommands[F]]
     val bafflesCommand: BafflesCommand[F, TcsCommands[F]]
+    val hrwfsCommands: AgMechCommands[F, HrwfsPickupPosition, TcsCommands[F]]
+    val scienceFoldCommands: AgMechCommands[F, ScienceFold.Position, TcsCommands[F]]
+    val aoFoldCommands: AgMechCommands[F, AoFoldPosition, TcsCommands[F]]
   }
   /*
 

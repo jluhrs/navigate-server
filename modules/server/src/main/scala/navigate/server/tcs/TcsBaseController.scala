@@ -4,12 +4,14 @@
 package navigate.server.tcs
 
 import lucuma.core.enums.Instrument
+import lucuma.core.enums.LightSinkName
 import lucuma.core.math.Angle
 import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.TimeSpan
 import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
+import navigate.model.enums.LightSource
 import navigate.model.enums.ShutterMode
 import navigate.server.ApplyCommandResult
 
@@ -48,10 +50,12 @@ trait TcsBaseController[F[_]] {
     deployable: DeployableBafflePosition
   ): F[ApplyCommandResult]
   def scsFollow(enable:           Boolean): F[ApplyCommandResult]
+  def lightPath(from:             LightSource, to:        LightSinkName): F[ApplyCommandResult]
 
   def getGuideState: F[GuideState]
   def getGuideQuality: F[GuidersQualityValues]
   def getTelescopeState: F[TelescopeState]
+  def getInstrumentPorts: F[InstrumentPorts]
 }
 
 object TcsBaseController {

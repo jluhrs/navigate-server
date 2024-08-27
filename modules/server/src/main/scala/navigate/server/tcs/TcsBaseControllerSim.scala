@@ -6,6 +6,7 @@ package navigate.server.tcs
 import cats.effect.Ref
 import cats.effect.Sync
 import cats.syntax.all.*
+import lucuma.core.enums.LightSinkName
 import lucuma.core.enums.MountGuideOption
 import lucuma.core.math.Angle
 import lucuma.core.model.M1GuideConfig
@@ -17,6 +18,7 @@ import mouse.boolean.*
 import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
+import navigate.model.enums.LightSource
 import navigate.model.enums.ShutterMode
 import navigate.server.ApplyCommandResult
 import navigate.server.tcs.FollowStatus.*
@@ -161,5 +163,20 @@ class TcsBaseControllerSim[F[_]: Sync](
     .as(ApplyCommandResult.Completed)
 
   override def swapTarget(target: Target): F[ApplyCommandResult] =
+    ApplyCommandResult.Completed.pure[F]
+
+  override def getInstrumentPorts: F[InstrumentPorts] =
+    InstrumentPorts(
+      flamingos2Port = 1,
+      ghostPort = 0,
+      gmosPort = 3,
+      gnirsPort = 0,
+      gpiPort = 0,
+      gsaoiPort = 5,
+      nifsPort = 0,
+      niriPort = 0
+    ).pure[F]
+
+  override def lightPath(from: LightSource, to: LightSinkName): F[ApplyCommandResult] =
     ApplyCommandResult.Completed.pure[F]
 }
