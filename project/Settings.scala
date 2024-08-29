@@ -64,7 +64,7 @@ object Settings {
     val clue = "0.35.0"
 
     // Natchez
-    val natchez = "0.3.5"
+    val natchez = "0.3.6"
   }
 
   /**
