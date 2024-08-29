@@ -61,7 +61,7 @@ object Systems {
                     readTop(tops, "oiwfs".refined),
                     "dc:fgDiag1P2.VALQ".refined,
                     "dc:fgDiag1P2.VALB".refined,
-                    "dc:initSigInit.MARK".refined
+                    "dc:seeing.VAL".refined
                   )
           mcs  <- McsEpicsSystem.build(epicsSrv, readTop(tops, "mcs".refined))
           scs  <- ScsEpicsSystem.build(epicsSrv, readTop(tops, "scs".refined))
