@@ -84,10 +84,10 @@ object Systems {
           p2   <- WfsEpicsSystem.build(epicsSrv, "PWFS2", readTop(tops, "pwfs2".refined))
           oi   <- WfsEpicsSystem.build(epicsSrv,
                                        "OIWFS",
+                                       readTop(tops, "oiwfs".refined),
                                        "dc:fgDiag1Oi.VALQ".refined,
                                        "dc:fgDiag1Oi.VALB".refined,
-                                       readTop(tops, "oiwfs".refined),
-                                       "dc:initSigInit.MARK".refined
+                                       "dc:seeing.VAL".refined
                   )
           mcs  <- McsEpicsSystem.build(epicsSrv, readTop(tops, "mcs".refined))
           scs  <- ScsEpicsSystem.build(epicsSrv, readTop(tops, "scs".refined))
