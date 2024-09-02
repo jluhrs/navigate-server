@@ -63,10 +63,10 @@ object Systems {
                     "dc:fgDiag1P2.VALB".refined,
                     "dc:seeing.VAL".refined
                   )
-          mcs  <- McsEpicsSystem.build(epicsSrv, readTop(tops, "mcs".refined))
-          scs  <- ScsEpicsSystem.build(epicsSrv, readTop(tops, "scs".refined))
-          crcs <- CrcsEpicsSystem.build(epicsSrv, readTop(tops, "crcs".refined))
-          ags  <- AgsEpicsSystem.build(epicsSrv, readTop(tops, "ags".refined))
+          mcs  <- McsEpicsSystem.build(epicsSrv, readTop(tops, "mc".refined))
+          scs  <- ScsEpicsSystem.build(epicsSrv, readTop(tops, "m2".refined))
+          crcs <- CrcsEpicsSystem.build(epicsSrv, readTop(tops, "cr".refined))
+          ags  <- AgsEpicsSystem.build(epicsSrv, readTop(tops, "ag".refined))
           r    <- Resource.eval(
                     TcsSouthControllerEpics.build(EpicsSystems(tcs, p1, p2, oi, mcs, scs, crcs, ags),
                                                   conf.ioTimeout
@@ -89,10 +89,10 @@ object Systems {
                                        "dc:fgDiag1Oi.VALB".refined,
                                        "dc:seeing.VAL".refined
                   )
-          mcs  <- McsEpicsSystem.build(epicsSrv, readTop(tops, "mcs".refined))
-          scs  <- ScsEpicsSystem.build(epicsSrv, readTop(tops, "scs".refined))
-          crcs <- CrcsEpicsSystem.build(epicsSrv, readTop(tops, "crcs".refined))
-          ags  <- AgsEpicsSystem.build(epicsSrv, readTop(tops, "ags".refined))
+          mcs  <- McsEpicsSystem.build(epicsSrv, readTop(tops, "mc".refined))
+          scs  <- ScsEpicsSystem.build(epicsSrv, readTop(tops, "m2".refined))
+          crcs <- CrcsEpicsSystem.build(epicsSrv, readTop(tops, "cr".refined))
+          ags  <- AgsEpicsSystem.build(epicsSrv, readTop(tops, "ag".refined))
           r    <- Resource.eval(
                     TcsNorthControllerEpics.build(EpicsSystems(tcs, p1, p2, oi, mcs, scs, crcs, ags),
                                                   conf.ioTimeout
