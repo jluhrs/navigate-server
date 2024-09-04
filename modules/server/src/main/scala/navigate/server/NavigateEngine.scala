@@ -13,6 +13,7 @@ import cats.effect.kernel.Sync
 import cats.syntax.all.*
 import fs2.Pipe
 import fs2.Stream
+import fs2.concurrent.Topic
 import io.circe.syntax.*
 import lucuma.core.enums.MountGuideOption
 import lucuma.core.enums.Site
@@ -32,6 +33,7 @@ import navigate.model.NavigateEvent.CommandFailure
 import navigate.model.NavigateEvent.CommandPaused
 import navigate.model.NavigateEvent.CommandStart
 import navigate.model.NavigateEvent.CommandSuccess
+import navigate.model.NavigateState
 import navigate.model.config.ControlStrategy
 import navigate.model.config.NavigateEngineConfiguration
 import navigate.model.enums.DomeMode
@@ -98,6 +100,8 @@ trait NavigateEngine[F[_]] {
   def getGuideState: F[GuideState]
   def getGuidersQuality: F[GuidersQualityValues]
   def getTelescopeState: F[TelescopeState]
+  def getNavigateState: F[NavigateState]
+  def getNavigateStateStream: Stream[F, NavigateState]
 }
 
 object NavigateEngine {
@@ -128,10 +132,12 @@ object NavigateEngine {
   }
 
   private case class NavigateEngineImpl[F[_]: Concurrent: Temporal: Logger](
-    site:    Site,
-    systems: Systems[F],
-    conf:    NavigateEngineConfiguration,
-    engine:  StateEngine[F, State, NavigateEvent]
+    site:     Site,
+    systems:  Systems[F],
+    conf:     NavigateEngineConfiguration,
+    engine:   StateEngine[F, State, NavigateEvent],
+    stateRef: Ref[F, State],
+    topic:    Topic[F, NavigateState]
   ) extends NavigateEngine[F]
       with Http4sClientDsl[F] {
 
@@ -165,8 +171,13 @@ object NavigateEngine {
         .whenA(conf.systemControl.observe === ControlStrategy.FullControl)
     }
 
+    private def navigateState(s: State): NavigateState =
+      NavigateState(onSwappedTarget = s.onSwappedTarget)
+
     override def eventStream: Stream[F, NavigateEvent] =
-      engine.process(startState)
+      engine.process(startState).evalMap { case (s, o) =>
+        stateRef.set(s) *> topic.publish1(navigateState(s)).as(o)
+      }
 
     override def mcsPark: F[Unit] =
       simpleCommand(engine, McsPark, systems.tcsCommon.mcsPark, Focus[State](_.mcsParkInProgress))
@@ -284,7 +295,7 @@ object NavigateEngine {
         Handler.modify[F, State, ApplyCommandResult](_.focus(_.onSwappedTarget).replace(false)) *>
           Handler.fromStream(
             Stream.eval(
-              systems.tcsCommon.tcsConfig(config)
+              systems.tcsCommon.restoreTarget(config)
             )
           ),
         Focus[State](_.tcsConfigInProgress)
@@ -412,15 +423,28 @@ object NavigateEngine {
     override def getGuidersQuality: F[GuidersQualityValues] = systems.tcsCommon.getGuideQuality
 
     override def getTelescopeState: F[TelescopeState] = systems.tcsCommon.getTelescopeState
+
+    override def getNavigateState: F[NavigateState] =
+      stateRef.get.map(s => NavigateState(s.onSwappedTarget))
+
+    override def getNavigateStateStream: Stream[F, NavigateState] =
+      topic.subscribeUnbounded
+        .mapAccumulate[Option[NavigateState], Option[NavigateState]](none) { (acc, ss) =>
+          (ss.some, if (acc.contains(ss)) none else ss.some)
+        }
+        .map(_._2)
+        .flattenOption
   }
 
   def build[F[_]: Concurrent: Temporal: Logger](
     site:    Site,
     systems: Systems[F],
     conf:    NavigateEngineConfiguration
-  ): F[NavigateEngine[F]] = StateEngine
-    .build[F, State, NavigateEvent]
-    .map(NavigateEngineImpl[F](site, systems, conf, _))
+  ): F[NavigateEngine[F]] = for {
+    eng <- StateEngine.build[F, State, NavigateEvent]
+    ref <- Ref.of[F, State](startState)
+    top <- Topic[F, NavigateState]
+  } yield NavigateEngineImpl[F](site, systems, conf, eng, ref, top)
 
   case class WfsConfigState(
     period:          Option[TimeSpan],

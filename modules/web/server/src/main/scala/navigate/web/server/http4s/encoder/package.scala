@@ -10,6 +10,7 @@ import io.circe.syntax.*
 import lucuma.core.model.M1GuideConfig
 import lucuma.core.model.M2GuideConfig
 import lucuma.core.util.Timestamp
+import navigate.model.NavigateState
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuidersQualityValues
 import navigate.server.tcs.MechSystemState
@@ -76,6 +77,11 @@ package object encoder {
       "pwfs1" -> s.pwfs1.asJson,
       "pwfs2" -> s.pwfs2.asJson,
       "oiwfs" -> s.oiwfs.asJson
+    )
+
+  given Encoder[NavigateState] = s =>
+    Json.obj(
+      "onSwappedTarget" -> s.onSwappedTarget.asJson
     )
 
 }

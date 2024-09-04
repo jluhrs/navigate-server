@@ -49,6 +49,7 @@ import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.TimeSpan
 import mouse.boolean.given
 import navigate.model.Distance
+import navigate.model.NavigateState
 import navigate.server.NavigateEngine
 import navigate.server.tcs.AutoparkAowfs
 import navigate.server.tcs.AutoparkGems
@@ -101,6 +102,9 @@ class NavigateMappings[F[_]: Sync](
 
   def telescopeState(p: Path, env: Env): F[Result[TelescopeState]] =
     server.getTelescopeState.attempt.map(_.fold(Result.internalError, Result.success))
+
+  def navigateState(p: Path, env: Env): F[Result[NavigateState]] =
+    server.getNavigateState.attempt.map(_.fold(Result.internalError, Result.success))
 
   def mountPark(p: Path, env: Env): F[Result[OperationOutcome]] =
     server.mcsPark.attempt
@@ -495,7 +499,8 @@ class NavigateMappings[F[_]: Sync](
       tpe = QueryType,
       fieldMappings = List(
         RootEffect.computeEncodable("guideState")((p, env) => guideState(p, env)),
-        RootEffect.computeEncodable("telescopeState")((p, env) => telescopeState(p, env))
+        RootEffect.computeEncodable("telescopeState")((p, env) => telescopeState(p, env)),
+        RootEffect.computeEncodable("navigateState")((p, env) => navigateState(p, env))
       )
     ),
     ObjectMapping(
@@ -549,6 +554,12 @@ class NavigateMappings[F[_]: Sync](
         RootStream.computeCursor("telescopeState") { (p, env) =>
           telescopeStateTopic
             .subscribe(10)
+            .map(_.asJson)
+            .map(circeCursor(p, env, _))
+            .map(Result.success)
+        },
+        RootStream.computeCursor("navigateState") { (p, env) =>
+          server.getNavigateStateStream
             .map(_.asJson)
             .map(circeCursor(p, env, _))
             .map(Result.success)

@@ -31,6 +31,7 @@ import lucuma.core.util.TimeSpan
 import lucuma.core.util.Timestamp
 import munit.CatsEffectSuite
 import navigate.model.NavigateEvent
+import navigate.model.NavigateState
 import navigate.model.enums.DomeMode
 import navigate.model.enums.ShutterMode
 import navigate.server.NavigateEngine
@@ -800,6 +801,28 @@ class NavigateMappingsSuit extends CatsEffectSuite {
     )
   }
 
+  test("Query Navigate server state") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      gd  <- Topic[IO, GuideState]
+      gq  <- Topic[IO, GuidersQualityValues]
+      ts  <- Topic[IO, TelescopeState]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts)
+      r   <- mp.compileAndRun(
+               """
+          | query {
+          |   navigateState {
+          |     onSwappedTarget
+          |   }
+          | }
+          |""".stripMargin
+             )
+    } yield assertEquals(r.hcursor.downField("data").downField("navigateState").as[NavigateState],
+                         NavigateState.default.asRight[DecodingFailure]
+    )
+  }
+
   test("Provide telescope state subscription") {
 
     val changes: List[TelescopeState] = List(
@@ -1141,6 +1164,11 @@ object NavigateMappingsTest {
       override def swapTarget(swapConfig: SwapConfig): IO[Unit] = IO.unit
 
       override def restoreTarget(config: TcsConfig): IO[Unit] = IO.unit
+
+      override def getNavigateState: IO[NavigateState] = NavigateState.default.pure[IO]
+
+      override def getNavigateStateStream: Stream[IO, NavigateState] =
+        Stream.eval(NavigateState.default.pure[IO])
     }
   }
 
@@ -1251,5 +1279,10 @@ object NavigateMappingsTest {
       p2,
       oi
     )
+
+  given Decoder[NavigateState] = h =>
+    for {
+      swp <- h.downField("onSwappedTarget").as[Boolean]
+    } yield NavigateState(swp)
 
 }

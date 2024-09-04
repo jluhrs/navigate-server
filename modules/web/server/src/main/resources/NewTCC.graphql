@@ -89,6 +89,10 @@ type TelescopeState {
     oiwfs: MechSystemState!
 }
 
+type NavigateState {
+    onSwappedTarget: Boolean!
+}
+
 input GuiderConfig{
     target: GuideTargetPropertiesInput!
     tracking: ProbeTrackingInput!
@@ -223,6 +227,7 @@ type GuidersQualityValues {
 type Query {
     telescopeState: TelescopeState!
     guideState: GuideConfigurationState!
+    navigateState: NavigateState!
 }
 
 type Mutation {
@@ -252,4 +257,5 @@ type Subscription {
     guideState: GuideConfigurationState!
     guidersQualityValues: GuidersQualityValues!
     telescopeState: TelescopeState!
+    navigateState: NavigateState!
 }
