@@ -42,6 +42,7 @@ import navigate.server.tcs.InstrumentSpecifics
 import navigate.server.tcs.RotatorTrackConfig
 import navigate.server.tcs.SlewOptions
 import navigate.server.tcs.Target
+import navigate.server.tcs.TcsBaseController.SwapConfig
 import navigate.server.tcs.TcsBaseController.TcsConfig
 import navigate.server.tcs.TelescopeState
 import navigate.server.tcs.TrackingConfig
@@ -92,7 +93,8 @@ trait NavigateEngine[F[_]] {
   def disableGuide: F[Unit]
   def oiwfsObserve(period:                           TimeSpan): F[Unit]
   def oiwfsStopObserve: F[Unit]
-  def swapTarget(target:                             Target): F[Unit]
+  def swapTarget(swapConfig:                         SwapConfig): F[Unit]
+  def restoreTarget(config:                          TcsConfig): F[Unit]
   def getGuideState: F[GuideState]
   def getGuidersQuality: F[GuidersQualityValues]
   def getTelescopeState: F[TelescopeState]
@@ -228,25 +230,66 @@ object NavigateEngine {
     // TODO
     override def ecsVentGatesMove(gateEast: Double, westGate: Double): F[Unit] = Applicative[F].unit
 
-    override def tcsConfig(config: TcsConfig): F[Unit] = simpleCommand(
+    override def tcsConfig(config: TcsConfig): F[Unit] = command(
       engine,
       TcsConfigure,
-      systems.tcsCommon.tcsConfig(config),
+      transformCommand(
+        TcsConfigure,
+        Handler.modify[F, State, ApplyCommandResult](_.focus(_.onSwappedTarget).replace(false)) *>
+          Handler.fromStream(
+            Stream.eval(
+              systems.tcsCommon.tcsConfig(config)
+            )
+          ),
+        Focus[State](_.tcsConfigInProgress)
+      ),
       Focus[State](_.tcsConfigInProgress)
     )
 
-    override def slew(slewOptions: SlewOptions, tcsConfig: TcsConfig): F[Unit] = simpleCommand(
+    override def slew(slewOptions: SlewOptions, tcsConfig: TcsConfig): F[Unit] = command(
       engine,
       Slew,
-      systems.tcsCommon.slew(slewOptions, tcsConfig),
+      transformCommand(
+        Slew,
+        Handler.modify[F, State, ApplyCommandResult](_.focus(_.onSwappedTarget).replace(false)) *>
+          Handler.fromStream(
+            Stream.eval(systems.tcsCommon.slew(slewOptions, tcsConfig))
+          ),
+        Focus[State](_.slewInProgress)
+      ),
       Focus[State](_.slewInProgress)
     )
 
-    override def swapTarget(target: Target): F[Unit] = simpleCommand(
+    override def swapTarget(swapConfig: SwapConfig): F[Unit] = command(
       engine,
       SwapTarget,
-      systems.tcsCommon.swapTarget(target),
+      transformCommand(
+        SwapTarget,
+        Handler.modify[F, State, ApplyCommandResult](_.focus(_.onSwappedTarget).replace(true)) *>
+          Handler.fromStream(
+            Stream.eval(
+              systems.tcsCommon.swapTarget(swapConfig)
+            )
+          ),
+        Focus[State](_.swapInProgress)
+      ),
       Focus[State](_.swapInProgress)
+    )
+
+    override def restoreTarget(config: TcsConfig): F[Unit] = command(
+      engine,
+      TcsConfigure,
+      transformCommand(
+        TcsConfigure,
+        Handler.modify[F, State, ApplyCommandResult](_.focus(_.onSwappedTarget).replace(false)) *>
+          Handler.fromStream(
+            Stream.eval(
+              systems.tcsCommon.tcsConfig(config)
+            )
+          ),
+        Focus[State](_.tcsConfigInProgress)
+      ),
+      Focus[State](_.tcsConfigInProgress)
     )
 
     override def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): F[Unit] =
@@ -407,7 +450,8 @@ object NavigateEngine {
     oiwfsObserve:                  Boolean,
     oiwfsStopObserve:              Boolean,
     guideConfig:                   GuideConfig,
-    swapInProgress:                Boolean
+    swapInProgress:                Boolean,
+    onSwappedTarget:               Boolean
   ) {
     lazy val tcsActionInProgress: Boolean =
       mcsParkInProgress ||
@@ -456,7 +500,8 @@ object NavigateEngine {
     oiwfsObserve = false,
     oiwfsStopObserve = false,
     guideConfig = GuideConfig.defaultGuideConfig,
-    swapInProgress = false
+    swapInProgress = false,
+    onSwappedTarget = false
   )
 
   /**

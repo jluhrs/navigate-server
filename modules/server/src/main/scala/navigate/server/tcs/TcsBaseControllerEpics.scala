@@ -11,6 +11,7 @@ import cats.syntax.all.*
 import lucuma.core.enums.ComaOption
 import lucuma.core.enums.Instrument
 import lucuma.core.enums.LightSinkName
+import lucuma.core.enums.LightSinkName.Ac
 import lucuma.core.enums.M1Source
 import lucuma.core.enums.MountGuideOption
 import lucuma.core.enums.TipTiltSource
@@ -24,6 +25,7 @@ import lucuma.core.model.M2GuideConfig
 import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.Enumerated
 import lucuma.core.util.TimeSpan
+import monocle.Focus.focus
 import monocle.Getter
 import monocle.syntax.all.*
 import mouse.boolean.given
@@ -36,12 +38,14 @@ import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
 import navigate.model.enums.HrwfsPickupPosition
 import navigate.model.enums.LightSource
+import navigate.model.enums.LightSource.Sky
 import navigate.model.enums.ShutterMode
 import navigate.server
 import navigate.server.ApplyCommandResult
 import navigate.server.ConnectionTimeout
 import navigate.server.epicsdata.BinaryOnOff
 import navigate.server.epicsdata.BinaryYesNo
+import navigate.server.tcs.AcquisitionCameraEpicsSystem.*
 import navigate.server.tcs.ParkStatus.NotParked
 import navigate.server.tcs.Target.*
 import navigate.server.tcs.TcsEpicsSystem.ProbeTrackingCommand
@@ -50,7 +54,7 @@ import navigate.server.tcs.TcsEpicsSystem.TcsCommands
 
 import scala.concurrent.duration.*
 
-import TcsBaseController.{EquinoxDefault, FixedSystem, SystemDefault, TcsConfig}
+import TcsBaseController.{EquinoxDefault, FixedSystem, SwapConfig, SystemDefault, TcsConfig}
 
 /* This class implements the common TCS commands */
 class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
@@ -268,7 +272,14 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
                 )
               )
           )
-          .getOrElse(identity[TcsCommands[F]])
+          .getOrElse(
+            setProbeTracking(
+              Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
+                _.oiwfsProbeTrackingCommand
+              ),
+              TrackingConfig.noTracking
+            )
+          )
       )
 
   // Added a 1.5 s wait between selecting the OIWFS and setting targets, to copy TCC
@@ -809,14 +820,41 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
       .post
       .verifiedRun(ConnectionTimeout)
 
-  override def swapTarget(target: Target): F[ApplyCommandResult] =
+  override def swapTarget(swapConfig: SwapConfig): F[ApplyCommandResult] =
     disableGuide *>
-      setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.sourceACmd), target)
-        .compose(target.wavelength.map(setSourceAWalength).getOrElse(identity))(
+      sys.hrwfs.status.filter.verifiedRun(ConnectionTimeout).flatMap { x =>
+        (
+          applyTcsConfig(
+            swapConfig.toTcsConfig
+              .focus(_.sourceATarget)
+              .andThen(Target.wavelength)
+              .replace(x.toWavelength.some)
+          ) >>>
+            setLightPath(LightSource.Sky, LightSinkName.Ac, 1)
+        )(
           sys.tcsEpics.startCommand(timeout)
-        )
-        .post
-        .verifiedRun(ConnectionTimeout)
+        ).post
+          .verifiedRun(ConnectionTimeout)
+      }
+
+  override def restoreTarget(config: TcsConfig): F[ApplyCommandResult] =
+    disableGuide *>
+      getInstrumentPorts.flatMap { ps =>
+        getPort(ps, config.instrument.toLightSink)
+          .map(p =>
+            (
+              selectOiwfs(config) *>
+                VerifiedEpics.liftF(Temporal[F].sleep(1500.milliseconds)) *>
+                (applyTcsConfig(config) >>> setLightPath(LightSource.Sky,
+                                                         config.instrument.toLightSink,
+                                                         p
+                ))(
+                  sys.tcsEpics.startCommand(timeout)
+                ).post
+            ).verifiedRun(ConnectionTimeout)
+          )
+          .getOrElse(ApplyCommandResult.Completed.pure[F])
+      }
 
   override def getInstrumentPorts: F[InstrumentPorts] = (for {
     f2F <- sys.ags.status.flamingos2Port
@@ -847,28 +885,35 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
     niriPort = nr
   )).verifiedRun(ConnectionTimeout)
 
+  private def setLightPath(
+    from: LightSource,
+    to:   LightSinkName,
+    port: Int
+  ): TcsCommands[F] => TcsCommands[F] = (x: TcsCommands[F]) => {
+    val aoFold      = (s: TcsCommands[F]) =>
+      (from === LightSource.AO)
+        .fold(s.aoFoldCommands.move.setPosition(AoFoldPosition.In), s.aoFoldCommands.park.mark)
+    val hrwfsPickup = (s: TcsCommands[F]) =>
+      (to === LightSinkName.Hr || to === LightSinkName.Ac).fold(
+        s.hrwfsCommands.move.setPosition(HrwfsPickupPosition.In),
+        s.hrwfsCommands.park.mark
+      )
+    val scienceFold = (s: TcsCommands[F]) =>
+      (port === 1).fold(
+        s.scienceFoldCommands.park.mark,
+        s.scienceFoldCommands.move.setPosition(
+          ScienceFold.Position(from, to, port)
+        )
+      )
+
+    (aoFold >>> hrwfsPickup >>> scienceFold)(x)
+  }
+
   override def lightPath(from: LightSource, to: LightSinkName): F[ApplyCommandResult] =
     getInstrumentPorts.flatMap { ports =>
       getPort(ports, to)
         .map { p =>
-          val aoFold      = (s: TcsCommands[F]) =>
-            (from === LightSource.AO).fold(s.aoFoldCommands.move.setPosition(AoFoldPosition.In),
-                                           s.aoFoldCommands.park.mark
-            )
-          val hrwfsPickup = (s: TcsCommands[F]) =>
-            (to === LightSinkName.Hr || to === LightSinkName.Ac).fold(
-              s.hrwfsCommands.move.setPosition(HrwfsPickupPosition.In),
-              s.hrwfsCommands.park.mark
-            )
-          val scienceFold = (s: TcsCommands[F]) =>
-            (p === 1).fold(
-              s.scienceFoldCommands.park.mark,
-              s.scienceFoldCommands.move.setPosition(
-                ScienceFold.Position(from, to, p)
-              )
-            )
-
-          (aoFold >>> hrwfsPickup >>> scienceFold)(sys.tcsEpics.startCommand(timeout)).post
+          setLightPath(from, to, p)(sys.tcsEpics.startCommand(timeout)).post
             .verifiedRun(ConnectionTimeout)
         }
         .getOrElse(ApplyCommandResult.Completed.pure[F])

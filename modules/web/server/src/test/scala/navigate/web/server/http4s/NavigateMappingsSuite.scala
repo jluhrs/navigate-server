@@ -49,6 +49,7 @@ import navigate.server.tcs.ParkStatus.Parked
 import navigate.server.tcs.RotatorTrackConfig
 import navigate.server.tcs.SlewOptions
 import navigate.server.tcs.Target
+import navigate.server.tcs.TcsBaseController.SwapConfig
 import navigate.server.tcs.TcsBaseController.TcsConfig
 import navigate.server.tcs.TcsNorthControllerSim
 import navigate.server.tcs.TcsSouthControllerSim
@@ -299,6 +300,147 @@ class NavigateMappingsSuit extends CatsEffectSuite {
              )
     } yield assert(
       extractResult[OperationOutcome](r, "tcsConfig").exists(_ === OperationOutcome.success)
+    )
+  }
+
+  test("Process swap target command") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      gd  <- Topic[IO, GuideState]
+      gq  <- Topic[IO, GuidersQualityValues]
+      ts  <- Topic[IO, TelescopeState]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts)
+      r   <- mp.compileAndRun(
+               """
+          |mutation { swapTarget ( swapConfig: {
+          |  guideTarget: {
+          |    id: "T0001"
+          |    name: "Dummy"
+          |    sidereal: {
+          |      ra: {
+          |        hms: "21:15:33"
+          |      }
+          |      dec: {
+          |        dms: "-30:26:38"
+          |      }
+          |      epoch:"J2000.000"
+          |   }
+          |    wavelength: {
+          |      nanometers: "400"
+          |    }
+          |  }
+          |  acParams: {
+          |    iaa: {
+          |      degrees: 178.38
+          |    }
+          |    focusOffset: {
+          |       micrometers: 1234
+          |    }
+          |    agName: "ac"
+          |    origin: {
+          |      x: {
+          |        micrometers: 3012
+          |      }
+          |      y: {
+          |        micrometers: -1234
+          |      }
+          |    }
+          |  }
+          |  rotator: {
+          |    ipa: {
+          |      microarcseconds: 89.76
+          |    }
+          |    mode: TRACKING
+          |  }
+          |} ) {
+          |  result
+          |} }
+          |""".stripMargin
+             )
+    } yield assert(
+      extractResult[OperationOutcome](r, "swapTarget").exists(_ === OperationOutcome.success)
+    )
+  }
+
+  test("Process restore target  command") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      gd  <- Topic[IO, GuideState]
+      gq  <- Topic[IO, GuidersQualityValues]
+      ts  <- Topic[IO, TelescopeState]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts)
+      r   <- mp.compileAndRun(
+               """
+          |mutation { restoreTarget ( config: {
+          |  sourceATarget: {
+          |    id: "T0001"
+          |    name: "Dummy"
+          |    sidereal: {
+          |      ra: {
+          |        hms: "21:15:33"
+          |      }
+          |      dec: {
+          |        dms: "-30:26:38"
+          |      }
+          |      epoch:"J2000.000"
+          |   }
+          |    wavelength: {
+          |      nanometers: "400"
+          |    }
+          |  }
+          |  instParams: {
+          |    iaa: {
+          |      degrees: 178.38
+          |    }
+          |    focusOffset: {
+          |       micrometers: 1234
+          |    }
+          |    agName: "gmos"
+          |    origin: {
+          |      x: {
+          |        micrometers: 3012
+          |      }
+          |      y: {
+          |        micrometers: -1234
+          |      }
+          |    }
+          |  }
+          |  oiwfs: {
+          |    target: {
+          |      name: "OiwfsDummy"
+          |      sidereal: {
+          |        ra: {
+          |          hms: "10:11:12"
+          |        }
+          |        dec: {
+          |          dms: "-30:31:32"
+          |        }
+          |        epoch:"J2000.000"
+          |      }
+          |    }
+          |    tracking: {
+          |      nodAchopA: true
+          |      nodAchopB: false
+          |      nodBchopA: false
+          |      nodBchopB: true
+          |    }
+          |  }
+          |  rotator: {
+          |    ipa: {
+          |      microarcseconds: 89.76
+          |    }
+          |    mode: TRACKING
+          |  }
+          |  instrument: GMOS_NORTH
+          |} ) {
+          |  result
+          |} }
+          |""".stripMargin
+             )
+    } yield assert(
+      extractResult[OperationOutcome](r, "restoreTarget").exists(_ === OperationOutcome.success)
     )
   }
 
@@ -996,7 +1138,9 @@ object NavigateMappingsTest {
 
       override def scsFollow(enable: Boolean): IO[Unit] = IO.unit
 
-      override def swapTarget(target: Target): IO[Unit] = IO.unit
+      override def swapTarget(swapConfig: SwapConfig): IO[Unit] = IO.unit
+
+      override def restoreTarget(config: TcsConfig): IO[Unit] = IO.unit
     }
   }
 

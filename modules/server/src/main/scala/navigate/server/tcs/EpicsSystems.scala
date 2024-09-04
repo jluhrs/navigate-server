@@ -11,5 +11,6 @@ case class EpicsSystems[F[_]](
   mcs:      McsEpicsSystem[F],
   scs:      ScsEpicsSystem[F],
   crcs:     CrcsEpicsSystem[F],
-  ags:      AgsEpicsSystem[F]
+  ags:      AgsEpicsSystem[F],
+  hrwfs:    AcquisitionCameraEpicsSystem[F]
 )

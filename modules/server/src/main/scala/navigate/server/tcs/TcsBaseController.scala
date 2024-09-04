@@ -33,7 +33,8 @@ trait TcsBaseController[F[_]] {
   def ecsVentGatesMove(gateEast:  Double, westGate:       Double): F[ApplyCommandResult]
   def tcsConfig(config:           TcsConfig): F[ApplyCommandResult]
   def slew(slewOptions:           SlewOptions, tcsConfig: TcsConfig): F[ApplyCommandResult]
-  def swapTarget(target:          Target): F[ApplyCommandResult]
+  def swapTarget(swapConfig:      SwapConfig): F[ApplyCommandResult]
+  def restoreTarget(config:       TcsConfig): F[ApplyCommandResult]
   def instrumentSpecifics(config: InstrumentSpecifics): F[ApplyCommandResult]
   def oiwfsTarget(target:         Target): F[ApplyCommandResult]
   def rotIaa(angle:               Angle): F[ApplyCommandResult]
@@ -67,6 +68,20 @@ object TcsBaseController {
     rotatorTrackConfig:  RotatorTrackConfig,
     instrument:          Instrument
   )
+
+  case class SwapConfig(
+    guideTarget:        Target,
+    acSpecifics:        InstrumentSpecifics,
+    rotatorTrackConfig: RotatorTrackConfig
+  ) {
+    lazy val toTcsConfig: TcsConfig = TcsConfig(
+      guideTarget,
+      acSpecifics,
+      None,
+      rotatorTrackConfig,
+      Instrument.AcqCam
+    )
+  }
 
   val SystemDefault: String  = "FK5"
   val EquinoxDefault: String = "J2000"

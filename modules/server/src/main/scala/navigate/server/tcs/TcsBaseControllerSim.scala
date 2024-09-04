@@ -24,6 +24,7 @@ import navigate.server.ApplyCommandResult
 import navigate.server.tcs.FollowStatus.*
 import navigate.server.tcs.GuidersQualityValues.GuiderQuality
 import navigate.server.tcs.ParkStatus.*
+import navigate.server.tcs.TcsBaseController.SwapConfig
 
 class TcsBaseControllerSim[F[_]: Sync](
   guideRef:    Ref[F, GuideState],
@@ -162,7 +163,7 @@ class TcsBaseControllerSim[F[_]: Sync](
     )
     .as(ApplyCommandResult.Completed)
 
-  override def swapTarget(target: Target): F[ApplyCommandResult] =
+  override def swapTarget(swapConfig: SwapConfig): F[ApplyCommandResult] =
     ApplyCommandResult.Completed.pure[F]
 
   override def getInstrumentPorts: F[InstrumentPorts] =
@@ -178,5 +179,8 @@ class TcsBaseControllerSim[F[_]: Sync](
     ).pure[F]
 
   override def lightPath(from: LightSource, to: LightSinkName): F[ApplyCommandResult] =
+    ApplyCommandResult.Completed.pure[F]
+
+  override def restoreTarget(config: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
     ApplyCommandResult.Completed.pure[F]
 }

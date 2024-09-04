@@ -67,11 +67,13 @@ object Systems {
           scs  <- ScsEpicsSystem.build(epicsSrv, readTop(tops, "m2".refined))
           crcs <- CrcsEpicsSystem.build(epicsSrv, readTop(tops, "cr".refined))
           ags  <- AgsEpicsSystem.build(epicsSrv, readTop(tops, "ag".refined))
-          r    <- Resource.eval(
-                    TcsSouthControllerEpics.build(EpicsSystems(tcs, p1, p2, oi, mcs, scs, crcs, ags),
-                                                  conf.ioTimeout
-                    )
-                  )
+          hr   <- AcquisitionCameraEpicsSystem.build(epicsSrv, readTop(tops, "hrwfs".refined))
+          r    <-
+            Resource.eval(
+              TcsSouthControllerEpics.build(EpicsSystems(tcs, p1, p2, oi, mcs, scs, crcs, ags, hr),
+                                            conf.ioTimeout
+              )
+            )
         } yield r
       else
         Resource.eval(TcsSouthControllerSim.build)
@@ -93,11 +95,13 @@ object Systems {
           scs  <- ScsEpicsSystem.build(epicsSrv, readTop(tops, "m2".refined))
           crcs <- CrcsEpicsSystem.build(epicsSrv, readTop(tops, "cr".refined))
           ags  <- AgsEpicsSystem.build(epicsSrv, readTop(tops, "ag".refined))
-          r    <- Resource.eval(
-                    TcsNorthControllerEpics.build(EpicsSystems(tcs, p1, p2, oi, mcs, scs, crcs, ags),
-                                                  conf.ioTimeout
-                    )
-                  )
+          hr   <- AcquisitionCameraEpicsSystem.build(epicsSrv, readTop(tops, "hrwfs".refined))
+          r    <-
+            Resource.eval(
+              TcsNorthControllerEpics.build(EpicsSystems(tcs, p1, p2, oi, mcs, scs, crcs, ags, hr),
+                                            conf.ioTimeout
+              )
+            )
         } yield r
       else
         Resource.eval(TcsNorthControllerSim.build)

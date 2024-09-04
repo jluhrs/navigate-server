@@ -102,6 +102,12 @@ input TcsConfigInput {
     instrument: Instrument!
 }
 
+input SwapConfigInput {
+    guideTarget: TargetPropertiesInput!
+    acParams: InstrumentSpecificsInput!
+    rotator: RotatorTrackingInput!
+}
+
 enum RotatorTrackingMode {
     TRACKING
     FIXED
@@ -227,6 +233,8 @@ type Mutation {
     scsFollow(enable: Boolean!): OperationOutcome!
     slew(slewOptions: SlewOptionsInput!, config: TcsConfigInput!): OperationOutcome!
     tcsConfig(config: TcsConfigInput!): OperationOutcome!
+    swapTarget(swapConfig: SwapConfigInput!): OperationOutcome!
+    restoreTarget(config: TcsConfigInput!): OperationOutcome!
     instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecificsInput!): OperationOutcome!
     rotatorConfig(config: RotatorTrackingInput!): OperationOutcome!
     oiwfsTarget(target: TargetPropertiesInput!): OperationOutcome!
@@ -237,7 +245,6 @@ type Mutation {
     oiwfsStopObserve: OperationOutcome!
     guideEnable(config: GuideConfigurationInput!): OperationOutcome!
     guideDisable: OperationOutcome!
-    swapTarget(guideTarget: TargetPropertiesInput!): OperationOutcome!
 }
 
 type Subscription {

@@ -6,6 +6,8 @@ package navigate.server.tcs
 import cats.Applicative
 import cats.Monad
 import eu.timepit.refined.types.string.NonEmptyString
+import lucuma.core.enums.Instrument
+import lucuma.core.enums.LightSinkName
 import lucuma.core.util.NewType
 import navigate.epics.Channel
 import navigate.epics.EpicsSystem.TelltaleChannel
@@ -198,3 +200,23 @@ def readTop(tops: Map[String, String], key: NonEmptyString): NonEmptyString =
     .get(key.value)
     .flatMap(NonEmptyString.from(_).toOption)
     .getOrElse(NonEmptyString.unsafeFrom(s"${key.value}:"))
+
+extension (i: Instrument) {
+  def toLightSink: LightSinkName = i match
+    case Instrument.AcqCam     => LightSinkName.Ac
+    case Instrument.Flamingos2 => LightSinkName.F2
+    case Instrument.Ghost      => LightSinkName.Ghost
+    case Instrument.GmosNorth  => LightSinkName.Gmos
+    case Instrument.GmosSouth  => LightSinkName.Gmos
+    case Instrument.Gnirs      => LightSinkName.Gnirs
+    case Instrument.Gpi        => LightSinkName.Gpi
+    case Instrument.Gsaoi      => LightSinkName.Gsaoi
+    case Instrument.Igrins2    => LightSinkName.Igrins2
+    case Instrument.Nifs       => LightSinkName.Nifs
+    case Instrument.Niri       => LightSinkName.Niri_f6 // TODO: handle the other cases
+    case Instrument.Phoenix    => LightSinkName.Phoenix
+    case Instrument.Visitor    => LightSinkName.Visitor
+    case Instrument.Alopeke    => LightSinkName.Visitor
+    case Instrument.Zorro      => LightSinkName.Visitor
+    case _                     => LightSinkName.Ac
+}
