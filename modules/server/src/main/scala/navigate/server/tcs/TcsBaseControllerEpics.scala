@@ -287,7 +287,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
     disableGuide *>
       (
         selectOiwfs(config) *>
-          VerifiedEpics.liftF(Temporal[F].sleep(1500.milliseconds)) *>
+          VerifiedEpics.liftF(Temporal[F].sleep(OiwfsSelectionDelay)) *>
           applyTcsConfig(config)(
             sys.tcsEpics.startCommand(timeout)
           ).post
@@ -300,7 +300,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
     disableGuide *>
       (
         selectOiwfs(tcsConfig) *>
-          VerifiedEpics.liftF(Temporal[F].sleep(1500.milliseconds)) *>
+          VerifiedEpics.liftF(Temporal[F].sleep(OiwfsSelectionDelay)) *>
           setSlewOptions(slewOptions)
             .compose(applyTcsConfig(tcsConfig))(
               sys.tcsEpics.startCommand(timeout)
@@ -621,6 +621,9 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
         .replace(None)
     )
 
+  // Time to wait after selecting the OIWFS in the AG Sequencer, to let the values propagate to TCS.
+  private val OiwfsSelectionDelay: Duration = 1500.milliseconds
+
   private def selectOiwfs(tcsConfig: TcsConfig): VerifiedEpics[F, F, ApplyCommandResult] =
     sys.tcsEpics
       .startCommand(timeout)
@@ -844,7 +847,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
           .map(p =>
             (
               selectOiwfs(config) *>
-                VerifiedEpics.liftF(Temporal[F].sleep(1500.milliseconds)) *>
+                VerifiedEpics.liftF(Temporal[F].sleep(OiwfsSelectionDelay)) *>
                 (applyTcsConfig(config) >>> setLightPath(LightSource.Sky,
                                                          config.instrument.toLightSink,
                                                          p
