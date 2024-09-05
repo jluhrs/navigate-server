@@ -10,6 +10,7 @@ import lucuma.core.math.Parallax
 import lucuma.core.math.ProperMotion
 import lucuma.core.math.RadialVelocity
 import lucuma.core.math.Wavelength
+import monocle.Lens
 
 sealed trait Target extends Product with Serializable {
   val objectName: String
@@ -44,5 +45,22 @@ object Target {
     override val wavelength: Option[Wavelength],
     ephemerisFile:           String
   ) extends Target
+
+  val objectName: Lens[Target, String] = Lens.apply[Target, String](_.objectName) { s =>
+    {
+      case a: SiderealTarget  => a.copy(objectName = s)
+      case a: AzElTarget      => a.copy(objectName = s)
+      case a: EphemerisTarget => a.copy(objectName = s)
+    }
+  }
+
+  val wavelength: Lens[Target, Option[Wavelength]] =
+    Lens.apply[Target, Option[Wavelength]](_.wavelength) { s =>
+      {
+        case a: SiderealTarget  => a.copy(wavelength = s)
+        case a: AzElTarget      => a.copy(wavelength = s)
+        case a: EphemerisTarget => a.copy(wavelength = s)
+      }
+    }
 
 }

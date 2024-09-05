@@ -13,7 +13,7 @@ trait StateEngine[F[_], S, O] {
 
   type HandlerType = Handler[F, S, Event[F, S, O], Option[O]]
 
-  def process(s0: S): Stream[F, O]
+  def process(s0: S): Stream[F, (S, O)]
   def offer(h:    HandlerType): F[Unit]
 
   def lift(ff: F[O]): Handler[F, S, Event[F, S, O], Option[O]]
@@ -41,17 +41,17 @@ object StateEngine {
     inputQueue:  Queue[F, Event[F, S, O]],
     streamQueue: Queue[F, Stream[F, Event[F, S, O]]]
   ) extends StateEngine[F, S, O] {
-    override def process(s0: S): Stream[F, O] =
+    override def process(s0: S): Stream[F, (S, O)] =
       Stream.exec(streamQueue.offer(Stream.fromQueueUnterminated(inputQueue))) ++
         Stream
           .fromQueueUnterminated(streamQueue)
           .parJoinUnbounded
           .mapAccumulate(s0)((s, i) => i.handle.run.run(s).value)
           .evalMap {
-            case (_, Handler.RetVal(o, Some(ss))) => streamQueue.offer(ss).as(o)
-            case (_, Handler.RetVal(o, None))     => o.pure[F]
+            case (s, Handler.RetVal(o, Some(ss))) => streamQueue.offer(ss).as((s, o))
+            case (s, Handler.RetVal(o, None))     => (s, o).pure[F]
           }
-          .flattenOption
+          .collect { case (s, Some(o)) => (s, o) }
 
     override def offer(h: HandlerType): F[Unit] = inputQueue.offer(Event(h))
 

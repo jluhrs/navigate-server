@@ -25,7 +25,7 @@ class StateEngineSpec extends CatsEffectSuite {
                    eng.setState(5) *>
                    eng.getState.flatMap(x => eng.lift(x.toString.pure[IO]))
                )
-        out <- eng.process(0).take(3).compile.toList
+        out <- eng.process(0).take(3).compile.toList.map(_.map(_._2))
       } yield out,
       List("0", "1", "5")
     )
@@ -38,7 +38,13 @@ class StateEngineSpec extends CatsEffectSuite {
       finishFlag  <- Semaphore.apply[IO](0)
       _           <- eng.offer(eng.lift(startedFlag.release *> finishFlag.acquire.as("X")))
       _           <- eng.offer(eng.lift(startedFlag.acquire *> finishFlag.release.as("Y")))
-      out         <- eng.process(0).take(2).timeout(FiniteDuration(5, TimeUnit.SECONDS)).compile.toList
+      out         <- eng
+                       .process(0)
+                       .take(2)
+                       .timeout(FiniteDuration(5, TimeUnit.SECONDS))
+                       .compile
+                       .toList
+                       .map(_.map(_._2))
     } yield {
       assert(out.contains("X"))
       assert(out.contains("Y"))

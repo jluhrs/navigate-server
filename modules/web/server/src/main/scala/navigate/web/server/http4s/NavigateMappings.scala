@@ -49,6 +49,7 @@ import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.TimeSpan
 import mouse.boolean.given
 import navigate.model.Distance
+import navigate.model.NavigateState
 import navigate.server.NavigateEngine
 import navigate.server.tcs.AutoparkAowfs
 import navigate.server.tcs.AutoparkGems
@@ -68,6 +69,7 @@ import navigate.server.tcs.ShortcircuitTargetFilter
 import navigate.server.tcs.SlewOptions
 import navigate.server.tcs.StopGuide
 import navigate.server.tcs.Target
+import navigate.server.tcs.TcsBaseController.SwapConfig
 import navigate.server.tcs.TcsBaseController.TcsConfig
 import navigate.server.tcs.TelescopeState
 import navigate.server.tcs.TrackingConfig
@@ -100,6 +102,9 @@ class NavigateMappings[F[_]: Sync](
 
   def telescopeState(p: Path, env: Env): F[Result[TelescopeState]] =
     server.getTelescopeState.attempt.map(_.fold(Result.internalError, Result.success))
+
+  def navigateState(p: Path, env: Env): F[Result[NavigateState]] =
+    server.getNavigateState.attempt.map(_.fold(Result.internalError, Result.success))
 
   def mountPark(p: Path, env: Env): F[Result[OperationOutcome]] =
     server.mcsPark.attempt
@@ -231,7 +236,45 @@ class NavigateMappings[F[_]: Sync](
       }
       .getOrElse(
         Result
-          .failure[OperationOutcome]("oiwfsProbeTracking parameters could not be parsed.")
+          .failure[OperationOutcome]("tcsConfig parameters could not be parsed.")
+          .pure[F]
+      )
+
+  def swapTarget(p: Path, env: Env): F[Result[OperationOutcome]] =
+    env
+      .get[SwapConfig]("swapConfig")(using classTag[SwapConfig])
+      .map { t =>
+        server
+          .swapTarget(t)
+          .attempt
+          .map(x =>
+            Result.success(
+              x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+            )
+          )
+      }
+      .getOrElse(
+        Result
+          .failure[OperationOutcome]("swapTarget parameters could not be parsed.")
+          .pure[F]
+      )
+
+  def restoreTarget(p: Path, env: Env): F[Result[OperationOutcome]] =
+    env
+      .get[TcsConfig]("config")(using classTag[TcsConfig])
+      .map { tc =>
+        server
+          .restoreTarget(tc)
+          .attempt
+          .map(x =>
+            Result.success(
+              x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+            )
+          )
+      }
+      .getOrElse(
+        Result
+          .failure[OperationOutcome]("restoreTarget parameters could not be parsed.")
           .pure[F]
       )
 
@@ -388,6 +431,22 @@ class NavigateMappings[F[_]: Sync](
         y <- Elab.liftR(parseTcsConfigInput(cf).toResult("Could not parse TCS config parameters."))
         _ <- Elab.env("config" -> y)
       } yield ()
+    case (MutationType, "swapTarget", List(Binding("swapConfig", ObjectValue(fields))))     =>
+      for {
+        x <-
+          Elab.liftR(
+            parseSwapConfigInput(fields).toResult("Could not parse swap target parameters.")
+          )
+        _ <- Elab.env("swapConfig", x)
+      } yield ()
+    case (MutationType, "restoreTarget", List(Binding("config", ObjectValue(fields))))      =>
+      for {
+        x <-
+          Elab.liftR(
+            parseTcsConfigInput(fields).toResult("Could not parse restore target parameters.")
+          )
+        _ <- Elab.env("config", x)
+      } yield ()
     case (MutationType,
           "instrumentSpecifics",
           List(Binding("instrumentSpecificsParams", ObjectValue(fields)))
@@ -440,7 +499,8 @@ class NavigateMappings[F[_]: Sync](
       tpe = QueryType,
       fieldMappings = List(
         RootEffect.computeEncodable("guideState")((p, env) => guideState(p, env)),
-        RootEffect.computeEncodable("telescopeState")((p, env) => telescopeState(p, env))
+        RootEffect.computeEncodable("telescopeState")((p, env) => telescopeState(p, env)),
+        RootEffect.computeEncodable("navigateState")((p, env) => navigateState(p, env))
       )
     ),
     ObjectMapping(
@@ -454,6 +514,8 @@ class NavigateMappings[F[_]: Sync](
         RootEffect.computeEncodable("scsFollow")((p, env) => scsFollow(p, env)),
         RootEffect.computeEncodable("tcsConfig")((p, env) => tcsConfig(p, env)),
         RootEffect.computeEncodable("slew")((p, env) => slew(p, env)),
+        RootEffect.computeEncodable("swapTarget")((p, env) => swapTarget(p, env)),
+        RootEffect.computeEncodable("restoreTarget")((p, env) => restoreTarget(p, env)),
         RootEffect.computeEncodable("instrumentSpecifics")((p, env) => instrumentSpecifics(p, env)),
         RootEffect.computeEncodable("oiwfsTarget")((p, env) => oiwfsTarget(p, env)),
         RootEffect.computeEncodable("oiwfsProbeTracking")((p, env) => oiwfsProbeTracking(p, env)),
@@ -492,6 +554,12 @@ class NavigateMappings[F[_]: Sync](
         RootStream.computeCursor("telescopeState") { (p, env) =>
           telescopeStateTopic
             .subscribe(10)
+            .map(_.asJson)
+            .map(circeCursor(p, env, _))
+            .map(Result.success)
+        },
+        RootStream.computeCursor("navigateState") { (p, env) =>
+          server.getNavigateStateStream
             .map(_.asJson)
             .map(circeCursor(p, env, _))
             .map(Result.success)
@@ -702,6 +770,14 @@ object NavigateMappings extends GrackleParsers {
              parseEnumerated[Instrument](v)
            }.flatten
   } yield TcsConfig(t, inp, oi, rc, ins)
+
+  def parseSwapConfigInput(l: List[(String, Value)]): Option[SwapConfig] = for {
+    t   <- l.collectFirst { case ("guideTarget", ObjectValue(v)) => parseTargetInput(v) }.flatten
+    inp <- l.collectFirst { case ("acParams", ObjectValue(v)) =>
+             parseInstrumentSpecificsInput(v)
+           }.flatten
+    rc  <- l.collectFirst { case ("rotator", ObjectValue(v)) => parseRotatorConfig(v) }.flatten
+  } yield SwapConfig(t, inp, rc)
 
   def parseProbeGuide(l: List[(String, Value)]): Option[ProbeGuide] = for {
     f <- l.collectFirst { case ("from", EnumValue(v)) => parseEnumerated[GuideProbe](v) }.flatten

@@ -4,12 +4,14 @@
 package navigate.server.tcs
 
 import lucuma.core.enums.Instrument
+import lucuma.core.enums.LightSinkName
 import lucuma.core.math.Angle
 import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.TimeSpan
 import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
+import navigate.model.enums.LightSource
 import navigate.model.enums.ShutterMode
 import navigate.server.ApplyCommandResult
 
@@ -31,6 +33,8 @@ trait TcsBaseController[F[_]] {
   def ecsVentGatesMove(gateEast:  Double, westGate:       Double): F[ApplyCommandResult]
   def tcsConfig(config:           TcsConfig): F[ApplyCommandResult]
   def slew(slewOptions:           SlewOptions, tcsConfig: TcsConfig): F[ApplyCommandResult]
+  def swapTarget(swapConfig:      SwapConfig): F[ApplyCommandResult]
+  def restoreTarget(config:       TcsConfig): F[ApplyCommandResult]
   def instrumentSpecifics(config: InstrumentSpecifics): F[ApplyCommandResult]
   def oiwfsTarget(target:         Target): F[ApplyCommandResult]
   def rotIaa(angle:               Angle): F[ApplyCommandResult]
@@ -47,10 +51,12 @@ trait TcsBaseController[F[_]] {
     deployable: DeployableBafflePosition
   ): F[ApplyCommandResult]
   def scsFollow(enable:           Boolean): F[ApplyCommandResult]
+  def lightPath(from:             LightSource, to:        LightSinkName): F[ApplyCommandResult]
 
   def getGuideState: F[GuideState]
   def getGuideQuality: F[GuidersQualityValues]
   def getTelescopeState: F[TelescopeState]
+  def getInstrumentPorts: F[InstrumentPorts]
 }
 
 object TcsBaseController {
@@ -62,6 +68,20 @@ object TcsBaseController {
     rotatorTrackConfig:  RotatorTrackConfig,
     instrument:          Instrument
   )
+
+  case class SwapConfig(
+    guideTarget:        Target,
+    acSpecifics:        InstrumentSpecifics,
+    rotatorTrackConfig: RotatorTrackConfig
+  ) {
+    lazy val toTcsConfig: TcsConfig = TcsConfig(
+      guideTarget,
+      acSpecifics,
+      None,
+      rotatorTrackConfig,
+      Instrument.AcqCam
+    )
+  }
 
   val SystemDefault: String  = "FK5"
   val EquinoxDefault: String = "J2000"

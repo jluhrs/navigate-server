@@ -10,6 +10,8 @@ import cats.effect.Temporal
 import cats.syntax.all.*
 import lucuma.core.enums.ComaOption
 import lucuma.core.enums.Instrument
+import lucuma.core.enums.LightSinkName
+import lucuma.core.enums.LightSinkName.Ac
 import lucuma.core.enums.M1Source
 import lucuma.core.enums.MountGuideOption
 import lucuma.core.enums.TipTiltSource
@@ -23,20 +25,27 @@ import lucuma.core.model.M2GuideConfig
 import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.Enumerated
 import lucuma.core.util.TimeSpan
+import monocle.Focus.focus
 import monocle.Getter
 import monocle.syntax.all.*
 import mouse.boolean.given
 import navigate.epics.VerifiedEpics
 import navigate.epics.VerifiedEpics.*
 import navigate.model.Distance
+import navigate.model.enums.AoFoldPosition
 import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
+import navigate.model.enums.HrwfsPickupPosition
+import navigate.model.enums.LightSource
+import navigate.model.enums.LightSource.Sky
 import navigate.model.enums.ShutterMode
+import navigate.server
 import navigate.server.ApplyCommandResult
 import navigate.server.ConnectionTimeout
 import navigate.server.epicsdata.BinaryOnOff
 import navigate.server.epicsdata.BinaryYesNo
+import navigate.server.tcs.AcquisitionCameraEpicsSystem.*
 import navigate.server.tcs.ParkStatus.NotParked
 import navigate.server.tcs.Target.*
 import navigate.server.tcs.TcsEpicsSystem.ProbeTrackingCommand
@@ -45,7 +54,7 @@ import navigate.server.tcs.TcsEpicsSystem.TcsCommands
 
 import scala.concurrent.duration.*
 
-import TcsBaseController.{EquinoxDefault, FixedSystem, SystemDefault, TcsConfig}
+import TcsBaseController.{EquinoxDefault, FixedSystem, SwapConfig, SystemDefault, TcsConfig}
 
 /* This class implements the common TCS commands */
 class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
@@ -263,32 +272,41 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
                 )
               )
           )
-          .getOrElse(identity[TcsCommands[F]])
+          .getOrElse(
+            setProbeTracking(
+              Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
+                _.oiwfsProbeTrackingCommand
+              ),
+              TrackingConfig.noTracking
+            )
+          )
       )
 
   // Added a 1.5 s wait between selecting the OIWFS and setting targets, to copy TCC
   override def tcsConfig(config: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
-    (
-      selectOiwfs(config) *>
-        VerifiedEpics.liftF(Temporal[F].sleep(1500.milliseconds)) *>
-        applyTcsConfig(config)(
-          sys.tcsEpics.startCommand(timeout)
-        ).post
-    ).verifiedRun(ConnectionTimeout)
+    disableGuide *>
+      (
+        selectOiwfs(config) *>
+          VerifiedEpics.liftF(Temporal[F].sleep(OiwfsSelectionDelay)) *>
+          applyTcsConfig(config)(
+            sys.tcsEpics.startCommand(timeout)
+          ).post
+      ).verifiedRun(ConnectionTimeout)
 
   override def slew(
     slewOptions: SlewOptions,
     tcsConfig:   TcsBaseController.TcsConfig
   ): F[ApplyCommandResult] =
-    (
-      selectOiwfs(tcsConfig) *>
-        VerifiedEpics.liftF(Temporal[F].sleep(1500.milliseconds)) *>
-        setSlewOptions(slewOptions)
-          .compose(applyTcsConfig(tcsConfig))(
-            sys.tcsEpics.startCommand(timeout)
-          )
-          .post
-    ).verifiedRun(ConnectionTimeout)
+    disableGuide *>
+      (
+        selectOiwfs(tcsConfig) *>
+          VerifiedEpics.liftF(Temporal[F].sleep(OiwfsSelectionDelay)) *>
+          setSlewOptions(slewOptions)
+            .compose(applyTcsConfig(tcsConfig))(
+              sys.tcsEpics.startCommand(timeout)
+            )
+            .post
+      ).verifiedRun(ConnectionTimeout)
 
   protected def setInstrumentSpecifics(
     config: InstrumentSpecifics
@@ -603,6 +621,9 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
         .replace(None)
     )
 
+  // Time to wait after selecting the OIWFS in the AG Sequencer, to let the values propagate to TCS.
+  private val OiwfsSelectionDelay: Duration = 1500.milliseconds
+
   private def selectOiwfs(tcsConfig: TcsConfig): VerifiedEpics[F, F, ApplyCommandResult] =
     sys.tcsEpics
       .startCommand(timeout)
@@ -801,6 +822,125 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
       .setFollow(enable)
       .post
       .verifiedRun(ConnectionTimeout)
+
+  override def swapTarget(swapConfig: SwapConfig): F[ApplyCommandResult] =
+    disableGuide *>
+      sys.hrwfs.status.filter.verifiedRun(ConnectionTimeout).flatMap { x =>
+        (
+          applyTcsConfig(
+            swapConfig.toTcsConfig
+              .focus(_.sourceATarget)
+              .andThen(Target.wavelength)
+              .replace(x.toWavelength.some)
+          ) >>>
+            setLightPath(LightSource.Sky, LightSinkName.Ac, 1)
+        )(
+          sys.tcsEpics.startCommand(timeout)
+        ).post
+          .verifiedRun(ConnectionTimeout)
+      }
+
+  override def restoreTarget(config: TcsConfig): F[ApplyCommandResult] =
+    disableGuide *>
+      getInstrumentPorts.flatMap { ps =>
+        getPort(ps, config.instrument.toLightSink)
+          .map(p =>
+            (
+              selectOiwfs(config) *>
+                VerifiedEpics.liftF(Temporal[F].sleep(OiwfsSelectionDelay)) *>
+                (applyTcsConfig(config) >>> setLightPath(LightSource.Sky,
+                                                         config.instrument.toLightSink,
+                                                         p
+                ))(
+                  sys.tcsEpics.startCommand(timeout)
+                ).post
+            ).verifiedRun(ConnectionTimeout)
+          )
+          .getOrElse(ApplyCommandResult.Completed.pure[F])
+      }
+
+  override def getInstrumentPorts: F[InstrumentPorts] = (for {
+    f2F <- sys.ags.status.flamingos2Port
+    ghF <- sys.ags.status.ghostPort
+    gmF <- sys.ags.status.gmosPort
+    gnF <- sys.ags.status.gnirsPort
+    gpF <- sys.ags.status.gpiPort
+    gsF <- sys.ags.status.gsaoiPort
+    nfF <- sys.ags.status.nifsPort
+    nrF <- sys.ags.status.niriPort
+  } yield for {
+    f2 <- f2F
+    gh <- ghF
+    gm <- gmF
+    gn <- gnF
+    gp <- gpF
+    gs <- gsF
+    nf <- nfF
+    nr <- nrF
+  } yield InstrumentPorts(
+    flamingos2Port = f2,
+    ghostPort = gh,
+    gmosPort = gm,
+    gnirsPort = gn,
+    gpiPort = gp,
+    gsaoiPort = gs,
+    nifsPort = nf,
+    niriPort = nr
+  )).verifiedRun(ConnectionTimeout)
+
+  private def setLightPath(
+    from: LightSource,
+    to:   LightSinkName,
+    port: Int
+  ): TcsCommands[F] => TcsCommands[F] = (x: TcsCommands[F]) => {
+    val aoFold      = (s: TcsCommands[F]) =>
+      (from === LightSource.AO)
+        .fold(s.aoFoldCommands.move.setPosition(AoFoldPosition.In), s.aoFoldCommands.park.mark)
+    val hrwfsPickup = (s: TcsCommands[F]) =>
+      (to === LightSinkName.Hr || to === LightSinkName.Ac).fold(
+        s.hrwfsCommands.move.setPosition(HrwfsPickupPosition.In),
+        s.hrwfsCommands.park.mark
+      )
+    val scienceFold = (s: TcsCommands[F]) =>
+      (port === 1).fold(
+        s.scienceFoldCommands.park.mark,
+        s.scienceFoldCommands.move.setPosition(
+          ScienceFold.Position(from, to, port)
+        )
+      )
+
+    (aoFold >>> hrwfsPickup >>> scienceFold)(x)
+  }
+
+  override def lightPath(from: LightSource, to: LightSinkName): F[ApplyCommandResult] =
+    getInstrumentPorts.flatMap { ports =>
+      getPort(ports, to)
+        .map { p =>
+          setLightPath(from, to, p)(sys.tcsEpics.startCommand(timeout)).post
+            .verifiedRun(ConnectionTimeout)
+        }
+        .getOrElse(ApplyCommandResult.Completed.pure[F])
+    }
+
+  def getPort(instrumentPorts: InstrumentPorts, lightSinkName: LightSinkName): Option[Int] = {
+    val p = lightSinkName match {
+      case LightSinkName.Gmos | LightSinkName.Gmos_Ifu                             => instrumentPorts.gmosPort
+      case LightSinkName.Niri_f6 | LightSinkName.Niri_f14 | LightSinkName.Niri_f32 =>
+        instrumentPorts.niriPort
+      case LightSinkName.Ac                                                        => 1
+      case LightSinkName.Hr                                                        => 1
+      case LightSinkName.Nifs                                                      => instrumentPorts.nifsPort
+      case LightSinkName.Gnirs                                                     => instrumentPorts.gnirsPort
+      case LightSinkName.Visitor                                                   => 0
+      case LightSinkName.F2                                                        => instrumentPorts.flamingos2Port
+      case LightSinkName.Gsaoi                                                     => instrumentPorts.gsaoiPort
+      case LightSinkName.Gpi                                                       => instrumentPorts.gpiPort
+      case LightSinkName.Ghost                                                     => instrumentPorts.ghostPort
+      case _                                                                       => 0
+    }
+
+    (p > 0).option(p)
+  }
 }
 
 object TcsBaseControllerEpics {

@@ -55,6 +55,7 @@ object NavigateCommand {
   ) extends NavigateCommand
   case object TcsConfigure                extends NavigateCommand
   case object Slew                        extends NavigateCommand
+  case object SwapTarget                  extends NavigateCommand
   case object InstSpecifics               extends NavigateCommand
   case object OiwfsTarget                 extends NavigateCommand
   case object OiwfsProbeTracking          extends NavigateCommand
@@ -102,6 +103,7 @@ object NavigateCommand {
       case _: EcsVentGatesMove   => "Ecs Vent Gates Move"
       case TcsConfigure          => "TCS Configuration"
       case Slew                  => "Slew"
+      case SwapTarget            => "Swap Target"
       case InstSpecifics         => "Instrument Specifics"
       case OiwfsTarget           => "OIWFS"
       case OiwfsProbeTracking    => "OIWFS Probe Tracking"

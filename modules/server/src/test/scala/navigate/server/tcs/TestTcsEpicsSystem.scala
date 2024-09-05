@@ -18,6 +18,7 @@ import navigate.server.acm.CadDirective
 import navigate.server.acm.GeminiApplyCommand
 import navigate.server.epicsdata.BinaryOnOff
 import navigate.server.epicsdata.BinaryYesNo
+import navigate.server.tcs.TcsChannels.AgMechChannels
 import navigate.server.tcs.TcsChannels.EnclosureChannels
 import navigate.server.tcs.TcsChannels.GuideConfigStatusChannels
 import navigate.server.tcs.TcsChannels.M1GuideConfigChannels
@@ -244,7 +245,10 @@ object TestTcsEpicsSystem {
     guideStatus:      GuideConfigState,
     probeGuideMode:   ProbeGuideModeState,
     oiwfsSelect:      OiwfsSelectState,
-    m2Baffles:        M2BafflesState
+    m2Baffles:        M2BafflesState,
+    hrwfsMech:        AgMechState,
+    scienceFoldMech:  AgMechState,
+    aoFoldMech:       AgMechState
   )
 
   val defaultState: State = State(
@@ -349,7 +353,10 @@ object TestTcsEpicsSystem {
     guideStatus = GuideConfigState.default,
     probeGuideMode = ProbeGuideModeState.default,
     oiwfsSelect = OiwfsSelectState.default,
-    m2Baffles = M2BafflesState.default
+    m2Baffles = M2BafflesState.default,
+    hrwfsMech = AgMechState.default,
+    scienceFoldMech = AgMechState.default,
+    aoFoldMech = AgMechState.default
   )
 
   def buildEnclosureChannels[F[_]: Applicative](s: Ref[F, State]): EnclosureChannels[F] =
@@ -707,6 +714,26 @@ object TestTcsEpicsSystem {
     new TestChannel[F, State, String](s, l.andThen(Focus[M2BafflesState](_.centralBaffle)))
   )
 
+  case class AgMechState(
+    parkDir:  TestChannel.State[CadDirective],
+    position: TestChannel.State[String]
+  )
+
+  object AgMechState {
+    val default: AgMechState = AgMechState(
+      TestChannel.State.default[CadDirective],
+      TestChannel.State.default[String]
+    )
+  }
+
+  def buildAgMechChannels[F[_]: Applicative](
+    s: Ref[F, State],
+    l: Lens[State, AgMechState]
+  ): AgMechChannels[F] = AgMechChannels[F](
+    new TestChannel[F, State, CadDirective](s, l.andThen(Focus[AgMechState](_.parkDir))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[AgMechState](_.position)))
+  )
+
   def buildChannels[F[_]: Applicative](s: Ref[F, State]): TcsChannels[F] =
     TcsChannels(
       telltale =
@@ -740,7 +767,10 @@ object TestTcsEpicsSystem {
       guide = buildGuideStateChannels(s, Focus[State](_.guideStatus)),
       probeGuideMode = buildGuideModeChannels(s, Focus[State](_.probeGuideMode)),
       oiwfsSelect = buildOiwfsSelectChannels(s, Focus[State](_.oiwfsSelect)),
-      m2Baffles = buildM2BafflesChannels(s, Focus[State](_.m2Baffles))
+      m2Baffles = buildM2BafflesChannels(s, Focus[State](_.m2Baffles)),
+      hrwfsMech = buildAgMechChannels(s, Focus[State](_.hrwfsMech)),
+      scienceFoldMech = buildAgMechChannels(s, Focus[State](_.scienceFoldMech)),
+      aoFoldMech = buildAgMechChannels(s, Focus[State](_.aoFoldMech))
     )
 
   def build[F[_]: Monad: Parallel](s: Ref[F, State]): TcsEpicsSystem[F] =

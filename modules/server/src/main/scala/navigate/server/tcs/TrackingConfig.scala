@@ -9,3 +9,8 @@ case class TrackingConfig(
   nodBchopA: Boolean,
   nodBchopB: Boolean
 )
+
+object TrackingConfig {
+  val default: TrackingConfig    = TrackingConfig(true, false, false, true)
+  val noTracking: TrackingConfig = TrackingConfig(false, false, false, false)
+}

@@ -49,7 +49,10 @@ case class TcsChannels[F[_]](
   guide:            GuideConfigStatusChannels[F],
   probeGuideMode:   ProbeGuideModeChannels[F],
   oiwfsSelect:      OiwfsSelectChannels[F],
-  m2Baffles:        M2BafflesChannels[F]
+  m2Baffles:        M2BafflesChannels[F],
+  hrwfsMech:        AgMechChannels[F],
+  scienceFoldMech:  AgMechChannels[F],
+  aoFoldMech:       AgMechChannels[F]
 )
 
 object TcsChannels {
@@ -209,6 +212,22 @@ object TcsChannels {
     parkDir: Channel[F, CadDirective],
     follow:  Channel[F, String]
   )
+
+  case class AgMechChannels[F[_]](
+    parkDir:  Channel[F, CadDirective],
+    position: Channel[F, String]
+  )
+
+  object AgMechChannels {
+    def build[F[_]](
+      service: EpicsService[F],
+      prefix:  String
+    ): Resource[F, AgMechChannels[F]] =
+      for {
+        prk <- service.getChannel[CadDirective](s"${prefix}Park$DirSuffix")
+        pos <- service.getChannel[String](s"${prefix}.A")
+      } yield AgMechChannels(prk, pos)
+  }
 
   // Build functions to construct each epics channel for each
   // channels group
@@ -572,7 +591,7 @@ object TcsChannels {
       rf   <- service.getChannel[String](tcsTop.value, "crFollow.A")
       rma  <- service.getChannel[String](tcsTop.value, "rotMove.A")
       ecs  <- buildEnclosureChannels(service, tcsTop)
-      sra  <- buildTargetChannels(service, s"${tcsTop.value.value}sourceA")
+      sra  <- buildTargetChannels(service, s"${tcsTop.value}sourceA")
       oit  <- buildTargetChannels(service, s"${tcsTop.value}oiwfs")
       wva  <- service.getChannel[String](tcsTop.value, "wavelSourceA.A")
       slw  <- buildSlewChannels(service, tcsTop)
@@ -594,6 +613,9 @@ object TcsChannels {
       gm   <- ProbeGuideModeChannels.build(service, tcsTop)
       os   <- OiwfsSelectChannels.build(service, tcsTop)
       bf   <- M2BafflesChannels.build(service, tcsTop)
+      hrm  <- AgMechChannels.build(service, s"${tcsTop.value}hrwfs")
+      sfm  <- AgMechChannels.build(service, s"${tcsTop.value}scienceFold")
+      aom  <- AgMechChannels.build(service, s"${tcsTop.value}aoFold")
     } yield TcsChannels[F](
       tt,
       tpd,
@@ -624,7 +646,10 @@ object TcsChannels {
       gd,
       gm,
       os,
-      bf
+      bf,
+      hrm,
+      sfm,
+      aom
     )
   }
 }

@@ -89,6 +89,10 @@ type TelescopeState {
     oiwfs: MechSystemState!
 }
 
+type NavigateState {
+    onSwappedTarget: Boolean!
+}
+
 input GuiderConfig{
     target: GuideTargetPropertiesInput!
     tracking: ProbeTrackingInput!
@@ -100,6 +104,12 @@ input TcsConfigInput {
     oiwfs: GuiderConfig
     rotator: RotatorTrackingInput!
     instrument: Instrument!
+}
+
+input SwapConfigInput {
+    guideTarget: TargetPropertiesInput!
+    acParams: InstrumentSpecificsInput!
+    rotator: RotatorTrackingInput!
 }
 
 enum RotatorTrackingMode {
@@ -217,6 +227,7 @@ type GuidersQualityValues {
 type Query {
     telescopeState: TelescopeState!
     guideState: GuideConfigurationState!
+    navigateState: NavigateState!
 }
 
 type Mutation {
@@ -227,6 +238,8 @@ type Mutation {
     scsFollow(enable: Boolean!): OperationOutcome!
     slew(slewOptions: SlewOptionsInput!, config: TcsConfigInput!): OperationOutcome!
     tcsConfig(config: TcsConfigInput!): OperationOutcome!
+    swapTarget(swapConfig: SwapConfigInput!): OperationOutcome!
+    restoreTarget(config: TcsConfigInput!): OperationOutcome!
     instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecificsInput!): OperationOutcome!
     rotatorConfig(config: RotatorTrackingInput!): OperationOutcome!
     oiwfsTarget(target: TargetPropertiesInput!): OperationOutcome!
@@ -244,4 +257,5 @@ type Subscription {
     guideState: GuideConfigurationState!
     guidersQualityValues: GuidersQualityValues!
     telescopeState: TelescopeState!
+    navigateState: NavigateState!
 }

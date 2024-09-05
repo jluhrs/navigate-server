@@ -31,6 +31,7 @@ import lucuma.core.util.TimeSpan
 import lucuma.core.util.Timestamp
 import munit.CatsEffectSuite
 import navigate.model.NavigateEvent
+import navigate.model.NavigateState
 import navigate.model.enums.DomeMode
 import navigate.model.enums.ShutterMode
 import navigate.server.NavigateEngine
@@ -49,6 +50,7 @@ import navigate.server.tcs.ParkStatus.Parked
 import navigate.server.tcs.RotatorTrackConfig
 import navigate.server.tcs.SlewOptions
 import navigate.server.tcs.Target
+import navigate.server.tcs.TcsBaseController.SwapConfig
 import navigate.server.tcs.TcsBaseController.TcsConfig
 import navigate.server.tcs.TcsNorthControllerSim
 import navigate.server.tcs.TcsSouthControllerSim
@@ -299,6 +301,147 @@ class NavigateMappingsSuit extends CatsEffectSuite {
              )
     } yield assert(
       extractResult[OperationOutcome](r, "tcsConfig").exists(_ === OperationOutcome.success)
+    )
+  }
+
+  test("Process swap target command") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      gd  <- Topic[IO, GuideState]
+      gq  <- Topic[IO, GuidersQualityValues]
+      ts  <- Topic[IO, TelescopeState]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts)
+      r   <- mp.compileAndRun(
+               """
+          |mutation { swapTarget ( swapConfig: {
+          |  guideTarget: {
+          |    id: "T0001"
+          |    name: "Dummy"
+          |    sidereal: {
+          |      ra: {
+          |        hms: "21:15:33"
+          |      }
+          |      dec: {
+          |        dms: "-30:26:38"
+          |      }
+          |      epoch:"J2000.000"
+          |   }
+          |    wavelength: {
+          |      nanometers: "400"
+          |    }
+          |  }
+          |  acParams: {
+          |    iaa: {
+          |      degrees: 178.38
+          |    }
+          |    focusOffset: {
+          |       micrometers: 1234
+          |    }
+          |    agName: "ac"
+          |    origin: {
+          |      x: {
+          |        micrometers: 3012
+          |      }
+          |      y: {
+          |        micrometers: -1234
+          |      }
+          |    }
+          |  }
+          |  rotator: {
+          |    ipa: {
+          |      microarcseconds: 89.76
+          |    }
+          |    mode: TRACKING
+          |  }
+          |} ) {
+          |  result
+          |} }
+          |""".stripMargin
+             )
+    } yield assert(
+      extractResult[OperationOutcome](r, "swapTarget").exists(_ === OperationOutcome.success)
+    )
+  }
+
+  test("Process restore target  command") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      gd  <- Topic[IO, GuideState]
+      gq  <- Topic[IO, GuidersQualityValues]
+      ts  <- Topic[IO, TelescopeState]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts)
+      r   <- mp.compileAndRun(
+               """
+          |mutation { restoreTarget ( config: {
+          |  sourceATarget: {
+          |    id: "T0001"
+          |    name: "Dummy"
+          |    sidereal: {
+          |      ra: {
+          |        hms: "21:15:33"
+          |      }
+          |      dec: {
+          |        dms: "-30:26:38"
+          |      }
+          |      epoch:"J2000.000"
+          |   }
+          |    wavelength: {
+          |      nanometers: "400"
+          |    }
+          |  }
+          |  instParams: {
+          |    iaa: {
+          |      degrees: 178.38
+          |    }
+          |    focusOffset: {
+          |       micrometers: 1234
+          |    }
+          |    agName: "gmos"
+          |    origin: {
+          |      x: {
+          |        micrometers: 3012
+          |      }
+          |      y: {
+          |        micrometers: -1234
+          |      }
+          |    }
+          |  }
+          |  oiwfs: {
+          |    target: {
+          |      name: "OiwfsDummy"
+          |      sidereal: {
+          |        ra: {
+          |          hms: "10:11:12"
+          |        }
+          |        dec: {
+          |          dms: "-30:31:32"
+          |        }
+          |        epoch:"J2000.000"
+          |      }
+          |    }
+          |    tracking: {
+          |      nodAchopA: true
+          |      nodAchopB: false
+          |      nodBchopA: false
+          |      nodBchopB: true
+          |    }
+          |  }
+          |  rotator: {
+          |    ipa: {
+          |      microarcseconds: 89.76
+          |    }
+          |    mode: TRACKING
+          |  }
+          |  instrument: GMOS_NORTH
+          |} ) {
+          |  result
+          |} }
+          |""".stripMargin
+             )
+    } yield assert(
+      extractResult[OperationOutcome](r, "restoreTarget").exists(_ === OperationOutcome.success)
     )
   }
 
@@ -658,6 +801,28 @@ class NavigateMappingsSuit extends CatsEffectSuite {
     )
   }
 
+  test("Query Navigate server state") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      gd  <- Topic[IO, GuideState]
+      gq  <- Topic[IO, GuidersQualityValues]
+      ts  <- Topic[IO, TelescopeState]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts)
+      r   <- mp.compileAndRun(
+               """
+          | query {
+          |   navigateState {
+          |     onSwappedTarget
+          |   }
+          | }
+          |""".stripMargin
+             )
+    } yield assertEquals(r.hcursor.downField("data").downField("navigateState").as[NavigateState],
+                         NavigateState.default.asRight[DecodingFailure]
+    )
+  }
+
   test("Provide telescope state subscription") {
 
     val changes: List[TelescopeState] = List(
@@ -995,6 +1160,15 @@ object NavigateMappingsTest {
       override def getTelescopeState: IO[TelescopeState] = p.get
 
       override def scsFollow(enable: Boolean): IO[Unit] = IO.unit
+
+      override def swapTarget(swapConfig: SwapConfig): IO[Unit] = IO.unit
+
+      override def restoreTarget(config: TcsConfig): IO[Unit] = IO.unit
+
+      override def getNavigateState: IO[NavigateState] = NavigateState.default.pure[IO]
+
+      override def getNavigateStateStream: Stream[IO, NavigateState] =
+        Stream.eval(NavigateState.default.pure[IO])
     }
   }
 
@@ -1105,5 +1279,10 @@ object NavigateMappingsTest {
       p2,
       oi
     )
+
+  given Decoder[NavigateState] = h =>
+    for {
+      swp <- h.downField("onSwappedTarget").as[Boolean]
+    } yield NavigateState(swp)
 
 }

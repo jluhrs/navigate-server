@@ -1169,6 +1169,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     crcs <- Ref.of[IO, TestCrcsEpicsSystem.State](TestCrcsEpicsSystem.defaultState)
     ags  <- Ref.of[IO, TestAgsEpicsSystem.State](TestAgsEpicsSystem.defaultState)
     st   <- Ref.of[IO, TcsBaseControllerEpics.State](TcsBaseControllerEpics.State.default)
+    ac   <- Ref.of[IO, TestAcquisitionCameraEpicsSystem.State](
+              TestAcquisitionCameraEpicsSystem.defaultState
+            )
   } yield (
     StateRefs(tcs, p1, p2, oi, mcs, scs, crcs, ags),
     new TcsBaseControllerEpics[IO](
@@ -1180,7 +1183,8 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
         TestMcsEpicsSystem.build(mcs),
         TestScsEpicsSystem.build(scs),
         TestCrcsEpicsSystem.build(crcs),
-        TestAgsEpicsSystem.build(ags)
+        TestAgsEpicsSystem.build(ags),
+        TestAcquisitionCameraEpicsSystem.build(ac)
       ),
       DefaultTimeout,
       st

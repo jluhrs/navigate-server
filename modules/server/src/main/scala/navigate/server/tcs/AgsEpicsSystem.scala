@@ -24,6 +24,7 @@ trait AgsEpicsSystem[F[_]] {
 }
 
 object AgsEpicsSystem {
+
   trait AgsStatus[F[_]] {
     def inPosition: VerifiedEpics[F, F, Boolean]
     def sfParked: VerifiedEpics[F, F, ParkStatus]
@@ -34,6 +35,14 @@ object AgsEpicsSystem {
     def p2Follow: VerifiedEpics[F, F, FollowStatus]
     def oiParked: VerifiedEpics[F, F, ParkStatus]
     def oiFollow: VerifiedEpics[F, F, FollowStatus]
+    def flamingos2Port: VerifiedEpics[F, F, Int]
+    def ghostPort: VerifiedEpics[F, F, Int]
+    def gmosPort: VerifiedEpics[F, F, Int]
+    def gnirsPort: VerifiedEpics[F, F, Int]
+    def gpiPort: VerifiedEpics[F, F, Int]
+    def gsaoiPort: VerifiedEpics[F, F, Int]
+    def nifsPort: VerifiedEpics[F, F, Int]
+    def niriPort: VerifiedEpics[F, F, Int]
   }
 
   private[tcs] def buildSystem[F[_]: Applicative](
@@ -88,6 +97,30 @@ object AgsEpicsSystem {
               case _    => NotFollowing
             }
           }
+
+        override def flamingos2Port: VerifiedEpics[F, F, Int] =
+          VerifiedEpics.readChannel(channels.telltale, channels.instrumentPorts.f2)
+
+        override def ghostPort: VerifiedEpics[F, F, Int] =
+          VerifiedEpics.readChannel(channels.telltale, channels.instrumentPorts.ghost)
+
+        override def gmosPort: VerifiedEpics[F, F, Int] =
+          VerifiedEpics.readChannel(channels.telltale, channels.instrumentPorts.gmos)
+
+        override def gnirsPort: VerifiedEpics[F, F, Int] =
+          VerifiedEpics.readChannel(channels.telltale, channels.instrumentPorts.gnirs)
+
+        override def gpiPort: VerifiedEpics[F, F, Int] =
+          VerifiedEpics.readChannel(channels.telltale, channels.instrumentPorts.gpi)
+
+        override def gsaoiPort: VerifiedEpics[F, F, Int] =
+          VerifiedEpics.readChannel(channels.telltale, channels.instrumentPorts.gsaoi)
+
+        override def nifsPort: VerifiedEpics[F, F, Int] =
+          VerifiedEpics.readChannel(channels.telltale, channels.instrumentPorts.nifs)
+
+        override def niriPort: VerifiedEpics[F, F, Int] =
+          VerifiedEpics.readChannel(channels.telltale, channels.instrumentPorts.niri)
       }
     }
 
