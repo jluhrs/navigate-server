@@ -18,8 +18,3 @@ def baseDir[F[_]: Sync]: F[Path] = Sync[F].delay:
   val appPath =
     Paths.get(this.getClass.getProtectionDomain.getCodeSource.getLocation.toURI).getParent.getParent
   if (Files.exists(appPath)) appPath else Paths.get(System.getProperty("user.home"))
-
-def uiBaseDir[F[_]: Sync]: F[Path] =
-  Sync[F]
-    .delay(Paths.get(System.getProperty("navigate.ui.path")))
-    .handleErrorWith(_ => baseDir[F])

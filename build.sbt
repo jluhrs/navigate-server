@@ -131,7 +131,8 @@ lazy val navigate_web_server = project
       Http4sCirce,
       GrackleRoutes,
       Natchez,
-      LucumaSchemas
+      LucumaSchemas,
+      NavigateUi
     ) ++
       Http4sClient ++ Http4s ++ PureConfig ++ Logging.value ++ MUnit.value ++ Grackle.value,
     // Supports launching the server in the background
@@ -146,9 +147,7 @@ lazy val navigate_web_server = project
     buildInfoKeys ++= Seq[BuildInfoKey](name, version, buildInfoBuildNumber),
     buildInfoOptions += BuildInfoOption.BuildTime,
     buildInfoObject           := "OcsBuildInfo",
-    buildInfoPackage          := "navigate.web.server",
-    // Make UI available in development mode, as long as navigate-ui is in a sibling directory.
-    javaOptions += "-Dnavigate.ui.path=../../../../navigate-ui"
+    buildInfoPackage          := "navigate.web.server"
   )
   .dependsOn(navigate_server)
   .dependsOn(navigate_model % "compile->compile;test->test")

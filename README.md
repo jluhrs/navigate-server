@@ -16,10 +16,6 @@ deploy_navigate_server/docker:publishLocal
 
 # Running in Test and Production
 
-## Composing
-
-The `noirlab/gpp-nav` image must be composed with the images from [`navigate-ui`](https://github.com/gemini-hlsw/navigate-ui) and its server in order to run. Also, a shared volume will be needed for `navigate-server` to be able to server the static files from `navigate-ui`.
-
 ## Configuration
 
 Deployment needs configuration that can be shared in the repos, like the TLS certificate and its key. For this, the server expects a directory called `conf/local` to be mounted in the container. A local directory must be [bind mounted](https://docs.docker.com/storage/bind-mounts/) into the container, providing a local `app.conf` and other needed files.

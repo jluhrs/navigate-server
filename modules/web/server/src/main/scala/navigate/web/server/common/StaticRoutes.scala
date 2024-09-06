@@ -9,7 +9,6 @@ import cats.effect.Sync
 import cats.syntax.all.*
 import fs2.compression.Compression
 import fs2.io.file.Files
-import fs2.io.file.Path
 import org.http4s.CacheDirective.*
 import org.http4s.Header
 import org.http4s.HttpRoutes
@@ -23,7 +22,7 @@ import org.http4s.server.middleware.GZip
 import scala.concurrent.duration.*
 
 class StaticRoutes[F[_]: Sync: Compression: Files]:
-  private val DistDir: String = "dist"
+  private val NavigateUiBase = "/navigate-ui"
 
   private val OneYear: Int = 365 * 24 * 60 * 60 // One year in seconds
 
@@ -32,13 +31,7 @@ class StaticRoutes[F[_]: Sync: Compression: Files]:
   )
 
   def localFile(path: String, req: Request[F]): OptionT[F, Response[F]] =
-    OptionT
-      .liftF(uiBaseDir)
-      .flatMap: dir =>
-        StaticFile.fromPath(
-          Path.fromNioPath(dir.resolve(DistDir).resolve(path.stripPrefix("/"))),
-          req.some
-        )
+    StaticFile.fromResource(NavigateUiBase + path, Some(req))
 
   extension (req: Request[F])
     def endsWith(exts: String*): Boolean = exts.exists(req.pathInfo.toString.endsWith)
