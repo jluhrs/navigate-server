@@ -13,8 +13,6 @@ import scala.concurrent.TimeoutException
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.duration.SECONDS
 
-import TestEnumerated.*
-
 class EpicsServiceSpec extends CatsEffectSuite {
 
   private val epicsServer = ResourceFunFixture(

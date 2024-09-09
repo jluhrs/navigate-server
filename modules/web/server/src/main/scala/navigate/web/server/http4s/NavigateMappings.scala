@@ -42,7 +42,6 @@ import lucuma.core.math.RadialVelocity
 import lucuma.core.math.RightAscension
 import lucuma.core.math.Wavelength
 import lucuma.core.model.M1GuideConfig
-import lucuma.core.model.M1GuideConfig.M1GuideOn
 import lucuma.core.model.M2GuideConfig
 import lucuma.core.model.ProbeGuide
 import lucuma.core.model.TelescopeGuideConfig
