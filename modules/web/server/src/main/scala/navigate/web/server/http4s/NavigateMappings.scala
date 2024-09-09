@@ -388,16 +388,9 @@ class NavigateMappings[F[_]: Sync](
         )
       )
 
-  val QueryType: TypeRef               = schema.ref("Query")
-  val MutationType: TypeRef            = schema.ref("Mutation")
-  val SubscriptionType: TypeRef        = schema.ref("Subscription")
-  val ParkStatusType: TypeRef          = schema.ref("ParkStatus")
-  val FollowStatusType: TypeRef        = schema.ref("FollowStatus")
-  val OperationOutcomeType: TypeRef    = schema.ref("OperationOutcome")
-  val OperationResultType: TypeRef     = schema.ref("OperationResult")
-  val RotatorTrackingModeType: TypeRef = schema.ref("RotatorTrackingMode")
-  val M1SourceType: TypeRef            = schema.ref("M1Source")
-  val TipTiltSourceType: TypeRef       = schema.ref("TipTiltSource")
+  val QueryType: TypeRef        = schema.ref("Query")
+  val MutationType: TypeRef     = schema.ref("Mutation")
+  val SubscriptionType: TypeRef = schema.ref("Subscription")
 
   override val selectElaborator: SelectElaborator = SelectElaborator {
     case (MutationType, "mountFollow", List(Binding("enable", BooleanValue(en))))           =>
@@ -493,76 +486,80 @@ class NavigateMappings[F[_]: Sync](
       } yield ()
   }
 
-  override val typeMappings: List[TypeMapping] = List(
-    ObjectMapping(
-      tpe = QueryType,
-      fieldMappings = List(
-        RootEffect.computeEncodable("guideState")((p, env) => guideState(p, env)),
-        RootEffect.computeEncodable("telescopeState")((p, env) => telescopeState(p, env)),
-        RootEffect.computeEncodable("navigateState")((p, env) => navigateState(p, env))
-      )
-    ),
-    ObjectMapping(
-      tpe = MutationType,
-      fieldMappings = List(
-        RootEffect.computeEncodable("mountPark")((p, env) => mountPark(p, env)),
-        RootEffect.computeEncodable("mountFollow")((p, env) => mountFollow(p, env)),
-        RootEffect.computeEncodable("rotatorPark")((p, env) => rotatorPark(p, env)),
-        RootEffect.computeEncodable("rotatorFollow")((p, env) => rotatorFollow(p, env)),
-        RootEffect.computeEncodable("rotatorConfig")((p, env) => rotatorConfig(p, env)),
-        RootEffect.computeEncodable("scsFollow")((p, env) => scsFollow(p, env)),
-        RootEffect.computeEncodable("tcsConfig")((p, env) => tcsConfig(p, env)),
-        RootEffect.computeEncodable("slew")((p, env) => slew(p, env)),
-        RootEffect.computeEncodable("swapTarget")((p, env) => swapTarget(p, env)),
-        RootEffect.computeEncodable("restoreTarget")((p, env) => restoreTarget(p, env)),
-        RootEffect.computeEncodable("instrumentSpecifics")((p, env) => instrumentSpecifics(p, env)),
-        RootEffect.computeEncodable("oiwfsTarget")((p, env) => oiwfsTarget(p, env)),
-        RootEffect.computeEncodable("oiwfsProbeTracking")((p, env) => oiwfsProbeTracking(p, env)),
-        RootEffect.computeEncodable("oiwfsPark")((p, env) => oiwfsPark(p, env)),
-        RootEffect.computeEncodable("oiwfsFollow")((p, env) => oiwfsFollow(p, env)),
-        RootEffect.computeEncodable("oiwfsObserve")((_, env) => oiwfsObserve(env)),
-        RootEffect.computeEncodable("oiwfsStopObserve")((_, _) => oiwfsStopObserve),
-        RootEffect.computeEncodable("guideEnable")((p, env) => guideEnable(p, env)),
-        RootEffect.computeEncodable("guideDisable")((p, env) => guideDisable(p, env))
-      )
-    ),
-    ObjectMapping(
-      tpe = SubscriptionType,
-      List(
-        RootStream.computeCursor("logMessage") { (p, env) =>
-          logTopic
-            .subscribe(10)
-            .map(_.asJson)
-            .map(circeCursor(p, env, _))
-            .map(Result.success)
-        },
-        RootStream.computeCursor("guideState") { (p, env) =>
-          guideStateTopic
-            .subscribe(10)
-            .map(_.asJson)
-            .map(circeCursor(p, env, _))
-            .map(Result.success)
-        },
-        RootStream.computeCursor("guidersQualityValues") { (p, env) =>
-          guidersQualityTopic
-            .subscribe(10)
-            .map(_.asJson)
-            .map(circeCursor(p, env, _))
-            .map(Result.success)
-        },
-        RootStream.computeCursor("telescopeState") { (p, env) =>
-          telescopeStateTopic
-            .subscribe(10)
-            .map(_.asJson)
-            .map(circeCursor(p, env, _))
-            .map(Result.success)
-        },
-        RootStream.computeCursor("navigateState") { (p, env) =>
-          server.getNavigateStateStream
-            .map(_.asJson)
-            .map(circeCursor(p, env, _))
-            .map(Result.success)
-        }
+  override val typeMappings: TypeMappings = TypeMappings(
+    List(
+      ObjectMapping(
+        tpe = QueryType,
+        fieldMappings = List(
+          RootEffect.computeEncodable("guideState")((p, env) => guideState(p, env)),
+          RootEffect.computeEncodable("telescopeState")((p, env) => telescopeState(p, env)),
+          RootEffect.computeEncodable("navigateState")((p, env) => navigateState(p, env))
+        )
+      ),
+      ObjectMapping(
+        tpe = MutationType,
+        fieldMappings = List(
+          RootEffect.computeEncodable("mountPark")((p, env) => mountPark(p, env)),
+          RootEffect.computeEncodable("mountFollow")((p, env) => mountFollow(p, env)),
+          RootEffect.computeEncodable("rotatorPark")((p, env) => rotatorPark(p, env)),
+          RootEffect.computeEncodable("rotatorFollow")((p, env) => rotatorFollow(p, env)),
+          RootEffect.computeEncodable("rotatorConfig")((p, env) => rotatorConfig(p, env)),
+          RootEffect.computeEncodable("scsFollow")((p, env) => scsFollow(p, env)),
+          RootEffect.computeEncodable("tcsConfig")((p, env) => tcsConfig(p, env)),
+          RootEffect.computeEncodable("slew")((p, env) => slew(p, env)),
+          RootEffect.computeEncodable("swapTarget")((p, env) => swapTarget(p, env)),
+          RootEffect.computeEncodable("restoreTarget")((p, env) => restoreTarget(p, env)),
+          RootEffect.computeEncodable("instrumentSpecifics")((p, env) =>
+            instrumentSpecifics(p, env)
+          ),
+          RootEffect.computeEncodable("oiwfsTarget")((p, env) => oiwfsTarget(p, env)),
+          RootEffect.computeEncodable("oiwfsProbeTracking")((p, env) => oiwfsProbeTracking(p, env)),
+          RootEffect.computeEncodable("oiwfsPark")((p, env) => oiwfsPark(p, env)),
+          RootEffect.computeEncodable("oiwfsFollow")((p, env) => oiwfsFollow(p, env)),
+          RootEffect.computeEncodable("oiwfsObserve")((_, env) => oiwfsObserve(env)),
+          RootEffect.computeEncodable("oiwfsStopObserve")((_, _) => oiwfsStopObserve),
+          RootEffect.computeEncodable("guideEnable")((p, env) => guideEnable(p, env)),
+          RootEffect.computeEncodable("guideDisable")((p, env) => guideDisable(p, env))
+        )
+      ),
+      ObjectMapping(
+        tpe = SubscriptionType,
+        List(
+          RootStream.computeCursor("logMessage") { (p, env) =>
+            logTopic
+              .subscribe(10)
+              .map(_.asJson)
+              .map(circeCursor(p, env, _))
+              .map(Result.success)
+          },
+          RootStream.computeCursor("guideState") { (p, env) =>
+            guideStateTopic
+              .subscribe(10)
+              .map(_.asJson)
+              .map(circeCursor(p, env, _))
+              .map(Result.success)
+          },
+          RootStream.computeCursor("guidersQualityValues") { (p, env) =>
+            guidersQualityTopic
+              .subscribe(10)
+              .map(_.asJson)
+              .map(circeCursor(p, env, _))
+              .map(Result.success)
+          },
+          RootStream.computeCursor("telescopeState") { (p, env) =>
+            telescopeStateTopic
+              .subscribe(10)
+              .map(_.asJson)
+              .map(circeCursor(p, env, _))
+              .map(Result.success)
+          },
+          RootStream.computeCursor("navigateState") { (p, env) =>
+            server.getNavigateStateStream
+              .map(_.asJson)
+              .map(circeCursor(p, env, _))
+              .map(Result.success)
+          }
+        )
       )
     )
   )
