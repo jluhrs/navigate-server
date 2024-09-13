@@ -67,7 +67,7 @@ import scala.jdk.CollectionConverters.given
 
 import NavigateMappings.*
 
-class NavigateMappingsSuit extends CatsEffectSuite {
+class NavigateMappingsSuite extends CatsEffectSuite {
   import NavigateMappingsTest.*
   import NavigateMappingsTest.given
 

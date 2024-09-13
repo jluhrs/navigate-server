@@ -28,7 +28,11 @@ package object encoder {
 
   given Encoder[GuideState] = s => {
     val m2fields: List[(String, Json)] = s.m2Guide match {
-      case M2GuideConfig.M2GuideOff               => List.empty
+      case M2GuideConfig.M2GuideOff               =>
+        List(
+          "m2Inputs" -> Json.Null,
+          "m2Coma"   -> Json.Null
+        )
       case M2GuideConfig.M2GuideOn(coma, sources) =>
         List(
           "m2Inputs" -> sources.asJson,
@@ -36,7 +40,7 @@ package object encoder {
         )
     }
     val m1field: List[(String, Json)]  = s.m1Guide match {
-      case M1GuideConfig.M1GuideOff        => List.empty
+      case M1GuideConfig.M1GuideOff        => List("m1Input" -> Json.Null)
       case M1GuideConfig.M1GuideOn(source) => List("m1Input" -> source.asJson)
     }
 

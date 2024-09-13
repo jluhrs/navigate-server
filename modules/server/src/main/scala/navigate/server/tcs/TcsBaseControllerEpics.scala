@@ -11,7 +11,6 @@ import cats.syntax.all.*
 import lucuma.core.enums.ComaOption
 import lucuma.core.enums.Instrument
 import lucuma.core.enums.LightSinkName
-import lucuma.core.enums.LightSinkName.Ac
 import lucuma.core.enums.M1Source
 import lucuma.core.enums.MountGuideOption
 import lucuma.core.enums.TipTiltSource
@@ -38,7 +37,6 @@ import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
 import navigate.model.enums.HrwfsPickupPosition
 import navigate.model.enums.LightSource
-import navigate.model.enums.LightSource.Sky
 import navigate.model.enums.ShutterMode
 import navigate.server
 import navigate.server.ApplyCommandResult

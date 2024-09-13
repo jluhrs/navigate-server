@@ -4,7 +4,6 @@
 package navigate.web.server.common
 
 import cats.effect.Sync
-import cats.syntax.all.*
 
 import java.nio.file.Files
 import java.nio.file.Path

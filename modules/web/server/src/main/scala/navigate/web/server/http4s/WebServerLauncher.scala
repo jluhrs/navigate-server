@@ -51,7 +51,6 @@ import pureconfig.ConfigSource
 
 import java.io.FileInputStream
 import java.nio.file.Files as JavaFiles
-import java.nio.file.Path as FilePath
 import java.security.KeyStore
 import java.security.Security
 import java.util.Locale
