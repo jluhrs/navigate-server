@@ -20,6 +20,9 @@ ThisBuild / resolvers ++= Seq(
 
 Global / resolvers ++= Resolver.sonatypeOssRepos("public")
 
+// Uncomment for local testing
+// ThisBuild / resolvers += "Local Repository" at "file://"+Path.userHome.absolutePath+"/.ivy2/local"
+
 ThisBuild / dockerExposedPorts ++= Seq(7070, 7071) // Must match deployed app.conf web-server.port
 ThisBuild / dockerBaseImage := "eclipse-temurin:17-jre"
 
