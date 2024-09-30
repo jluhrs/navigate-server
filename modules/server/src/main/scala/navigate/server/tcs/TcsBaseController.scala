@@ -46,6 +46,8 @@ trait TcsBaseController[F[_]] {
   def disableGuide: F[ApplyCommandResult]
   def oiwfsObserve(exposureTime:  TimeSpan): F[ApplyCommandResult]
   def oiwfsStopObserve: F[ApplyCommandResult]
+  def hrwfsObserve(exposureTime:  TimeSpan): F[ApplyCommandResult]
+  def hrwfsStopObserve: F[ApplyCommandResult]
   def baffles(
     central:    CentralBafflePosition,
     deployable: DeployableBafflePosition

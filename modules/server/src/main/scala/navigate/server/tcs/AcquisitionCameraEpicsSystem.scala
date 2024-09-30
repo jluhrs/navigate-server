@@ -3,34 +3,48 @@
 
 package navigate.server.tcs
 
-import cats.Applicative
+import cats.Monad
+import cats.Parallel
 import cats.effect.Resource
+import cats.effect.Temporal
+import cats.effect.std.Dispatcher
 import cats.syntax.all.*
 import eu.timepit.refined.types.string.NonEmptyString
 import lucuma.core.math.Wavelength
 import navigate.epics.EpicsService
-import navigate.epics.VerifiedEpics.VerifiedEpics
-import navigate.epics.VerifiedEpics.readChannel
+import navigate.epics.VerifiedEpics.*
 import navigate.model.enums.AcFilter
+import navigate.model.enums.AcLens
+import navigate.model.enums.AcNdFilter
+import navigate.server.ApplyCommandResult
+import navigate.server.acm.CadDirective
 import navigate.server.acm.Decoder
+import navigate.server.acm.GeminiApplyCommand
+import navigate.server.acm.ParameterList.*
+import navigate.server.acm.ParameterList.ParameterList
+import navigate.server.acm.writeCadParam
 import navigate.server.tcs.AcquisitionCameraEpicsSystem.AcquisitionCameraStatus
+
+import scala.concurrent.duration.FiniteDuration
 
 trait AcquisitionCameraEpicsSystem[F[_]] {
   val status: AcquisitionCameraStatus[F]
+
+  def startCommand(
+    timeout: FiniteDuration
+  ): AcquisitionCameraEpicsSystem.AcquisitionCameraCommands[F]
 }
 
 object AcquisitionCameraEpicsSystem {
 
-  val acFilterDec: Decoder[String, AcFilter] = new Decoder[String, AcFilter] {
-    override def decode(b: String): AcFilter = b match {
-      case "neutral" => AcFilter.Neutral
-      case "U-red1"  => AcFilter.U_Red1
-      case "B-blue"  => AcFilter.B_Blue
-      case "V-green" => AcFilter.V_Green
-      case "R-red2"  => AcFilter.R_Red2
-      case "I-red3"  => AcFilter.I_Red3
-      case _         => AcFilter.Neutral
-    }
+  val acFilterDec: Decoder[String, AcFilter] = {
+    case "neutral" => AcFilter.Neutral
+    case "U-red1"  => AcFilter.U_Red1
+    case "B-blue"  => AcFilter.B_Blue
+    case "V-green" => AcFilter.V_Green
+    case "R-red2"  => AcFilter.R_Red2
+    case "I-red3"  => AcFilter.I_Red3
+    case _         => AcFilter.Neutral
   }
 
   extension (flt: AcFilter) {
@@ -50,20 +64,139 @@ object AcquisitionCameraEpicsSystem {
     def filter: VerifiedEpics[F, F, AcFilter]
   }
 
-  private[tcs] def buildSystem[F[_]: Applicative](
-    chs: AcquisitionCameraChannels[F]
+  trait AcquisitionCameraCommands[F[_]] {
+    def post: VerifiedEpics[F, F, ApplyCommandResult]
+    def setLens(lens:            AcLens): AcquisitionCameraCommands[F]
+    def setNdFilter(filter:      AcNdFilter): AcquisitionCameraCommands[F]
+    def setColFilter(filter:     AcFilter): AcquisitionCameraCommands[F]
+    def setExposureTime(expTime: Double): AcquisitionCameraCommands[F]
+    def setNumberOfFrames(cnt:   Int): AcquisitionCameraCommands[F]
+    def setOutput(opt:           Int): AcquisitionCameraCommands[F]
+    def setDirectory(dir:        String): AcquisitionCameraCommands[F]
+    def setFilename(file:        String): AcquisitionCameraCommands[F]
+    def simFile(file:            String): AcquisitionCameraCommands[F]
+    def setQuicklookStream(name: String): AcquisitionCameraCommands[F]
+    def setDhsOption(opt:        Int): AcquisitionCameraCommands[F]
+    def setBinning(bin:          Int): AcquisitionCameraCommands[F]
+    def enableWindow(enable:     Int): AcquisitionCameraCommands[F]
+    def setWindowX(v:            Int): AcquisitionCameraCommands[F]
+    def setWindowY(v:            Int): AcquisitionCameraCommands[F]
+    def setWindowWidth(v:        Int): AcquisitionCameraCommands[F]
+    def setWindowHeight(v:       Int): AcquisitionCameraCommands[F]
+    def setDhsLabel(label:       String): AcquisitionCameraCommands[F]
+    def stop: AcquisitionCameraCommands[F]
+  }
+
+  case class AcquisitionCameraCommandsImpl[F[_]: Monad: Parallel](
+    applyCmd: GeminiApplyCommand[F],
+    chs:      AcquisitionCameraChannels[F],
+    timeout:  FiniteDuration,
+    params:   ParameterList[F]
+  ) extends AcquisitionCameraCommands[F] {
+    private def addParam(v: VerifiedEpics[F, F, Unit]): AcquisitionCameraCommands[F] =
+      this.copy(params = params :+ v)
+
+    override def post: VerifiedEpics[F, F, ApplyCommandResult] =
+      params.compile *> applyCmd.post(timeout)
+
+    override def setLens(lens: AcLens): AcquisitionCameraCommands[F] = addParam(
+      writeCadParam(chs.telltale, chs.lens)(lens)
+    )
+
+    override def setNdFilter(filter: AcNdFilter): AcquisitionCameraCommands[F] = addParam(
+      writeCadParam(chs.telltale, chs.ndFilter)(filter)
+    )
+
+    override def setColFilter(filter: AcFilter): AcquisitionCameraCommands[F] = addParam(
+      writeCadParam(chs.telltale, chs.filter)(filter)
+    )
+
+    override def setExposureTime(expTime: Double): AcquisitionCameraCommands[F] = addParam(
+      writeCadParam(chs.telltale, chs.expTime)(expTime)
+    )
+
+    override def setNumberOfFrames(cnt: Int): AcquisitionCameraCommands[F] = addParam(
+      writeCadParam(chs.telltale, chs.frameCount)(cnt)
+    )
+
+    override def setOutput(opt: Int): AcquisitionCameraCommands[F] = addParam(
+      writeCadParam(chs.telltale, chs.output)(opt)
+    )
+
+    override def setDirectory(dir: String): AcquisitionCameraCommands[F] = addParam(
+      writeCadParam(chs.telltale, chs.directory)(dir)
+    )
+
+    override def setFilename(file: String): AcquisitionCameraCommands[F] = addParam(
+      writeCadParam(chs.telltale, chs.fileName)(file)
+    )
+
+    override def simFile(file: String): AcquisitionCameraCommands[F] = addParam(
+      writeCadParam(chs.telltale, chs.simFile)(file)
+    )
+
+    override def setQuicklookStream(name: String): AcquisitionCameraCommands[F] = addParam(
+      writeCadParam(chs.telltale, chs.dhsStream)(name)
+    )
+
+    override def setDhsOption(opt: Int): AcquisitionCameraCommands[F] = addParam(
+      writeCadParam(chs.telltale, chs.dhsOption)(opt)
+    )
+
+    override def setBinning(bin: Int): AcquisitionCameraCommands[F] = addParam(
+      writeCadParam(chs.telltale, chs.binning)(bin)
+    )
+
+    override def enableWindow(enable: Int): AcquisitionCameraCommands[F] = addParam(
+      writeCadParam(chs.telltale, chs.windowing)(enable)
+    )
+
+    override def setWindowX(v: Int): AcquisitionCameraCommands[F] = addParam(
+      writeCadParam(chs.telltale, chs.centerX)(v)
+    )
+
+    override def setWindowY(v: Int): AcquisitionCameraCommands[F] = addParam(
+      writeCadParam(chs.telltale, chs.centerY)(v)
+    )
+
+    override def setWindowWidth(v: Int): AcquisitionCameraCommands[F] = addParam(
+      writeCadParam(chs.telltale, chs.width)(v)
+    )
+
+    override def setWindowHeight(v: Int): AcquisitionCameraCommands[F] = addParam(
+      writeCadParam(chs.telltale, chs.height)(v)
+    )
+
+    override def setDhsLabel(label: String): AcquisitionCameraCommands[F] = addParam(
+      writeCadParam(chs.telltale, chs.dhsLabel)(label)
+    )
+
+    override def stop: AcquisitionCameraCommands[F] = addParam(
+      writeChannel(chs.telltale, chs.stopDir)(CadDirective.MARK.pure[F])
+    )
+  }
+
+  private[tcs] def buildSystem[F[_]: Monad: Parallel](
+    applyCmd: GeminiApplyCommand[F],
+    chs:      AcquisitionCameraChannels[F]
   ): AcquisitionCameraEpicsSystem[F] =
     new AcquisitionCameraEpicsSystem[F] {
       override val status: AcquisitionCameraStatus[F] = new AcquisitionCameraStatus[F] {
         override def filter: VerifiedEpics[F, F, AcFilter] =
-          readChannel(chs.telltale, chs.filter).map(_.map(acFilterDec.decode))
+          readChannel(chs.telltale, chs.filterReadout).map(_.map(acFilterDec.decode))
       }
+
+      override def startCommand(timeout: FiniteDuration): AcquisitionCameraCommands[F] =
+        AcquisitionCameraCommandsImpl(applyCmd, chs, timeout, List.empty)
     }
 
-  def build[F[_]: Applicative](
+  def build[F[_]: Monad: Dispatcher: Temporal: Parallel](
     service: EpicsService[F],
     top:     NonEmptyString
   ): Resource[F, AcquisitionCameraEpicsSystem[F]] =
-    AcquisitionCameraChannels.build(service, top).map(buildSystem)
+    for {
+      chs   <- AcquisitionCameraChannels.build(service, top)
+      apply <- GeminiApplyCommand.build(service, chs.telltale, s"${top}apply", s"${top}applyC")
+    } yield buildSystem(apply, chs)
 
 }

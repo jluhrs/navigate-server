@@ -939,6 +939,28 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
 
     (p > 0).option(p)
   }
+
+  private val hrwfsStream: String = "hrwfsScience"
+
+  override def hrwfsObserve(exposureTime: TimeSpan): F[ApplyCommandResult] =
+    (sys.hrwfs
+      .startCommand(timeout)
+      .setExposureTime(exposureTime.toSeconds.toDouble)
+      .setNumberOfFrames(-1)
+      .setQuicklookStream(hrwfsStream)
+      .setDhsOption(2)
+      .post *>
+      sys.hrwfs
+        .startCommand(timeout)
+        .setDhsLabel("NONE")
+        .post).verifiedRun(ConnectionTimeout)
+
+  override def hrwfsStopObserve: F[ApplyCommandResult] =
+    sys.hrwfs
+      .startCommand(timeout)
+      .stop
+      .post
+      .verifiedRun(ConnectionTimeout)
 }
 
 object TcsBaseControllerEpics {
