@@ -64,6 +64,8 @@ object NavigateCommand {
   case object DisableGuide                extends NavigateCommand
   case object OiwfsObserve                extends NavigateCommand
   case object OiwfsStopObserve            extends NavigateCommand
+  case object AcObserve                   extends NavigateCommand
+  case object AcStopObserve               extends NavigateCommand
 
   given Eq[NavigateCommand] = Eq.fromUniversalEquals
 
@@ -112,6 +114,8 @@ object NavigateCommand {
       case DisableGuide          => "Guide Disable"
       case OiwfsObserve          => "Oiwfs Start Exposures"
       case OiwfsStopObserve      => "Oiwfs Stop Exposures"
+      case AcObserve             => "Acquisition Camera Start Exposures"
+      case AcStopObserve         => "Acquisition Camera Stop Exposures"
     }
   }
 

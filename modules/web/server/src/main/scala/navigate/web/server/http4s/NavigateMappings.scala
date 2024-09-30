@@ -363,6 +363,31 @@ class NavigateMappings[F[_]: Sync](
         )
       )
 
+  def acObserve(env: Env): F[Result[OperationOutcome]] =
+    env
+      .get[TimeSpan]("period")
+      .map { p =>
+        server
+          .acObserve(p)
+          .attempt
+          .map(x =>
+            Result.success(
+              x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+            )
+          )
+      }
+      .getOrElse(
+        Result.failure[OperationOutcome]("acObserve parameter could not be parsed.").pure[F]
+      )
+
+  def acStopObserve: F[Result[OperationOutcome]] =
+    server.acStopObserve.attempt
+      .map(x =>
+        Result.Success(
+          x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+        )
+      )
+
   def guideEnable(p: Path, env: Env): F[Result[OperationOutcome]] =
     env
       .get[TelescopeGuideConfig]("config")
@@ -475,6 +500,15 @@ class NavigateMappings[F[_]: Sync](
              )
         _ <- Elab.env("period" -> x)
       } yield ()
+    case (MutationType, "acObserve", List(Binding("period", ObjectValue(fields))))          =>
+      for {
+        x <- Elab.liftR(
+               parseTimeSpan(fields).toResult(
+                 "Could not parse acObserve parameters."
+               )
+             )
+        _ <- Elab.env("period" -> x)
+      } yield ()
     case (MutationType, "guideEnable", List(Binding("config", ObjectValue(fields))))        =>
       for {
         x <- Elab.liftR(
@@ -518,6 +552,8 @@ class NavigateMappings[F[_]: Sync](
           RootEffect.computeEncodable("oiwfsFollow")((p, env) => oiwfsFollow(p, env)),
           RootEffect.computeEncodable("oiwfsObserve")((_, env) => oiwfsObserve(env)),
           RootEffect.computeEncodable("oiwfsStopObserve")((_, _) => oiwfsStopObserve),
+          RootEffect.computeEncodable("acObserve")((_, env) => acObserve(env)),
+          RootEffect.computeEncodable("acStopObserve")((_, _) => acStopObserve),
           RootEffect.computeEncodable("guideEnable")((p, env) => guideEnable(p, env)),
           RootEffect.computeEncodable("guideDisable")((p, env) => guideDisable(p, env))
         )

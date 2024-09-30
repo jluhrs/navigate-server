@@ -95,6 +95,8 @@ trait NavigateEngine[F[_]] {
   def disableGuide: F[Unit]
   def oiwfsObserve(period:                           TimeSpan): F[Unit]
   def oiwfsStopObserve: F[Unit]
+  def acObserve(period:                              TimeSpan): F[Unit]
+  def acStopObserve: F[Unit]
   def swapTarget(swapConfig:                         SwapConfig): F[Unit]
   def restoreTarget(config:                          TcsConfig): F[Unit]
   def getGuideState: F[GuideState]
@@ -418,6 +420,30 @@ object NavigateEngine {
       Focus[State](_.oiwfsStopObserve)
     )
 
+    override def acObserve(period: TimeSpan): F[Unit] = command(
+      engine,
+      AcObserve,
+      transformCommand(
+        AcObserve,
+        Handler.get[F, State, ApplyCommandResult].flatMap { st =>
+          Handler.fromStream(
+            Stream.eval(
+              systems.tcsCommon.hrwfsObserve(period)
+            )
+          )
+        },
+        Focus[State](_.acObserve)
+      ),
+      Focus[State](_.acObserve)
+    )
+
+    override def acStopObserve: F[Unit] = simpleCommand(
+      engine,
+      AcStopObserve,
+      systems.tcsCommon.hrwfsStopObserve,
+      Focus[State](_.acStopObserve)
+    )
+
     override def getGuideState: F[GuideState] = systems.tcsCommon.getGuideState
 
     override def getGuidersQuality: F[GuidersQualityValues] = systems.tcsCommon.getGuideQuality
@@ -473,6 +499,8 @@ object NavigateEngine {
     disableGuide:                  Boolean,
     oiwfsObserve:                  Boolean,
     oiwfsStopObserve:              Boolean,
+    acObserve:                     Boolean,
+    acStopObserve:                 Boolean,
     guideConfig:                   GuideConfig,
     swapInProgress:                Boolean,
     onSwappedTarget:               Boolean
@@ -523,6 +551,8 @@ object NavigateEngine {
     disableGuide = false,
     oiwfsObserve = false,
     oiwfsStopObserve = false,
+    acObserve = false,
+    acStopObserve = false,
     guideConfig = GuideConfig.defaultGuideConfig,
     swapInProgress = false,
     onSwappedTarget = false
