@@ -68,10 +68,7 @@ object AgsEpicsSystem {
 
         override def p1Follow: VerifiedEpics[F, F, FollowStatus] =
           VerifiedEpics.readChannel(channels.telltale, channels.p1Follow).map {
-            _.map {
-              case "ON" => Following
-              case _    => NotFollowing
-            }
+            _.map(decodeFollow)
           }
 
         override def p2Parked: VerifiedEpics[F, F, ParkStatus] = VerifiedEpics
@@ -80,10 +77,7 @@ object AgsEpicsSystem {
 
         override def p2Follow: VerifiedEpics[F, F, FollowStatus] =
           VerifiedEpics.readChannel(channels.telltale, channels.p2Follow).map {
-            _.map {
-              case "ON" => Following
-              case _    => NotFollowing
-            }
+            _.map(decodeFollow)
           }
 
         override def oiParked: VerifiedEpics[F, F, ParkStatus] = VerifiedEpics
@@ -92,11 +86,13 @@ object AgsEpicsSystem {
 
         override def oiFollow: VerifiedEpics[F, F, FollowStatus] =
           VerifiedEpics.readChannel(channels.telltale, channels.oiFollow).map {
-            _.map {
-              case "ON" => Following
-              case _    => NotFollowing
-            }
+            _.map(decodeFollow)
           }
+
+        private def decodeFollow(str: String): FollowStatus = str.toUpperCase.trim match {
+          case "ON" => Following
+          case _    => NotFollowing
+        }
 
         override def flamingos2Port: VerifiedEpics[F, F, Int] =
           VerifiedEpics.readChannel(channels.telltale, channels.instrumentPorts.f2)
