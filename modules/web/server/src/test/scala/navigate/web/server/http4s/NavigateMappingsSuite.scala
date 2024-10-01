@@ -994,6 +994,49 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     )
   }
 
+  test("Process ac observe command") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      gd  <- Topic[IO, GuideState]
+      gq  <- Topic[IO, GuidersQualityValues]
+      ts  <- Topic[IO, TelescopeState]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts)
+      r   <- mp.compileAndRun(
+               """
+          |mutation { acObserve( period: {
+          |    milliseconds: 20
+          |  }
+          |) {
+          |  result
+          |} }
+          |""".stripMargin
+             )
+    } yield assert(
+      extractResult[OperationOutcome](r, "acObserve").exists(_ === OperationOutcome.success)
+    )
+  }
+
+  test("Process ac stop observe command") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      gd  <- Topic[IO, GuideState]
+      gq  <- Topic[IO, GuidersQualityValues]
+      ts  <- Topic[IO, TelescopeState]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts)
+      r   <- mp.compileAndRun(
+               """
+          |mutation { acStopObserve {
+          |  result
+          |} }
+          |""".stripMargin
+             )
+    } yield assert(
+      extractResult[OperationOutcome](r, "acStopObserve").exists(_ === OperationOutcome.success)
+    )
+  }
+
   test("Set probeGuide OIWFS to OIWFS") {
     for {
       eng <- buildServer
@@ -1152,6 +1195,10 @@ object NavigateMappingsTest {
       override def oiwfsObserve(period: TimeSpan): IO[Unit] = IO.unit
 
       override def oiwfsStopObserve: IO[Unit] = IO.unit
+
+      override def acObserve(period: TimeSpan): IO[Unit] = IO.unit
+
+      override def acStopObserve: IO[Unit] = IO.unit
 
       override def getGuideState: IO[GuideState] = r.get
 

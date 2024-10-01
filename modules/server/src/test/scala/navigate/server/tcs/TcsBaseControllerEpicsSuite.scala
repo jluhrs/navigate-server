@@ -922,6 +922,37 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     }
   }
 
+  test("Start HRWFS exposures") {
+    val testVal = TimeSpan.unsafeFromMicroseconds(12345)
+
+    for {
+      x        <- createController
+      (st, ctr) = x
+      _        <- ctr.hrwfsObserve(testVal)
+      rs       <- st.ac.get
+    } yield {
+      assert(rs.expTime.connected)
+      assert(rs.dhsStream.connected)
+      assert(rs.dhsOption.connected)
+      assert(rs.frameCount.connected)
+      assert(rs.expTime.connected)
+      assertEquals(rs.expTime.value.flatMap(_.toDoubleOption), testVal.toSeconds.toDouble.some)
+      assertEquals(rs.frameCount.value.flatMap(_.toIntOption), -1.some)
+    }
+  }
+
+  test("Stop HRWFS exposures") {
+    for {
+      x        <- createController
+      (st, ctr) = x
+      _        <- ctr.hrwfsStopObserve
+      rs       <- st.ac.get
+    } yield {
+      assert(rs.stopDir.connected)
+      assertEquals(rs.stopDir.value, CadDirective.MARK.some)
+    }
+  }
+
   private val defaultGuideState = GuideConfigState(
     pwfs1Integrating = TestChannel.State.of(BinaryYesNo.No),
     pwfs2Integrating = TestChannel.State.of(BinaryYesNo.No),
@@ -1156,7 +1187,8 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     mcs:  Ref[F, TestMcsEpicsSystem.State],
     scs:  Ref[F, TestScsEpicsSystem.State],
     crcs: Ref[F, TestCrcsEpicsSystem.State],
-    ags:  Ref[F, TestAgsEpicsSystem.State]
+    ags:  Ref[F, TestAgsEpicsSystem.State],
+    ac:   Ref[F, TestAcquisitionCameraEpicsSystem.State]
   )
 
   def createController: IO[(StateRefs[IO], TcsBaseControllerEpics[IO])] = for {
@@ -1173,7 +1205,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
               TestAcquisitionCameraEpicsSystem.defaultState
             )
   } yield (
-    StateRefs(tcs, p1, p2, oi, mcs, scs, crcs, ags),
+    StateRefs(tcs, p1, p2, oi, mcs, scs, crcs, ags, ac),
     new TcsBaseControllerEpics[IO](
       EpicsSystems(
         TestTcsEpicsSystem.build(tcs),

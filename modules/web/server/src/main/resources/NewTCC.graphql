@@ -248,6 +248,8 @@ type Mutation {
     oiwfsFollow(enable: Boolean!): OperationOutcome!
     oiwfsObserve(period: TimeSpanInput!): OperationOutcome!
     oiwfsStopObserve: OperationOutcome!
+    acObserve(period: TimeSpanInput!): OperationOutcome!
+    acStopObserve: OperationOutcome!
     guideEnable(config: GuideConfigurationInput!): OperationOutcome!
     guideDisable: OperationOutcome!
 }

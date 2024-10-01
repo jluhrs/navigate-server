@@ -183,4 +183,9 @@ class TcsBaseControllerSim[F[_]: Sync](
 
   override def restoreTarget(config: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
     ApplyCommandResult.Completed.pure[F]
+
+  override def hrwfsObserve(exposureTime: TimeSpan): F[ApplyCommandResult] =
+    ApplyCommandResult.Completed.pure[F]
+
+  override def hrwfsStopObserve: F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
 }
