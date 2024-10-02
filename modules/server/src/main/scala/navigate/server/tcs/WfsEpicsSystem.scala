@@ -63,12 +63,20 @@ object WfsEpicsSystem {
     service:             EpicsService[F],
     sysName:             String,
     top:                 NonEmptyString,
+    gainResetName:       NonEmptyString = "dc:initSigInit.J".refined,
     fluxName:            NonEmptyString = "dc:fgDiag1PW.VALQ".refined,
     centroidName:        NonEmptyString = "dc:fgDiag1PW.VALB".refined,
     telltaleChannelName: NonEmptyString = "health.VAL".refined
   ): Resource[F, WfsEpicsSystem[F]] = for {
     channels <-
-      WfsChannels.build(service, sysName, top, telltaleChannelName, fluxName, centroidName)
+      WfsChannels.build(service,
+                        sysName,
+                        top,
+                        telltaleChannelName,
+                        gainResetName,
+                        fluxName,
+                        centroidName
+      )
   } yield buildSystem(channels)
 
   trait WfsEpics[F[_]] {

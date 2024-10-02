@@ -24,12 +24,13 @@ case class WfsChannels[F[_]](
 
 object WfsChannels {
   def build[F[_]](
-    service:      EpicsService[F],
-    sysName:      String,
-    top:          NonEmptyString,
-    telltaleName: NonEmptyString,
-    fluxName:     NonEmptyString,
-    centroidName: NonEmptyString
+    service:       EpicsService[F],
+    sysName:       String,
+    top:           NonEmptyString,
+    telltaleName:  NonEmptyString,
+    gainResetName: NonEmptyString,
+    fluxName:      NonEmptyString,
+    centroidName:  NonEmptyString
   ): Resource[F, WfsChannels[F]] =
     for {
       tell   <- service.getChannel[String](top, telltaleName.value).map(TelltaleChannel(sysName, _))
