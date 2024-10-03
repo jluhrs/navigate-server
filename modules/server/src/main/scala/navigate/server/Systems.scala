@@ -45,6 +45,7 @@ object Systems {
                     epicsSrv,
                     "PWFS1",
                     readTop(tops, "pwfs1".refined),
+                    "dc:initSigInit.J".refined,
                     "dc:fgDiag6P1.VALH".refined,
                     "dc:fgDiag1P1.VALB".refined
                   )
@@ -52,6 +53,7 @@ object Systems {
                     epicsSrv,
                     "PWFS2",
                     readTop(tops, "pwfs2".refined),
+                    "dc:initSigInit.J".refined,
                     "dc:fgDiag1P2.VALQ".refined,
                     "dc:fgDiag1P2.VALB".refined
                   )
@@ -59,6 +61,7 @@ object Systems {
                     epicsSrv,
                     "OIWFS",
                     readTop(tops, "oiwfs".refined),
+                    "dc:initSigInitFgGain.PROC".refined,
                     "dc:fgDiag1P2.VALQ".refined,
                     "dc:fgDiag1P2.VALB".refined,
                     "dc:seeing.VAL".refined
@@ -84,24 +87,26 @@ object Systems {
           tcs  <- TcsEpicsSystem.build(epicsSrv, tops)
           p1   <- WfsEpicsSystem.build(epicsSrv, "PWFS1", readTop(tops, "pwfs1".refined))
           p2   <- WfsEpicsSystem.build(epicsSrv, "PWFS2", readTop(tops, "pwfs2".refined))
-          oi   <- WfsEpicsSystem.build(epicsSrv,
-                                       "OIWFS",
-                                       readTop(tops, "oiwfs".refined),
-                                       "dc:fgDiag1Oi.VALQ".refined,
-                                       "dc:fgDiag1Oi.VALB".refined,
-                                       "dc:seeing.VAL".refined
+          oi   <- WfsEpicsSystem.build(
+                    epicsSrv,
+                    "OIWFS",
+                    readTop(tops, "oiwfs".refined),
+                    "dc:initSigInitFgGain.PROC".refined,
+                    "dc:fgDiag1Oi.VALQ".refined,
+                    "dc:fgDiag1Oi.VALB".refined,
+                    "dc:seeing.VAL".refined
                   )
           mcs  <- McsEpicsSystem.build(epicsSrv, readTop(tops, "mc".refined))
           scs  <- ScsEpicsSystem.build(epicsSrv, readTop(tops, "m2".refined))
           crcs <- CrcsEpicsSystem.build(epicsSrv, readTop(tops, "cr".refined))
           ags  <- AgsEpicsSystem.build(epicsSrv, readTop(tops, "ag".refined))
           hr   <- AcquisitionCameraEpicsSystem.build(epicsSrv, readTop(tops, "hrwfs".refined))
-          r    <-
-            Resource.eval(
-              TcsNorthControllerEpics.build(EpicsSystems(tcs, p1, p2, oi, mcs, scs, crcs, ags, hr),
-                                            conf.ioTimeout
-              )
-            )
+          r    <- Resource.eval(
+                    TcsNorthControllerEpics.build(
+                      EpicsSystems(tcs, p1, p2, oi, mcs, scs, crcs, ags, hr),
+                      conf.ioTimeout
+                    )
+                  )
         } yield r
       else
         Resource.eval(TcsNorthControllerSim.build)
