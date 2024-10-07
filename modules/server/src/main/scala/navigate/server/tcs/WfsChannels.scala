@@ -38,7 +38,7 @@ object WfsChannels {
       tiltG  <- service.getChannel[String](top, "dc:detSigInitFgGain.B")
       focusG <- service.getChannel[String](top, "dc:detSigInitFgGain.C")
       gDir   <- service.getChannel[CadDirective](top, "dc:detSigInitFgGain.DIR")
-      rst    <- service.getChannel[Double](top, "dc:initSigInit.J")
+      rst    <- service.getChannel[Double](top, gainResetName.value)
       fx     <- service.getChannel[Int](top, fluxName.value)
       ct     <- service.getChannel[Int](top, centroidName.value)
     } yield WfsChannels[F](
