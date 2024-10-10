@@ -7,7 +7,7 @@ case class EpicsSystems[F[_]](
   tcsEpics: TcsEpicsSystem[F],
   pwfs1:    WfsEpicsSystem[F],
   pwfs2:    WfsEpicsSystem[F],
-  oiwfs:    WfsEpicsSystem[F],
+  oiwfs:    OiwfsEpicsSystem[F],
   mcs:      McsEpicsSystem[F],
   scs:      ScsEpicsSystem[F],
   crcs:     CrcsEpicsSystem[F],

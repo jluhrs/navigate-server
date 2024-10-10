@@ -613,7 +613,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       r1       <- st.tcs.get
       p1_1     <- st.p1.get
       p2_1     <- st.p2.get
-      oi_1     <- st.oi.get
+      oi_1     <- st.oiw.get
       _        <- ctr.disableGuide
       r2       <- st.tcs.get
     } yield {
@@ -691,7 +691,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       r1       <- st.tcs.get
       p1_1     <- st.p1.get
       p2_1     <- st.p2.get
-      oi_1     <- st.oi.get
+      oi_1     <- st.oiw.get
       _        <- ctr.disableGuide
       r2       <- st.tcs.get
     } yield {
@@ -907,6 +907,10 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
                    testVal.toSeconds.toDouble.some
       )
       assertEquals(rs.oiWfs.observe.numberOfExposures.value.flatMap(_.toIntOption), -1.some)
+      rs.oiWfs.observe.interval.value
+        .flatMap(_.toDoubleOption)
+        .map(assertEqualsDouble(_, testVal.toSeconds.toDouble, 1e-6))
+        .getOrElse(fail("No interval value set"))
     }
   }
 
@@ -1072,7 +1076,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
                       centroid = TestChannel.State.of(testGuideQuality.pwfs2.centroidDetected.fold(1, 0))
                     )
                   )
-      _        <- st.oi.update(
+      _        <- st.oiw.update(
                     _.copy(
                       flux = TestChannel.State.of(testGuideQuality.oiwfs.flux),
                       centroid = TestChannel.State.of(testGuideQuality.oiwfs.centroidDetected.fold(1, 0))
@@ -1081,7 +1085,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       g        <- ctr.getGuideQuality
       rp1      <- st.p1.get
       rp2      <- st.p2.get
-      roi      <- st.oi.get
+      roi      <- st.oiw.get
     } yield {
       assert(rp1.flux.connected)
       assert(rp1.centroid.connected)
@@ -1109,49 +1113,57 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       _        <- st.tcs.update(_.focus(_.guideStatus).replace(defaultGuideState))
       _        <- ctr.oiwfsObserve(testExpTime)
       r00      <- st.tcs.get
+      s00      <- st.oi.get
       _        <- ctr.enableGuide(guideCfg)
       r01      <- st.tcs.get
+      s01      <- st.oi.get
       _        <- st.tcs.update(_.focus(_.guideStatus).replace(guideWithOiState))
       _        <- ctr.oiwfsStopObserve
       r02      <- st.tcs.get
+      s02      <- st.oi.get
       _        <- ctr.disableGuide
       r03      <- st.tcs.get
+      s03      <- st.oi.get
       _        <- st.tcs.update(_.focus(_.guideStatus).replace(defaultGuideState))
       _        <- ctr.enableGuide(guideCfg)
       r10      <- st.tcs.get
+      s10      <- st.oi.get
       _        <- st.tcs.update(_.focus(_.guideStatus).replace(guideWithOiState))
       _        <- ctr.oiwfsObserve(testExpTime)
       r11      <- st.tcs.get
+      s11      <- st.oi.get
       _        <- ctr.disableGuide
       r12      <- st.tcs.get
+      s12      <- st.oi.get
       _        <- st.tcs.update(_.focus(_.guideStatus).replace(defaultGuideState))
       _        <- ctr.oiwfsStopObserve
       r13      <- st.tcs.get
+      s13      <- st.oi.get
     } yield {
       assertEquals(r00.oiWfs.observe.output.value, "QL".some)
       assertEquals(r00.oiWfs.observe.options.value, "DHS".some)
-      assertEquals(r00.oiWfs.closedLoop.zernikes2m2.value, "0".some)
+      assertEquals(s00.z2m2.value, "0".some)
       assertEquals(r01.oiWfs.observe.output.value, "".some)
       assertEquals(r01.oiWfs.observe.options.value, "NONE".some)
-      assertEquals(r01.oiWfs.closedLoop.zernikes2m2.value, "1".some)
+      assertEquals(s01.z2m2.value, "1".some)
       assertEquals(r02.oiWfs.observe.output.value, "".some)
       assertEquals(r02.oiWfs.observe.options.value, "NONE".some)
-      assertEquals(r02.oiWfs.closedLoop.zernikes2m2.value, "1".some)
+      assertEquals(s02.z2m2.value, "1".some)
       assertEquals(r03.oiWfs.observe.output.value, "".some)
       assertEquals(r03.oiWfs.observe.options.value, "NONE".some)
-      assertEquals(r03.oiWfs.closedLoop.zernikes2m2.value, "1".some)
+      assertEquals(s03.z2m2.value, "1".some)
       assertEquals(r10.oiWfs.observe.output.value, "".some)
       assertEquals(r10.oiWfs.observe.options.value, "NONE".some)
-      assertEquals(r10.oiWfs.closedLoop.zernikes2m2.value, "1".some)
+      assertEquals(s10.z2m2.value, "1".some)
       assertEquals(r11.oiWfs.observe.output.value, "".some)
       assertEquals(r11.oiWfs.observe.options.value, "NONE".some)
-      assertEquals(r11.oiWfs.closedLoop.zernikes2m2.value, "1".some)
+      assertEquals(s11.z2m2.value, "1".some)
       assertEquals(r12.oiWfs.observe.output.value, "QL".some)
       assertEquals(r12.oiWfs.observe.options.value, "DHS".some)
-      assertEquals(r12.oiWfs.closedLoop.zernikes2m2.value, "0".some)
+      assertEquals(s12.z2m2.value, "0".some)
       assertEquals(r13.oiWfs.observe.output.value, "QL".some)
       assertEquals(r13.oiWfs.observe.options.value, "DHS".some)
-      assertEquals(r13.oiWfs.closedLoop.zernikes2m2.value, "0".some)
+      assertEquals(s13.z2m2.value, "0".some)
     }
   }
 
@@ -1183,7 +1195,8 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     tcs:  Ref[F, TestTcsEpicsSystem.State],
     p1:   Ref[F, TestWfsEpicsSystem.State],
     p2:   Ref[F, TestWfsEpicsSystem.State],
-    oi:   Ref[F, TestWfsEpicsSystem.State],
+    oiw:  Ref[F, TestWfsEpicsSystem.State],
+    oi:   Ref[F, TestOiwfsEpicsSystem.State],
     mcs:  Ref[F, TestMcsEpicsSystem.State],
     scs:  Ref[F, TestScsEpicsSystem.State],
     crcs: Ref[F, TestCrcsEpicsSystem.State],
@@ -1195,7 +1208,8 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     tcs  <- Ref.of[IO, TestTcsEpicsSystem.State](TestTcsEpicsSystem.defaultState)
     p1   <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
     p2   <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
-    oi   <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
+    oiw  <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
+    oi   <- Ref.of[IO, TestOiwfsEpicsSystem.State](TestOiwfsEpicsSystem.defaultState)
     mcs  <- Ref.of[IO, TestMcsEpicsSystem.State](TestMcsEpicsSystem.defaultState)
     scs  <- Ref.of[IO, TestScsEpicsSystem.State](TestScsEpicsSystem.defaultState)
     crcs <- Ref.of[IO, TestCrcsEpicsSystem.State](TestCrcsEpicsSystem.defaultState)
@@ -1205,13 +1219,13 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
               TestAcquisitionCameraEpicsSystem.defaultState
             )
   } yield (
-    StateRefs(tcs, p1, p2, oi, mcs, scs, crcs, ags, ac),
+    StateRefs(tcs, p1, p2, oiw, oi, mcs, scs, crcs, ags, ac),
     new TcsBaseControllerEpics[IO](
       EpicsSystems(
         TestTcsEpicsSystem.build(tcs),
         TestWfsEpicsSystem.build("PWFS1", p1),
         TestWfsEpicsSystem.build("PWFS2", p2),
-        TestWfsEpicsSystem.build("OIWFS", oi),
+        TestOiwfsEpicsSystem.build(oiw, oi),
         TestMcsEpicsSystem.build(mcs),
         TestScsEpicsSystem.build(scs),
         TestCrcsEpicsSystem.build(crcs),
