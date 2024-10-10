@@ -527,30 +527,25 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
 
   def setupOiwfsObserve(exposureTime: TimeSpan, isQL: Boolean): F[ApplyCommandResult] =
     stateRef.get.flatMap { st =>
-      val expTimeChange   = st.oiwfs.period.forall(_ =!= exposureTime).option(exposureTime)
-      val qlChange        = st.oiwfs.configuredForQl.forall(_ =!= isQL).option(isQL)
-      val setDarkFilename = (c: TcsCommands[F]) =>
-        expTimeChange.fold(c)(t =>
-          c.oiWfsCommands.signalProc
-            .darkFilename(darkFileName(oiPrefix, t))
+      val expTimeChange = st.oiwfs.period.forall(_ =!= exposureTime).option(exposureTime)
+      val qlChange      = st.oiwfs.configuredForQl.forall(_ =!= isQL).option(isQL)
+
+      val setSigProc  = expTimeChange
+        .map(t =>
+          sys.oiwfs.startSignalProcCommand(timeout).filename(darkFileName(oiPrefix, t)).post
         )
-      val setSigProc      = qlChange
-        .map(
-          _.fold(
-            sys.tcsEpics.startCommand(timeout).oiWfsCommands.closedLoop.zernikes2m2(0),
-            setDarkFilename(
-              sys.tcsEpics
-                .startCommand(timeout)
-                .oiWfsCommands
-                .closedLoop
-                .zernikes2m2(1)
+        .getOrElse(VerifiedEpics.pureF[F, F, ApplyCommandResult](ApplyCommandResult.Completed)) *>
+        qlChange
+          .map(
+            _.fold(
+              sys.oiwfs.startClosedLoopCommand(timeout).zernikes2m2(0).post,
+              sys.oiwfs.startClosedLoopCommand(timeout).zernikes2m2(1).post
             )
-          ).post
-        )
-        .getOrElse(VerifiedEpics.pureF[F, F, ApplyCommandResult](ApplyCommandResult.Completed))
-      val setInterval     = (c: TcsCommands[F]) =>
+          )
+          .getOrElse(VerifiedEpics.pureF[F, F, ApplyCommandResult](ApplyCommandResult.Completed))
+      val setInterval = (c: TcsCommands[F]) =>
         expTimeChange.fold(c)(t => c.oiWfsCommands.observe.interval(t.toSeconds.toDouble))
-      val setQl           = (c: TcsCommands[F]) =>
+      val setQl       = (c: TcsCommands[F]) =>
         qlChange.fold(c)(i =>
           c.oiWfsCommands.observe
             .output(i.fold("QL", ""))
@@ -560,7 +555,11 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
         )
 
       val setup = setSigProc *>
-        (setInterval >>> setQl)(sys.tcsEpics.startCommand(timeout)).oiWfsCommands.observe
+        (setInterval >>> setQl)(sys.tcsEpics.startCommand(timeout)).post *>
+        sys.tcsEpics
+          .startCommand(timeout)
+          .oiWfsCommands
+          .observe
           .numberOfExposures(-1)
           .oiWfsCommands
           .observe
@@ -703,7 +702,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
 
   def dayTimeGains: VerifiedEpics[F, F, ApplyCommandResult] =
     sys.pwfs1
-      .startCommand(timeout)
+      .startGainCommand(timeout)
       .gains
       .setTipGain(0.0)
       .gains
@@ -712,7 +711,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
       .setFocusGain(0.0)
       .post *>
       sys.pwfs2
-        .startCommand(timeout)
+        .startGainCommand(timeout)
         .gains
         .setTipGain(0.0)
         .gains
@@ -721,7 +720,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
         .setFocusGain(0.0)
         .post *>
       sys.oiwfs
-        .startCommand(timeout)
+        .startGainCommand(timeout)
         .gains
         .setTipGain(0.0)
         .gains
@@ -732,15 +731,15 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
 
   def defaultGains: VerifiedEpics[F, F, ApplyCommandResult] =
     sys.pwfs1
-      .startCommand(timeout)
+      .startGainCommand(timeout)
       .resetGain
       .post *>
       sys.pwfs2
-        .startCommand(timeout)
+        .startGainCommand(timeout)
         .resetGain
         .post *>
       sys.oiwfs
-        .startCommand(timeout)
+        .startGainCommand(timeout)
         .resetGain
         .post
 

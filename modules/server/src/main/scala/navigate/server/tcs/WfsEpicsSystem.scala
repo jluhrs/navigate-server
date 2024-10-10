@@ -14,7 +14,6 @@ import lucuma.refined.*
 import navigate.epics.EpicsService
 import navigate.epics.VerifiedEpics
 import navigate.epics.VerifiedEpics.*
-import navigate.epics.VerifiedEpics.VerifiedEpics
 import navigate.server.ApplyCommandResult
 import navigate.server.acm.CadDirective
 import navigate.server.acm.ParameterList.*
@@ -23,16 +22,16 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
 
 trait WfsEpicsSystem[F[_]] {
-  def startCommand(timeout: FiniteDuration): WfsEpicsSystem.WfsCommands[F]
+  def startGainCommand(timeout: FiniteDuration): WfsEpicsSystem.WfsGainCommands[F]
   def getQualityStatus: WfsEpicsSystem.WfsQualityStatus[F]
 }
 
 object WfsEpicsSystem {
 
-  trait WfsCommands[F[_]] {
+  trait WfsGainCommands[F[_]] {
     def post: VerifiedEpics[F, F, ApplyCommandResult]
-    val gains: GainsCommand[F, WfsCommands[F]]
-    def resetGain: WfsCommands[F]
+    val gains: GainsCommand[F, WfsGainCommands[F]]
+    def resetGain: WfsGainCommands[F]
   }
 
   trait GainsCommand[F[_], +S] {
@@ -44,8 +43,8 @@ object WfsEpicsSystem {
   private[tcs] def buildSystem[F[_]: Monad: Temporal: Parallel](
     channels: WfsChannels[F]
   ): WfsEpicsSystem[F] = new WfsEpicsSystem[F] {
-    override def startCommand(timeout: FiniteDuration): WfsCommands[F] =
-      new WfsCommandsImpl[F](
+    override def startGainCommand(timeout: FiniteDuration): WfsGainCommands[F] =
+      new WfsGainCommandsImpl[F](
         new WfsEpicsImpl[F](channels),
         timeout
       )
@@ -110,27 +109,32 @@ object WfsEpicsSystem {
     )(1.0.pure[F])
   }
 
-  private class WfsCommandsImpl[F[_]: Monad: Parallel](
+  private[tcs] class WfsGainCommandsImpl[F[_]: Monad: Parallel](
     wfsEpics: WfsEpics[F],
     timeout:  FiniteDuration,
     params:   ParameterList[F] = List.empty[VerifiedEpics[F, F, Unit]]
-  ) extends WfsCommands[F] {
-    private def addParam(p: VerifiedEpics[F, F, Unit]): WfsCommands[F] =
-      WfsCommandsImpl(wfsEpics, timeout, params :+ p)
+  ) extends WfsGainCommands[F] {
+    private def addParam(p: VerifiedEpics[F, F, Unit]): WfsGainCommands[F] =
+      WfsGainCommandsImpl(wfsEpics, timeout, params :+ p)
 
     override def post: VerifiedEpics[F, F, ApplyCommandResult] =
       params.compile *> wfsEpics.post(timeout)
 
-    override val gains: GainsCommand[F, WfsCommands[F]] = new GainsCommand[F, WfsCommands[F]] {
-      override def setTipGain(v: Double): WfsCommands[F] = addParam(wfsEpics.gainsCmd.setParam1(v))
+    override val gains: GainsCommand[F, WfsGainCommands[F]] =
+      new GainsCommand[F, WfsGainCommands[F]] {
+        override def setTipGain(v: Double): WfsGainCommands[F] = addParam(
+          wfsEpics.gainsCmd.setParam1(v)
+        )
 
-      override def setTiltGain(v: Double): WfsCommands[F] = addParam(wfsEpics.gainsCmd.setParam2(v))
+        override def setTiltGain(v: Double): WfsGainCommands[F] = addParam(
+          wfsEpics.gainsCmd.setParam2(v)
+        )
 
-      override def setFocusGain(v: Double): WfsCommands[F] = addParam(
-        wfsEpics.gainsCmd.setParam3(v)
-      )
-    }
-    override def resetGain: WfsCommands[F]              = addParam(wfsEpics.resetGainCmd)
+        override def setFocusGain(v: Double): WfsGainCommands[F] = addParam(
+          wfsEpics.gainsCmd.setParam3(v)
+        )
+      }
+    override def resetGain: WfsGainCommands[F]              = addParam(wfsEpics.resetGainCmd)
   }
 
   trait WfsQualityStatus[F[_]] {

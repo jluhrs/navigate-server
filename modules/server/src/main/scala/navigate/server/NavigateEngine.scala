@@ -401,13 +401,11 @@ object NavigateEngine {
       OiwfsObserve,
       transformCommand(
         OiwfsObserve,
-        Handler.get[F, State, ApplyCommandResult].flatMap { st =>
-          Handler.fromStream(
-            Stream.eval(
-              systems.tcsCommon.oiwfsObserve(period)
-            )
+        Handler.fromStream(
+          Stream.eval(
+            systems.tcsCommon.oiwfsObserve(period)
           )
-        },
+        ),
         Focus[State](_.oiwfsObserve)
       ),
       Focus[State](_.oiwfsObserve)
@@ -425,13 +423,11 @@ object NavigateEngine {
       AcObserve,
       transformCommand(
         AcObserve,
-        Handler.get[F, State, ApplyCommandResult].flatMap { st =>
-          Handler.fromStream(
-            Stream.eval(
-              systems.tcsCommon.hrwfsObserve(period)
-            )
+        Handler.fromStream(
+          Stream.eval(
+            systems.tcsCommon.hrwfsObserve(period)
           )
-        },
+        ),
         Focus[State](_.acObserve)
       ),
       Focus[State](_.acObserve)

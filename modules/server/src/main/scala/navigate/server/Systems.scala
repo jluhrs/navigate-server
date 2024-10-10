@@ -57,14 +57,11 @@ object Systems {
                     "dc:fgDiag1P2.VALQ".refined,
                     "dc:fgDiag1P2.VALB".refined
                   )
-          oi   <- WfsEpicsSystem.build(
+          oi   <- OiwfsEpicsSystem.build(
                     epicsSrv,
-                    "OIWFS",
                     readTop(tops, "oiwfs".refined),
-                    "dc:initSigInitFgGain.PROC".refined,
                     "dc:fgDiag1P2.VALQ".refined,
-                    "dc:fgDiag1P2.VALB".refined,
-                    "dc:seeing.VAL".refined
+                    "dc:fgDiag1P2.VALB".refined
                   )
           mcs  <- McsEpicsSystem.build(epicsSrv, readTop(tops, "mc".refined))
           scs  <- ScsEpicsSystem.build(epicsSrv, readTop(tops, "m2".refined))
@@ -87,14 +84,11 @@ object Systems {
           tcs  <- TcsEpicsSystem.build(epicsSrv, tops)
           p1   <- WfsEpicsSystem.build(epicsSrv, "PWFS1", readTop(tops, "pwfs1".refined))
           p2   <- WfsEpicsSystem.build(epicsSrv, "PWFS2", readTop(tops, "pwfs2".refined))
-          oi   <- WfsEpicsSystem.build(
+          oi   <- OiwfsEpicsSystem.build(
                     epicsSrv,
-                    "OIWFS",
                     readTop(tops, "oiwfs".refined),
-                    "dc:initSigInitFgGain.PROC".refined,
                     "dc:fgDiag1Oi.VALQ".refined,
-                    "dc:fgDiag1Oi.VALB".refined,
-                    "dc:seeing.VAL".refined
+                    "dc:fgDiag1Oi.VALB".refined
                   )
           mcs  <- McsEpicsSystem.build(epicsSrv, readTop(tops, "mc".refined))
           scs  <- ScsEpicsSystem.build(epicsSrv, readTop(tops, "m2".refined))
