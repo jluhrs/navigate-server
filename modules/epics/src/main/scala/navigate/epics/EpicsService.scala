@@ -55,15 +55,15 @@ object EpicsService {
     serverPort:        Option[Int],
     maxArrayBytes:     Option[Int]
   ) {
-    def withAddressList(l:        List[InetAddress]): Builder = this.copy(addrList = l.some)
-    def withAutoAddrList(enabled: Boolean): Builder           = this.copy(autoAddrList = enabled.some)
+    def withAddressList(l:        List[InetAddress]): Builder   = this.copy(addrList = l.some)
+    def withAutoAddrList(enabled: Boolean): Builder             = this.copy(autoAddrList = enabled.some)
     def withConnectionTimeout(timeout: FiniteDuration): Builder =
       this.copy(connectionTimeout = timeout.some)
     def withEnabledRepeater(enabled: Boolean): Builder          =
       this.copy(enableRepeater = enabled.some)
-    def withRepeaterPort(port:   Int): Builder = this.copy(repeaterPort = port.some)
-    def withServerPort(port:     Int): Builder = this.copy(serverPort = port.some)
-    def withMaxArrayBytes(limit: Int): Builder = this.copy(maxArrayBytes = limit.some)
+    def withRepeaterPort(port:    Int): Builder                 = this.copy(repeaterPort = port.some)
+    def withServerPort(port:      Int): Builder                 = this.copy(serverPort = port.some)
+    def withMaxArrayBytes(limit:  Int): Builder                 = this.copy(maxArrayBytes = limit.some)
 
     def build[F[_]: Async]: Resource[F, EpicsService[F]] = Resource
       .eval {
@@ -76,7 +76,7 @@ object EpicsService {
           connectionTimeout.map(x =>
             props.setProperty(EPICS_CA_CONN_TMO.toString, x.toSeconds.toString)
           )
-          enableRepeater.map(x => props.setProperty(CA_REPEATER_DISABLE.toString, (!x).toString))
+          enableRepeater.map(x => props.setProperty(CA_REPEATER_DISABLE.toString, !x.toString))
           repeaterPort.map(x => props.setProperty(EPICS_CA_REPEATER_PORT.toString, x.toString))
           serverPort.map(x => props.setProperty(EPICS_CA_SERVER_PORT.toString, x.toString))
           maxArrayBytes.map(x => props.setProperty(EPICS_CA_MAX_ARRAY_BYTES.toString, x.toString))

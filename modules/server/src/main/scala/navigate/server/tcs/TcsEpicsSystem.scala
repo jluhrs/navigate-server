@@ -87,15 +87,8 @@ object TcsEpicsSystem {
     val m1GuideCmd: Command1Channels[F, BinaryOnOff]
     val m2GuideCmd: Command1Channels[F, BinaryOnOff]
     val m2GuideModeCmd: Command1Channels[F, BinaryOnOff]
-    val m2GuideConfigCmd: Command7Channels[F,
-                                           String,
-                                           Double,
-                                           String,
-                                           Double,
-                                           Double,
-                                           String,
-                                           BinaryOnOff
-    ]
+    val m2GuideConfigCmd
+      : Command7Channels[F, String, Double, String, Double, Double, String, BinaryOnOff]
     val m2GuideResetCmd: ParameterlessCommandChannels[F]
     val m2FollowCmd: Command1Channels[F, BinaryOnOff]
     val mountGuideCmd: Command4Channels[F, BinaryOnOff, String, Double, Double]
