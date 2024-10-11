@@ -76,7 +76,7 @@ object EpicsService {
           connectionTimeout.map(x =>
             props.setProperty(EPICS_CA_CONN_TMO.toString, x.toSeconds.toString)
           )
-          enableRepeater.map(x => props.setProperty(CA_REPEATER_DISABLE.toString, !x.toString))
+          enableRepeater.map(x => props.setProperty(CA_REPEATER_DISABLE.toString, (!x).toString))
           repeaterPort.map(x => props.setProperty(EPICS_CA_REPEATER_PORT.toString, x.toString))
           serverPort.map(x => props.setProperty(EPICS_CA_SERVER_PORT.toString, x.toString))
           maxArrayBytes.map(x => props.setProperty(EPICS_CA_MAX_ARRAY_BYTES.toString, x.toString))
