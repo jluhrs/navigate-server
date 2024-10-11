@@ -26,8 +26,8 @@ Global / resolvers ++= Resolver.sonatypeOssRepos("public")
 ThisBuild / dockerExposedPorts ++= Seq(7070, 7071) // Must match deployed app.conf web-server.port
 ThisBuild / dockerBaseImage := "eclipse-temurin:17-jre"
 
-val mainCond       = "github.ref == 'refs/heads/main'"
-val geminiRepoCond = "startsWith(github.repository, 'gemini')"
+val mainCond                 = "github.ref == 'refs/heads/main'"
+val geminiRepoCond           = "startsWith(github.repository, 'gemini')"
 def allConds(conds: String*) = conds.mkString("(", " && ", ")")
 
 lazy val dockerHubLogin =

@@ -53,7 +53,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   private val DefaultTimeout: FiniteDuration = FiniteDuration(1, TimeUnit.SECONDS)
 
-  private val Tolerance: Double = 1e-6
+  private val Tolerance: Double                            = 1e-6
   private def compareDouble(a: Double, b: Double): Boolean = Math.abs(a - b) < Tolerance
 
   test("Mount commands") {
