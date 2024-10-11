@@ -1031,7 +1031,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       x        <- createController
       (st, ctr) = x
       _        <- st.mcs.update(_.focus(_.follow).replace(TestChannel.State.of("ON")))
-      _        <- st.scs.update(_.focus(_.follow).replace(TestChannel.State.of("ON")))
+      _        <- st.scs.update(_.focus(_.follow).replace(TestChannel.State.of("YES")))
       _        <- st.crcs.update(_.focus(_.follow).replace(TestChannel.State.of("ON")))
       _        <- st.ags.update(
                     _.copy(oiParked = TestChannel.State.of(0), oiFollow = TestChannel.State.of("ON"))

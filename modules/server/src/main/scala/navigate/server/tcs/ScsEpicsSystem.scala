@@ -26,8 +26,8 @@ object ScsEpicsSystem {
           .readChannel(channels.telltale, channels.follow)
           .map {
             _.map {
-              case "ON" => Following
-              case _    => NotFollowing
+              case "YES" => Following
+              case _     => NotFollowing
             }
           }
     }
