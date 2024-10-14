@@ -518,12 +518,12 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
     }
 
   def darkFileName(prefix: String, exposureTime: TimeSpan): String =
-    if (exposureTime > TimeSpan.unsafeFromMicroseconds(1000))
-      s"${prefix}_${math.round(1000.0 / exposureTime.toSeconds.toDouble)}mHz.fits"
+    if (exposureTime > TimeSpan.unsafeFromMicroseconds(1000000))
+      s"${prefix}${math.round(1000.0 / exposureTime.toSeconds.toDouble)}mHz.fits"
     else
-      s"${prefix}_${math.round(1.0 / exposureTime.toSeconds.toDouble)}Hz.fits"
+      s"${prefix}${math.round(1.0 / exposureTime.toSeconds.toDouble)}Hz.fits"
 
-  val oiPrefix: String = "oi"
+  val oiPrefix: String = "data/"
 
   def setupOiwfsObserve(exposureTime: TimeSpan, isQL: Boolean): F[ApplyCommandResult] =
     stateRef.get.flatMap { st =>

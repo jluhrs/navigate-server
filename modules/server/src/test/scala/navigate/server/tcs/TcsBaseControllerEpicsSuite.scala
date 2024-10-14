@@ -886,8 +886,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     }
   }
 
-  test("Start OIWFS exposures") {
-    val testVal = TimeSpan.unsafeFromMicroseconds(12345)
+  test("Start OIWFS readout") {
+    val testVal          = TimeSpan.unsafeFromMicroseconds(5000)
+    val expectedFilename = "data/200Hz.fits"
 
     for {
       x        <- createController
@@ -895,6 +896,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       _        <- st.tcs.update(_.focus(_.guideStatus).replace(defaultGuideState))
       _        <- ctr.oiwfsObserve(testVal)
       rs       <- st.tcs.get
+      ois      <- st.oi.get
     } yield {
       assert(rs.oiWfs.observe.path.connected)
       assert(rs.oiWfs.observe.label.connected)
@@ -911,10 +913,11 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
         .flatMap(_.toDoubleOption)
         .map(assertEqualsDouble(_, testVal.toSeconds.toDouble, 1e-6))
         .getOrElse(fail("No interval value set"))
+      assertEquals(ois.darkFilename.value, expectedFilename.some)
     }
   }
 
-  test("Stop OIWFS exposures") {
+  test("Stop OIWFS readout") {
     for {
       x        <- createController
       (st, ctr) = x
