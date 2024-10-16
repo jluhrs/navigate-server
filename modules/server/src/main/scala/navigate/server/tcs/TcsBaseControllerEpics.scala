@@ -538,9 +538,9 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
         qlChange
           .map(
             _.fold(
-              sys.oiwfs.startClosedLoopCommand(timeout).zernikes2m2(0).post,
-              sys.oiwfs.startClosedLoopCommand(timeout).zernikes2m2(1).post
-            )
+              sys.oiwfs.startClosedLoopCommand(timeout).zernikes2m2(0),
+              sys.oiwfs.startClosedLoopCommand(timeout).zernikes2m2(1)
+            ).post
           )
           .getOrElse(VerifiedEpics.pureF[F, F, ApplyCommandResult](ApplyCommandResult.Completed))
       val setInterval = (c: TcsCommands[F]) =>
@@ -554,12 +554,8 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
             .options(i.fold("DHS", "NONE"))
         )
 
-      val setup = setSigProc *>
-        (setInterval >>> setQl)(sys.tcsEpics.startCommand(timeout)).post *>
-        sys.tcsEpics
-          .startCommand(timeout)
-          .oiWfsCommands
-          .observe
+      val setupAndStart = setSigProc *>
+        (setInterval >>> setQl)(sys.tcsEpics.startCommand(timeout)).oiWfsCommands.observe
           .numberOfExposures(-1)
           .oiWfsCommands
           .observe
@@ -589,7 +585,7 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
                       } {
                         VerifiedEpics.pureF[F, F, ApplyCommandResult](ApplyCommandResult.Completed)
                       } *>
-                        setup
+                        setupAndStart
                     }
       } yield ret).verifiedRun(ConnectionTimeout) <*
         stateRef.update(
