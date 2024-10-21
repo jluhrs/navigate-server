@@ -66,6 +66,13 @@ object NavigateCommand {
   case object OiwfsStopObserve            extends NavigateCommand
   case object AcObserve                   extends NavigateCommand
   case object AcStopObserve               extends NavigateCommand
+  case object M1Park                      extends NavigateCommand
+  case object M1Unpark                    extends NavigateCommand
+  case object M1OpenLoopOff               extends NavigateCommand
+  case object M1OpenLoopOn                extends NavigateCommand
+  case object M1ZeroFigure                extends NavigateCommand
+  case object M1LoadAoFigure              extends NavigateCommand
+  case object M1LoadNonAoFigure           extends NavigateCommand
 
   given Eq[NavigateCommand] = Eq.fromUniversalEquals
 
@@ -116,6 +123,13 @@ object NavigateCommand {
       case OiwfsStopObserve      => "Oiwfs Stop Exposures"
       case AcObserve             => "Acquisition Camera Start Exposures"
       case AcStopObserve         => "Acquisition Camera Stop Exposures"
+      case M1Park                => "M1 Park"
+      case M1Unpark              => "M1 Unpark"
+      case M1OpenLoopOff         => "M1 Open Loop Off"
+      case M1OpenLoopOn          => "M1 Open Loop On"
+      case M1ZeroFigure          => "M1 Zero Figure"
+      case M1LoadAoFigure        => "M1 Load Ao Figure"
+      case M1LoadNonAoFigure     => "M1 Load Non Ao Figure"
     }
   }
 
