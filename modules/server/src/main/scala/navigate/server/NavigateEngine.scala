@@ -418,19 +418,47 @@ object NavigateEngine {
         .map(_._2)
         .flattenOption
 
-    override def m1Park: F[Unit] = ???
+    override def m1Park: F[Unit] = simpleCommand(
+      engine,
+      M1Park,
+      systems.tcsCommon.m1Park
+    )
 
-    override def m1Unpark: F[Unit] = ???
+    override def m1Unpark: F[Unit] = simpleCommand(
+      engine,
+      M1Unpark,
+      systems.tcsCommon.m1Unpark
+    )
 
-    override def m1OpenLoopOff: F[Unit] = ???
+    override def m1OpenLoopOff: F[Unit] = simpleCommand(
+      engine,
+      M1OpenLoopOff,
+      systems.tcsCommon.m1UpdateOff
+    )
 
-    override def m1OpenLoopOn: F[Unit] = ???
+    override def m1OpenLoopOn: F[Unit] = simpleCommand(
+      engine,
+      M1OpenLoopOn,
+      systems.tcsCommon.m1UpdateOn
+    )
 
-    override def m1ZeroFigure: F[Unit] = ???
+    override def m1ZeroFigure: F[Unit] = simpleCommand(
+      engine,
+      M1ZeroFigure,
+      systems.tcsCommon.m1ZeroFigure
+    )
 
-    override def m1LoadAoFigure: F[Unit] = ???
+    override def m1LoadAoFigure: F[Unit] = simpleCommand(
+      engine,
+      M1LoadAoFigure,
+      systems.tcsCommon.m1LoadAoFigure
+    )
 
-    override def m1LoadNonAoFigure: F[Unit] = ???
+    override def m1LoadNonAoFigure: F[Unit] = simpleCommand(
+      engine,
+      M1LoadNonAoFigure,
+      systems.tcsCommon.m1LoadNonAoFigure
+    )
   }
 
   def build[F[_]: Concurrent: Temporal: Logger](
