@@ -17,10 +17,12 @@ import navigate.server.ApplyCommandResult
 import navigate.server.acm.CadDirective
 import navigate.server.acm.GeminiApplyCommand
 import navigate.server.epicsdata.BinaryOnOff
+import navigate.server.epicsdata.BinaryOnOffCapitalized
 import navigate.server.epicsdata.BinaryYesNo
 import navigate.server.tcs.TcsChannels.AgMechChannels
 import navigate.server.tcs.TcsChannels.EnclosureChannels
 import navigate.server.tcs.TcsChannels.GuideConfigStatusChannels
+import navigate.server.tcs.TcsChannels.M1Channels
 import navigate.server.tcs.TcsChannels.M1GuideConfigChannels
 import navigate.server.tcs.TcsChannels.M2BafflesChannels
 import navigate.server.tcs.TcsChannels.M2GuideConfigChannels
@@ -248,7 +250,8 @@ object TestTcsEpicsSystem {
     m2Baffles:        M2BafflesState,
     hrwfsMech:        AgMechState,
     scienceFoldMech:  AgMechState,
-    aoFoldMech:       AgMechState
+    aoFoldMech:       AgMechState,
+    m1Cmds:           M1CommandsState
   )
 
   val defaultState: State = State(
@@ -356,7 +359,8 @@ object TestTcsEpicsSystem {
     m2Baffles = M2BafflesState.default,
     hrwfsMech = AgMechState.default,
     scienceFoldMech = AgMechState.default,
-    aoFoldMech = AgMechState.default
+    aoFoldMech = AgMechState.default,
+    m1Cmds = M1CommandsState.default
   )
 
   def buildEnclosureChannels[F[_]: Applicative](s: Ref[F, State]): EnclosureChannels[F] =
@@ -726,6 +730,50 @@ object TestTcsEpicsSystem {
     )
   }
 
+  case class M1CommandsState(
+    telltale:      TestChannel.State[String],
+    park:          TestChannel.State[String],
+    figUpdates:    TestChannel.State[String],
+    zero:          TestChannel.State[String],
+    loadModelFile: TestChannel.State[String],
+    saveModelFile: TestChannel.State[String],
+    aoEnable:      TestChannel.State[BinaryOnOffCapitalized]
+  )
+
+  object M1CommandsState {
+    val default: M1CommandsState = M1CommandsState(
+      TestChannel.State.default[String],
+      TestChannel.State.default[String],
+      TestChannel.State.default[String],
+      TestChannel.State.default[String],
+      TestChannel.State.default[String],
+      TestChannel.State.default[String],
+      TestChannel.State.default[BinaryOnOffCapitalized]
+    )
+  }
+
+  def buildM1Channels[F[_]: Applicative](
+    s: Ref[F, State],
+    l: Lens[State, M1CommandsState]
+  ): M1Channels[F] = M1Channels[F](
+    telltale = TelltaleChannel[F](
+      "M1",
+      new TestChannel[F, State, String](s, l.andThen(Focus[M1CommandsState](_.telltale)))
+    ),
+    park = new TestChannel[F, State, String](s, l.andThen(Focus[M1CommandsState](_.park))),
+    figUpdates =
+      new TestChannel[F, State, String](s, l.andThen(Focus[M1CommandsState](_.figUpdates))),
+    zero = new TestChannel[F, State, String](s, l.andThen(Focus[M1CommandsState](_.zero))),
+    loadModelFile =
+      new TestChannel[F, State, String](s, l.andThen(Focus[M1CommandsState](_.loadModelFile))),
+    saveModelFile =
+      new TestChannel[F, State, String](s, l.andThen(Focus[M1CommandsState](_.saveModelFile))),
+    aoEnable = new TestChannel[F, State, BinaryOnOffCapitalized](
+      s,
+      l.andThen(Focus[M1CommandsState](_.aoEnable))
+    )
+  )
+
   def buildAgMechChannels[F[_]: Applicative](
     s: Ref[F, State],
     l: Lens[State, AgMechState]
@@ -770,7 +818,8 @@ object TestTcsEpicsSystem {
       m2Baffles = buildM2BafflesChannels(s, Focus[State](_.m2Baffles)),
       hrwfsMech = buildAgMechChannels(s, Focus[State](_.hrwfsMech)),
       scienceFoldMech = buildAgMechChannels(s, Focus[State](_.scienceFoldMech)),
-      aoFoldMech = buildAgMechChannels(s, Focus[State](_.aoFoldMech))
+      aoFoldMech = buildAgMechChannels(s, Focus[State](_.aoFoldMech)),
+      m1Channels = buildM1Channels(s, Focus[State](_.m1Cmds))
     )
 
   def build[F[_]: Monad: Parallel](s: Ref[F, State]): TcsEpicsSystem[F] =

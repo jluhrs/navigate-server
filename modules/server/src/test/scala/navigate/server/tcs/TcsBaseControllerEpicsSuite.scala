@@ -36,6 +36,7 @@ import navigate.model.enums.ShutterMode
 import navigate.server.acm.CadDirective
 import navigate.server.epicsdata
 import navigate.server.epicsdata.BinaryOnOff
+import navigate.server.epicsdata.BinaryOnOffCapitalized
 import navigate.server.epicsdata.BinaryYesNo
 import navigate.server.tcs.FollowStatus.Following
 import navigate.server.tcs.FollowStatus.NotFollowing
@@ -1191,6 +1192,92 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assertEquals(r1.m2Baffles.deployBaffle.value, "Near IR".some)
       assertEquals(r2.m2Baffles.deployBaffle.value, "Visible".some)
       assertEquals(r3.m2Baffles.deployBaffle.value, "Extended".some)
+    }
+  }
+
+  test("Park M1") {
+    for {
+      x        <- createController
+      (st, ctr) = x
+      _        <- ctr.m1Park
+      r0       <- st.tcs.get
+    } yield {
+      assert(r0.m1Cmds.park.connected)
+      assertEquals(r0.m1Cmds.park.value, "PARK".some)
+    }
+  }
+
+  test("Unpark M1") {
+    for {
+      x        <- createController
+      (st, ctr) = x
+      _        <- ctr.m1Unpark
+      r0       <- st.tcs.get
+    } yield {
+      assert(r0.m1Cmds.park.connected)
+      assertEquals(r0.m1Cmds.park.value, "UNPARK".some)
+    }
+  }
+
+  test("Zero M1 figure") {
+    for {
+      x        <- createController
+      (st, ctr) = x
+      _        <- ctr.m1ZeroFigure
+      r0       <- st.tcs.get
+    } yield {
+      assert(r0.m1Cmds.zero.connected)
+      assertEquals(r0.m1Cmds.zero.value, "FIGURE".some)
+    }
+  }
+
+  test("Enable M1 updates") {
+    for {
+      x        <- createController
+      (st, ctr) = x
+      _        <- ctr.m1UpdateOn
+      r0       <- st.tcs.get
+    } yield {
+      assert(r0.m1Cmds.figUpdates.connected)
+      assert(r0.m1Cmds.aoEnable.connected)
+      assertEquals(r0.m1Cmds.figUpdates.value, "On".some)
+      assertEquals(r0.m1Cmds.aoEnable.value, BinaryOnOffCapitalized.On.some)
+    }
+  }
+
+  test("Disable M1 updates") {
+    for {
+      x        <- createController
+      (st, ctr) = x
+      _        <- ctr.m1UpdateOff
+      r0       <- st.tcs.get
+    } yield {
+      assert(r0.m1Cmds.aoEnable.connected)
+      assertEquals(r0.m1Cmds.aoEnable.value, BinaryOnOffCapitalized.Off.some)
+    }
+  }
+
+  test("Load M1 AO figure") {
+    for {
+      x        <- createController
+      (st, ctr) = x
+      _        <- ctr.m1LoadAoFigure
+      r0       <- st.tcs.get
+    } yield {
+      assert(r0.m1Cmds.loadModelFile.connected)
+      assertEquals(r0.m1Cmds.loadModelFile.value, "AO".some)
+    }
+  }
+
+  test("Load M1 non-AO figure") {
+    for {
+      x        <- createController
+      (st, ctr) = x
+      _        <- ctr.m1LoadNonAoFigure
+      r0       <- st.tcs.get
+    } yield {
+      assert(r0.m1Cmds.loadModelFile.connected)
+      assertEquals(r0.m1Cmds.loadModelFile.value, "non-AO".some)
     }
   }
 

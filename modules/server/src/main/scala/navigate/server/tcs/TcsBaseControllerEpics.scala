@@ -956,6 +956,41 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
       .stop
       .post
       .verifiedRun(ConnectionTimeout)
+
+  override def m1Park: F[ApplyCommandResult] =
+    sys.tcsEpics.startCommand(timeout).m1Commands.park.post.verifiedRun(ConnectionTimeout)
+
+  override def m1Unpark: F[ApplyCommandResult] =
+    sys.tcsEpics.startCommand(timeout).m1Commands.unpark.post.verifiedRun(ConnectionTimeout)
+
+  override def m1UpdateOn: F[ApplyCommandResult] = sys.tcsEpics
+    .startCommand(timeout)
+    .m1Commands
+    .ao(true)
+    .m1Commands
+    .figureUpdates(true)
+    .post
+    .verifiedRun(ConnectionTimeout)
+
+  override def m1UpdateOff: F[ApplyCommandResult] =
+    sys.tcsEpics.startCommand(timeout).m1Commands.ao(false).post.verifiedRun(ConnectionTimeout)
+
+  override def m1ZeroFigure: F[ApplyCommandResult] =
+    sys.tcsEpics.startCommand(timeout).m1Commands.zero("FIGURE").post.verifiedRun(ConnectionTimeout)
+
+  override def m1LoadAoFigure: F[ApplyCommandResult] = sys.tcsEpics
+    .startCommand(timeout)
+    .m1Commands
+    .loadModel("AO")
+    .post
+    .verifiedRun(ConnectionTimeout)
+
+  override def m1LoadNonAoFigure: F[ApplyCommandResult] = sys.tcsEpics
+    .startCommand(timeout)
+    .m1Commands
+    .loadModel("non-AO")
+    .post
+    .verifiedRun(ConnectionTimeout)
 }
 
 object TcsBaseControllerEpics {
