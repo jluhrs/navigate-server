@@ -11,6 +11,7 @@ import navigate.epics.EpicsSystem.TelltaleChannel
 import navigate.epics.given
 import navigate.server.acm.CadDirective
 import navigate.server.epicsdata.BinaryOnOff
+import navigate.server.epicsdata.BinaryOnOffCapitalized
 import navigate.server.epicsdata.BinaryYesNo
 import navigate.server.epicsdata.DirSuffix
 
@@ -52,7 +53,8 @@ case class TcsChannels[F[_]](
   m2Baffles:        M2BafflesChannels[F],
   hrwfsMech:        AgMechChannels[F],
   scienceFoldMech:  AgMechChannels[F],
-  aoFoldMech:       AgMechChannels[F]
+  aoFoldMech:       AgMechChannels[F],
+  m1Channels:       M1Channels[F]
 )
 
 object TcsChannels {
@@ -150,6 +152,40 @@ object TcsChannels {
     ecsVentGateEast:  Channel[F, String],
     ecsVentGateWest:  Channel[F, String]
   )
+
+  case class M1Channels[F[_]](
+    telltale:      TelltaleChannel[F],
+    park:          Channel[F, String],
+    figUpdates:    Channel[F, String],
+    zero:          Channel[F, String],
+    loadModelFile: Channel[F, String],
+    saveModelFile: Channel[F, String],
+    aoEnable:      Channel[F, BinaryOnOffCapitalized]
+  )
+
+  object M1Channels {
+    def build[F[_]](
+      service: EpicsService[F],
+      tcsTop:  TcsTop,
+      m1Top:   M1Top
+    ): Resource[F, M1Channels[F]] = for {
+      tt  <- service.getChannel[String](m1Top.value, "health.VAL").map(TelltaleChannel("M1", _))
+      prk <- service.getChannel[String](tcsTop.value, "m1Park.A")
+      fup <- service.getChannel[String](tcsTop.value, "m1FigUpdates.A")
+      zr  <- service.getChannel[String](tcsTop.value, "m1ZeroSet.A")
+      ld  <- service.getChannel[String](tcsTop.value, "m1ModelRestore.A")
+      sv  <- service.getChannel[String](tcsTop.value, "m1ModelSave.A")
+      ao  <- service.getChannel[BinaryOnOffCapitalized](m1Top.value, "aosOn.VAL")
+    } yield M1Channels(
+      tt,
+      prk,
+      fup,
+      zr,
+      ld,
+      sv,
+      ao
+    )
+  }
 
   case class TargetChannels[F[_]](
     objectName:     Channel[F, String],
@@ -577,7 +613,7 @@ object TcsChannels {
   def buildChannels[F[_]](
     service: EpicsService[F],
     tcsTop:  TcsTop,
-    agTop:   AgTop
+    m1Top:   M1Top
   ): Resource[F, TcsChannels[F]] = {
     def telltaleChannel(top: NonEmptyString, channel: String): Resource[F, TelltaleChannel[F]] =
       service.getChannel[String](top, channel).map(TelltaleChannel(sysName, _))
@@ -616,6 +652,7 @@ object TcsChannels {
       hrm  <- AgMechChannels.build(service, s"${tcsTop.value}hrwfs")
       sfm  <- AgMechChannels.build(service, s"${tcsTop.value}scienceFold")
       aom  <- AgMechChannels.build(service, s"${tcsTop.value}aoFold")
+      m1   <- M1Channels.build(service, tcsTop, m1Top)
     } yield TcsChannels[F](
       tt,
       tpd,
@@ -649,7 +686,8 @@ object TcsChannels {
       bf,
       hrm,
       sfm,
-      aom
+      aom,
+      m1
     )
   }
 }

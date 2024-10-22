@@ -188,4 +188,18 @@ class TcsBaseControllerSim[F[_]: Sync](
     ApplyCommandResult.Completed.pure[F]
 
   override def hrwfsStopObserve: F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
+
+  override def m1Park: F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
+
+  override def m1Unpark: F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
+
+  override def m1UpdateOn: F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
+
+  override def m1UpdateOff: F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
+
+  override def m1ZeroFigure: F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
+
+  override def m1LoadAoFigure: F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
+
+  override def m1LoadNonAoFigure: F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
 }

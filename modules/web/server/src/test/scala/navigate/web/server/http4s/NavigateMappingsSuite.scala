@@ -1037,6 +1037,61 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     )
   }
 
+  test("Process ac stop observe command") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      gd  <- Topic[IO, GuideState]
+      gq  <- Topic[IO, GuidersQualityValues]
+      ts  <- Topic[IO, TelescopeState]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts)
+      r   <- mp.compileAndRun(
+               """
+          |mutation { acStopObserve {
+          |  result
+          |} }
+          |""".stripMargin
+             )
+    } yield assert(
+      extractResult[OperationOutcome](r, "acStopObserve").exists(_ === OperationOutcome.success)
+    )
+  }
+
+  def m1Test(name: String, mutation: String) =
+    test(s"Process M1 $name command") {
+      for {
+        eng <- buildServer
+        log <- Topic[IO, ILoggingEvent]
+        gd  <- Topic[IO, GuideState]
+        gq  <- Topic[IO, GuidersQualityValues]
+        ts  <- Topic[IO, TelescopeState]
+        mp  <- NavigateMappings[IO](eng, log, gd, gq, ts)
+        r   <- mp.compileAndRun(
+                 s"""
+            |mutation { $mutation {
+            |  result
+            |} }
+            |""".stripMargin
+               )
+      } yield assert(
+        extractResult[OperationOutcome](r, mutation).exists(_ === OperationOutcome.success)
+      )
+    }
+
+  val m1ParkTest: Unit = m1Test("park", "m1Park")
+
+  val m2UnparkTest: Unit = m1Test("unpark", "m1Unpark")
+
+  val m1OpenLoopOffTest: Unit = m1Test("open loop off", "m1OpenLoopOff")
+
+  val m1OpenLoopOnTest: Unit = m1Test("open loop on", "m1OpenLoopOn")
+
+  val m1ZeroFigureTest: Unit = m1Test("zero figure", "m1ZeroFigure")
+
+  val m1LoadAoFigureTest: Unit = m1Test("load AO figure", "m1LoadAoFigure")
+
+  val m1LoanNonAoFigureTest: Unit = m1Test("load non AO figure", "m1LoadNonAoFigure")
+
   test("Set probeGuide OIWFS to OIWFS") {
     for {
       eng <- buildServer
@@ -1216,6 +1271,20 @@ object NavigateMappingsTest {
 
       override def getNavigateStateStream: Stream[IO, NavigateState] =
         Stream.eval(NavigateState.default.pure[IO])
+
+      override def m1Park: IO[Unit] = IO.unit
+
+      override def m1Unpark: IO[Unit] = IO.unit
+
+      override def m1OpenLoopOff: IO[Unit] = IO.unit
+
+      override def m1OpenLoopOn: IO[Unit] = IO.unit
+
+      override def m1ZeroFigure: IO[Unit] = IO.unit
+
+      override def m1LoadAoFigure: IO[Unit] = IO.unit
+
+      override def m1LoadNonAoFigure: IO[Unit] = IO.unit
     }
   }
 

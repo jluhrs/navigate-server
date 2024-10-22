@@ -105,14 +105,6 @@ class NavigateMappings[F[_]: Sync](
   def navigateState(p: Path, env: Env): F[Result[NavigateState]] =
     server.getNavigateState.attempt.map(_.fold(Result.internalError, Result.success))
 
-  def mountPark(p: Path, env: Env): F[Result[OperationOutcome]] =
-    server.mcsPark.attempt
-      .map(x =>
-        Result.Success(
-          x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
-        )
-      )
-
   def mountFollow(p: Path, env: Env): F[Result[OperationOutcome]] =
     env
       .get[Boolean]("enable")
@@ -128,14 +120,6 @@ class NavigateMappings[F[_]: Sync](
       }
       .getOrElse(
         Result.failure[OperationOutcome]("mountFollow parameter could not be parsed.").pure[F]
-      )
-
-  def rotatorPark(p: Path, env: Env): F[Result[OperationOutcome]] =
-    server.rotPark.attempt
-      .map(x =>
-        Result.Success(
-          x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
-        )
       )
 
   def rotatorFollow(p: Path, env: Env): F[Result[OperationOutcome]] =
@@ -313,14 +297,6 @@ class NavigateMappings[F[_]: Sync](
           .pure[F]
       )
 
-  def oiwfsPark(p: Path, env: Env): F[Result[OperationOutcome]] =
-    server.oiwfsPark.attempt
-      .map(x =>
-        Result.Success(
-          x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
-        )
-      )
-
   def oiwfsFollow(p: Path, env: Env): F[Result[OperationOutcome]] =
     env
       .get[Boolean]("enable")
@@ -355,14 +331,6 @@ class NavigateMappings[F[_]: Sync](
         Result.failure[OperationOutcome]("oiwfsObserve parameter could not be parsed.").pure[F]
       )
 
-  def oiwfsStopObserve: F[Result[OperationOutcome]] =
-    server.oiwfsStopObserve.attempt
-      .map(x =>
-        Result.Success(
-          x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
-        )
-      )
-
   def acObserve(env: Env): F[Result[OperationOutcome]] =
     env
       .get[TimeSpan]("period")
@@ -378,14 +346,6 @@ class NavigateMappings[F[_]: Sync](
       }
       .getOrElse(
         Result.failure[OperationOutcome]("acObserve parameter could not be parsed.").pure[F]
-      )
-
-  def acStopObserve: F[Result[OperationOutcome]] =
-    server.acStopObserve.attempt
-      .map(x =>
-        Result.Success(
-          x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
-        )
       )
 
   def guideEnable(p: Path, env: Env): F[Result[OperationOutcome]] =
@@ -405,8 +365,8 @@ class NavigateMappings[F[_]: Sync](
         Result.failure[OperationOutcome]("guideEnable parameters could not be parsed.").pure[F]
       )
 
-  def guideDisable(p: Path, env: Env): F[Result[OperationOutcome]] =
-    server.disableGuide.attempt
+  def simpleCommand(cmd: F[Unit]): F[Result[OperationOutcome]] =
+    cmd.attempt
       .map(x =>
         Result.Success(
           x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
@@ -533,9 +493,9 @@ class NavigateMappings[F[_]: Sync](
       ObjectMapping(
         tpe = MutationType,
         fieldMappings = List(
-          RootEffect.computeEncodable("mountPark")((p, env) => mountPark(p, env)),
+          RootEffect.computeEncodable("mountPark")((p, env) => simpleCommand(server.mcsPark)),
           RootEffect.computeEncodable("mountFollow")((p, env) => mountFollow(p, env)),
-          RootEffect.computeEncodable("rotatorPark")((p, env) => rotatorPark(p, env)),
+          RootEffect.computeEncodable("rotatorPark")((p, env) => simpleCommand(server.rotPark)),
           RootEffect.computeEncodable("rotatorFollow")((p, env) => rotatorFollow(p, env)),
           RootEffect.computeEncodable("rotatorConfig")((p, env) => rotatorConfig(p, env)),
           RootEffect.computeEncodable("scsFollow")((p, env) => scsFollow(p, env)),
@@ -548,14 +508,37 @@ class NavigateMappings[F[_]: Sync](
           ),
           RootEffect.computeEncodable("oiwfsTarget")((p, env) => oiwfsTarget(p, env)),
           RootEffect.computeEncodable("oiwfsProbeTracking")((p, env) => oiwfsProbeTracking(p, env)),
-          RootEffect.computeEncodable("oiwfsPark")((p, env) => oiwfsPark(p, env)),
+          RootEffect.computeEncodable("oiwfsPark")((p, env) => simpleCommand(server.oiwfsPark)),
           RootEffect.computeEncodable("oiwfsFollow")((p, env) => oiwfsFollow(p, env)),
           RootEffect.computeEncodable("oiwfsObserve")((_, env) => oiwfsObserve(env)),
-          RootEffect.computeEncodable("oiwfsStopObserve")((_, _) => oiwfsStopObserve),
+          RootEffect.computeEncodable("oiwfsStopObserve")((_, _) =>
+            simpleCommand(server.oiwfsStopObserve)
+          ),
           RootEffect.computeEncodable("acObserve")((_, env) => acObserve(env)),
-          RootEffect.computeEncodable("acStopObserve")((_, _) => acStopObserve),
+          RootEffect.computeEncodable("acStopObserve")((_, _) =>
+            simpleCommand(server.acStopObserve)
+          ),
           RootEffect.computeEncodable("guideEnable")((p, env) => guideEnable(p, env)),
-          RootEffect.computeEncodable("guideDisable")((p, env) => guideDisable(p, env))
+          RootEffect.computeEncodable("guideDisable")((p, env) =>
+            simpleCommand(server.disableGuide)
+          ),
+          RootEffect.computeEncodable("m1Park")((p, env) => simpleCommand(server.m1Park)),
+          RootEffect.computeEncodable("m1Unpark")((p, env) => simpleCommand(server.m1Unpark)),
+          RootEffect.computeEncodable("m1OpenLoopOff")((p, env) =>
+            simpleCommand(server.m1OpenLoopOff)
+          ),
+          RootEffect.computeEncodable("m1OpenLoopOn")((p, env) =>
+            simpleCommand(server.m1OpenLoopOn)
+          ),
+          RootEffect.computeEncodable("m1ZeroFigure")((p, env) =>
+            simpleCommand(server.m1ZeroFigure)
+          ),
+          RootEffect.computeEncodable("m1LoadAoFigure")((p, env) =>
+            simpleCommand(server.m1LoadAoFigure)
+          ),
+          RootEffect.computeEncodable("m1LoadNonAoFigure")((p, env) =>
+            simpleCommand(server.m1LoadNonAoFigure)
+          )
         )
       ),
       ObjectMapping(

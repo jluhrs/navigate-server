@@ -8,6 +8,7 @@ import cats.Parallel
 import cats.effect.Resource
 import cats.effect.Temporal
 import cats.effect.std.Dispatcher
+import cats.syntax.all.*
 import eu.timepit.refined.types.string.NonEmptyString
 import lucuma.core.enums.GuideProbe
 import lucuma.core.math.Angle
@@ -32,6 +33,7 @@ import navigate.server.acm.ParameterList.*
 import navigate.server.acm.writeCadParam
 import navigate.server.epicsdata.BinaryOnOff
 import navigate.server.epicsdata.BinaryOnOff.given
+import navigate.server.epicsdata.BinaryOnOffCapitalized
 import navigate.server.epicsdata.BinaryYesNo
 import navigate.server.epicsdata.BinaryYesNo.given
 import navigate.server.tcs.TcsEpicsSystem.TcsStatus
@@ -107,22 +109,14 @@ object TcsEpicsSystem {
     // val offsetBCmd: OffsetCmd[F]
     // val wavelSourceB: TargetWavelengthCmd[F]
     // val m2Beam: M2Beam[F]
-    // val pwfs1ProbeGuideCmd: ProbeGuideCmd[F]
-    // val pwfs2ProbeGuideCmd: ProbeGuideCmd[F]
-    // val pwfs1ProbeFollowCmd: ProbeFollowCmd[F]
-    // val pwfs2ProbeFollowCmd: ProbeFollowCmd[F]
-    // val aoProbeFollowCmd: ProbeFollowCmd[F]
-    // val pwfs1Park: EpicsCommand[F]
-    // val pwfs2Park: EpicsCommand[F]
     // val pwfs1StopObserveCmd: EpicsCommand[F]
     // val pwfs2StopObserveCmd: EpicsCommand[F]
-    // val oiwfsStopObserveCmd: EpicsCommand[F]
     // val pwfs1ObserveCmd: WfsObserveCmd[F]
     // val pwfs2ObserveCmd: WfsObserveCmd[F]
-    // val oiwfsObserveCmd: WfsObserveCmd[F]
     val hrwfsCmds: AgMechCommandsChannels[F, HrwfsPickupPosition]
     val scienceFoldCmds: AgMechCommandsChannels[F, ScienceFold.Position]
     val aoFoldCmds: AgMechCommandsChannels[F, AoFoldPosition]
+    val m1Cmds: M1CommandsChannels[F]
     // val observe: EpicsCommand[F]
     // val endObserve: EpicsCommand[F]
     // // GeMS Commands
@@ -366,13 +360,13 @@ object TcsEpicsSystem {
         .getOrElse(NonEmptyString.unsafeFrom(s"${key}:"))
 
     val top = readTop("tcs")
-    val ag  = readTop("ag")
+    val m1  = readTop("m1")
 
     for {
       channels <- TcsChannels.buildChannels(
                     service,
                     TcsTop(top),
-                    AgTop(ag)
+                    M1Top(m1)
                   )
       applyCmd <-
         GeminiApplyCommand.build(service, channels.telltale, s"${top}apply", s"${top}applyC")
@@ -942,6 +936,32 @@ object TcsEpicsSystem {
       buildAgMechCommands(
         tcsEpics.aoFoldCmds
       )
+    override val m1Commands: M1Commands[F, TcsCommands[F]]                                    = new M1Commands[F, TcsCommands[F]] {
+
+      override def park: TcsCommands[F] = addParam(tcsEpics.m1Cmds.park.setParam1("PARK"))
+
+      override def unpark: TcsCommands[F] = addParam(tcsEpics.m1Cmds.park.setParam1("UNPARK"))
+
+      override def figureUpdates(enable: Boolean): TcsCommands[F] = addParam(
+        tcsEpics.m1Cmds.figureUpdates.setParam1(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+      )
+
+      override def zero(mech: String): TcsCommands[F] = addParam(
+        tcsEpics.m1Cmds.zero.setParam1(mech)
+      )
+
+      override def saveModel(name: String): TcsCommands[F] = addParam(
+        tcsEpics.m1Cmds.saveModel.setParam1(name)
+      )
+
+      override def loadModel(name: String): TcsCommands[F] = addParam(
+        tcsEpics.m1Cmds.loadModel.setParam1(name)
+      )
+
+      override def ao(enable: Boolean): TcsCommands[F] = addParam(
+        tcsEpics.m1Cmds.ao(enable.fold(BinaryOnOffCapitalized.On, BinaryOnOffCapitalized.Off))
+      )
+    }
   }
 
   class TcsEpicsSystemImpl[F[_]: Monad: Parallel](epics: TcsEpics[F], st: TcsStatus[F])
@@ -1141,6 +1161,8 @@ object TcsEpicsSystem {
       buildAgMechCommandsChannels(channels.telltale, channels.scienceFoldMech)
     override val aoFoldCmds: AgMechCommandsChannels[F, AoFoldPosition]                            =
       buildAgMechCommandsChannels(channels.telltale, channels.aoFoldMech)
+    override val m1Cmds: M1CommandsChannels[F]                                                    =
+      M1CommandsChannels.build(channels.telltale, channels.m1Channels)
   }
 
   def formatAngleCoord(d: Double): String = {
@@ -1264,6 +1286,30 @@ object TcsEpicsSystem {
     ParameterlessCommandChannels(tt, mechChannels.parkDir),
     Command1Channels(tt, mechChannels.position)
   )
+
+  case class M1CommandsChannels[F[_]: Monad](
+    park:          Command1Channels[F, String],
+    figureUpdates: Command1Channels[F, BinaryOnOff],
+    zero:          Command1Channels[F, String],
+    saveModel:     Command1Channels[F, String],
+    loadModel:     Command1Channels[F, String],
+    ao:            (en: BinaryOnOffCapitalized) => VerifiedEpics[F, F, Unit]
+  )
+
+  object M1CommandsChannels {
+    def build[F[_]: Monad](
+      tcsTt:      TelltaleChannel[F],
+      m1Channels: TcsChannels.M1Channels[F]
+    ): M1CommandsChannels[F] = M1CommandsChannels[F](
+      park = Command1Channels(tcsTt, m1Channels.park),
+      figureUpdates = Command1Channels(tcsTt, m1Channels.figUpdates),
+      zero = Command1Channels[F, String](tcsTt, m1Channels.zero),
+      saveModel = Command1Channels[F, String](tcsTt, m1Channels.saveModelFile),
+      loadModel = Command1Channels[F, String](tcsTt, m1Channels.loadModelFile),
+      ao = (en: BinaryOnOffCapitalized) =>
+        writeChannel(m1Channels.telltale, m1Channels.aoEnable)(en.pure[F])
+    )
+  }
 
   case class WfsCommandsChannels[F[_]: Monad](
     observe:    Command7Channels[F, Int, Double, String, String, String, String, String],
@@ -1489,6 +1535,16 @@ object TcsEpicsSystem {
     def output(v:    String): S
   }
 
+  trait M1Commands[F[_], +S] {
+    def park: S
+    def unpark: S
+    def figureUpdates(enable: Boolean): S
+    def zero(mech:            String): S
+    def saveModel(name:       String): S
+    def loadModel(name:       String): S
+    def ao(enable:            Boolean): S
+  }
+
   trait TcsCommands[F[_]] {
     def post: VerifiedEpics[F, F, ApplyCommandResult]
     val mcsParkCommand: BaseCommand[F, TcsCommands[F]]
@@ -1525,6 +1581,7 @@ object TcsEpicsSystem {
     val hrwfsCommands: AgMechCommands[F, HrwfsPickupPosition, TcsCommands[F]]
     val scienceFoldCommands: AgMechCommands[F, ScienceFold.Position, TcsCommands[F]]
     val aoFoldCommands: AgMechCommands[F, AoFoldPosition, TcsCommands[F]]
+    val m1Commands: M1Commands[F, TcsCommands[F]]
   }
   /*
 
@@ -1548,10 +1605,6 @@ object TcsEpicsSystem {
 
   trait HrwfsPosCmd[F[_]] {
     def setHrwfsPos(v: String): VerifiedEpics[F, F, Unit]
-  }
-
-  trait ScienceFoldPosCmd[F[_]] {
-    def setScfold(v: String): VerifiedEpics[F, F, Unit]
   }
 
   trait AoCorrect[F[_]] {

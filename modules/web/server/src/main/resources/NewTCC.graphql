@@ -252,6 +252,13 @@ type Mutation {
     acStopObserve: OperationOutcome!
     guideEnable(config: GuideConfigurationInput!): OperationOutcome!
     guideDisable: OperationOutcome!
+    m1Park: OperationOutcome!
+    m1Unpark: OperationOutcome!
+    m1OpenLoopOff: OperationOutcome!
+    m1OpenLoopOn: OperationOutcome!
+    m1ZeroFigure: OperationOutcome!
+    m1LoadAoFigure: OperationOutcome!
+    m1LoadNonAoFigure: OperationOutcome!
 }
 
 type Subscription {

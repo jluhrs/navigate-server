@@ -54,6 +54,13 @@ trait TcsBaseController[F[_]] {
   ): F[ApplyCommandResult]
   def scsFollow(enable:           Boolean): F[ApplyCommandResult]
   def lightPath(from:             LightSource, to:        LightSinkName): F[ApplyCommandResult]
+  def m1Park: F[ApplyCommandResult]
+  def m1Unpark: F[ApplyCommandResult]
+  def m1UpdateOn: F[ApplyCommandResult]
+  def m1UpdateOff: F[ApplyCommandResult]
+  def m1ZeroFigure: F[ApplyCommandResult]
+  def m1LoadAoFigure: F[ApplyCommandResult]
+  def m1LoadNonAoFigure: F[ApplyCommandResult]
 
   def getGuideState: F[GuideState]
   def getGuideQuality: F[GuidersQualityValues]
