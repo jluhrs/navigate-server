@@ -633,6 +633,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assert(r1.m2GuideReset.connected)
       assert(r1.mountGuide.mode.connected)
       assert(r1.mountGuide.source.connected)
+      assert(r1.probeGuideMode.state.connected)
       assert(p1_1.reset.connected)
       assert(p2_1.reset.connected)
       assert(oi_1.reset.connected)
@@ -662,10 +663,16 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
                    BinaryOnOff.On.some
       )
       assertEquals(r1.mountGuide.source.value, "SCS".some)
+      assertEquals(r1.probeGuideMode.state.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.Off.some
+      )
 
       assertEquals(r2.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.Off.some)
       assertEquals(r2.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.Off.some)
       assertEquals(r2.mountGuide.mode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.Off.some
+      )
+      assertEquals(r2.probeGuideMode.state.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.Off.some
       )
       assertEquals(p1_1.reset.value, 1.0.some)
@@ -772,7 +779,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       m1Guide = M1GuideConfig.M1GuideOn(M1Source.OIWFS),
       m2Guide = M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
       dayTimeMode = Some(false),
-      probeGuide = none
+      probeGuide = ProbeGuide(GuideProbe.GmosOIWFS, GuideProbe.GmosOIWFS).some
     )
 
     for {
@@ -799,6 +806,8 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assert(r1.mountGuide.mode.connected)
       assert(r1.mountGuide.source.connected)
       assert(r1.probeGuideMode.state.connected)
+      assert(r1.probeGuideMode.from.connected)
+      assert(r1.probeGuideMode.to.connected)
 
       assertEquals(r1.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
       assertEquals(r1.m1GuideConfig.source.value.flatMap(Enumerated[M1Source].fromTag),
@@ -825,13 +834,18 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
                    BinaryOnOff.On.some
       )
       assertEquals(r1.mountGuide.source.value, "SCS".some)
+      assertEquals(r1.probeGuideMode.state.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.On.some
+      )
+      assertEquals(r1.probeGuideMode.from.value, "OIWFS".some)
+      assertEquals(r1.probeGuideMode.to.value, "OIWFS".some)
 
       assertEquals(r2.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.Off.some)
       assertEquals(r2.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.Off.some)
       assertEquals(r2.mountGuide.mode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.Off.some
       )
-      assertEquals(r1.probeGuideMode.state.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+      assertEquals(r2.probeGuideMode.state.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.Off.some
       )
     }

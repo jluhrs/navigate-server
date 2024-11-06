@@ -507,6 +507,8 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
     .state(false)
     .mountGuideCommand
     .mode(false)
+    .probeGuideModeCommand
+    .setMode(None)
     .post
     .verifiedRun(ConnectionTimeout) <*
     stateRef.get.flatMap { s =>
