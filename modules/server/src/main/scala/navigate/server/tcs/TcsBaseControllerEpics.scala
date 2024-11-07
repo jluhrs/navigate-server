@@ -55,7 +55,7 @@ import scala.concurrent.duration.*
 import TcsBaseController.{EquinoxDefault, FixedSystem, SwapConfig, SystemDefault, TcsConfig}
 
 /* This class implements the common TCS commands */
-class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
+abstract class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
   sys:      EpicsSystems[F],
   timeout:  FiniteDuration,
   stateRef: Ref[F, TcsBaseControllerEpics.State]
@@ -851,35 +851,6 @@ class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
           )
           .getOrElse(ApplyCommandResult.Completed.pure[F])
       }
-
-  override def getInstrumentPorts: F[InstrumentPorts] = (for {
-    f2F <- sys.ags.status.flamingos2Port
-    ghF <- sys.ags.status.ghostPort
-    gmF <- sys.ags.status.gmosPort
-    gnF <- sys.ags.status.gnirsPort
-    gpF <- sys.ags.status.gpiPort
-    gsF <- sys.ags.status.gsaoiPort
-    nfF <- sys.ags.status.nifsPort
-    nrF <- sys.ags.status.niriPort
-  } yield for {
-    f2 <- f2F
-    gh <- ghF
-    gm <- gmF
-    gn <- gnF
-    gp <- gpF
-    gs <- gsF
-    nf <- nfF
-    nr <- nrF
-  } yield InstrumentPorts(
-    flamingos2Port = f2,
-    ghostPort = gh,
-    gmosPort = gm,
-    gnirsPort = gn,
-    gpiPort = gp,
-    gsaoiPort = gs,
-    nifsPort = nf,
-    niriPort = nr
-  )).verifiedRun(ConnectionTimeout)
 
   private def setLightPath(
     from: LightSource,
