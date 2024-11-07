@@ -11,6 +11,7 @@ import lucuma.core.enums.GuideProbe
 import lucuma.core.enums.Instrument
 import lucuma.core.enums.M1Source
 import lucuma.core.enums.MountGuideOption
+import lucuma.core.enums.Site
 import lucuma.core.enums.TipTiltSource
 import lucuma.core.math.Angle
 import lucuma.core.math.Coordinates
@@ -59,7 +60,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Mount commands") {
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.mcsPark
       _        <- ctr.mcsFollow(enable = true)
@@ -74,7 +75,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("SCS commands") {
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.scsFollow(enable = true)
       rs       <- st.tcs.get
@@ -88,7 +89,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     val testAngle = Angle.fromDoubleDegrees(123.456)
 
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.rotPark
       _        <- ctr.rotFollow(enable = true)
@@ -116,7 +117,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     val testVentWest = 0.2
 
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.ecsCarouselMode(DomeMode.MinVibration,
                                       ShutterMode.Tracking,
@@ -206,7 +207,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     )
 
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.slew(
                     slewOptions,
@@ -438,7 +439,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     )
 
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.instrumentSpecifics(instrumentSpecifics)
       rs       <- st.tcs.get
@@ -498,7 +499,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     )
 
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.oiwfsTarget(oiwfsTarget)
       rs       <- st.tcs.get
@@ -542,7 +543,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     val trackingConfig = TrackingConfig(true, false, false, true)
 
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.oiwfsProbeTracking(trackingConfig)
       rs       <- st.tcs.get
@@ -569,7 +570,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("oiwfs probe park command") {
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.oiwfsPark
       rs       <- st.tcs.get
@@ -581,7 +582,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("oiwfs probe follow command") {
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.oiwfsFollow(true)
       r1       <- st.tcs.get
@@ -608,7 +609,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     )
 
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.enableGuide(guideCfg)
       r1       <- st.tcs.get
@@ -633,6 +634,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assert(r1.m2GuideReset.connected)
       assert(r1.mountGuide.mode.connected)
       assert(r1.mountGuide.source.connected)
+      assert(r1.probeGuideMode.state.connected)
       assert(p1_1.reset.connected)
       assert(p2_1.reset.connected)
       assert(oi_1.reset.connected)
@@ -662,10 +664,16 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
                    BinaryOnOff.On.some
       )
       assertEquals(r1.mountGuide.source.value, "SCS".some)
+      assertEquals(r1.probeGuideMode.state.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.Off.some
+      )
 
       assertEquals(r2.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.Off.some)
       assertEquals(r2.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.Off.some)
       assertEquals(r2.mountGuide.mode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.Off.some
+      )
+      assertEquals(r2.probeGuideMode.state.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.Off.some
       )
       assertEquals(p1_1.reset.value, 1.0.some)
@@ -686,7 +694,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     )
 
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.enableGuide(guideCfg)
       r1       <- st.tcs.get
@@ -772,11 +780,11 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       m1Guide = M1GuideConfig.M1GuideOn(M1Source.OIWFS),
       m2Guide = M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
       dayTimeMode = Some(false),
-      probeGuide = none
+      probeGuide = ProbeGuide(GuideProbe.GmosOIWFS, GuideProbe.GmosOIWFS).some
     )
 
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.enableGuide(guideCfg)
       r1       <- st.tcs.get
@@ -799,6 +807,8 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assert(r1.mountGuide.mode.connected)
       assert(r1.mountGuide.source.connected)
       assert(r1.probeGuideMode.state.connected)
+      assert(r1.probeGuideMode.from.connected)
+      assert(r1.probeGuideMode.to.connected)
 
       assertEquals(r1.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
       assertEquals(r1.m1GuideConfig.source.value.flatMap(Enumerated[M1Source].fromTag),
@@ -825,13 +835,18 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
                    BinaryOnOff.On.some
       )
       assertEquals(r1.mountGuide.source.value, "SCS".some)
+      assertEquals(r1.probeGuideMode.state.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.On.some
+      )
+      assertEquals(r1.probeGuideMode.from.value, "OIWFS".some)
+      assertEquals(r1.probeGuideMode.to.value, "OIWFS".some)
 
       assertEquals(r2.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.Off.some)
       assertEquals(r2.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.Off.some)
       assertEquals(r2.mountGuide.mode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.Off.some
       )
-      assertEquals(r1.probeGuideMode.state.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+      assertEquals(r2.probeGuideMode.state.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.Off.some
       )
     }
@@ -847,7 +862,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     )
 
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.enableGuide(guideCfg)
       r1       <- st.tcs.get
@@ -872,7 +887,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     )
 
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.enableGuide(guideCfg)
       r1       <- st.tcs.get
@@ -892,7 +907,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     val expectedFilename = "data/200Hz.fits"
 
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- st.tcs.update(_.focus(_.guideStatus).replace(defaultGuideState))
       _        <- ctr.oiwfsObserve(testVal)
@@ -920,7 +935,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Stop OIWFS readout") {
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.oiwfsStopObserve
       rs       <- st.tcs.get
@@ -934,7 +949,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     val testVal = TimeSpan.unsafeFromMicroseconds(12345)
 
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.hrwfsObserve(testVal)
       rs       <- st.ac.get
@@ -951,7 +966,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Stop HRWFS exposures") {
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.hrwfsStopObserve
       rs       <- st.ac.get
@@ -1005,7 +1020,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     )
 
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- st.tcs.update(_.focus(_.guideStatus).replace(guideWithOiState))
       g        <- ctr.getGuideState
@@ -1032,7 +1047,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     )
 
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- st.mcs.update(_.focus(_.follow).replace(TestChannel.State.of("ON")))
       _        <- st.scs.update(_.focus(_.follow).replace(TestChannel.State.of("YES")))
@@ -1066,7 +1081,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       GuidersQualityValues.GuiderQuality(1500, true)
     )
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- st.p1.update(
                     _.copy(
@@ -1112,7 +1127,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     )
 
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- st.tcs.update(_.focus(_.guideStatus).replace(defaultGuideState))
       _        <- ctr.oiwfsObserve(testExpTime)
@@ -1173,7 +1188,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Set baffles") {
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.baffles(CentralBafflePosition.Open, DeployableBafflePosition.ThermalIR)
       r0       <- st.tcs.get
@@ -1197,7 +1212,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Park M1") {
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.m1Park
       r0       <- st.tcs.get
@@ -1209,7 +1224,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Unpark M1") {
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.m1Unpark
       r0       <- st.tcs.get
@@ -1221,7 +1236,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Zero M1 figure") {
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.m1ZeroFigure
       r0       <- st.tcs.get
@@ -1233,7 +1248,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Enable M1 updates") {
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.m1UpdateOn
       r0       <- st.tcs.get
@@ -1247,7 +1262,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Disable M1 updates") {
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.m1UpdateOff
       r0       <- st.tcs.get
@@ -1259,7 +1274,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Load M1 AO figure") {
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.m1LoadAoFigure
       r0       <- st.tcs.get
@@ -1271,13 +1286,49 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Load M1 non-AO figure") {
     for {
-      x        <- createController
+      x        <- createController()
       (st, ctr) = x
       _        <- ctr.m1LoadNonAoFigure
       r0       <- st.tcs.get
     } yield {
       assert(r0.m1Cmds.loadModelFile.connected)
       assertEquals(r0.m1Cmds.loadModelFile.value, "non-AO".some)
+    }
+  }
+
+  test("Don't try to read GN instruments ports at GS") {
+    for {
+      x        <- createController(site = Site.GS)
+      (st, ctr) = x
+      _        <- ctr.getInstrumentPorts
+      r0       <- st.ags.get
+    } yield {
+      assert(r0.f2Port.connected)
+      assert(r0.ghostPort.connected)
+      assert(r0.gmosPort.connected)
+      assert(r0.gsaoiPort.connected)
+      assert(!r0.gnirsPort.connected)
+      assert(!r0.gpiPort.connected)
+      assert(!r0.nifsPort.connected)
+      assert(!r0.niriPort.connected)
+    }
+  }
+
+  test("Don't try to read GS instruments ports at GN") {
+    for {
+      x        <- createController(site = Site.GN)
+      (st, ctr) = x
+      _        <- ctr.getInstrumentPorts
+      r0       <- st.ags.get
+    } yield {
+      assert(!r0.f2Port.connected)
+      assert(!r0.ghostPort.connected)
+      assert(r0.gmosPort.connected)
+      assert(!r0.gsaoiPort.connected)
+      assert(r0.gnirsPort.connected)
+      assert(r0.gpiPort.connected)
+      assert(r0.nifsPort.connected)
+      assert(r0.niriPort.connected)
     }
   }
 
@@ -1294,37 +1345,55 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     ac:   Ref[F, TestAcquisitionCameraEpicsSystem.State]
   )
 
-  def createController: IO[(StateRefs[IO], TcsBaseControllerEpics[IO])] = for {
-    tcs  <- Ref.of[IO, TestTcsEpicsSystem.State](TestTcsEpicsSystem.defaultState)
-    p1   <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
-    p2   <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
-    oiw  <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
-    oi   <- Ref.of[IO, TestOiwfsEpicsSystem.State](TestOiwfsEpicsSystem.defaultState)
-    mcs  <- Ref.of[IO, TestMcsEpicsSystem.State](TestMcsEpicsSystem.defaultState)
-    scs  <- Ref.of[IO, TestScsEpicsSystem.State](TestScsEpicsSystem.defaultState)
-    crcs <- Ref.of[IO, TestCrcsEpicsSystem.State](TestCrcsEpicsSystem.defaultState)
-    ags  <- Ref.of[IO, TestAgsEpicsSystem.State](TestAgsEpicsSystem.defaultState)
-    st   <- Ref.of[IO, TcsBaseControllerEpics.State](TcsBaseControllerEpics.State.default)
-    ac   <- Ref.of[IO, TestAcquisitionCameraEpicsSystem.State](
-              TestAcquisitionCameraEpicsSystem.defaultState
-            )
-  } yield (
-    StateRefs(tcs, p1, p2, oiw, oi, mcs, scs, crcs, ags, ac),
-    new TcsBaseControllerEpics[IO](
-      EpicsSystems(
-        TestTcsEpicsSystem.build(tcs),
-        TestWfsEpicsSystem.build("PWFS1", p1),
-        TestWfsEpicsSystem.build("PWFS2", p2),
-        TestOiwfsEpicsSystem.build(oiw, oi),
-        TestMcsEpicsSystem.build(mcs),
-        TestScsEpicsSystem.build(scs),
-        TestCrcsEpicsSystem.build(crcs),
-        TestAgsEpicsSystem.build(ags),
-        TestAcquisitionCameraEpicsSystem.build(ac)
-      ),
-      DefaultTimeout,
-      st
+  def createController(site: Site = Site.GS): IO[(StateRefs[IO], TcsBaseControllerEpics[IO])] =
+    for {
+      tcs  <- Ref.of[IO, TestTcsEpicsSystem.State](TestTcsEpicsSystem.defaultState)
+      p1   <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
+      p2   <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
+      oiw  <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
+      oi   <- Ref.of[IO, TestOiwfsEpicsSystem.State](TestOiwfsEpicsSystem.defaultState)
+      mcs  <- Ref.of[IO, TestMcsEpicsSystem.State](TestMcsEpicsSystem.defaultState)
+      scs  <- Ref.of[IO, TestScsEpicsSystem.State](TestScsEpicsSystem.defaultState)
+      crcs <- Ref.of[IO, TestCrcsEpicsSystem.State](TestCrcsEpicsSystem.defaultState)
+      ags  <- Ref.of[IO, TestAgsEpicsSystem.State](TestAgsEpicsSystem.defaultState)
+      st   <- Ref.of[IO, TcsBaseControllerEpics.State](TcsBaseControllerEpics.State.default)
+      ac   <- Ref.of[IO, TestAcquisitionCameraEpicsSystem.State](
+                TestAcquisitionCameraEpicsSystem.defaultState
+              )
+    } yield (
+      StateRefs(tcs, p1, p2, oiw, oi, mcs, scs, crcs, ags, ac),
+      (site === Site.GS).fold(
+        new TcsSouthControllerEpics[IO](
+          EpicsSystems(
+            TestTcsEpicsSystem.build(tcs),
+            TestWfsEpicsSystem.build("PWFS1", p1),
+            TestWfsEpicsSystem.build("PWFS2", p2),
+            TestOiwfsEpicsSystem.build(oiw, oi),
+            TestMcsEpicsSystem.build(mcs),
+            TestScsEpicsSystem.build(scs),
+            TestCrcsEpicsSystem.build(crcs),
+            TestAgsEpicsSystem.build(ags),
+            TestAcquisitionCameraEpicsSystem.build(ac)
+          ),
+          DefaultTimeout,
+          st
+        ),
+        new TcsNorthControllerEpics[IO](
+          EpicsSystems(
+            TestTcsEpicsSystem.build(tcs),
+            TestWfsEpicsSystem.build("PWFS1", p1),
+            TestWfsEpicsSystem.build("PWFS2", p2),
+            TestOiwfsEpicsSystem.build(oiw, oi),
+            TestMcsEpicsSystem.build(mcs),
+            TestScsEpicsSystem.build(scs),
+            TestCrcsEpicsSystem.build(crcs),
+            TestAgsEpicsSystem.build(ags),
+            TestAcquisitionCameraEpicsSystem.build(ac)
+          ),
+          DefaultTimeout,
+          st
+        )
+      )
     )
-  )
 
 }
