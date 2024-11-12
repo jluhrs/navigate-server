@@ -3,6 +3,7 @@
 
 package navigate.server.acm
 
+import cats.syntax.all.*
 import lucuma.core.util.Enumerated
 
 trait Encoder[A, B] {
@@ -20,7 +21,7 @@ object Encoder {
   given [A: Enumerated]: Encoder[A, String] = (a: A) => Enumerated[A].tag(a)
 
   given [A: Encoder[*, String]]: Encoder[Option[A], String] = (x: Option[A]) =>
-    x.map(_.encode[String]).getOrElse("")
+    x.foldMap(_.encode[String])
 
   extension [A](a: A) {
     def encode[B](using enc: Encoder[A, B]): B = enc.encode(a)
