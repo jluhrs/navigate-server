@@ -406,7 +406,7 @@ abstract class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
           x.m1GuideCommand
             .state(true)
             .m1GuideConfigCommand
-            .source(source.tag)
+            .source(source.tag.toUpperCase)
             .m1GuideConfigCommand
             .weighting("none")
             .m1GuideConfigCommand
@@ -434,18 +434,25 @@ abstract class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
       case M2GuideConfig.M2GuideOn(coma, sources) =>
         val requireReset: Boolean = true // Use current state
         val beams                 = List("A", "B")
+
         sources
           .flatMap(x => beams.map(y => (x, y)))
           .foldLeft(
-            requireReset.fold(
-              sys.tcsEpics
-                .startCommand(timeout)
-                .m2GuideResetCommand
-                .mark
-                .post
-                .verifiedRun(ConnectionTimeout),
-              ApplyCommandResult.Completed.pure[F]
-            )
+            sys.tcsEpics
+              .startCommand(timeout)
+              .m2GuideCommand
+              .state(false)
+              .post
+              .verifiedRun(ConnectionTimeout) *>
+              requireReset.fold(
+                sys.tcsEpics
+                  .startCommand(timeout)
+                  .m2GuideResetCommand
+                  .mark
+                  .post
+                  .verifiedRun(ConnectionTimeout),
+                ApplyCommandResult.Completed.pure[F]
+              )
           ) { case (t, (src, beam)) =>
             t.flatMap { r =>
               // Set tip-tilt guide for each source on each beam
@@ -454,11 +461,15 @@ abstract class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
                 sys.tcsEpics
                   .startCommand(timeout)
                   .m2GuideConfigCommand
-                  .source(src.tag)
+                  .source(src.tag.toUpperCase)
                   .m2GuideConfigCommand
                   .sampleFreq(200.0)
                   .m2GuideConfigCommand
                   .filter("raw")
+                  .m2GuideConfigCommand
+                  .freq1(none)
+                  .m2GuideConfigCommand
+                  .freq2(none)
                   .m2GuideConfigCommand
                   .beam(beam)
                   .m2GuideConfigCommand
@@ -503,6 +514,8 @@ abstract class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
     .startCommand(timeout)
     .m1GuideCommand
     .state(false)
+    .m2GuideModeCommand
+    .coma(false)
     .m2GuideCommand
     .state(false)
     .mountGuideCommand

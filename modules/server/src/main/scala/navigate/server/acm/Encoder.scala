@@ -19,6 +19,9 @@ object Encoder {
 
   given [A: Enumerated]: Encoder[A, String] = (a: A) => Enumerated[A].tag(a)
 
+  given [A: Encoder[*, String]]: Encoder[Option[A], String] = (x: Option[A]) =>
+    x.map(_.encode[String]).getOrElse("")
+
   extension [A](a: A) {
     def encode[B](using enc: Encoder[A, B]): B = enc.encode(a)
   }

@@ -93,8 +93,8 @@ object TcsEpicsSystem {
                                            String,
                                            Double,
                                            String,
-                                           Double,
-                                           Double,
+                                           Option[Double],
+                                           Option[Double],
                                            String,
                                            BinaryOnOff
     ]
@@ -776,11 +776,11 @@ object TcsEpicsSystem {
           tcsEpics.m2GuideConfigCmd.setParam3(v)
         )
 
-        override def freq1(v: Double): TcsCommands[F] = addParam(
+        override def freq1(v: Option[Double]): TcsCommands[F] = addParam(
           tcsEpics.m2GuideConfigCmd.setParam4(v)
         )
 
-        override def freq2(v: Double): TcsCommands[F] = addParam(
+        override def freq2(v: Option[Double]): TcsCommands[F] = addParam(
           tcsEpics.m2GuideConfigCmd.setParam5(v)
         )
 
@@ -1104,8 +1104,15 @@ object TcsEpicsSystem {
     override val m2GuideModeCmd: Command1Channels[F, BinaryOnOff] =
       Command1Channels(channels.telltale, channels.m2GuideMode)
 
-    override val m2GuideConfigCmd
-      : Command7Channels[F, String, Double, String, Double, Double, String, BinaryOnOff] =
+    override val m2GuideConfigCmd: Command7Channels[F,
+                                                    String,
+                                                    Double,
+                                                    String,
+                                                    Option[Double],
+                                                    Option[Double],
+                                                    String,
+                                                    BinaryOnOff
+    ] =
       Command7Channels(
         channels.telltale,
         channels.m2GuideConfig.source,
@@ -1475,8 +1482,8 @@ object TcsEpicsSystem {
     def source(v:     String): S
     def sampleFreq(v: Double): S
     def filter(v:     String): S
-    def freq1(v:      Double): S
-    def freq2(v:      Double): S
+    def freq1(v:      Option[Double]): S
+    def freq2(v:      Option[Double]): S
     def beam(v:       String): S
     def reset(v:      Boolean): S
   }
