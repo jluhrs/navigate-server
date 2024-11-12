@@ -640,16 +640,12 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assert(oi_1.reset.connected)
 
       assertEquals(r1.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
-      assertEquals(r1.m1GuideConfig.source.value.flatMap(Enumerated[M1Source].fromTag),
-                   M1Source.OIWFS.some
-      )
+      assertEquals(r1.m1GuideConfig.source.value, M1Source.OIWFS.tag.toUpperCase.some)
       assertEquals(r1.m1GuideConfig.frames.value.flatMap(_.toIntOption), 1.some)
       assertEquals(r1.m1GuideConfig.weighting.value, "none".some)
       assertEquals(r1.m1GuideConfig.filename.value, "".some)
       assertEquals(r1.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
-      assertEquals(r1.m2GuideConfig.source.value.flatMap(Enumerated[TipTiltSource].fromTag),
-                   TipTiltSource.OIWFS.some
-      )
+      assertEquals(r1.m2GuideConfig.source.value, TipTiltSource.OIWFS.tag.toUpperCase.some)
       assertEquals(r1.m2GuideConfig.beam.value, "B".some)
       assertEquals(r1.m2GuideConfig.filter.value, "raw".some)
       assertEquals(r1.m2GuideConfig.samplefreq.value.flatMap(_.toDoubleOption), 200.0.some)
@@ -730,16 +726,12 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assert(oi_1.focusGain.connected)
 
       assertEquals(r1.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
-      assertEquals(r1.m1GuideConfig.source.value.flatMap(Enumerated[M1Source].fromTag),
-                   M1Source.OIWFS.some
-      )
+      assertEquals(r1.m1GuideConfig.source.value, M1Source.OIWFS.tag.toUpperCase.some)
       assertEquals(r1.m1GuideConfig.frames.value.flatMap(_.toIntOption), 1.some)
       assertEquals(r1.m1GuideConfig.weighting.value, "none".some)
       assertEquals(r1.m1GuideConfig.filename.value, "".some)
       assertEquals(r1.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
-      assertEquals(r1.m2GuideConfig.source.value.flatMap(Enumerated[TipTiltSource].fromTag),
-                   TipTiltSource.OIWFS.some
-      )
+      assertEquals(r1.m2GuideConfig.source.value, TipTiltSource.OIWFS.tag.toUpperCase.some)
       assertEquals(r1.m2GuideConfig.beam.value, "B".some)
       assertEquals(r1.m2GuideConfig.filter.value, "raw".some)
       assertEquals(r1.m2GuideConfig.samplefreq.value.flatMap(_.toDoubleOption), 200.0.some)
@@ -811,16 +803,12 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assert(r1.probeGuideMode.to.connected)
 
       assertEquals(r1.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
-      assertEquals(r1.m1GuideConfig.source.value.flatMap(Enumerated[M1Source].fromTag),
-                   M1Source.OIWFS.some
-      )
+      assertEquals(r1.m1GuideConfig.source.value, M1Source.OIWFS.tag.toUpperCase.some)
       assertEquals(r1.m1GuideConfig.frames.value.flatMap(_.toIntOption), 1.some)
       assertEquals(r1.m1GuideConfig.weighting.value, "none".some)
       assertEquals(r1.m1GuideConfig.filename.value, "".some)
       assertEquals(r1.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
-      assertEquals(r1.m2GuideConfig.source.value.flatMap(Enumerated[TipTiltSource].fromTag),
-                   TipTiltSource.OIWFS.some
-      )
+      assertEquals(r1.m2GuideConfig.source.value, TipTiltSource.OIWFS.tag.toUpperCase.some)
       assertEquals(r1.m2GuideConfig.beam.value, "B".some)
       assertEquals(r1.m2GuideConfig.filter.value, "raw".some)
       assertEquals(r1.m2GuideConfig.samplefreq.value.flatMap(_.toDoubleOption), 200.0.some)
