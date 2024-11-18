@@ -19,6 +19,7 @@ import io.circe.Decoder.Result
 import io.circe.DecodingFailure
 import io.circe.Json
 import lucuma.core.enums.ComaOption
+import lucuma.core.enums.LightSinkName
 import lucuma.core.enums.M1Source
 import lucuma.core.enums.MountGuideOption
 import lucuma.core.enums.TipTiltSource
@@ -33,6 +34,7 @@ import munit.CatsEffectSuite
 import navigate.model.NavigateEvent
 import navigate.model.NavigateState
 import navigate.model.enums.DomeMode
+import navigate.model.enums.LightSource
 import navigate.model.enums.ShutterMode
 import navigate.server.NavigateEngine
 import navigate.server.OdbProxy
@@ -1154,6 +1156,70 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     )
   }
 
+  test("Configure light path") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      gd  <- Topic[IO, GuideState]
+      gq  <- Topic[IO, GuidersQualityValues]
+      ts  <- Topic[IO, TelescopeState]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts)
+      p   <- mp.compileAndRun(
+               """
+          |mutation { lightpathConfig (
+          |  from: SKY,
+          |  to: GMOS
+          |) {
+          |  result
+          |} }
+          |""".stripMargin
+             )
+      q   <- mp.compileAndRun(
+               """
+          |mutation { lightpathConfig (
+          |  from: AO,
+          |  to: GMOS
+          |) {
+          |  result
+          |} }
+          |""".stripMargin
+             )
+      r   <- mp.compileAndRun(
+               """
+          |mutation { lightpathConfig (
+          |  from: GCAL,
+          |  to: GMOS
+          |) {
+          |  result
+          |} }
+          |""".stripMargin
+             )
+      s   <- mp.compileAndRun(
+               """
+          |mutation { lightpathConfig (
+          |  from: SKY,
+          |  to: AC
+          |) {
+          |  result
+          |} }
+          |""".stripMargin
+             )
+    } yield {
+      assert(
+        extractResult[OperationOutcome](p, "lightpathConfig").exists(_ === OperationOutcome.success)
+      )
+      assert(
+        extractResult[OperationOutcome](q, "lightpathConfig").exists(_ === OperationOutcome.success)
+      )
+      assert(
+        extractResult[OperationOutcome](r, "lightpathConfig").exists(_ === OperationOutcome.success)
+      )
+      assert(
+        extractResult[OperationOutcome](s, "lightpathConfig").exists(_ === OperationOutcome.success)
+      )
+    }
+  }
+
 }
 
 object NavigateMappingsTest {
@@ -1285,6 +1351,8 @@ object NavigateMappingsTest {
       override def m1LoadAoFigure: IO[Unit] = IO.unit
 
       override def m1LoadNonAoFigure: IO[Unit] = IO.unit
+
+      override def lightpathConfig(from: LightSource, to: LightSinkName): IO[Unit] = IO.unit
     }
   }
 

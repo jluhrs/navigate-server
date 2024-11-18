@@ -30,6 +30,8 @@ import io.circe.syntax.*
 import lucuma.core.enums.ComaOption
 import lucuma.core.enums.GuideProbe
 import lucuma.core.enums.Instrument
+import lucuma.core.enums.LightSinkName
+import lucuma.core.enums.LightSinkName.*
 import lucuma.core.enums.M1Source
 import lucuma.core.enums.MountGuideOption
 import lucuma.core.enums.TipTiltSource
@@ -49,6 +51,7 @@ import lucuma.core.util.TimeSpan
 import mouse.boolean.given
 import navigate.model.Distance
 import navigate.model.NavigateState
+import navigate.model.enums.LightSource
 import navigate.server.NavigateEngine
 import navigate.server.tcs.AutoparkAowfs
 import navigate.server.tcs.AutoparkGems
@@ -365,6 +368,18 @@ class NavigateMappings[F[_]: Sync](
         Result.failure[OperationOutcome]("guideEnable parameters could not be parsed.").pure[F]
       )
 
+  def lightpathConfig(p: Path, env: Env): F[Result[OperationOutcome]] = (for {
+    from <- env.get[LightSource]("from")
+    to   <- env.get[LightSinkName]("to")
+  } yield server
+    .lightpathConfig(from, to)
+    .attempt
+    .map(x =>
+      Result.success(
+        x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+      )
+    )).getOrElse(Result.failure[OperationOutcome]("Slew parameters could not be parsed.").pure[F])
+
   def simpleCommand(cmd: F[Unit]): F[Result[OperationOutcome]] =
     cmd.attempt
       .map(x =>
@@ -478,6 +493,24 @@ class NavigateMappings[F[_]: Sync](
              )
         _ <- Elab.env("config" -> x)
       } yield ()
+    case (MutationType,
+          "lightpathConfig",
+          List(Binding("from", EnumValue(f)), Binding("to", EnumValue(t)))
+        ) =>
+      for {
+        from <- Elab.liftR(
+                  parseEnumerated[LightSource](f).toResult(
+                    "Could not parse lightpathConfig parameter \"from\""
+                  )
+                )
+        to   <- Elab.liftR(
+                  parseEnumerated[LightSinkName](t).toResult(
+                    "Could not parse lightpathConfig parameter \"to\""
+                  )
+                )
+        _    <- Elab.env("from" -> from)
+        _    <- Elab.env("to" -> to)
+      } yield ()
   }
 
   override val typeMappings: TypeMappings = TypeMappings(
@@ -538,7 +571,8 @@ class NavigateMappings[F[_]: Sync](
           ),
           RootEffect.computeEncodable("m1LoadNonAoFigure")((p, env) =>
             simpleCommand(server.m1LoadNonAoFigure)
-          )
+          ),
+          RootEffect.computeEncodable("lightpathConfig")((p, env) => lightpathConfig(p, env))
         )
       ),
       ObjectMapping(

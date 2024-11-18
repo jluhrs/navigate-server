@@ -3,13 +3,12 @@
 
 package navigate.model.enums
 
-import cats.Eq
-import cats.derived.*
+import lucuma.core.util.Enumerated
 
-enum LightSource extends Product with Serializable derives Eq {
-  case Sky extends LightSource
+enum LightSource(val tag: String) extends Product with Serializable derives Enumerated {
+  case Sky extends LightSource("Sky")
 
-  case AO extends LightSource
+  case AO extends LightSource("Ao")
 
-  case GCAL extends LightSource
+  case GCAL extends LightSource("Gcal")
 }
