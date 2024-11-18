@@ -73,6 +73,7 @@ object NavigateCommand {
   case object M1ZeroFigure                extends NavigateCommand
   case object M1LoadAoFigure              extends NavigateCommand
   case object M1LoadNonAoFigure           extends NavigateCommand
+  case object LightPathConfig             extends NavigateCommand
 
   given Eq[NavigateCommand] = Eq.fromUniversalEquals
 
@@ -130,6 +131,7 @@ object NavigateCommand {
       case M1ZeroFigure          => "M1 Zero Figure"
       case M1LoadAoFigure        => "M1 Load Ao Figure"
       case M1LoadNonAoFigure     => "M1 Load Non Ao Figure"
+      case LightPathConfig       => "Light Path Configuration"
     }
   }
 

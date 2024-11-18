@@ -15,6 +15,7 @@ import fs2.Pipe
 import fs2.Stream
 import fs2.concurrent.Topic
 import io.circe.syntax.*
+import lucuma.core.enums.LightSinkName
 import lucuma.core.enums.MountGuideOption
 import lucuma.core.enums.Site
 import lucuma.core.math.Angle
@@ -36,6 +37,7 @@ import navigate.model.NavigateState
 import navigate.model.config.ControlStrategy
 import navigate.model.config.NavigateEngineConfiguration
 import navigate.model.enums.DomeMode
+import navigate.model.enums.LightSource
 import navigate.model.enums.ShutterMode
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuidersQualityValues
@@ -105,6 +107,7 @@ trait NavigateEngine[F[_]] {
   def m1ZeroFigure: F[Unit]
   def m1LoadAoFigure: F[Unit]
   def m1LoadNonAoFigure: F[Unit]
+  def lightpathConfig(from:                          LightSource, to:        LightSinkName): F[Unit]
   def getGuideState: F[GuideState]
   def getGuidersQuality: F[GuidersQualityValues]
   def getTelescopeState: F[TelescopeState]
@@ -458,6 +461,12 @@ object NavigateEngine {
       engine,
       M1LoadNonAoFigure,
       systems.tcsCommon.m1LoadNonAoFigure
+    )
+
+    override def lightpathConfig(from: LightSource, to: LightSinkName): F[Unit] = simpleCommand(
+      engine,
+      LightPathConfig,
+      systems.tcsCommon.lightPath(from, to)
     )
   }
 

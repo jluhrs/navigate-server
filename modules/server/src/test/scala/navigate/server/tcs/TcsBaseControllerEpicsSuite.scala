@@ -9,6 +9,7 @@ import cats.syntax.all.*
 import lucuma.core.enums.ComaOption
 import lucuma.core.enums.GuideProbe
 import lucuma.core.enums.Instrument
+import lucuma.core.enums.LightSinkName
 import lucuma.core.enums.M1Source
 import lucuma.core.enums.MountGuideOption
 import lucuma.core.enums.Site
@@ -33,6 +34,7 @@ import navigate.model.Distance
 import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
+import navigate.model.enums.LightSource
 import navigate.model.enums.ShutterMode
 import navigate.server.acm.CadDirective
 import navigate.server.epicsdata
@@ -1317,6 +1319,33 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assert(r0.gpiPort.connected)
       assert(r0.nifsPort.connected)
       assert(r0.niriPort.connected)
+    }
+  }
+
+  test("Configure light path") {
+    for {
+      x        <- createController(site = Site.GN)
+      (st, ctr) = x
+      _        <- st.ags.update(_.focus(_.gmosPort.value).replace(3.some))
+      _        <- ctr.lightPath(LightSource.Sky, LightSinkName.Gmos)
+      r0       <- st.tcs.get
+      _        <- ctr.lightPath(LightSource.AO, LightSinkName.Gmos)
+      r1       <- st.tcs.get
+      _        <- ctr.lightPath(LightSource.GCAL, LightSinkName.Gmos)
+      r2       <- st.tcs.get
+      _        <- ctr.lightPath(LightSource.Sky, LightSinkName.Ac)
+      r3       <- st.tcs.get
+    } yield {
+      assert(r0.aoFoldMech.parkDir.connected)
+      assert(r0.scienceFoldMech.position.connected)
+      assert(r0.hrwfsMech.parkDir.connected)
+      assertEquals(r0.scienceFoldMech.position.value, "gmos3".some)
+      assert(r1.aoFoldMech.position.connected)
+      assertEquals(r1.aoFoldMech.position.value, "IN".some)
+      assertEquals(r1.scienceFoldMech.position.value, "ao2gmos3".some)
+      assertEquals(r2.scienceFoldMech.position.value, "gcal2gmos3".some)
+      assert(r3.hrwfsMech.position.connected)
+      assertEquals(r3.hrwfsMech.position.value, "IN".some)
     }
   }
 

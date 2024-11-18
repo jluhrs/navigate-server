@@ -224,6 +224,31 @@ type GuidersQualityValues {
     oiwfs: GuideQuality!
 }
 
+enum LightSource {
+    SKY
+    AO
+    GCAL
+}
+
+enum LightSink {
+    GMOS
+    NIRI_F6
+    NIRI_F14
+    NIRI_F32
+    AC
+    HR
+    NIFS
+    GMOS_IFU
+    GNIRS
+    VISITOR
+    F2
+    GSAOI
+    PHOENIX
+    GPI
+    GHOST
+    IGRINS2
+}
+
 type Query {
     telescopeState: TelescopeState!
     guideState: GuideConfigurationState!
@@ -259,6 +284,7 @@ type Mutation {
     m1ZeroFigure: OperationOutcome!
     m1LoadAoFigure: OperationOutcome!
     m1LoadNonAoFigure: OperationOutcome!
+    lightpathConfig(from: LightSource, to: LightSink): OperationOutcome!
 }
 
 type Subscription {
