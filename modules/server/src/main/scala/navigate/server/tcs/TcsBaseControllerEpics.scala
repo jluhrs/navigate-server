@@ -41,6 +41,7 @@ import navigate.model.enums.ShutterMode
 import navigate.server
 import navigate.server.ApplyCommandResult
 import navigate.server.ConnectionTimeout
+import navigate.server.acm.CarState
 import navigate.server.epicsdata.BinaryOnOff
 import navigate.server.epicsdata.BinaryYesNo
 import navigate.server.tcs.AcquisitionCameraEpicsSystem.*
@@ -686,6 +687,7 @@ abstract class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
       fj <- sys.tcsEpics.status.pwfs1On
       fk <- sys.tcsEpics.status.pwfs2On
       fl <- sys.tcsEpics.status.oiwfsOn
+      fm <- sys.hrwfs.status.observe
     } yield for {
       a <- fa
       b <- fb
@@ -699,13 +701,15 @@ abstract class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
       j <- fj
       k <- fk
       l <- fl
+      m <- fm
     } yield GuideState(
       MountGuideOption.fromBoolean(f =!= 0),
       calcM1Guide(a, h),
       calcM2Guide(i, d, e, c, b, g),
       j === BinaryYesNo.Yes,
       k === BinaryYesNo.Yes,
-      l === BinaryYesNo.Yes
+      l === BinaryYesNo.Yes,
+      m === CarState.BUSY
     )
 
     x.verifiedRun(ConnectionTimeout)

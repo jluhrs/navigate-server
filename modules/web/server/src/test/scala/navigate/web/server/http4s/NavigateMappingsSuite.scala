@@ -693,11 +693,13 @@ class NavigateMappingsSuite extends CatsEffectSuite {
         M2GuideConfig.M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
         false,
         false,
+        false,
         false
       ),
       GuideState(MountGuideOption.MountGuideOff,
                  M1GuideConfig.M1GuideOff,
                  M2GuideConfig.M2GuideOff,
+                 false,
                  false,
                  false,
                  false
@@ -708,12 +710,14 @@ class NavigateMappingsSuite extends CatsEffectSuite {
         M2GuideConfig.M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
         false,
         false,
+        false,
         false
       ),
       GuideState(
         MountGuideOption.MountGuideOff,
         M1GuideConfig.M1GuideOn(M1Source.OIWFS),
         M2GuideConfig.M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
+        false,
         false,
         false,
         false
@@ -1233,6 +1237,7 @@ object NavigateMappingsTest {
                       M2GuideConfig.M2GuideOff,
                       false,
                       false,
+                      false,
                       false
            )
          )
@@ -1435,6 +1440,7 @@ object NavigateMappingsTest {
           if (l.isEmpty) M2GuideConfig.M2GuideOff
           else M2GuideConfig.M2GuideOn(ComaOption.fromBoolean(cm.exists(identity)), l.toSet)
         ).getOrElse(M2GuideConfig.M2GuideOff),
+        false,
         false,
         false,
         false

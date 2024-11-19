@@ -166,6 +166,8 @@ type GuideConfigurationState {
     p2Integrating: Boolean!
     """Is OIWFS integrating?"""
     oiIntegrating: Boolean!
+    """Is the AC/HRWFS integrating?"""
+    acIntegrating: Boolean!
 }
 
 input GuideConfigurationInput {

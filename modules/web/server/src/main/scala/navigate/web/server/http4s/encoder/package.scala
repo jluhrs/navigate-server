@@ -49,7 +49,8 @@ package object encoder {
         "mountOffload"  -> s.mountOffload.asJson,
         "p1Integrating" -> s.p1Integrating.asJson,
         "p2Integrating" -> s.p2Integrating.asJson,
-        "oiIntegrating" -> s.oiIntegrating.asJson
+        "oiIntegrating" -> s.oiIntegrating.asJson,
+        "acIntegrating" -> s.acIntegrating.asJson
       )
     )
   }

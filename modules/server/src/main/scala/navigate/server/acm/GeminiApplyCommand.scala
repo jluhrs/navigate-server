@@ -140,21 +140,21 @@ object GeminiApplyCommand {
                   )
                 case (Processing(None, x), ApplyValChange(v)) if v > 0               =>
                   (Processing(v.some, x), none[ApplyCommandResult].pure[F])
-                case (Processing(v, _), CarValChange(CarState.Error))                =>
+                case (Processing(v, _), CarValChange(CarState.ERROR))                =>
                   (Processing(v, WaitingIdle),
                    omsr.flatMap(msg =>
                      new Throwable(s"CAR record ${car.name} has error: $msg").raiseError
                    )
                   )
-                case (Processing(v, WaitingBusy), CarValChange(CarState.Busy))       =>
+                case (Processing(v, WaitingBusy), CarValChange(CarState.BUSY))       =>
                   (Processing(v, WaitingIdle), none[ApplyCommandResult].pure[F])
-                case (Processing(None, WaitingIdle), CarValChange(CarState.Idle))    =>
+                case (Processing(None, WaitingIdle), CarValChange(CarState.IDLE))    =>
                   (Processing(None, WaitingBusy), none[ApplyCommandResult].pure[F])
-                case (Processing(Some(v), WaitingIdle), CarValChange(CarState.Idle)) =>
+                case (Processing(Some(v), WaitingIdle), CarValChange(CarState.IDLE)) =>
                   (Processing(Some(v), WaitingBusy),
                    clidr.map(c => (c >= v).option(ApplyCommandResult.Completed))
                   )
-                case (Processing(Some(v), _), CarValChange(CarState.Paused))         =>
+                case (Processing(Some(v), _), CarValChange(CarState.PAUSED))         =>
                   (Processing(Some(v), WaitingBusy),
                    clidr.map(c => (c >= v).option(ApplyCommandResult.Paused))
                   )
