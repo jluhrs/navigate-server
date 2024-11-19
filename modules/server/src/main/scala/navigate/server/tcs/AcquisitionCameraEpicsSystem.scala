@@ -18,6 +18,7 @@ import navigate.model.enums.AcLens
 import navigate.model.enums.AcNdFilter
 import navigate.server.ApplyCommandResult
 import navigate.server.acm.CadDirective
+import navigate.server.acm.CarState
 import navigate.server.acm.Decoder
 import navigate.server.acm.GeminiApplyCommand
 import navigate.server.acm.ParameterList.*
@@ -62,6 +63,7 @@ object AcquisitionCameraEpicsSystem {
 
   trait AcquisitionCameraStatus[F[_]] {
     def filter: VerifiedEpics[F, F, AcFilter]
+    def observe: VerifiedEpics[F, F, CarState]
   }
 
   trait AcquisitionCameraCommands[F[_]] {
@@ -184,6 +186,9 @@ object AcquisitionCameraEpicsSystem {
       override val status: AcquisitionCameraStatus[F] = new AcquisitionCameraStatus[F] {
         override def filter: VerifiedEpics[F, F, AcFilter] =
           readChannel(chs.telltale, chs.filterReadout).map(_.map(acFilterDec.decode))
+
+        override def observe: VerifiedEpics[F, F, CarState] =
+          readChannel(chs.telltale, chs.observeInProgress)
       }
 
       override def startCommand(timeout: FiniteDuration): AcquisitionCameraCommands[F] =

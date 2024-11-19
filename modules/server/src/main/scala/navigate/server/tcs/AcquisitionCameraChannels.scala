@@ -10,30 +10,32 @@ import navigate.epics.EpicsService
 import navigate.epics.EpicsSystem.TelltaleChannel
 import navigate.epics.given
 import navigate.server.acm.CadDirective
+import navigate.server.acm.CarState
 
 case class AcquisitionCameraChannels[F[_]](
-  telltale:      TelltaleChannel[F],
-  filterReadout: Channel[F, String],
-  lens:          Channel[F, String],
-  ndFilter:      Channel[F, String],
-  filter:        Channel[F, String],
-  frameCount:    Channel[F, String],
-  expTime:       Channel[F, String],
-  output:        Channel[F, String],
-  directory:     Channel[F, String],
-  fileName:      Channel[F, String],
-  simFile:       Channel[F, String],
-  dhsStream:     Channel[F, String],
-  dhsOption:     Channel[F, String],
-  obsType:       Channel[F, String],
-  binning:       Channel[F, String],
-  windowing:     Channel[F, String],
-  centerX:       Channel[F, String],
-  centerY:       Channel[F, String],
-  width:         Channel[F, String],
-  height:        Channel[F, String],
-  dhsLabel:      Channel[F, String],
-  stopDir:       Channel[F, CadDirective]
+  telltale:          TelltaleChannel[F],
+  filterReadout:     Channel[F, String],
+  lens:              Channel[F, String],
+  ndFilter:          Channel[F, String],
+  filter:            Channel[F, String],
+  frameCount:        Channel[F, String],
+  expTime:           Channel[F, String],
+  output:            Channel[F, String],
+  directory:         Channel[F, String],
+  fileName:          Channel[F, String],
+  simFile:           Channel[F, String],
+  dhsStream:         Channel[F, String],
+  dhsOption:         Channel[F, String],
+  obsType:           Channel[F, String],
+  binning:           Channel[F, String],
+  windowing:         Channel[F, String],
+  centerX:           Channel[F, String],
+  centerY:           Channel[F, String],
+  width:             Channel[F, String],
+  height:            Channel[F, String],
+  dhsLabel:          Channel[F, String],
+  stopDir:           Channel[F, CadDirective],
+  observeInProgress: Channel[F, CarState]
 )
 
 object AcquisitionCameraChannels {
@@ -66,6 +68,7 @@ object AcquisitionCameraChannels {
     hei  <- service.getChannel[String](top, "dc:detFrameSize.F")
     lab  <- service.getChannel[String](top, "observe.A")
     std  <- service.getChannel[CadDirective](top, "stop.DIR")
+    obc  <- service.getChannel[CarState](top, "observeC.VAL")
   } yield AcquisitionCameraChannels(
     tt,
     flrd,
@@ -88,6 +91,7 @@ object AcquisitionCameraChannels {
     wid,
     hei,
     lab,
-    std
+    std,
+    obc
   )
 }

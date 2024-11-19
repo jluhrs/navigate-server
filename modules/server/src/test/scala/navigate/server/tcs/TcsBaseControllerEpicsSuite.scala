@@ -1006,7 +1006,8 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       M2GuideConfig.M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
       false,
       false,
-      true
+      true,
+      false
     )
 
     for {

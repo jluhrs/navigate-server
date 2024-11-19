@@ -15,5 +15,6 @@ case class GuideState(
   m2Guide:       M2GuideConfig,
   p1Integrating: Boolean,
   p2Integrating: Boolean,
-  oiIntegrating: Boolean
+  oiIntegrating: Boolean,
+  acIntegrating: Boolean
 ) derives Eq

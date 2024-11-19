@@ -6,8 +6,8 @@ package navigate.server.acm
 import lucuma.core.util.Enumerated
 
 enum CarState(val tag: String) extends Product with Serializable derives Enumerated {
-  case Idle   extends CarState("idle")
-  case Paused extends CarState("paused")
-  case Busy   extends CarState("busy")
-  case Error  extends CarState("error")
+  case IDLE   extends CarState("idle")
+  case PAUSED extends CarState("paused")
+  case BUSY   extends CarState("busy")
+  case ERROR  extends CarState("error")
 }

@@ -25,6 +25,7 @@ object TcsSouthControllerSim {
              M2GuideConfig.M2GuideOff,
              false,
              false,
+             false,
              false
            )
          )
