@@ -11,7 +11,7 @@ object Settings {
   object LibraryVersions {
 
     // Scala libraries
-    val catsEffect = "3.5.6"
+    val catsEffect = "3.5.7"
     val cats       = "2.12.0"
     val mouse      = "1.3.2"
     val fs2        = "3.11.0"
