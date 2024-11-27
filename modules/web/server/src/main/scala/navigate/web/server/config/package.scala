@@ -9,7 +9,6 @@ import lucuma.core.enums.Site
 import navigate.model.config.*
 import pureconfig.*
 import pureconfig.error.*
-import pureconfig.generic.derivation.default.*
 import pureconfig.module.catseffect.syntax.*
 import pureconfig.module.http4s.*
 
