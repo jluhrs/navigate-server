@@ -1040,22 +1040,22 @@ object TcsEpicsSystem {
         tcsEpics.m1Cmds.ao(enable.fold(BinaryOnOffCapitalized.On, BinaryOnOffCapitalized.Off))
       )
     }
-    override val poAdjustCommand: AdjustCommand[F, TcsCommands[F]] =
+    override val originAdjustCommand: AdjustCommand[F, TcsCommands[F]] =
       new AdjustCommand[F, TcsCommands[F]] {
         override def frame(frm: ReferenceFrame): TcsCommands[F] = addParam(
-          writeCadParam(channels.telltale, channels.poAdjust.frame)(frm)
+          writeCadParam(channels.telltale, channels.originAdjust.frame)(frm)
         )
 
         override def size(sz: Double): TcsCommands[F] = addParam(
-          writeCadParam(channels.telltale, channels.poAdjust.size)(sz)
+          writeCadParam(channels.telltale, channels.originAdjust.size)(sz)
         )
 
         override def angle(a: Angle): TcsCommands[F] = addParam(
-          writeCadParam(channels.telltale, channels.poAdjust.angle)(a.toDoubleDegrees)
+          writeCadParam(channels.telltale, channels.originAdjust.angle)(a.toDoubleDegrees)
         )
 
         override def vtMask(vts: List[VirtualTelescope]): TcsCommands[F] = addParam(
-          writeCadParam(channels.telltale, channels.poAdjust.vtMask)(vts)
+          writeCadParam(channels.telltale, channels.originAdjust.vtMask)(vts)
         )
       }
   }
@@ -1726,7 +1726,7 @@ object TcsEpicsSystem {
     val scienceFoldCommands: AgMechCommands[F, ScienceFold.Position, TcsCommands[F]]
     val aoFoldCommands: AgMechCommands[F, AoFoldPosition, TcsCommands[F]]
     val m1Commands: M1Commands[F, TcsCommands[F]]
-    val poAdjustCommand: AdjustCommand[F, TcsCommands[F]]
+    val originAdjustCommand: AdjustCommand[F, TcsCommands[F]]
   }
   /*
 

@@ -1157,13 +1157,13 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       (if (Math.abs(size) > 1e-6) {
          sys.tcsEpics
            .startCommand(timeout)
-           .poAdjustCommand
+           .originAdjustCommand
            .frame(ReferenceFrame.Instrument)
-           .poAdjustCommand
+           .originAdjustCommand
            .size(size)
-           .poAdjustCommand
+           .originAdjustCommand
            .angle(angle)
-           .poAdjustCommand
+           .originAdjustCommand
            .vtMask(
              List(VirtualTelescope.SourceA, VirtualTelescope.SourceB, VirtualTelescope.SourceC)
            )

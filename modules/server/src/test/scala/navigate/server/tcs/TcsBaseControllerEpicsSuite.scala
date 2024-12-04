@@ -1414,23 +1414,23 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       r1       <- st.tcs.get
     } yield {
       assert(r1.inPosition.connected)
-      assert(r1.poAdjust.frame.connected)
-      assert(r1.poAdjust.size.connected)
-      assert(r1.poAdjust.angle.connected)
-      assert(r1.poAdjust.vt.connected)
-      r1.poAdjust.frame.value
+      assert(r1.originAdjust.frame.connected)
+      assert(r1.originAdjust.size.connected)
+      assert(r1.originAdjust.angle.connected)
+      assert(r1.originAdjust.vt.connected)
+      r1.originAdjust.frame.value
         .flatMap(_.toIntOption)
         .map(x => assertEquals(x, expFrame))
         .getOrElse(fail("No value for parameter frame"))
-      r1.poAdjust.size.value
+      r1.originAdjust.size.value
         .flatMap(_.toDoubleOption)
         .map(x => assertEqualsDouble(x, expSize, 1e-6))
         .getOrElse(fail("No value for parameter size"))
-      r1.poAdjust.angle.value
+      r1.originAdjust.angle.value
         .flatMap(_.toDoubleOption)
         .map(x => assertEqualsDouble(x, expAngle, 1e-6))
         .getOrElse(fail("No value for parameter angle"))
-      r1.poAdjust.vt.value
+      r1.originAdjust.vt.value
         .flatMap(_.toIntOption)
         .map(x => assertEquals(x, expVt))
         .getOrElse(fail("No value for parameter vt"))

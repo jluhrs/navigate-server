@@ -32,6 +32,7 @@ import navigate.server.tcs.TcsChannels.M2GuideConfigChannels
 import navigate.server.tcs.TcsChannels.MountGuideChannels
 import navigate.server.tcs.TcsChannels.OiwfsSelectChannels
 import navigate.server.tcs.TcsChannels.OriginChannels
+import navigate.server.tcs.TcsChannels.PointingModelAdjustChannels
 import navigate.server.tcs.TcsChannels.ProbeChannels
 import navigate.server.tcs.TcsChannels.ProbeGuideModeChannels
 import navigate.server.tcs.TcsChannels.ProbeTrackingChannels
@@ -259,7 +260,9 @@ object TestTcsEpicsSystem {
     aoFoldMech:       AgMechState,
     m1Cmds:           M1CommandsState,
     nodState:         TestChannel.State[String],
-    poAdjust:         AdjustState,
+    targetAdjust:     AdjustCommandState,
+    originAdjust:     AdjustCommandState,
+    pointingAdjust:   PointingAdjustCommandState,
     inPosition:       TestChannel.State[String]
   )
 
@@ -389,7 +392,9 @@ object TestTcsEpicsSystem {
     aoFoldMech = AgMechState.default,
     m1Cmds = M1CommandsState.default,
     nodState = TestChannel.State.of("A"),
-    poAdjust = AdjustState.default,
+    targetAdjust = AdjustCommandState.default,
+    originAdjust = AdjustCommandState.default,
+    pointingAdjust = PointingAdjustCommandState.default,
     inPosition = TestChannel.State.of("FALSE")
   )
 
@@ -750,12 +755,12 @@ object TestTcsEpicsSystem {
 
   def buildAdjustChannels[F[_]: Temporal](
     s: Ref[F, State],
-    l: Lens[State, AdjustState]
+    l: Lens[State, AdjustCommandState]
   ): AdjustChannels[F] = AdjustChannels(
-    new TestChannel[F, State, String](s, l.andThen(Focus[AdjustState](_.frame))),
-    new TestChannel[F, State, String](s, l.andThen(Focus[AdjustState](_.size))),
-    new TestChannel[F, State, String](s, l.andThen(Focus[AdjustState](_.angle))),
-    new TestChannel[F, State, String](s, l.andThen(Focus[AdjustState](_.vt)))
+    new TestChannel[F, State, String](s, l.andThen(Focus[AdjustCommandState](_.frame))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[AdjustCommandState](_.size))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[AdjustCommandState](_.angle))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[AdjustCommandState](_.vt)))
   )
 
   case class AgMechState(
@@ -780,6 +785,36 @@ object TestTcsEpicsSystem {
     aoEnable:      TestChannel.State[BinaryOnOffCapitalized]
   )
 
+  case class AdjustCommandState(
+    frame: TestChannel.State[String],
+    size:  TestChannel.State[String],
+    angle: TestChannel.State[String],
+    vt:    TestChannel.State[String]
+  )
+
+  object AdjustCommandState {
+    val default: AdjustCommandState = AdjustCommandState(
+      TestChannel.State.default[String],
+      TestChannel.State.default[String],
+      TestChannel.State.default[String],
+      TestChannel.State.default[String]
+    )
+  }
+
+  case class PointingAdjustCommandState(
+    frame: TestChannel.State[String],
+    size:  TestChannel.State[String],
+    angle: TestChannel.State[String]
+  )
+
+  object PointingAdjustCommandState {
+    val default: PointingAdjustCommandState = PointingAdjustCommandState(
+      TestChannel.State.default[String],
+      TestChannel.State.default[String],
+      TestChannel.State.default[String]
+    )
+  }
+
   object M1CommandsState {
     val default: M1CommandsState = M1CommandsState(
       TestChannel.State.default[String],
@@ -789,22 +824,6 @@ object TestTcsEpicsSystem {
       TestChannel.State.default[String],
       TestChannel.State.default[String],
       TestChannel.State.default[BinaryOnOffCapitalized]
-    )
-  }
-
-  case class AdjustState(
-    frame: TestChannel.State[String],
-    size:  TestChannel.State[String],
-    angle: TestChannel.State[String],
-    vt:    TestChannel.State[String]
-  )
-
-  object AdjustState {
-    val default: AdjustState = AdjustState(
-      TestChannel.State.default[String],
-      TestChannel.State.default[String],
-      TestChannel.State.default[String],
-      TestChannel.State.default[String]
     )
   }
 
@@ -836,6 +855,15 @@ object TestTcsEpicsSystem {
   ): AgMechChannels[F] = AgMechChannels[F](
     new TestChannel[F, State, CadDirective](s, l.andThen(Focus[AgMechState](_.parkDir))),
     new TestChannel[F, State, String](s, l.andThen(Focus[AgMechState](_.position)))
+  )
+
+  def buildPointingAdjustChannels[F[_]: Temporal](
+    s: Ref[F, State],
+    l: Lens[State, PointingAdjustCommandState]
+  ): PointingModelAdjustChannels[F] = PointingModelAdjustChannels[F](
+    new TestChannel[F, State, String](s, l.andThen(Focus[PointingAdjustCommandState](_.frame))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[PointingAdjustCommandState](_.size))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[PointingAdjustCommandState](_.angle)))
   )
 
   def buildChannels[F[_]: Temporal](s: Ref[F, State]): TcsChannels[F] =
@@ -881,7 +909,9 @@ object TestTcsEpicsSystem {
       p2ProbeTrackingState = buildProbeTrackingChannels(s, Focus[State](_.pwfs2Tracking)),
       oiProbeTrackingState = buildProbeTrackingChannels(s, Focus[State](_.oiwfsTracking)),
       aoProbeTrackingState = buildProbeTrackingChannels(s, Focus[State](_.aowfsTracking)),
-      poAdjust = buildAdjustChannels(s, Focus[State](_.poAdjust)),
+      targetAdjust = buildAdjustChannels(s, Focus[State](_.targetAdjust)),
+      originAdjust = buildAdjustChannels(s, Focus[State](_.originAdjust)),
+      pointingAdjust = buildPointingAdjustChannels(s, Focus[State](_.pointingAdjust)),
       inPosition = new TestChannel[F, State, String](s, Focus[State](_.inPosition))
     )
 

@@ -60,7 +60,9 @@ case class TcsChannels[F[_]](
   p2ProbeTrackingState: ProbeTrackingChannels[F],
   oiProbeTrackingState: ProbeTrackingChannels[F],
   aoProbeTrackingState: ProbeTrackingChannels[F],
-  poAdjust:             AdjustChannels[F],
+  targetAdjust:         AdjustChannels[F],
+  originAdjust:         AdjustChannels[F],
+  pointingAdjust:       PointingModelAdjustChannels[F],
   inPosition:           Channel[F, String]
 )
 
@@ -638,6 +640,28 @@ object TcsChannels {
     } yield AdjustChannels(frm, sz, an, vt)
   }
 
+  case class PointingModelAdjustChannels[F[_]](
+                                                frame: Channel[F, String],
+                                                size:  Channel[F, String],
+                                                angle: Channel[F, String]
+                                              )
+
+  object PointingModelAdjustChannels {
+    def build[F[_]](
+                     service: EpicsService[F],
+                     top:     TcsTop,
+                     cadName: String
+                   ): Resource[F, PointingModelAdjustChannels[F]] = for {
+      frm <- service.getChannel[String](top.value, s"$cadName.A")
+      sze <- service.getChannel[String](top.value, s"$cadName.A")
+      ang <- service.getChannel[String](top.value, s"$cadName.A")
+    } yield PointingModelAdjustChannels[F](
+      frm,
+      sze,
+      ang
+    )
+  }
+
   /**
    * Build all TcsChannels It will construct the desired raw channel or call the build function for
    * channels group
@@ -691,12 +715,14 @@ object TcsChannels {
       sfm  <- AgMechChannels.build(service, s"${tcsTop.value}scienceFold")
       aom  <- AgMechChannels.build(service, s"${tcsTop.value}aoFold")
       m1   <- M1Channels.build(service, tcsTop, m1Top)
+      trad <- AdjustChannels.build(service, tcsTop, "target")
+      orad <- AdjustChannels.build(service, tcsTop, "po")
+      pmad <- PointingModelAdjustChannels.build(service, tcsTop, "collAdjust")
       nodS <- service.getChannel[String](tcsTop.value, "sad:nodState.VAL")
       p1gs <- buildProbeTrackingStateChannels(service, tcsTop, "Pwfs1")
       p2gs <- buildProbeTrackingStateChannels(service, tcsTop, "Pwfs2")
       oigs <- buildProbeTrackingStateChannels(service, tcsTop, "Oiwfs")
       aogs <- buildProbeTrackingStateChannels(service, tcsTop, "Aowfs")
-      poAd <- AdjustChannels.build(service, tcsTop, "po")
       inpo <- service.getChannel[String](tcsTop.value, "sad:inPosition.VAL")
     } yield TcsChannels[F](
       tt,
@@ -738,7 +764,9 @@ object TcsChannels {
       p2gs,
       oigs,
       aogs,
-      poAd,
+      trad,
+      orad,
+      pmad,
       inpo
     )
   }
