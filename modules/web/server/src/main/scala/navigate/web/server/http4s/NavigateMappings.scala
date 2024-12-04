@@ -580,28 +580,28 @@ class NavigateMappings[F[_]: Sync](
         List(
           RootStream.computeCursor("logMessage") { (p, env) =>
             logTopic
-              .subscribe(10)
+              .subscribe(1024)
               .map(_.asJson)
               .map(circeCursor(p, env, _))
               .map(Result.success)
           },
           RootStream.computeCursor("guideState") { (p, env) =>
             guideStateTopic
-              .subscribe(10)
+              .subscribe(1024)
               .map(_.asJson)
               .map(circeCursor(p, env, _))
               .map(Result.success)
           },
           RootStream.computeCursor("guidersQualityValues") { (p, env) =>
             guidersQualityTopic
-              .subscribe(10)
+              .subscribe(1024)
               .map(_.asJson)
               .map(circeCursor(p, env, _))
               .map(Result.success)
           },
           RootStream.computeCursor("telescopeState") { (p, env) =>
             telescopeStateTopic
-              .subscribe(10)
+              .subscribe(1024)
               .map(_.asJson)
               .map(circeCursor(p, env, _))
               .map(Result.success)

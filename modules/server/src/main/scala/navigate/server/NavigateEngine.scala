@@ -414,7 +414,8 @@ object NavigateEngine {
       stateRef.get.map(s => NavigateState(s.onSwappedTarget))
 
     override def getNavigateStateStream: Stream[F, NavigateState] =
-      topic.subscribeUnbounded
+      topic
+        .subscribe(1024)
         .mapAccumulate[Option[NavigateState], Option[NavigateState]](none) { (acc, ss) =>
           (ss.some, if (acc.contains(ss)) none else ss.some)
         }
