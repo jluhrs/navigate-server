@@ -53,7 +53,7 @@ object AgsChannels {
         gp <- buildPortCh("gpi")
         f2 <- buildPortCh("f2")
         nr <- buildPortCh("niri")
-        gn <- buildPortCh("gnirs")
+        gn <- buildPortCh("nirs")
         nf <- buildPortCh("nifs")
         gh <- buildPortCh("ghost")
       } yield InstrumentPortChannels(
