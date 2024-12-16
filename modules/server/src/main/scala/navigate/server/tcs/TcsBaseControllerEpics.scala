@@ -281,6 +281,39 @@ abstract class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
           )
       )
 
+  // The difference between this and the full applyTcsConfig is that here we keep the instrument parameters, but set
+  // the origin for the AC.
+  protected def applyPointToGuideConfig(
+    config: TcsBaseController.TcsConfig
+  ): TcsCommands[F] => TcsCommands[F] =
+    setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.sourceACmd),
+              config.sourceATarget
+    ).compose(config.sourceATarget.wavelength.map(setSourceAWalength).getOrElse(identity))
+      .compose(setRotatorTrackingConfig(config.rotatorTrackConfig))
+      .compose(setOrigin(config.instrumentSpecifics.origin))
+      .compose(
+        config.oiwfs
+          .map(o =>
+            setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.oiwfsTargetCmd),
+                      o.target
+            )
+              .compose(
+                setProbeTracking(Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
+                                   _.oiwfsProbeTrackingCommand
+                                 ),
+                                 o.tracking
+                )
+              )
+          )
+          .getOrElse(
+            setProbeTracking(
+              Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
+                _.oiwfsProbeTrackingCommand
+              ),
+              TrackingConfig.noTracking
+            )
+          )
+      )
   // Added a 1.5 s wait between selecting the OIWFS and setting targets, to copy TCC
   override def tcsConfig(config: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
     disableGuide *>
@@ -839,7 +872,7 @@ abstract class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
     disableGuide *>
       sys.hrwfs.status.filter.verifiedRun(ConnectionTimeout).flatMap { x =>
         (
-          applyTcsConfig(
+          applyPointToGuideConfig(
             swapConfig.toTcsConfig
               .focus(_.sourceATarget)
               .andThen(Target.wavelength)
@@ -852,6 +885,7 @@ abstract class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
           .verifiedRun(ConnectionTimeout)
       }
 
+  // TODO: consider cases where the light path should go through the AO
   override def restoreTarget(config: TcsConfig): F[ApplyCommandResult] =
     disableGuide *>
       getInstrumentPorts.flatMap { ps =>
