@@ -48,8 +48,7 @@ ThisBuild / githubWorkflowAddedJobs +=
   WorkflowJob(
     "deploy",
     "Build and publish Docker image",
-    WorkflowStep.Checkout ::
-      WorkflowStep.SetupJava(githubWorkflowJavaVersions.value.toList.take(1)) :::
+    githubWorkflowJobSetup.value.toList :::
       dockerHubLogin ::
       sbtDockerPublish ::
       Nil,
