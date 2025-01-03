@@ -233,9 +233,12 @@ object TestTcsEpicsSystem {
     rotator:          RotatorChannelState,
     origin:           OriginChannelState,
     focusOffset:      TestChannel.State[String],
+    pwfs1Tracking:    ProbeTrackingState,
+    pwfs2Tracking:    ProbeTrackingState,
     oiwfsTracking:    ProbeTrackingState,
     oiwfsProbe:       ProbeState,
     oiWfs:            WfsChannelState,
+    aowfsTracking:    ProbeTrackingState,
     m1Guide:          TestChannel.State[String],
     m1GuideConfig:    M1GuideConfigState,
     m2Guide:          TestChannel.State[String],
@@ -251,7 +254,8 @@ object TestTcsEpicsSystem {
     hrwfsMech:        AgMechState,
     scienceFoldMech:  AgMechState,
     aoFoldMech:       AgMechState,
-    m1Cmds:           M1CommandsState
+    m1Cmds:           M1CommandsState,
+    nodState:         TestChannel.State[String]
   )
 
   val defaultState: State = State(
@@ -336,15 +340,33 @@ object TestTcsEpicsSystem {
       yc = TestChannel.State.default
     ),
     focusOffset = TestChannel.State.default,
+    pwfs1Tracking = ProbeTrackingState(
+      nodAchopA = TestChannel.State.of("Off"),
+      nodAchopB = TestChannel.State.of("Off"),
+      nodBchopA = TestChannel.State.of("Off"),
+      nodBchopB = TestChannel.State.of("Off")
+    ),
+    pwfs2Tracking = ProbeTrackingState(
+      nodAchopA = TestChannel.State.of("Off"),
+      nodAchopB = TestChannel.State.of("Off"),
+      nodBchopA = TestChannel.State.of("Off"),
+      nodBchopB = TestChannel.State.of("Off")
+    ),
     oiwfsTracking = ProbeTrackingState(
-      nodAchopA = TestChannel.State.default,
-      nodAchopB = TestChannel.State.default,
-      nodBchopA = TestChannel.State.default,
-      nodBchopB = TestChannel.State.default
+      nodAchopA = TestChannel.State.of("Off"),
+      nodAchopB = TestChannel.State.of("Off"),
+      nodBchopA = TestChannel.State.of("Off"),
+      nodBchopB = TestChannel.State.of("Off")
     ),
     oiwfsProbe =
       ProbeState(parkDir = TestChannel.State.default, follow = TestChannel.State.default),
     oiWfs = WfsChannelState.default,
+    aowfsTracking = ProbeTrackingState(
+      nodAchopA = TestChannel.State.of("Off"),
+      nodAchopB = TestChannel.State.of("Off"),
+      nodBchopA = TestChannel.State.of("Off"),
+      nodBchopB = TestChannel.State.of("Off")
+    ),
     m1Guide = TestChannel.State.default,
     m1GuideConfig = M1GuideConfigState.default,
     m2Guide = TestChannel.State.default,
@@ -360,7 +382,8 @@ object TestTcsEpicsSystem {
     hrwfsMech = AgMechState.default,
     scienceFoldMech = AgMechState.default,
     aoFoldMech = AgMechState.default,
-    m1Cmds = M1CommandsState.default
+    m1Cmds = M1CommandsState.default,
+    nodState = TestChannel.State.of("A")
   )
 
   def buildEnclosureChannels[F[_]: Applicative](s: Ref[F, State]): EnclosureChannels[F] =
@@ -546,26 +569,26 @@ object TestTcsEpicsSystem {
 
   object GuideConfigState {
     val default: GuideConfigState = GuideConfigState(
-      TestChannel.State.default,
-      TestChannel.State.default,
-      TestChannel.State.default,
-      TestChannel.State.default,
-      TestChannel.State.default,
-      TestChannel.State.default,
-      TestChannel.State.default,
-      TestChannel.State.default,
-      TestChannel.State.default,
-      TestChannel.State.default,
-      TestChannel.State.default,
-      TestChannel.State.default,
-      TestChannel.State.default,
-      TestChannel.State.default,
-      TestChannel.State.default,
-      TestChannel.State.default,
-      TestChannel.State.default,
-      TestChannel.State.default,
-      TestChannel.State.default,
-      TestChannel.State.default
+      TestChannel.State.of(BinaryYesNo.No),
+      TestChannel.State.of(BinaryYesNo.No),
+      TestChannel.State.of(BinaryYesNo.No),
+      TestChannel.State.of(BinaryOnOff.Off),
+      TestChannel.State.of(0),
+      TestChannel.State.of(BinaryOnOff.Off),
+      TestChannel.State.of(BinaryOnOff.Off),
+      TestChannel.State.of(""),
+      TestChannel.State.of(0.0),
+      TestChannel.State.of(0.0),
+      TestChannel.State.of(0.0),
+      TestChannel.State.of(0.0),
+      TestChannel.State.of(0.0),
+      TestChannel.State.of(0.0),
+      TestChannel.State.of(0.0),
+      TestChannel.State.of(0.0),
+      TestChannel.State.of("OFF"),
+      TestChannel.State.of("OFF"),
+      TestChannel.State.of("OFF"),
+      TestChannel.State.of("OFF")
     )
   }
 
@@ -819,7 +842,12 @@ object TestTcsEpicsSystem {
       hrwfsMech = buildAgMechChannels(s, Focus[State](_.hrwfsMech)),
       scienceFoldMech = buildAgMechChannels(s, Focus[State](_.scienceFoldMech)),
       aoFoldMech = buildAgMechChannels(s, Focus[State](_.aoFoldMech)),
-      m1Channels = buildM1Channels(s, Focus[State](_.m1Cmds))
+      m1Channels = buildM1Channels(s, Focus[State](_.m1Cmds)),
+      nodState = new TestChannel[F, State, String](s, Focus[State](_.nodState)),
+      p1ProbeTrackingState = buildProbeTrackingChannels(s, Focus[State](_.pwfs1Tracking)),
+      p2ProbeTrackingState = buildProbeTrackingChannels(s, Focus[State](_.pwfs2Tracking)),
+      oiProbeTrackingState = buildProbeTrackingChannels(s, Focus[State](_.oiwfsTracking)),
+      aoProbeTrackingState = buildProbeTrackingChannels(s, Focus[State](_.aowfsTracking))
     )
 
   def build[F[_]: Monad: Parallel](s: Ref[F, State]): TcsEpicsSystem[F] =
