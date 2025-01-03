@@ -625,15 +625,13 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       x        <- createController()
       (st, ctr) = x
       _        <- setOiwfsTrackingState(st.tcs)
-//      _        <- st.tcs.update(_.focus(_.nodState).replace(TestChannel.State.of("A")))
-
-      _    <- ctr.enableGuide(guideCfg)
-      r1   <- st.tcs.get
-      p1_1 <- st.p1.get
-      p2_1 <- st.p2.get
-      oi_1 <- st.oiw.get
-      _    <- ctr.disableGuide
-      r2   <- st.tcs.get
+      _        <- ctr.enableGuide(guideCfg)
+      r1       <- st.tcs.get
+      p1_1     <- st.p1.get
+      p2_1     <- st.p2.get
+      oi_1     <- st.oiw.get
+      _        <- ctr.disableGuide
+      r2       <- st.tcs.get
     } yield {
       assert(r1.m1Guide.connected)
       assert(r1.m1GuideConfig.source.connected)
