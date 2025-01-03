@@ -42,11 +42,13 @@ import navigate.server
 import navigate.server.ApplyCommandResult
 import navigate.server.ConnectionTimeout
 import navigate.server.acm.CarState
+import navigate.server.epicsdata
 import navigate.server.epicsdata.BinaryOnOff
 import navigate.server.epicsdata.BinaryYesNo
 import navigate.server.tcs.AcquisitionCameraEpicsSystem.*
 import navigate.server.tcs.ParkStatus.NotParked
 import navigate.server.tcs.Target.*
+import navigate.server.tcs.TcsEpicsSystem.ProbeGuideConfig
 import navigate.server.tcs.TcsEpicsSystem.ProbeTrackingCommand
 import navigate.server.tcs.TcsEpicsSystem.TargetCommand
 import navigate.server.tcs.TcsEpicsSystem.TcsCommands
@@ -425,6 +427,118 @@ abstract class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
     setRotatorTrackingConfig(cfg)(sys.tcsEpics.startCommand(timeout)).post
       .verifiedRun(ConnectionTimeout)
 
+  private def calcM2Guide(
+    state: ProbeGuideConfig[F]
+  ): VerifiedEpics[F, F, M2BeamConfig] = {
+    def calcBeams(chopA: BinaryOnOff, chopB: BinaryOnOff): M2BeamConfig = (chopA, chopB) match {
+      case (BinaryOnOff.Off, BinaryOnOff.Off) => M2BeamConfig.None
+      case (BinaryOnOff.Off, BinaryOnOff.On)  => M2BeamConfig.BeamB
+      case (BinaryOnOff.On, BinaryOnOff.On)   => M2BeamConfig.BeamAB
+      case (BinaryOnOff.On, BinaryOnOff.Off)  => M2BeamConfig.BeamA
+    }
+
+    for {
+      faa  <- state.nodAchopA
+      fab  <- state.nodAchopB
+      fba  <- state.nodBchopA
+      fbb  <- state.nodBchopB
+      fnod <- sys.tcsEpics.status.nodState
+    } yield for {
+      aa  <- faa
+      ab  <- fab
+      ba  <- fba
+      bb  <- fbb
+      nod <- fnod
+    } yield nod match
+      case epicsdata.NodState.A => calcBeams(aa, ab)
+      case epicsdata.NodState.B => calcBeams(ba, bb)
+      case epicsdata.NodState.C => M2BeamConfig.None
+  }
+
+  private def enableM2Guide(
+    cfg: M2GuideConfig.M2GuideOn
+  ): VerifiedEpics[F, F, ApplyCommandResult] = {
+    def setM2Guide(
+      src:   TipTiltSource,
+      beams: M2BeamConfig
+    ): VerifiedEpics[F, F, ApplyCommandResult] =
+      (beams =!= M2BeamConfig.None).fold(
+        sys.tcsEpics
+          .startCommand(timeout)
+          .m2GuideConfigCommand
+          .source(src.tag.toUpperCase)
+          .m2GuideConfigCommand
+          .sampleFreq(200.0)
+          .m2GuideConfigCommand
+          .filter("raw")
+          .m2GuideConfigCommand
+          .freq1(none)
+          .m2GuideConfigCommand
+          .freq2(none)
+          .m2GuideConfigCommand
+          .beam(beams.tag.toUpperCase)
+          .m2GuideConfigCommand
+          .reset(false)
+          .post,
+        VerifiedEpics.pureF(ApplyCommandResult.Completed)
+      )
+
+    sys.tcsEpics
+      .startCommand(timeout)
+      .m2GuideModeCommand
+      .coma(cfg.coma === ComaOption.ComaOn)
+      .post *> (
+      for {
+        oif  <- cfg.sources
+                  .contains(TipTiltSource.OIWFS)
+                  .fold(calcM2Guide(sys.tcsEpics.status.oiwfsProbeGuideConfig),
+                        VerifiedEpics.pureF(M2BeamConfig.None)
+                  )
+        p1f  <- cfg.sources
+                  .contains(TipTiltSource.PWFS1)
+                  .fold(calcM2Guide(sys.tcsEpics.status.pwfs1ProbeGuideConfig),
+                        VerifiedEpics.pureF(M2BeamConfig.None)
+                  )
+        p2f  <- cfg.sources
+                  .contains(TipTiltSource.PWFS2)
+                  .fold(calcM2Guide(sys.tcsEpics.status.pwfs2ProbeGuideConfig),
+                        VerifiedEpics.pureF(M2BeamConfig.None)
+                  )
+        aof  <- cfg.sources
+                  .contains(TipTiltSource.GAOS)
+                  .fold(calcM2Guide(sys.tcsEpics.status.aowfsProbeGuideConfig),
+                        VerifiedEpics.pureF(M2BeamConfig.None)
+                  )
+        oicf <- sys.tcsEpics.status.m2oiGuide.map(_.map(M2BeamConfig.fromTcsGuideConfig))
+        p1cf <- sys.tcsEpics.status.m2p1Guide.map(_.map(M2BeamConfig.fromTcsGuideConfig))
+        p2cf <- sys.tcsEpics.status.m2p2Guide.map(_.map(M2BeamConfig.fromTcsGuideConfig))
+        aocf <- sys.tcsEpics.status.m2aoGuide.map(_.map(M2BeamConfig.fromTcsGuideConfig))
+      } yield for {
+        oi  <- oif
+        p1  <- p1f
+        p2  <- p2f
+        ao  <- aof
+        oic <- oicf
+        p1c <- p1cf
+        p2c <- p2cf
+        aoc <- aocf
+        r   <- {
+          val mustReset = oi =!= oic || p1 =!= p1c || p2 =!= p2c || ao =!= aoc
+          mustReset.fold(
+            (sys.tcsEpics.startCommand(timeout).m2GuideCommand.state(false).post *>
+              sys.tcsEpics.startCommand(timeout).m2GuideResetCommand.mark.post *>
+              setM2Guide(TipTiltSource.PWFS1, p1) *>
+              setM2Guide(TipTiltSource.PWFS2, p2) *>
+              setM2Guide(TipTiltSource.OIWFS, oi) *>
+              setM2Guide(TipTiltSource.GAOS, ao)).verifiedRun(ConnectionTimeout),
+            ApplyCommandResult.Completed.pure[F]
+          )
+        }
+      } yield r
+    ) *>
+      sys.tcsEpics.startCommand(timeout).m2GuideCommand.state(true).post
+  }
+
   override def enableGuide(config: TelescopeGuideConfig): F[ApplyCommandResult] = {
     val gains =
       if (config.dayTimeMode.exists(_ === true))
@@ -432,28 +546,30 @@ abstract class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
       else
         defaultGains
 
-    val m1 = (x: TcsCommands[F]) =>
-      config.m1Guide match {
-        case M1GuideConfig.M1GuideOff        =>
-          x.m1GuideCommand.state(false).probeGuideModeCommand.setMode(config.probeGuide)
-        case M1GuideConfig.M1GuideOn(source) =>
-          x.m1GuideCommand
-            .state(true)
-            .m1GuideConfigCommand
-            .source(source.tag.toUpperCase)
-            .m1GuideConfigCommand
-            .weighting("none")
-            .m1GuideConfigCommand
-            .frames(1)
-            .m1GuideConfigCommand
-            .filename("")
-            .probeGuideModeCommand
-            .setMode(config.probeGuide)
-      }
+    val m1 = config.m1Guide match {
+      case M1GuideConfig.M1GuideOff        =>
+        sys.tcsEpics.startCommand(timeout).m1GuideCommand.state(false).post
+      case M1GuideConfig.M1GuideOn(source) =>
+        sys.tcsEpics
+          .startCommand(timeout)
+          .m1GuideCommand
+          .state(true)
+          .m1GuideConfigCommand
+          .source(source.tag.toUpperCase)
+          .m1GuideConfigCommand
+          .weighting("none")
+          .m1GuideConfigCommand
+          .frames(1)
+          .m1GuideConfigCommand
+          .filename("")
+          .post
+    }
 
-    config.m2Guide match {
-      case M2GuideConfig.M2GuideOff               =>
-        (gains *> m1(sys.tcsEpics.startCommand(timeout)).m2GuideCommand
+    val m2 = config.m2Guide match {
+      case M2GuideConfig.M2GuideOff          =>
+        sys.tcsEpics
+          .startCommand(timeout)
+          .m2GuideCommand
           .state(false)
           .m2GuideModeCommand
           .coma(false)
@@ -463,85 +579,32 @@ abstract class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
           .source("SCS")
           .probeGuideModeCommand
           .setMode(config.probeGuide)
-          .post)
-          .verifiedRun(ConnectionTimeout)
-      case M2GuideConfig.M2GuideOn(coma, sources) =>
-        val requireReset: Boolean = true // Use current state
-        val beams                 = List("A", "B")
-
-        sources
-          .flatMap(x => beams.map(y => (x, y)))
-          .foldLeft(
-            sys.tcsEpics
-              .startCommand(timeout)
-              .m2GuideCommand
-              .state(false)
-              .post
-              .verifiedRun(ConnectionTimeout) *>
-              requireReset.fold(
-                sys.tcsEpics
-                  .startCommand(timeout)
-                  .m2GuideResetCommand
-                  .mark
-                  .post
-                  .verifiedRun(ConnectionTimeout),
-                ApplyCommandResult.Completed.pure[F]
-              )
-          ) { case (t, (src, beam)) =>
-            t.flatMap { r =>
-              // Set tip-tilt guide for each source on each beam
-              // TCC adds a delay between each call. Is it necessary?
-              (r === ApplyCommandResult.Completed).fold(
-                sys.tcsEpics
-                  .startCommand(timeout)
-                  .m2GuideConfigCommand
-                  .source(src.tag.toUpperCase)
-                  .m2GuideConfigCommand
-                  .sampleFreq(200.0)
-                  .m2GuideConfigCommand
-                  .filter("raw")
-                  .m2GuideConfigCommand
-                  .freq1(none)
-                  .m2GuideConfigCommand
-                  .freq2(none)
-                  .m2GuideConfigCommand
-                  .beam(beam)
-                  .m2GuideConfigCommand
-                  .reset(false)
-                  .probeGuideModeCommand
-                  .setMode(config.probeGuide)
-                  .post
-                  .verifiedRun(ConnectionTimeout),
-                r.pure[F]
-              )
-            }.flatMap { r =>
-              (r === ApplyCommandResult.Completed).fold(
-                (gains *> m1(sys.tcsEpics.startCommand(timeout)).m2GuideCommand
-                  .state(true)
-                  .m2GuideModeCommand
-                  .coma(coma === ComaOption.ComaOn)
-                  .mountGuideCommand
-                  .mode(config.mountGuide === MountGuideOption.MountGuideOn)
-                  .mountGuideCommand
-                  .source("SCS")
-                  .probeGuideModeCommand
-                  .setMode(config.probeGuide)
-                  .post).verifiedRun(ConnectionTimeout) <*
-                  stateRef.get.flatMap { s =>
-                    s.oiwfs.period
-                      .flatMap(p =>
-                        guideUsesOiwfs(config.m1Guide, config.m2Guide)
-                          .option(setupOiwfsObserve(p, false))
-                      )
-                      .getOrElse(
-                        ApplyCommandResult.Completed.pure[F]
-                      )
-                  },
-                r.pure[F]
-              )
-            }
-          }
+          .post
+      case x @ M2GuideConfig.M2GuideOn(_, _) => enableM2Guide(x)
     }
+
+    (gains *>
+      m1 *>
+      m2 *>
+      sys.tcsEpics
+        .startCommand(timeout)
+        .probeGuideModeCommand
+        .setMode(config.probeGuide)
+        .mountGuideCommand
+        .mode(config.mountGuide === MountGuideOption.MountGuideOn)
+        .mountGuideCommand
+        .source("SCS")
+        .post).verifiedRun(ConnectionTimeout) <*
+      stateRef.get.flatMap { s =>
+        s.oiwfs.period
+          .flatMap(p =>
+            guideUsesOiwfs(config.m1Guide, config.m2Guide)
+              .option(setupOiwfsObserve(p, false))
+          )
+          .getOrElse(
+            ApplyCommandResult.Completed.pure[F]
+          )
+      }
   }
 
   override def disableGuide: F[ApplyCommandResult] = sys.tcsEpics

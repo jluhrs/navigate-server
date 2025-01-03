@@ -51,7 +51,7 @@ import scala.concurrent.duration.FiniteDuration
 
 import Target.SiderealTarget
 import TcsBaseController.*
-import TestTcsEpicsSystem.GuideConfigState
+import TestTcsEpicsSystem.{GuideConfigState, ProbeTrackingState}
 
 class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
@@ -601,6 +601,17 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     }
   }
 
+  def setOiwfsTrackingState(r: Ref[IO, TestTcsEpicsSystem.State]): IO[Unit] = r.update(
+    _.focus(_.oiwfsTracking).replace(
+      ProbeTrackingState(
+        TestChannel.State.of("On"),
+        TestChannel.State.of("Off"),
+        TestChannel.State.of("Off"),
+        TestChannel.State.of("On")
+      )
+    )
+  )
+
   test("Enable and disable guiding default gains") {
     val guideCfg = TelescopeGuideConfig(
       mountGuide = MountGuideOption.MountGuideOn,
@@ -613,13 +624,16 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     for {
       x        <- createController()
       (st, ctr) = x
-      _        <- ctr.enableGuide(guideCfg)
-      r1       <- st.tcs.get
-      p1_1     <- st.p1.get
-      p2_1     <- st.p2.get
-      oi_1     <- st.oiw.get
-      _        <- ctr.disableGuide
-      r2       <- st.tcs.get
+      _        <- setOiwfsTrackingState(st.tcs)
+//      _        <- st.tcs.update(_.focus(_.nodState).replace(TestChannel.State.of("A")))
+
+      _    <- ctr.enableGuide(guideCfg)
+      r1   <- st.tcs.get
+      p1_1 <- st.p1.get
+      p2_1 <- st.p2.get
+      oi_1 <- st.oiw.get
+      _    <- ctr.disableGuide
+      r2   <- st.tcs.get
     } yield {
       assert(r1.m1Guide.connected)
       assert(r1.m1GuideConfig.source.connected)
@@ -648,7 +662,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assertEquals(r1.m1GuideConfig.filename.value, "".some)
       assertEquals(r1.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
       assertEquals(r1.m2GuideConfig.source.value, TipTiltSource.OIWFS.tag.toUpperCase.some)
-      assertEquals(r1.m2GuideConfig.beam.value, "B".some)
+      assertEquals(r1.m2GuideConfig.beam.value, "A".some)
       assertEquals(r1.m2GuideConfig.filter.value, "raw".some)
       assertEquals(r1.m2GuideConfig.samplefreq.value.flatMap(_.toDoubleOption), 200.0.some)
       assertEquals(r1.m2GuideConfig.reset.value.flatMap(Enumerated[BinaryOnOff].fromTag),
@@ -694,6 +708,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     for {
       x        <- createController()
       (st, ctr) = x
+      _        <- setOiwfsTrackingState(st.tcs)
       _        <- ctr.enableGuide(guideCfg)
       r1       <- st.tcs.get
       p1_1     <- st.p1.get
@@ -734,7 +749,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assertEquals(r1.m1GuideConfig.filename.value, "".some)
       assertEquals(r1.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
       assertEquals(r1.m2GuideConfig.source.value, TipTiltSource.OIWFS.tag.toUpperCase.some)
-      assertEquals(r1.m2GuideConfig.beam.value, "B".some)
+      assertEquals(r1.m2GuideConfig.beam.value, "A".some)
       assertEquals(r1.m2GuideConfig.filter.value, "raw".some)
       assertEquals(r1.m2GuideConfig.samplefreq.value.flatMap(_.toDoubleOption), 200.0.some)
       assertEquals(r1.m2GuideConfig.reset.value.flatMap(Enumerated[BinaryOnOff].fromTag),
@@ -780,6 +795,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     for {
       x        <- createController()
       (st, ctr) = x
+      _        <- setOiwfsTrackingState(st.tcs)
       _        <- ctr.enableGuide(guideCfg)
       r1       <- st.tcs.get
       _        <- ctr.disableGuide
@@ -811,7 +827,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assertEquals(r1.m1GuideConfig.filename.value, "".some)
       assertEquals(r1.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
       assertEquals(r1.m2GuideConfig.source.value, TipTiltSource.OIWFS.tag.toUpperCase.some)
-      assertEquals(r1.m2GuideConfig.beam.value, "B".some)
+      assertEquals(r1.m2GuideConfig.beam.value, "A".some)
       assertEquals(r1.m2GuideConfig.filter.value, "raw".some)
       assertEquals(r1.m2GuideConfig.samplefreq.value.flatMap(_.toDoubleOption), 200.0.some)
       assertEquals(r1.m2GuideConfig.reset.value.flatMap(Enumerated[BinaryOnOff].fromTag),

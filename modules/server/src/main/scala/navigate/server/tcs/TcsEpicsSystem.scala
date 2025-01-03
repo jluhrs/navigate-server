@@ -3,6 +3,7 @@
 
 package navigate.server.tcs
 
+import cats.Applicative
 import cats.Monad
 import cats.Parallel
 import cats.effect.Resource
@@ -36,6 +37,7 @@ import navigate.server.epicsdata.BinaryOnOff.given
 import navigate.server.epicsdata.BinaryOnOffCapitalized
 import navigate.server.epicsdata.BinaryYesNo
 import navigate.server.epicsdata.BinaryYesNo.given
+import navigate.server.epicsdata.NodState
 import navigate.server.tcs.TcsEpicsSystem.TcsStatus
 
 import java.util.Locale
@@ -190,6 +192,7 @@ object TcsEpicsSystem {
     def pwfs1On: VerifiedEpics[F, F, BinaryYesNo]
     def pwfs2On: VerifiedEpics[F, F, BinaryYesNo]
     def oiwfsOn: VerifiedEpics[F, F, BinaryYesNo]
+    def nodState: VerifiedEpics[F, F, NodState]
     // def sfName: F[String]
     // def sfParked: F[Int]
     // def agHwName: F[String]
@@ -199,7 +202,10 @@ object TcsEpicsSystem {
     // def agInPosition: F[Double]
     // val pwfs1ProbeGuideConfig: ProbeGuideConfig[F]
     // val pwfs2ProbeGuideConfig: ProbeGuideConfig[F]
-    // val oiwfsProbeGuideConfig: ProbeGuideConfig[F]
+    val pwfs1ProbeGuideConfig: ProbeGuideConfig[F]
+    val pwfs2ProbeGuideConfig: ProbeGuideConfig[F]
+    val oiwfsProbeGuideConfig: ProbeGuideConfig[F]
+    val aowfsProbeGuideConfig: ProbeGuideConfig[F]
     // // This functions returns a F that, when run, first waits tcsSettleTime to absorb in-position transients, then waits
     // // for the in-position to change to true and stay true for stabilizationTime. It will wait up to `timeout`
     // // seconds for that to happen.
@@ -312,7 +318,7 @@ object TcsEpicsSystem {
 
   object TcsStatus {
 
-    def build[F[_]](channels: TcsChannels[F]): TcsStatus[F] =
+    def build[F[_]: Applicative](channels: TcsChannels[F]): TcsStatus[F] =
       new TcsStatus[F] {
         override def absorbTipTilt: VerifiedEpics[F, F, Int]        =
           VerifiedEpics.readChannel(channels.telltale, channels.guide.absorbTipTilt)
@@ -338,6 +344,18 @@ object TcsEpicsSystem {
           VerifiedEpics.readChannel(channels.telltale, channels.guide.pwfs2Integrating)
         override def oiwfsOn: VerifiedEpics[F, F, BinaryYesNo]      =
           VerifiedEpics.readChannel(channels.telltale, channels.guide.oiwfsIntegrating)
+        override def nodState: VerifiedEpics[F, F, NodState]        =
+          VerifiedEpics
+            .readChannel(channels.telltale, channels.nodState)
+            .map(_.map(NodState.valueOf))
+        override val pwfs1ProbeGuideConfig: ProbeGuideConfig[F]     =
+          buildProbeGuideConfig(channels.telltale, channels.p1ProbeTrackingState)
+        override val pwfs2ProbeGuideConfig: ProbeGuideConfig[F]     =
+          buildProbeGuideConfig(channels.telltale, channels.p2ProbeTrackingState)
+        override val oiwfsProbeGuideConfig: ProbeGuideConfig[F]     =
+          buildProbeGuideConfig(channels.telltale, channels.oiProbeTrackingState)
+        override val aowfsProbeGuideConfig: ProbeGuideConfig[F]     =
+          buildProbeGuideConfig(channels.telltale, channels.aoProbeTrackingState)
       }
   }
 
@@ -1280,6 +1298,31 @@ object TcsEpicsSystem {
     ParameterlessCommandChannels(tt, probeChannels.parkDir),
     Command1Channels(tt, probeChannels.follow)
   )
+
+  trait ProbeGuideConfig[F[_]] {
+    def nodAchopA: VerifiedEpics[F, F, BinaryOnOff]
+    def nodAchopB: VerifiedEpics[F, F, BinaryOnOff]
+    def nodBchopA: VerifiedEpics[F, F, BinaryOnOff]
+    def nodBchopB: VerifiedEpics[F, F, BinaryOnOff]
+  }
+
+  def buildProbeGuideConfig[F[_]: Applicative](
+    tt:            TelltaleChannel[F],
+    probeChannels: ProbeTrackingChannels[F]
+  ): ProbeGuideConfig[F] = new ProbeGuideConfig[F] {
+
+    override def nodAchopA: VerifiedEpics[F, F, BinaryOnOff] =
+      VerifiedEpics.readChannel(tt, probeChannels.nodachopa).map(_.map(BinaryOnOff.valueOf))
+
+    override def nodAchopB: VerifiedEpics[F, F, BinaryOnOff] =
+      VerifiedEpics.readChannel(tt, probeChannels.nodachopb).map(_.map(BinaryOnOff.valueOf))
+
+    override def nodBchopA: VerifiedEpics[F, F, BinaryOnOff] =
+      VerifiedEpics.readChannel(tt, probeChannels.nodbchopa).map(_.map(BinaryOnOff.valueOf))
+
+    override def nodBchopB: VerifiedEpics[F, F, BinaryOnOff] =
+      VerifiedEpics.readChannel(tt, probeChannels.nodbchopb).map(_.map(BinaryOnOff.valueOf))
+  }
 
   case class AgMechCommandsChannels[F[_]: Monad, A](
     park:     ParameterlessCommandChannels[F],

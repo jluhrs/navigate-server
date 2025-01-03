@@ -21,40 +21,45 @@ case class TcsChannels[F[_]](
   /**
    * List of all TcsChannels. Channel -> Defines a raw channel Other cases -> Group of channels
    */
-  telltale:         TelltaleChannel[F],
-  telescopeParkDir: Channel[F, CadDirective],
-  mountFollow:      Channel[F, String],
-  rotStopBrake:     Channel[F, String],
-  rotParkDir:       Channel[F, CadDirective],
-  rotFollow:        Channel[F, String],
-  rotMoveAngle:     Channel[F, String],
-  enclosure:        EnclosureChannels[F],
-  sourceA:          TargetChannels[F],
-  oiwfsTarget:      TargetChannels[F],
-  wavelSourceA:     Channel[F, String],
-  slew:             SlewChannels[F],
-  rotator:          RotatorChannels[F],
-  origin:           OriginChannels[F],
-  focusOffset:      Channel[F, String],
-  oiProbeTracking:  ProbeTrackingChannels[F],
-  oiProbe:          ProbeChannels[F],
-  m1Guide:          Channel[F, String],
-  m1GuideConfig:    M1GuideConfigChannels[F],
-  m2Guide:          Channel[F, String],
-  m2GuideMode:      Channel[F, String],
-  m2GuideConfig:    M2GuideConfigChannels[F],
-  m2GuideReset:     Channel[F, CadDirective],
-  m2Follow:         Channel[F, String],
-  mountGuide:       MountGuideChannels[F],
-  oiwfs:            WfsChannels[F],
-  guide:            GuideConfigStatusChannels[F],
-  probeGuideMode:   ProbeGuideModeChannels[F],
-  oiwfsSelect:      OiwfsSelectChannels[F],
-  m2Baffles:        M2BafflesChannels[F],
-  hrwfsMech:        AgMechChannels[F],
-  scienceFoldMech:  AgMechChannels[F],
-  aoFoldMech:       AgMechChannels[F],
-  m1Channels:       M1Channels[F]
+  telltale:             TelltaleChannel[F],
+  telescopeParkDir:     Channel[F, CadDirective],
+  mountFollow:          Channel[F, String],
+  rotStopBrake:         Channel[F, String],
+  rotParkDir:           Channel[F, CadDirective],
+  rotFollow:            Channel[F, String],
+  rotMoveAngle:         Channel[F, String],
+  enclosure:            EnclosureChannels[F],
+  sourceA:              TargetChannels[F],
+  oiwfsTarget:          TargetChannels[F],
+  wavelSourceA:         Channel[F, String],
+  slew:                 SlewChannels[F],
+  rotator:              RotatorChannels[F],
+  origin:               OriginChannels[F],
+  focusOffset:          Channel[F, String],
+  oiProbeTracking:      ProbeTrackingChannels[F],
+  oiProbe:              ProbeChannels[F],
+  m1Guide:              Channel[F, String],
+  m1GuideConfig:        M1GuideConfigChannels[F],
+  m2Guide:              Channel[F, String],
+  m2GuideMode:          Channel[F, String],
+  m2GuideConfig:        M2GuideConfigChannels[F],
+  m2GuideReset:         Channel[F, CadDirective],
+  m2Follow:             Channel[F, String],
+  mountGuide:           MountGuideChannels[F],
+  oiwfs:                WfsChannels[F],
+  guide:                GuideConfigStatusChannels[F],
+  probeGuideMode:       ProbeGuideModeChannels[F],
+  oiwfsSelect:          OiwfsSelectChannels[F],
+  m2Baffles:            M2BafflesChannels[F],
+  hrwfsMech:            AgMechChannels[F],
+  scienceFoldMech:      AgMechChannels[F],
+  aoFoldMech:           AgMechChannels[F],
+  m1Channels:           M1Channels[F],
+  nodState:             Channel[F, String],
+  p1ProbeTrackingState: ProbeTrackingChannels[F],
+  p2ProbeTrackingState: ProbeTrackingChannels[F],
+  oiProbeTrackingState: ProbeTrackingChannels[F],
+  aoProbeTrackingState: ProbeTrackingChannels[F]
 )
 
 object TcsChannels {
@@ -336,6 +341,17 @@ object TcsChannels {
     ab <- service.getChannel[String](top.value, s"config$name.B")
     ba <- service.getChannel[String](top.value, s"config$name.D")
     bb <- service.getChannel[String](top.value, s"config$name.E")
+  } yield ProbeTrackingChannels(aa, ab, ba, bb)
+
+  def buildProbeTrackingStateChannels[F[_]](
+    service: EpicsService[F],
+    top:     TcsTop,
+    name:    String
+  ): Resource[F, ProbeTrackingChannels[F]] = for {
+    aa <- service.getChannel[String](top.value, s"config$name.VALA")
+    ab <- service.getChannel[String](top.value, s"config$name.VALB")
+    ba <- service.getChannel[String](top.value, s"config$name.VALD")
+    bb <- service.getChannel[String](top.value, s"config$name.VALE")
   } yield ProbeTrackingChannels(aa, ab, ba, bb)
 
   def buildSlewChannels[F[_]](
@@ -653,6 +669,11 @@ object TcsChannels {
       sfm  <- AgMechChannels.build(service, s"${tcsTop.value}scienceFold")
       aom  <- AgMechChannels.build(service, s"${tcsTop.value}aoFold")
       m1   <- M1Channels.build(service, tcsTop, m1Top)
+      nodS <- service.getChannel[String](tcsTop.value, "sad:nodState.VAL")
+      p1gs <- buildProbeTrackingStateChannels(service, tcsTop, "Pwfs1")
+      p2gs <- buildProbeTrackingStateChannels(service, tcsTop, "Pwfs2")
+      oigs <- buildProbeTrackingStateChannels(service, tcsTop, "Oiwfs")
+      aogs <- buildProbeTrackingStateChannels(service, tcsTop, "Aowfs")
     } yield TcsChannels[F](
       tt,
       tpd,
@@ -687,7 +708,12 @@ object TcsChannels {
       hrm,
       sfm,
       aom,
-      m1
+      m1,
+      nodS,
+      p1gs,
+      p2gs,
+      oigs,
+      aogs
     )
   }
 }
