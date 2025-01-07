@@ -340,7 +340,9 @@ abstract class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
               sys.tcsEpics.startCommand(timeout)
             )
             .post
-      ).verifiedRun(ConnectionTimeout)
+      ).verifiedRun(ConnectionTimeout) *>
+      // TODO: Consider case AO -> Instrument
+      lightPath(LightSource.Sky, tcsConfig.instrument.toLightSink)
 
   protected def setInstrumentSpecifics(
     config: InstrumentSpecifics
