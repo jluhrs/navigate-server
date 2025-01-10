@@ -195,7 +195,7 @@ object AcquisitionCameraEpicsSystem {
         AcquisitionCameraCommandsImpl(applyCmd, chs, timeout, List.empty)
     }
 
-  def build[F[_]: Monad: Dispatcher: Temporal: Parallel](
+  def build[F[_]: Dispatcher: Temporal: Parallel](
     service: EpicsService[F],
     top:     NonEmptyString
   ): Resource[F, AcquisitionCameraEpicsSystem[F]] =

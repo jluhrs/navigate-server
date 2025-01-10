@@ -40,7 +40,7 @@ object WfsEpicsSystem {
     def setFocusGain(v: Double): S
   }
 
-  private[tcs] def buildSystem[F[_]: Monad: Temporal: Parallel](
+  private[tcs] def buildSystem[F[_]: Temporal: Parallel](
     channels: WfsChannels[F]
   ): WfsEpicsSystem[F] = new WfsEpicsSystem[F] {
     override def startGainCommand(timeout: FiniteDuration): WfsGainCommands[F] =
@@ -87,7 +87,7 @@ object WfsEpicsSystem {
   // There is no CAR associated these commands. Without feedback, we can only wait and pray.
   val commandWaitTime: FiniteDuration = FiniteDuration(500, TimeUnit.MILLISECONDS)
 
-  class WfsEpicsImpl[F[_]: Monad: Temporal](
+  class WfsEpicsImpl[F[_]: Temporal](
     channels: WfsChannels[F]
   ) extends WfsEpics[F] {
     override def post(timeout: FiniteDuration): VerifiedEpics[F, F, ApplyCommandResult] =

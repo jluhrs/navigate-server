@@ -4,7 +4,6 @@
 package navigate.server.tcs
 
 import cats.Applicative
-import cats.Monad
 import cats.Parallel
 import cats.effect.Ref
 import cats.effect.Temporal
@@ -40,7 +39,7 @@ object TestOiwfsEpicsSystem {
     darkFilename = TestChannel(s, Focus[State](_.darkFilename))
   )
 
-  def build[F[_]: Monad: Temporal: Parallel](
+  def build[F[_]: Temporal: Parallel](
     wfs:   Ref[F, TestWfsEpicsSystem.State],
     oiwfs: Ref[F, State]
   ): OiwfsEpicsSystem[F] =

@@ -6,7 +6,6 @@ package navigate.server
 import cats.Applicative
 import cats.MonadThrow
 import cats.effect.Async
-import cats.effect.Concurrent
 import cats.effect.Ref
 import cats.effect.Temporal
 import cats.effect.kernel.Sync
@@ -142,7 +141,7 @@ object NavigateEngine {
     }
   }
 
-  private case class NavigateEngineImpl[F[_]: Concurrent: Temporal: Logger](
+  private case class NavigateEngineImpl[F[_]: Temporal: Logger](
     site:     Site,
     systems:  Systems[F],
     conf:     NavigateEngineConfiguration,
@@ -471,7 +470,7 @@ object NavigateEngine {
     )
   }
 
-  def build[F[_]: Concurrent: Temporal: Logger](
+  def build[F[_]: Temporal: Logger](
     site:    Site,
     systems: Systems[F],
     conf:    NavigateEngineConfiguration

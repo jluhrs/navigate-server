@@ -3,7 +3,6 @@
 
 package navigate.server.tcs
 
-import cats.Monad
 import cats.Parallel
 import cats.effect.Resource
 import cats.effect.Temporal
@@ -47,7 +46,7 @@ object OiwfsEpicsSystem {
 
   val commandWaitTime: FiniteDuration = FiniteDuration(500, TimeUnit.MILLISECONDS)
 
-  private class DarkCommandImpl[F[_]: Monad: Temporal: Parallel](
+  private class DarkCommandImpl[F[_]: Temporal: Parallel](
     telltale: TelltaleChannel[F],
     channels: OiwfsChannels[F],
     timeout:  FiniteDuration,
@@ -67,7 +66,7 @@ object OiwfsEpicsSystem {
     )
   }
 
-  private class ClosedLoopCommandImpl[F[_]: Monad: Temporal: Parallel](
+  private class ClosedLoopCommandImpl[F[_]: Temporal: Parallel](
     telltale: TelltaleChannel[F],
     channels: OiwfsChannels[F],
     timeout:  FiniteDuration,
@@ -87,7 +86,7 @@ object OiwfsEpicsSystem {
     )
   }
 
-  private class SignalProcCommandImpl[F[_]: Monad: Temporal: Parallel](
+  private class SignalProcCommandImpl[F[_]: Temporal: Parallel](
     telltale: TelltaleChannel[F],
     channels: OiwfsChannels[F],
     timeout:  FiniteDuration,
@@ -107,7 +106,7 @@ object OiwfsEpicsSystem {
     )
   }
 
-  private[tcs] def buildSystem[F[_]: Monad: Temporal: Parallel](
+  private[tcs] def buildSystem[F[_]: Temporal: Parallel](
     wfsChannels:   WfsChannels[F],
     oiwfsChannels: OiwfsChannels[F]
   ): OiwfsEpicsSystem[F] = new OiwfsEpicsSystem[F] {
