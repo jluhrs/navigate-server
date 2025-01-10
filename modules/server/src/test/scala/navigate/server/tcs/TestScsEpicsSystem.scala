@@ -4,7 +4,6 @@
 package navigate.server.tcs
 
 import cats.Applicative
-import cats.Monad
 import cats.Parallel
 import cats.effect.Ref
 import cats.effect.Temporal
@@ -32,7 +31,7 @@ object TestScsEpicsSystem {
     follow = new TestChannel[F, State, String](s, Focus[State](_.follow))
   )
 
-  def build[F[_]: Monad: Temporal: Parallel](
+  def build[F[_]: Temporal: Parallel](
     s: Ref[F, State]
   ): ScsEpicsSystem[F] = ScsEpicsSystem.buildSystem(buildChannels(s))
 }

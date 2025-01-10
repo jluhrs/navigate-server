@@ -4,7 +4,6 @@
 package navigate.server.tcs
 
 import cats.Applicative
-import cats.Monad
 import cats.Parallel
 import cats.effect.Ref
 import cats.effect.Temporal
@@ -83,7 +82,7 @@ object TestAgsEpicsSystem {
     )
   )
 
-  def build[F[_]: Monad: Temporal: Parallel](
+  def build[F[_]: Temporal: Parallel](
     s: Ref[F, State]
   ): AgsEpicsSystem[F] = AgsEpicsSystem.buildSystem(buildChannels(s))
 }

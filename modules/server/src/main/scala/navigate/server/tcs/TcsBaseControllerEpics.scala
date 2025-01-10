@@ -58,7 +58,7 @@ import scala.concurrent.duration.*
 import TcsBaseController.{EquinoxDefault, FixedSystem, SwapConfig, SystemDefault, TcsConfig}
 
 /* This class implements the common TCS commands */
-abstract class TcsBaseControllerEpics[F[_]: Async: Parallel: Temporal](
+abstract class TcsBaseControllerEpics[F[_]: Async: Parallel](
   sys:      EpicsSystems[F],
   timeout:  FiniteDuration,
   stateRef: Ref[F, TcsBaseControllerEpics.State]

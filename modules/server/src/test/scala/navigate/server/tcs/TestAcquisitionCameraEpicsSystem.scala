@@ -4,7 +4,6 @@
 package navigate.server.tcs
 
 import cats.Applicative
-import cats.Monad
 import cats.Parallel
 import cats.effect.Ref
 import cats.effect.Temporal
@@ -101,7 +100,7 @@ object TestAcquisitionCameraEpicsSystem {
     observeInProgress = new TestChannel[F, State, CarState](s, Focus[State](_.observeInProgress))
   )
 
-  def build[F[_]: Monad: Temporal: Parallel](
+  def build[F[_]: Temporal: Parallel](
     s: Ref[F, State]
   ): AcquisitionCameraEpicsSystem[F] = AcquisitionCameraEpicsSystem.buildSystem(
     (timeout: FiniteDuration) =>

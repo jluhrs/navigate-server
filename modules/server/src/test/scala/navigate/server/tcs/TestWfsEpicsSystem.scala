@@ -4,7 +4,6 @@
 package navigate.server.tcs
 
 import cats.Applicative
-import cats.Monad
 import cats.Parallel
 import cats.effect.Ref
 import cats.effect.Temporal
@@ -52,7 +51,7 @@ object TestWfsEpicsSystem {
     centroidDetected = new TestChannel[F, State, Int](s, Focus[State](_.centroid))
   )
 
-  def build[F[_]: Monad: Temporal: Parallel](
+  def build[F[_]: Temporal: Parallel](
     sysName: String,
     s:       Ref[F, State]
   ): WfsEpicsSystem[F] = WfsEpicsSystem.buildSystem(buildChannels(sysName, s))
