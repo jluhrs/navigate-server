@@ -70,9 +70,8 @@ object Systems {
           hr   <- AcquisitionCameraEpicsSystem.build(epicsSrv, readTop(tops, "hrwfs".refined))
           r    <-
             Resource.eval(
-              TcsSouthControllerEpics.build(EpicsSystems(tcs, p1, p2, oi, mcs, scs, crcs, ags, hr),
-                                            conf.ioTimeout
-              )
+              TcsSouthControllerEpics
+                .build(EpicsSystems(tcs, p1, p2, oi, mcs, scs, crcs, ags, hr), conf.ioTimeout)
             )
         } yield r
       else
