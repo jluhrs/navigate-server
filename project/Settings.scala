@@ -60,7 +60,7 @@ object Settings {
 
     val grackle = "0.23.0"
 
-    val graphQLRoutes = "0.8.16"
+    val graphQLRoutes = "0.8.17"
 
     val clue = "0.35.0"
 
