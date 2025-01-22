@@ -996,6 +996,7 @@ object TcsEpicsSystem {
   ) extends TcsEpics[F] {
     given Encoder[GuideProbe, String] = _ match {
       case GuideProbe.GmosOIWFS => "OIWFS"
+      case GuideProbe.F2OIWFS   => "OIWFS"
       case GuideProbe.PWFS1     => "PWFS1"
       case GuideProbe.PWFS2     => "PWFS2"
     }
