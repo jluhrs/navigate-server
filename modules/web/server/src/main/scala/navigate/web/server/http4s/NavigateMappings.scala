@@ -108,6 +108,16 @@ class NavigateMappings[F[_]: Sync](
   def navigateState(p: Path, env: Env): F[Result[NavigateState]] =
     server.getNavigateState.attempt.map(_.fold(Result.internalError, Result.success))
 
+  def instrumentPort(p: Path, env: Env): F[Result[Option[Int]]] =
+    env
+      .get[Instrument]("instrument")
+      .map(ins =>
+        server.getInstrumentPort(ins).attempt.map(_.fold(Result.internalError, Result.success))
+      )
+      .getOrElse(
+        Result.failure[Option[Int]]("instrumentPort parameter could not be parsed.").pure[F]
+      )
+
   def mountFollow(p: Path, env: Env): F[Result[OperationOutcome]] =
     env
       .get[Boolean]("enable")
@@ -511,6 +521,14 @@ class NavigateMappings[F[_]: Sync](
         _    <- Elab.env("from" -> from)
         _    <- Elab.env("to" -> to)
       } yield ()
+    case (QueryType, "instrumentPort", List(Binding("instrument", EnumValue(ins))))         =>
+      Elab
+        .liftR(
+          parseEnumerated[Instrument](ins)
+            .toResult("Could not parse instrumentPort parameter \"instrument\"")
+        )
+        .flatMap(x => Elab.env("instrument" -> x))
+
   }
 
   override val typeMappings: TypeMappings = TypeMappings(
@@ -520,7 +538,8 @@ class NavigateMappings[F[_]: Sync](
         fieldMappings = List(
           RootEffect.computeEncodable("guideState")((p, env) => guideState(p, env)),
           RootEffect.computeEncodable("telescopeState")((p, env) => telescopeState(p, env)),
-          RootEffect.computeEncodable("navigateState")((p, env) => navigateState(p, env))
+          RootEffect.computeEncodable("navigateState")((p, env) => navigateState(p, env)),
+          RootEffect.computeEncodable("instrumentPort")((p, env) => instrumentPort(p, env))
         )
       ),
       ObjectMapping(

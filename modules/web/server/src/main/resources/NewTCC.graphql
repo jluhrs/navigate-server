@@ -255,6 +255,7 @@ type Query {
     telescopeState: TelescopeState!
     guideState: GuideConfigurationState!
     navigateState: NavigateState!
+    instrumentPort(instrument: Instrument!): Int
 }
 
 type Mutation {

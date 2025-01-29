@@ -19,6 +19,7 @@ import io.circe.Decoder.Result
 import io.circe.DecodingFailure
 import io.circe.Json
 import lucuma.core.enums.ComaOption
+import lucuma.core.enums.Instrument
 import lucuma.core.enums.LightSinkName
 import lucuma.core.enums.M1Source
 import lucuma.core.enums.MountGuideOption
@@ -1224,6 +1225,34 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     }
   }
 
+  test("Get instrument port") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      gd  <- Topic[IO, GuideState]
+      gq  <- Topic[IO, GuidersQualityValues]
+      ts  <- Topic[IO, TelescopeState]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts)
+      p   <- mp.compileAndRun(
+               """
+          |query {
+          |  instrumentPort( instrument: GMOS_NORTH )
+          |}
+          |""".stripMargin
+             )
+      q   <- mp.compileAndRun(
+               """
+          |query {
+          |  instrumentPort( instrument: NICI )
+          |}
+          |""".stripMargin
+             )
+    } yield {
+      assertEquals(p.hcursor.downField("data").downField("instrumentPort").as[Int].toOption, 5.some)
+      assertEquals(q.hcursor.downField("data").downField("instrumentPort").as[Int].toOption, none)
+    }
+  }
+
 }
 
 object NavigateMappingsTest {
@@ -1358,6 +1387,11 @@ object NavigateMappingsTest {
       override def m1LoadNonAoFigure: IO[Unit] = IO.unit
 
       override def lightpathConfig(from: LightSource, to: LightSinkName): IO[Unit] = IO.unit
+
+      override def getInstrumentPort(instrument: Instrument): IO[Option[Int]] = (instrument match
+        case Instrument.GmosNorth => 5.some
+        case _                    => none
+      ).pure[IO]
     }
   }
 
