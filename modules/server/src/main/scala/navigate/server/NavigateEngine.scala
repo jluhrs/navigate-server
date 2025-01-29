@@ -14,6 +14,7 @@ import fs2.Pipe
 import fs2.Stream
 import fs2.concurrent.Topic
 import io.circe.syntax.*
+import lucuma.core.enums.Instrument
 import lucuma.core.enums.LightSinkName
 import lucuma.core.enums.MountGuideOption
 import lucuma.core.enums.Site
@@ -25,6 +26,7 @@ import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.TimeSpan
 import monocle.Lens
 import monocle.syntax.all.focus
+import mouse.all.*
 import navigate.model.NavigateCommand
 import navigate.model.NavigateCommand.*
 import navigate.model.NavigateEvent
@@ -112,6 +114,7 @@ trait NavigateEngine[F[_]] {
   def getTelescopeState: F[TelescopeState]
   def getNavigateState: F[NavigateState]
   def getNavigateStateStream: Stream[F, NavigateState]
+  def getInstrumentPort(instrument:                  Instrument): F[Option[Int]]
 }
 
 object NavigateEngine {
@@ -468,6 +471,26 @@ object NavigateEngine {
       LightPathConfig,
       systems.tcsCommon.lightPath(from, to)
     )
+
+    override def getInstrumentPort(instrument: Instrument): F[Option[Int]] =
+      systems.tcsCommon.getInstrumentPorts.map { x =>
+        val a = instrument match {
+          case Instrument.AcqCam     => 1
+          case Instrument.Flamingos2 => x.flamingos2Port
+          case Instrument.Ghost      => x.ghostPort
+          case Instrument.GmosNorth  => x.gmosPort
+          case Instrument.GmosSouth  => x.gmosPort
+          case Instrument.Gnirs      => x.gnirsPort
+          case Instrument.Gpi        => x.gpiPort
+          case Instrument.Gsaoi      => x.gsaoiPort
+          case Instrument.Nifs       => x.nifsPort
+          case Instrument.Niri       => x.niriPort
+          case Instrument.Alopeke    => (site === Site.GN).fold(2, 0)
+          case Instrument.Zorro      => (site === Site.GS).fold(2, 0)
+          case _                     => 0
+        }
+        (a =!= 0).option(a)
+      }
   }
 
   def build[F[_]: Temporal: Logger](
