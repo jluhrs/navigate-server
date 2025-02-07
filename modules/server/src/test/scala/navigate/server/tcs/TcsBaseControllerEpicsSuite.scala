@@ -1083,7 +1083,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     val testGuideQuality = GuidersQualityValues(
       GuidersQualityValues.GuiderQuality(1000, true),
       GuidersQualityValues.GuiderQuality(500, false),
-      GuidersQualityValues.GuiderQuality(1500, true)
+      GuidersQualityValues.GuiderQuality(1500, false)
     )
     for {
       x        <- createController()
@@ -1091,19 +1091,19 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       _        <- st.p1.update(
                     _.copy(
                       flux = TestChannel.State.of(testGuideQuality.pwfs1.flux),
-                      centroid = TestChannel.State.of(testGuideQuality.pwfs1.centroidDetected.fold(1, 0))
+                      centroid = TestChannel.State.of(1)
                     )
                   )
       _        <- st.p2.update(
                     _.copy(
                       flux = TestChannel.State.of(testGuideQuality.pwfs2.flux),
-                      centroid = TestChannel.State.of(testGuideQuality.pwfs2.centroidDetected.fold(1, 0))
+                      centroid = TestChannel.State.of(0)
                     )
                   )
       _        <- st.oiw.update(
                     _.copy(
                       flux = TestChannel.State.of(testGuideQuality.oiwfs.flux),
-                      centroid = TestChannel.State.of(testGuideQuality.oiwfs.centroidDetected.fold(1, 0))
+                      centroid = TestChannel.State.of(65536)
                     )
                   )
       g        <- ctr.getGuideQuality
