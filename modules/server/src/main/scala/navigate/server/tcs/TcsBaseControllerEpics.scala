@@ -15,6 +15,7 @@ import lucuma.core.enums.M1Source
 import lucuma.core.enums.MountGuideOption
 import lucuma.core.enums.TipTiltSource
 import lucuma.core.math.Angle
+import lucuma.core.math.HourAngle
 import lucuma.core.math.Parallax
 import lucuma.core.math.ProperMotion
 import lucuma.core.math.RadialVelocity
@@ -152,8 +153,12 @@ abstract class TcsBaseControllerEpics[F[_]: Async: Parallel](
     case t: AzElTarget      =>
       { (x: TcsCommands[F]) => l.get(x).objectName(t.objectName) }
         .compose[TcsCommands[F]](l.get(_).coordSystem("AzEl"))
-        .compose[TcsCommands[F]](l.get(_).coord1(t.coordinates.azimuth.toAngle.toDoubleDegrees))
-        .compose[TcsCommands[F]](l.get(_).coord2(t.coordinates.elevation.toAngle.toDoubleDegrees))
+        .compose[TcsCommands[F]](
+          l.get(_).coord1(Angle.fromStringSignedDMS.reverseGet(t.coordinates.azimuth.toAngle))
+        )
+        .compose[TcsCommands[F]](
+          l.get(_).coord2(Angle.fromStringSignedDMS.reverseGet(t.coordinates.elevation.toAngle))
+        )
         .compose[TcsCommands[F]](l.get(_).brightness(DefaultBrightness))
         .compose[TcsCommands[F]](l.get(_).epoch(2000.0))
         .compose[TcsCommands[F]](l.get(_).equinox(""))
@@ -165,8 +170,12 @@ abstract class TcsBaseControllerEpics[F[_]: Async: Parallel](
     case t: SiderealTarget  =>
       { (x: TcsCommands[F]) => l.get(x).objectName(t.objectName) }
         .compose[TcsCommands[F]](l.get(_).coordSystem(SystemDefault))
-        .compose[TcsCommands[F]](l.get(_).coord1(t.coordinates.ra.toAngle.toDoubleDegrees / 15.0))
-        .compose[TcsCommands[F]](l.get(_).coord2(t.coordinates.dec.toAngle.toSignedDoubleDegrees))
+        .compose[TcsCommands[F]](
+          l.get(_).coord1(HourAngle.fromStringHMS.reverseGet(t.coordinates.ra.toHourAngle))
+        )
+        .compose[TcsCommands[F]](
+          l.get(_).coord2(Angle.fromStringSignedDMS.reverseGet(t.coordinates.dec.toAngle))
+        )
         .compose[TcsCommands[F]](l.get(_).brightness(DefaultBrightness))
         .compose[TcsCommands[F]](l.get(_).epoch(t.epoch.epochYear))
         .compose[TcsCommands[F]](l.get(_).equinox(EquinoxDefault))
@@ -191,8 +200,8 @@ abstract class TcsBaseControllerEpics[F[_]: Async: Parallel](
     case t: EphemerisTarget =>
       { (x: TcsCommands[F]) => l.get(x).objectName(t.objectName) }
         .compose[TcsCommands[F]](l.get(_).coordSystem(""))
-        .compose[TcsCommands[F]](l.get(_).coord1(0.0))
-        .compose[TcsCommands[F]](l.get(_).coord2(0.0))
+        .compose[TcsCommands[F]](l.get(_).coord1("00:00:00.000000"))
+        .compose[TcsCommands[F]](l.get(_).coord2("00:00:00.000000"))
         .compose[TcsCommands[F]](l.get(_).brightness(DefaultBrightness))
         .compose[TcsCommands[F]](l.get(_).epoch(2000.0))
         .compose[TcsCommands[F]](l.get(_).equinox(""))

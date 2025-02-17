@@ -40,7 +40,6 @@ import navigate.server.epicsdata.BinaryYesNo.given
 import navigate.server.epicsdata.NodState
 import navigate.server.tcs.TcsEpicsSystem.TcsStatus
 
-import java.util.Locale
 import scala.concurrent.duration.FiniteDuration
 
 import ScienceFoldPositionCodex.given
@@ -502,11 +501,11 @@ object TcsEpicsSystem {
           tcsEpics.sourceACmd.coordSystem(v)
         )
 
-        override def coord1(v: Double): TcsCommands[F] = addParam(
+        override def coord1(v: String): TcsCommands[F] = addParam(
           tcsEpics.sourceACmd.coord1(v)
         )
 
-        override def coord2(v: Double): TcsCommands[F] = addParam(
+        override def coord2(v: String): TcsCommands[F] = addParam(
           tcsEpics.sourceACmd.coord2(v)
         )
 
@@ -553,11 +552,11 @@ object TcsEpicsSystem {
           tcsEpics.oiwfsTargetCmd.coordSystem(v)
         )
 
-        override def coord1(v: Double): TcsCommands[F] = addParam(
+        override def coord1(v: String): TcsCommands[F] = addParam(
           tcsEpics.oiwfsTargetCmd.coord1(v)
         )
 
-        override def coord2(v: Double): TcsCommands[F] = addParam(
+        override def coord2(v: String): TcsCommands[F] = addParam(
           tcsEpics.oiwfsTargetCmd.coord2(v)
         )
 
@@ -1191,17 +1190,6 @@ object TcsEpicsSystem {
       M1CommandsChannels.build(channels.telltale, channels.m1Channels)
   }
 
-  def formatAngleCoord(d: Double): String = {
-    val absVal = scala.math.abs(d)
-    val sign   = scala.math.signum(d)
-
-    val deg = scala.math.floor(absVal)
-    val min = scala.math.floor((absVal - deg) * 60.0)
-    val sec = ((absVal - deg) * 60.0 - min) * 60.0
-
-    f"${(deg * sign).toInt}%d:${min.toInt}%02d:" + "%09.6f".formatLocal(Locale.US, sec)
-  }
-
   case class TargetCommandChannels[F[_]: Monad](
     tt:             TelltaleChannel[F],
     targetChannels: TargetChannels[F]
@@ -1210,10 +1198,10 @@ object TcsEpicsSystem {
       writeCadParam[F, String](tt, targetChannels.objectName)(v)
     def coordSystem(v: String): VerifiedEpics[F, F, Unit]    =
       writeCadParam[F, String](tt, targetChannels.coordSystem)(v)
-    def coord1(v: Double): VerifiedEpics[F, F, Unit]         =
-      writeCadParam[F, String](tt, targetChannels.coord1)(formatAngleCoord(v))
-    def coord2(v: Double): VerifiedEpics[F, F, Unit]         =
-      writeCadParam[F, String](tt, targetChannels.coord2)(formatAngleCoord(v))
+    def coord1(v: String): VerifiedEpics[F, F, Unit]         =
+      writeCadParam[F, String](tt, targetChannels.coord1)(v)
+    def coord2(v: String): VerifiedEpics[F, F, Unit]         =
+      writeCadParam[F, String](tt, targetChannels.coord2)(v)
     def epoch(v: Double): VerifiedEpics[F, F, Unit]          =
       writeCadParam[F, Double](tt, targetChannels.epoch)(v)
     def equinox(v: String): VerifiedEpics[F, F, Unit]        =
@@ -1435,8 +1423,8 @@ object TcsEpicsSystem {
   trait TargetCommand[F[_], +S] {
     def objectName(v:     String): S
     def coordSystem(v:    String): S
-    def coord1(v:         Double): S
-    def coord2(v:         Double): S
+    def coord1(v:         String): S
+    def coord2(v:         String): S
     def epoch(v:          Double): S
     def equinox(v:        String): S
     def parallax(v:       Double): S
