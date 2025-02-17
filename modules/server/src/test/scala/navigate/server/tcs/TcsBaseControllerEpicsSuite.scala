@@ -160,20 +160,28 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
   }
 
   test("Slew command") {
+    val targetRa  = "17:01:00.000000"
+    val targetDec = "-21:10:59.999999"
+
     val target = SiderealTarget(
       objectName = "dummy",
       wavelength = Wavelength.fromIntPicometers(400 * 1000),
-      coordinates = Coordinates.unsafeFromRadians(-0.321, 0.123),
+      coordinates =
+        Coordinates.fromHmsDms.getOption(s"$targetRa $targetDec").getOrElse(Coordinates.Zero),
       epoch = Epoch.J2000,
       properMotion = none,
       radialVelocity = none,
       parallax = none
     )
 
+    val oiwfsRa  = "17:00:59.999999"
+    val oiwfsDec = "-21:10:00.000001"
+
     val oiwfsTarget = SiderealTarget(
       objectName = "oiwfsDummy",
       wavelength = Wavelength.fromIntPicometers(600 * 1000),
-      coordinates = Coordinates.unsafeFromRadians(-0.123, 0.321),
+      coordinates =
+        Coordinates.fromHmsDms.getOption(s"$oiwfsRa $oiwfsDec").getOrElse(Coordinates.Zero),
       epoch = Epoch.J2000,
       properMotion = none,
       radialVelocity = none,
@@ -238,12 +246,12 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assert(rs.sourceA.ephemerisFile.connected)
       assertEquals(rs.sourceA.objectName.value, target.objectName.some)
       assertEquals(
-        rs.sourceA.coord1.value.flatMap(HourAngle.fromStringHMS.getOption),
-        Some(target.coordinates.ra.toHourAngle)
+        rs.sourceA.coord1.value,
+        Some(targetRa)
       )
       assertEquals(
-        rs.sourceA.coord2.value.flatMap(Angle.fromStringSignedDMS.getOption),
-        Some(target.coordinates.dec.toAngle)
+        rs.sourceA.coord2.value,
+        Some(targetDec)
       )
       assert(rs.sourceA.properMotion1.value.exists(x => compareDouble(x.toDouble, 0.0)))
       assert(rs.sourceA.properMotion2.value.exists(x => compareDouble(x.toDouble, 0.0)))
@@ -268,12 +276,12 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assert(rs.oiwfsTarget.ephemerisFile.connected)
       assertEquals(rs.oiwfsTarget.objectName.value, oiwfsTarget.objectName.some)
       assertEquals(
-        rs.oiwfsTarget.coord1.value.flatMap(HourAngle.fromStringHMS.getOption),
-        Some(oiwfsTarget.coordinates.ra.toHourAngle)
+        rs.oiwfsTarget.coord1.value,
+        Some(oiwfsRa)
       )
       assertEquals(
-        rs.oiwfsTarget.coord2.value.flatMap(Angle.fromStringSignedDMS.getOption),
-        Some(oiwfsTarget.coordinates.dec.toAngle)
+        rs.oiwfsTarget.coord2.value,
+        Some(oiwfsDec)
       )
       assert(rs.oiwfsTarget.properMotion1.value.exists(x => compareDouble(x.toDouble, 0.0)))
       assert(rs.oiwfsTarget.properMotion2.value.exists(x => compareDouble(x.toDouble, 0.0)))
@@ -520,12 +528,12 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assert(rs.oiwfsTarget.ephemerisFile.connected)
       assertEquals(rs.oiwfsTarget.objectName.value, oiwfsTarget.objectName.some)
       assertEquals(
-        rs.oiwfsTarget.coord1.value.flatMap(HourAngle.fromStringHMS.getOption),
-        Some(oiwfsTarget.coordinates.ra.toHourAngle)
+        rs.oiwfsTarget.coord1.value,
+        Some(HourAngle.fromStringHMS.reverseGet(oiwfsTarget.coordinates.ra.toHourAngle))
       )
       assertEquals(
-        rs.oiwfsTarget.coord2.value.flatMap(Angle.fromStringSignedDMS.getOption),
-        Some(oiwfsTarget.coordinates.dec.toAngle)
+        rs.oiwfsTarget.coord2.value,
+        Some(Angle.fromStringSignedDMS.reverseGet(oiwfsTarget.coordinates.dec.toAngle))
       )
       assert(rs.oiwfsTarget.properMotion1.value.exists(x => compareDouble(x.toDouble, 0.0)))
       assert(rs.oiwfsTarget.properMotion2.value.exists(x => compareDouble(x.toDouble, 0.0)))
