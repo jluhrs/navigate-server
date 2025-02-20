@@ -82,6 +82,7 @@ import navigate.server.tcs.ZeroMountDiffTrack
 import navigate.server.tcs.ZeroMountOffset
 import navigate.server.tcs.ZeroSourceDiffTrack
 import navigate.server.tcs.ZeroSourceOffset
+import navigate.web.server.OcsBuildInfo
 
 import java.nio.file.Path as JPath
 import scala.reflect.classTag
@@ -117,6 +118,8 @@ class NavigateMappings[F[_]: Sync](
       .getOrElse(
         Result.failure[Option[Int]]("instrumentPort parameter could not be parsed.").pure[F]
       )
+
+  def serverVersion: F[Result[String]] = Result.success(OcsBuildInfo.version).pure[F]
 
   def mountFollow(p: Path, env: Env): F[Result[OperationOutcome]] =
     env
@@ -539,7 +542,8 @@ class NavigateMappings[F[_]: Sync](
           RootEffect.computeEncodable("guideState")((p, env) => guideState(p, env)),
           RootEffect.computeEncodable("telescopeState")((p, env) => telescopeState(p, env)),
           RootEffect.computeEncodable("navigateState")((p, env) => navigateState(p, env)),
-          RootEffect.computeEncodable("instrumentPort")((p, env) => instrumentPort(p, env))
+          RootEffect.computeEncodable("instrumentPort")((p, env) => instrumentPort(p, env)),
+          RootEffect.computeEncodable("serverVersion")((_, _) => serverVersion)
         )
       ),
       ObjectMapping(

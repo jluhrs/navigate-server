@@ -256,6 +256,7 @@ type Query {
     guideState: GuideConfigurationState!
     navigateState: NavigateState!
     instrumentPort(instrument: Instrument!): Int
+    serverVersion: String
 }
 
 type Mutation {
