@@ -59,6 +59,7 @@ import navigate.server.tcs.TcsNorthControllerSim
 import navigate.server.tcs.TcsSouthControllerSim
 import navigate.server.tcs.TelescopeState
 import navigate.server.tcs.TrackingConfig
+import navigate.web.server.OcsBuildInfo
 import org.http4s.HttpApp
 import org.http4s.client.Client
 import org.slf4j.Marker
@@ -1251,6 +1252,26 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       assertEquals(p.hcursor.downField("data").downField("instrumentPort").as[Int].toOption, 5.some)
       assertEquals(q.hcursor.downField("data").downField("instrumentPort").as[Int].toOption, none)
     }
+  }
+
+  test("Get server version") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      gd  <- Topic[IO, GuideState]
+      gq  <- Topic[IO, GuidersQualityValues]
+      ts  <- Topic[IO, TelescopeState]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts)
+      p   <- mp.compileAndRun(
+               """
+          |query {
+          |  serverVersion
+          |}
+          |""".stripMargin
+             )
+    } yield assertEquals(p.hcursor.downField("data").downField("serverVersion").as[String].toOption,
+                         OcsBuildInfo.version.some
+    )
   }
 
 }
