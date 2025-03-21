@@ -237,7 +237,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
       buffer <- Ref.empty[IO, Seq[ILoggingEvent]].toResource
       _      <- log
                   .subscribe(1024)
-                  .evalMap(event => buffer.update(events => events.take(maxQueueSize - 1) :+ event))
+                  .evalMap(event => buffer.update(events => events.takeRight(maxQueueSize - 1) :+ event))
                   .compile
                   .drain
                   .background
