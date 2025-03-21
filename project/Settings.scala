@@ -25,12 +25,12 @@ object Settings {
     val http4sBlaze = "0.23.17"
     val slf4j       = "2.0.17"
     val log4s       = "1.10.0"
-    val logback     = "1.5.17"
+    val logback     = "1.5.18"
     val janino      = "3.1.12"
     val logstash    = "7.0"
     val pureConfig  = "0.17.8"
     val monocle     = "3.3.0"
-    val circe       = "0.14.10"
+    val circe       = "0.14.12"
 
     // test libraries
     val scalaMock              = "5.2.0"
@@ -54,7 +54,7 @@ object Settings {
     val jca = "2.4.10"
 
     // Lucuma
-    val lucumaCore    = "0.116.3"
+    val lucumaCore    = "0.116.4"
     val lucumaSchemas = "0.123.1"
     val navigateUi    = "0.5.10"
 
