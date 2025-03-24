@@ -58,7 +58,7 @@ object Settings {
     val lucumaSchemas = "0.123.1"
     val navigateUi    = "0.5.10"
 
-    val grackle = "0.23.0"
+    val grackle = "0.24.0"
 
     val graphQLRoutes = "0.8.17"
 
