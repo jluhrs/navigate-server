@@ -41,14 +41,12 @@ import navigate.server.OdbProxy
 import navigate.server.Systems
 import navigate.server.tcs.FollowStatus
 import navigate.server.tcs.FollowStatus.*
-import navigate.server.tcs.FollowStatus.Following
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuidersQualityValues
 import navigate.server.tcs.InstrumentSpecifics
 import navigate.server.tcs.MechSystemState
 import navigate.server.tcs.ParkStatus
 import navigate.server.tcs.ParkStatus.*
-import navigate.server.tcs.ParkStatus.Parked
 import navigate.server.tcs.RotatorTrackConfig
 import navigate.server.tcs.SlewOptions
 import navigate.server.tcs.Target
@@ -67,8 +65,6 @@ import org.slf4j.event.KeyValuePair
 import java.util
 import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters.given
-
-import NavigateMappings.*
 
 class NavigateMappingsSuite extends CatsEffectSuite {
   import NavigateMappingsTest.*
