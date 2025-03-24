@@ -33,7 +33,6 @@ import lucuma.core.enums.ComaOption
 import lucuma.core.enums.GuideProbe
 import lucuma.core.enums.Instrument
 import lucuma.core.enums.LightSinkName
-import lucuma.core.enums.LightSinkName.*
 import lucuma.core.enums.M1Source
 import lucuma.core.enums.MountGuideOption
 import lucuma.core.enums.TipTiltSource

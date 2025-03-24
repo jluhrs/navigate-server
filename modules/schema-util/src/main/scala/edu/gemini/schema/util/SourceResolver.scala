@@ -8,7 +8,7 @@ import java.nio.file.Path
 import cats.effect.Resource
 import cats.effect.Sync
 import cats.syntax.all.*
-import cats.ApplicativeThrow
+import cats.effect.MonadCancelThrow
 
 // Trait used to find the schema file
 trait SourceResolver[F[_]] {
@@ -31,8 +31,8 @@ object SourceResolver {
       .map(x => Resource.pure(Source.fromString(x)))
       .getOrElse(Resource.raiseError[F, Source, Throwable](new Error(s"Unknown source $name")))
 
-  extension [F[_]: ApplicativeThrow](s: SourceResolver[F])
+  extension [F[_]: MonadCancelThrow](s: SourceResolver[F])
     def or(other: SourceResolver[F]): SourceResolver[F] = (name: Path) =>
-      s.resolve(name).handleErrorWith[Source, Throwable](_ => other.resolve(name))
+      s.resolve(name).handleErrorWith[Source](_ => other.resolve(name))
 
 }

@@ -12,7 +12,6 @@ import cats.syntax.all.*
 import eu.timepit.refined.types.string.NonEmptyString
 import mouse.boolean.*
 import navigate.epics.*
-import navigate.epics.EpicsService
 import navigate.epics.VerifiedEpics.*
 import navigate.server.tcs.AgsEpicsSystem.AgsStatus
 
