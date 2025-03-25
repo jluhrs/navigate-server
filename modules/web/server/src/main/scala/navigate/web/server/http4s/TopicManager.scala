@@ -24,11 +24,7 @@ import org.typelevel.log4cats.Logger
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.*
 
-/**
- * Class for managing all Topic creation and initialization
- */
-@annotation.nowarn("msg=Given search preference")
-class TopicManager[F[_]: Spawn: Temporal] private (
+class TopicManager[F[_]] private (
   val navigateEvents: Topic[F, NavigateEvent],
   val loggingEvents:  Topic[F, ILoggingEvent],
   val guideState:     Topic[F, GuideState],
@@ -37,41 +33,36 @@ class TopicManager[F[_]: Spawn: Temporal] private (
   val logBuffer:      Ref[F, Seq[ILoggingEvent]]
 ) {
 
+  private def genericPoll[A](
+    fetchData: => F[A],
+    topic:     Topic[F, A]
+  )(using Temporal[F]): Stream[F, Unit] =
+    Stream
+      .fixedRate[F](FiniteDuration(1, TimeUnit.SECONDS))
+      .evalMap(_ => fetchData)
+      .evalMapAccumulate(none[A]) { (acc, data) =>
+        (if (acc.contains(data)) Applicative[F].unit else topic.publish1(data).void)
+          .as(data.some, ())
+      }
+      .void
+
   private def guideStatePoll(
     eng:   NavigateEngine[F],
     topic: Topic[F, GuideState]
-  ): Stream[F, Unit] =
-    Stream
-      .fixedRate[F](FiniteDuration(1, TimeUnit.SECONDS))
-      .evalMap(_ => eng.getGuideState)
-      .evalMapAccumulate(none) { (acc, gs) =>
-        (if (acc.contains(gs)) Applicative[F].unit else topic.publish1(gs).void).as(gs.some, ())
-      }
-      .void
+  )(using Temporal[F]): Stream[F, Unit] =
+    genericPoll(eng.getGuideState, topic)
 
   private def guiderQualityPoll(
     eng:   NavigateEngine[F],
     topic: Topic[F, GuidersQualityValues]
-  ): Stream[F, Unit] =
-    Stream
-      .fixedRate[F](FiniteDuration(1, TimeUnit.SECONDS))
-      .evalMap(_ => eng.getGuidersQuality)
-      .evalMapAccumulate(none) { (acc, gs) =>
-        (if (acc.contains(gs)) Applicative[F].unit else topic.publish1(gs).void).as(gs.some, ())
-      }
-      .void
+  )(using Temporal[F]): Stream[F, Unit] =
+    genericPoll(eng.getGuidersQuality, topic)
 
   private def telescopeStatePoll(
     eng:   NavigateEngine[F],
     topic: Topic[F, TelescopeState]
-  ): Stream[F, Unit] =
-    Stream
-      .fixedRate[F](FiniteDuration(1, TimeUnit.SECONDS))
-      .evalMap(_ => eng.getTelescopeState)
-      .evalMapAccumulate(none) { (acc, ts) =>
-        (if (acc.contains(ts)) Applicative[F].unit else topic.publish1(ts).void).as(ts.some, ())
-      }
-      .void
+  )(using Temporal[F]): Stream[F, Unit] =
+    genericPoll(eng.getTelescopeState, topic)
 
   // Logger of error of last resort.
   private def logError[F[_]: Logger]: PartialFunction[Throwable, F[Unit]] = {
@@ -99,7 +90,7 @@ class TopicManager[F[_]: Spawn: Temporal] private (
       _ <- guiderQualityPoll(engine, guidersQuality).compile.drain.start
       _ <- telescopeStatePoll(engine, telescopeState).compile.drain.start
 
-      // Start engine event stream and return this fiber for joining
+      // Start engine event stream
       fiber <-
         engine.eventStream.through(navigateEvents.publish).compile.drain.onError(logError).start
     } yield fiber
@@ -110,7 +101,7 @@ object TopicManager {
   /**
    * Buffer log messages to be able to send old messages to new clients
    */
-  def bufferLogMessages[F[_]: Concurrent](
+  private def bufferLogMessages[F[_]: Concurrent](
     log: Topic[F, ILoggingEvent]
   ): Resource[F, Ref[F, Seq[ILoggingEvent]]] = {
     val maxQueueSize = 30
