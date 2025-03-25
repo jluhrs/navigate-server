@@ -3,10 +3,10 @@
 
 package navigate.model
 
-import lucuma.core.math.Angle
-import lucuma.core.math.Offset
 import cats.Eq
 import cats.derived.*
+import lucuma.core.math.Angle
+import lucuma.core.math.Offset
 
 case class AcquisitionAdjustment(
   offset: Offset,

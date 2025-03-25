@@ -39,6 +39,7 @@ import lucuma.core.enums.TipTiltSource
 import lucuma.core.math.Coordinates
 import lucuma.core.math.Declination
 import lucuma.core.math.Epoch
+import lucuma.core.math.Offset
 import lucuma.core.math.Parallax
 import lucuma.core.math.ProperMotion
 import lucuma.core.math.RadialVelocity
@@ -50,6 +51,7 @@ import lucuma.core.model.ProbeGuide
 import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.TimeSpan
 import mouse.boolean.given
+import navigate.model.AcquisitionAdjustment
 import navigate.model.Distance
 import navigate.model.NavigateState
 import navigate.model.enums.LightSource
@@ -89,8 +91,6 @@ import java.nio.file.Path as JPath
 import scala.reflect.classTag
 
 import encoder.given
-import navigate.model.AcquisitionAdjustment
-import lucuma.core.math.Offset
 
 class NavigateMappings[F[_]: Sync](
   server:              NavigateEngine[F],

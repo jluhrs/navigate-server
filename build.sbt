@@ -70,12 +70,6 @@ val stopNavigateAllCommands  = List(
 addCommandAlias("startNavigateAll", startNavigateAllCommands.mkString(";", ";", ""))
 addCommandAlias("stopNavigateAll", stopNavigateAllCommands.mkString(";", ";", ""))
 
-ThisBuild / resolvers ++= Resolver.sonatypeOssRepos("snapshots")
-
-ThisBuild / updateOptions := updateOptions.value.withLatestSnapshots(false)
-
-ThisBuild / evictionErrorLevel := Level.Info
-
 //////////////
 // Projects
 //////////////
