@@ -1319,6 +1319,53 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     }
   }
 
+  test("request acquisition adjustment") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      gd  <- Topic[IO, GuideState]
+      gq  <- Topic[IO, GuidersQualityValues]
+      ts  <- Topic[IO, TelescopeState]
+      lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      // p   <- mp.compileAndRun(
+      //          """
+      //     |mutation { a() {
+      //     |  result
+      //     |} }
+      //     |""".stripMargin
+      //        )
+      p   <- mp.compileAndRun(
+               """
+          |mutation { requestAcquisitionAdjustment (
+          |  adjustment: {
+          |    offset: {
+          |      p: {
+          |        arcseconds: 0.1
+          |      }
+          |      q: {
+          |        arcseconds: 0.1
+          |      }
+          |    },
+          |    ipa: {
+          |       milliseconds: 10
+          |    },
+          |    iaa: {
+          |       milliseconds: 10
+          |    }
+          |  }
+          |) {
+          |  result
+          |} }
+          |""".stripMargin
+             )
+    } yield {
+      println(p)
+      assertEquals(p.hcursor.downField("data").downField("instrumentPort").as[Int].toOption, 5.some)
+    }
+    // assertEquals(q.hcursor.downField("data").downField("instrumentPort").as[Int].toOption, none)
+  }
+
   test("Get server version") {
     for {
       eng <- buildServer

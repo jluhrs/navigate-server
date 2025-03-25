@@ -1,5 +1,5 @@
 #import NonEmptyString, Sidereal, GuideProbe, TargetId, Nonsidereal from "lucuma/schemas/ObservationDB.graphql"
-#import SiderealInput, NonsiderealInput, WavelengthInput, AngleInput from "lucuma/schemas/ObservationDB.graphql"
+#import SiderealInput, OffsetInput, NonsiderealInput, WavelengthInput, AngleInput from "lucuma/schemas/ObservationDB.graphql"
 #import Long, BigDecimal, Timestamp, TimeSpanInput from "lucuma/schemas/ObservationDB.graphql"
 #import Instrument from "lucuma/schemas/ObservationDB.graphql"
 
@@ -249,6 +249,12 @@ enum LightSink {
     IGRINS2
 }
 
+input AcquisitionAdjustmentInput {
+    offset: OffsetInput!
+    ipa: AngleInput
+    iaa: AngleInput
+}
+
 type Query {
     telescopeState: TelescopeState!
     guideState: GuideConfigurationState!
@@ -287,6 +293,7 @@ type Mutation {
     m1LoadAoFigure: OperationOutcome!
     m1LoadNonAoFigure: OperationOutcome!
     lightpathConfig(from: LightSource, to: LightSink): OperationOutcome!
+    requestAcquisitionAdjustment(adjustment: AcquisitionAdjustmentInput!): OperationOutcome!
 }
 
 type Subscription {

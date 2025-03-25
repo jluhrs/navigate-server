@@ -89,6 +89,8 @@ import java.nio.file.Path as JPath
 import scala.reflect.classTag
 
 import encoder.given
+import navigate.model.AcquisitionAdjustment
+import lucuma.core.math.Offset
 
 class NavigateMappings[F[_]: Sync](
   server:              NavigateEngine[F],
@@ -383,6 +385,18 @@ class NavigateMappings[F[_]: Sync](
         Result.failure[OperationOutcome]("guideEnable parameters could not be parsed.").pure[F]
       )
 
+  def acquisitionAdjustment(p: Path, env: Env): F[Result[OperationOutcome]] =
+    env
+      .get[AcquisitionAdjustment]("adjustment")
+      .map { adj =>
+        Result.success(OperationOutcome.success).pure[F]
+      }
+      .getOrElse {
+        Result
+          .failure[OperationOutcome]("requestAcquisitionAdjustment parameters could not be parsed.")
+          .pure[F]
+      }
+
   def lightpathConfig(p: Path, env: Env): F[Result[OperationOutcome]] = (for {
     from <- env.get[LightSource]("from")
     to   <- env.get[LightSinkName]("to")
@@ -526,6 +540,18 @@ class NavigateMappings[F[_]: Sync](
         _    <- Elab.env("from" -> from)
         _    <- Elab.env("to" -> to)
       } yield ()
+    case (MutationType,
+          "requestAcquisitionAdjustment",
+          List(Binding("adjustment", ObjectValue(adj)))
+        ) =>
+      Elab
+        .liftR(
+          parseAcquisitionAdjustment(adj)
+            .toResult("Could not parse adjustment parameter \"adjustment\"")
+        )
+        .flatMap { x =>
+          Elab.env("adjustment" -> x)
+        }
     case (QueryType, "instrumentPort", List(Binding("instrument", EnumValue(ins))))         =>
       Elab
         .liftR(
@@ -597,7 +623,10 @@ class NavigateMappings[F[_]: Sync](
           RootEffect.computeEncodable("m1LoadNonAoFigure")((p, env) =>
             simpleCommand(server.m1LoadNonAoFigure)
           ),
-          RootEffect.computeEncodable("lightpathConfig")((p, env) => lightpathConfig(p, env))
+          RootEffect.computeEncodable("lightpathConfig")((p, env) => lightpathConfig(p, env)),
+          RootEffect.computeEncodable("requestAcquisitionAdjustment") { (p, env) =>
+            acquisitionAdjustment(p, env)
+          }
         )
       ),
       ObjectMapping(
@@ -891,5 +920,17 @@ object NavigateMappings extends GrackleParsers {
         )
       }
   }
+
+  def parseOffset(l: List[(String, Value)]): Option[Offset] = for {
+    p <- l.collectFirst { case ("p", ObjectValue(v)) => parseAngle(v) }.flatten
+    q <- l.collectFirst { case ("q", ObjectValue(v)) => parseAngle(v) }.flatten
+  } yield Offset(p.p, q.q)
+
+  def parseAcquisitionAdjustment(l: List[(String, Value)]): Option[AcquisitionAdjustment] = for {
+    o   <-
+      l.collectFirst { case ("offset", ObjectValue(v)) => parseOffset(v) }.flatten
+    ipa <- l.collectFirst { case ("ipa", ObjectValue(v)) => parseAngle(v) }
+    iaa <- l.collectFirst { case ("iaa", ObjectValue(v)) => parseAngle(v) }
+  } yield AcquisitionAdjustment(o, ipa, iaa)
 
 }
