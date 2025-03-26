@@ -3,7 +3,6 @@
 
 package navigate.server.tcs
 
-import cats.Applicative
 import cats.Parallel
 import cats.effect.Ref
 import cats.effect.Temporal
@@ -71,7 +70,7 @@ object TestAcquisitionCameraEpicsSystem {
     TestChannel.State.of(CarState.IDLE)
   )
 
-  def buildChannels[F[_]: Applicative](
+  def buildChannels[F[_]: Temporal](
     s: Ref[F, State]
   ): AcquisitionCameraChannels[F] = new AcquisitionCameraChannels[F](
     telltale =

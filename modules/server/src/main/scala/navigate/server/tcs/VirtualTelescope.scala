@@ -7,7 +7,7 @@ import lucuma.core.util.Enumerated
 
 enum VirtualTelescope(val tag: String) derives Enumerated {
   case Mount extends VirtualTelescope("Mount")
-  
+
   case SourceA extends VirtualTelescope("SourceA")
 
   case SourceB extends VirtualTelescope("SourceB")

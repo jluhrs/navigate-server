@@ -3,7 +3,6 @@
 
 package navigate.server.tcs
 
-import cats.Applicative
 import cats.Parallel
 import cats.effect.Ref
 import cats.effect.Temporal
@@ -56,7 +55,7 @@ object TestAgsEpicsSystem {
     TestChannel.State.of(0)
   )
 
-  def buildChannels[F[_]: Applicative](
+  def buildChannels[F[_]: Temporal](
     s: Ref[F, State]
   ): AgsChannels[F] = new AgsChannels[F](
     telltale =

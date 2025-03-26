@@ -3,7 +3,6 @@
 
 package navigate.server.tcs
 
-import cats.Applicative
 import cats.Parallel
 import cats.effect.Ref
 import cats.effect.Temporal
@@ -36,7 +35,7 @@ object TestWfsEpicsSystem {
     TestChannel.State.default
   )
 
-  def buildChannels[F[_]: Applicative](
+  def buildChannels[F[_]: Temporal](
     sysName: String,
     s:       Ref[F, State]
   ): WfsChannels[F] = WfsChannels(

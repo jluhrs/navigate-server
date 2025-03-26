@@ -18,7 +18,8 @@ import lucuma.core.enums.Instrument
 import lucuma.core.enums.LightSinkName
 import lucuma.core.enums.MountGuideOption
 import lucuma.core.enums.Site
-import lucuma.core.math.{Angle, Offset}
+import lucuma.core.math.Angle
+import lucuma.core.math.Offset
 import lucuma.core.model.GuideConfig
 import lucuma.core.model.M1GuideConfig
 import lucuma.core.model.M2GuideConfig
@@ -63,6 +64,7 @@ import org.typelevel.log4cats.Logger
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
+
 import NavigateEvent.NullEvent
 
 trait NavigateEngine[F[_]] {
@@ -492,7 +494,11 @@ object NavigateEngine {
       }
 
     override def acquisitionAdj(offset: Offset, iaa: Option[Angle], ipa: Option[Angle]): F[Unit] =
-      simpleCommand(engine, AcquisitionAdjust(offset, ipa, iaa), stateRef.get.flatMap(s => systems.tcsCommon.acquisitionAdj(offset, ipa, iaa)(s.guideConfig)))
+      simpleCommand(
+        engine,
+        AcquisitionAdjust(offset, ipa, iaa),
+        stateRef.get.flatMap(s => systems.tcsCommon.acquisitionAdj(offset, ipa, iaa)(s.guideConfig))
+      )
   }
 
   def build[F[_]: {Temporal, Logger}](

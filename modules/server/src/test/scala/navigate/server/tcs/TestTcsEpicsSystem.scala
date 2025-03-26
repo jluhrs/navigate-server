@@ -5,8 +5,10 @@ package navigate.server.tcs
 
 import cats.Applicative
 import cats.Parallel
+import cats.effect.Async
+import cats.effect.Ref
+import cats.effect.Temporal
 import cats.effect.std.Dispatcher
-import cats.effect.{Async, Ref}
 import monocle.Focus
 import monocle.Lens
 import navigate.epics.EpicsSystem.TelltaleChannel
@@ -19,7 +21,26 @@ import navigate.server.acm.GeminiApplyCommand
 import navigate.server.epicsdata.BinaryOnOff
 import navigate.server.epicsdata.BinaryOnOffCapitalized
 import navigate.server.epicsdata.BinaryYesNo
-import navigate.server.tcs.TcsChannels.{AdjustChannels, AgMechChannels, EnclosureChannels, GuideConfigStatusChannels, M1Channels, M1GuideConfigChannels, M2BafflesChannels, M2GuideConfigChannels, MountGuideChannels, OiwfsSelectChannels, OriginChannels, ProbeChannels, ProbeGuideModeChannels, ProbeTrackingChannels, RotatorChannels, SlewChannels, TargetChannels, WfsChannels, WfsClosedLoopChannels, WfsObserveChannels}
+import navigate.server.tcs.TcsChannels.AdjustChannels
+import navigate.server.tcs.TcsChannels.AgMechChannels
+import navigate.server.tcs.TcsChannels.EnclosureChannels
+import navigate.server.tcs.TcsChannels.GuideConfigStatusChannels
+import navigate.server.tcs.TcsChannels.M1Channels
+import navigate.server.tcs.TcsChannels.M1GuideConfigChannels
+import navigate.server.tcs.TcsChannels.M2BafflesChannels
+import navigate.server.tcs.TcsChannels.M2GuideConfigChannels
+import navigate.server.tcs.TcsChannels.MountGuideChannels
+import navigate.server.tcs.TcsChannels.OiwfsSelectChannels
+import navigate.server.tcs.TcsChannels.OriginChannels
+import navigate.server.tcs.TcsChannels.ProbeChannels
+import navigate.server.tcs.TcsChannels.ProbeGuideModeChannels
+import navigate.server.tcs.TcsChannels.ProbeTrackingChannels
+import navigate.server.tcs.TcsChannels.RotatorChannels
+import navigate.server.tcs.TcsChannels.SlewChannels
+import navigate.server.tcs.TcsChannels.TargetChannels
+import navigate.server.tcs.TcsChannels.WfsChannels
+import navigate.server.tcs.TcsChannels.WfsClosedLoopChannels
+import navigate.server.tcs.TcsChannels.WfsObserveChannels
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -372,7 +393,7 @@ object TestTcsEpicsSystem {
     inPosition = TestChannel.State.of("FALSE")
   )
 
-  def buildEnclosureChannels[F[_]: Applicative](s: Ref[F, State]): EnclosureChannels[F] =
+  def buildEnclosureChannels[F[_]: Temporal](s: Ref[F, State]): EnclosureChannels[F] =
     EnclosureChannels[F](
       ecsDomeMode = new TestChannel[F, State, String](s, Focus[State](_.enclosure.ecsDomeMode)),
       ecsShutterMode =
@@ -391,7 +412,7 @@ object TestTcsEpicsSystem {
         new TestChannel[F, State, String](s, Focus[State](_.enclosure.ecsVentGateWest))
     )
 
-  def buildTargetChannels[F[_]: Applicative](
+  def buildTargetChannels[F[_]: Temporal](
     s: Ref[F, State],
     l: Lens[State, TargetChannelsState]
   ): TargetChannels[F] =
@@ -427,7 +448,7 @@ object TestTcsEpicsSystem {
         new TestChannel[F, State, String](s, l.andThen(Focus[TargetChannelsState](_.ephemerisFile)))
     )
 
-  def buildSlewChannels[F[_]: Applicative](
+  def buildSlewChannels[F[_]: Temporal](
     s: Ref[F, State]
   ): SlewChannels[F] =
     SlewChannels(
@@ -468,7 +489,7 @@ object TestTcsEpicsSystem {
       autoparkAowfs = new TestChannel[F, State, String](s, Focus[State](_.slew.autoparkAowfs))
     )
 
-  def buildRotatorChannels[F[_]: Applicative](s: Ref[F, State]): RotatorChannels[F] =
+  def buildRotatorChannels[F[_]: Temporal](s: Ref[F, State]): RotatorChannels[F] =
     RotatorChannels(
       new TestChannel[F, State, String](s, Focus[State](_.rotator.ipa)),
       new TestChannel[F, State, String](s, Focus[State](_.rotator.system)),
@@ -476,7 +497,7 @@ object TestTcsEpicsSystem {
       new TestChannel[F, State, String](s, Focus[State](_.rotator.iaa))
     )
 
-  def buildOriginChannels[F[_]: Applicative](s: Ref[F, State]): OriginChannels[F] =
+  def buildOriginChannels[F[_]: Temporal](s: Ref[F, State]): OriginChannels[F] =
     OriginChannels(
       new TestChannel[F, State, String](s, Focus[State](_.origin.xa)),
       new TestChannel[F, State, String](s, Focus[State](_.origin.ya)),
@@ -486,7 +507,7 @@ object TestTcsEpicsSystem {
       new TestChannel[F, State, String](s, Focus[State](_.origin.yc))
     )
 
-  def buildProbeTrackingChannels[F[_]: Applicative](
+  def buildProbeTrackingChannels[F[_]: Temporal](
     s: Ref[F, State],
     l: Lens[State, ProbeTrackingState]
   ): ProbeTrackingChannels[F] = ProbeTrackingChannels(
@@ -496,7 +517,7 @@ object TestTcsEpicsSystem {
     new TestChannel[F, State, String](s, l.andThen(Focus[ProbeTrackingState](_.nodBchopB)))
   )
 
-  def buildProbeChannels[F[_]: Applicative](
+  def buildProbeChannels[F[_]: Temporal](
     s: Ref[F, State],
     l: Lens[State, ProbeState]
   ): ProbeChannels[F] = ProbeChannels(
@@ -520,7 +541,7 @@ object TestTcsEpicsSystem {
     )
   }
 
-  def buildM1GuideConfigChannels[F[_]: Applicative](
+  def buildM1GuideConfigChannels[F[_]: Temporal](
     s: Ref[F, State],
     l: Lens[State, M1GuideConfigState]
   ): M1GuideConfigChannels[F] = M1GuideConfigChannels(
@@ -578,7 +599,7 @@ object TestTcsEpicsSystem {
     )
   }
 
-  def buildGuideStateChannels[F[_]: Applicative](
+  def buildGuideStateChannels[F[_]: Temporal](
     s: Ref[F, State],
     l: Lens[State, GuideConfigState]
   ): GuideConfigStatusChannels[F] = GuideConfigStatusChannels(
@@ -634,7 +655,7 @@ object TestTcsEpicsSystem {
     )
   }
 
-  def buildM2GuideConfigChannels[F[_]: Applicative](
+  def buildM2GuideConfigChannels[F[_]: Temporal](
     s: Ref[F, State],
     l: Lens[State, M2GuideConfigState]
   ): M2GuideConfigChannels[F] = M2GuideConfigChannels(
@@ -663,7 +684,7 @@ object TestTcsEpicsSystem {
     )
   }
 
-  def buildMountGuideChannels[F[_]: Applicative](
+  def buildMountGuideChannels[F[_]: Temporal](
     s: Ref[F, State],
     l: Lens[State, MountGuideState]
   ): MountGuideChannels[F] = MountGuideChannels(
@@ -673,7 +694,7 @@ object TestTcsEpicsSystem {
     new TestChannel[F, State, String](s, l.andThen(Focus[MountGuideState](_.p2weight)))
   )
 
-  def buildWfsChannels[F[_]: Applicative](
+  def buildWfsChannels[F[_]: Temporal](
     s: Ref[F, State],
     l: Lens[State, WfsChannelState]
   ): WfsChannels[F] = WfsChannels(
@@ -702,7 +723,7 @@ object TestTcsEpicsSystem {
     )
   )
 
-  def buildGuideModeChannels[F[_]: Applicative](
+  def buildGuideModeChannels[F[_]: Temporal](
     s: Ref[F, State],
     l: Lens[State, ProbeGuideModeState]
   ): ProbeGuideModeChannels[F] = ProbeGuideModeChannels(
@@ -711,7 +732,7 @@ object TestTcsEpicsSystem {
     new TestChannel[F, State, String](s, l.andThen(Focus[ProbeGuideModeState](_.to)))
   )
 
-  def buildOiwfsSelectChannels[F[_]: Applicative](
+  def buildOiwfsSelectChannels[F[_]: Temporal](
     s: Ref[F, State],
     l: Lens[State, OiwfsSelectState]
   ): OiwfsSelectChannels[F] = OiwfsSelectChannels(
@@ -719,7 +740,7 @@ object TestTcsEpicsSystem {
     new TestChannel[F, State, String](s, l.andThen(Focus[OiwfsSelectState](_.output)))
   )
 
-  def buildM2BafflesChannels[F[_]: Applicative](
+  def buildM2BafflesChannels[F[_]: Temporal](
     s: Ref[F, State],
     l: Lens[State, M2BafflesState]
   ): M2BafflesChannels[F] = M2BafflesChannels(
@@ -727,10 +748,10 @@ object TestTcsEpicsSystem {
     new TestChannel[F, State, String](s, l.andThen(Focus[M2BafflesState](_.centralBaffle)))
   )
 
-  def buildAdjustChannels[F[_]: Applicative](
-                                              s: Ref[F, State],
-                                              l: Lens[State, AdjustState]
-                                            ): AdjustChannels[F] = AdjustChannels(
+  def buildAdjustChannels[F[_]: Temporal](
+    s: Ref[F, State],
+    l: Lens[State, AdjustState]
+  ): AdjustChannels[F] = AdjustChannels(
     new TestChannel[F, State, String](s, l.andThen(Focus[AdjustState](_.frame))),
     new TestChannel[F, State, String](s, l.andThen(Focus[AdjustState](_.size))),
     new TestChannel[F, State, String](s, l.andThen(Focus[AdjustState](_.angle))),
@@ -773,10 +794,10 @@ object TestTcsEpicsSystem {
 
   case class AdjustState(
     frame: TestChannel.State[String],
-    size: TestChannel.State[String],
+    size:  TestChannel.State[String],
     angle: TestChannel.State[String],
-    vt: TestChannel.State[String]
-                        )
+    vt:    TestChannel.State[String]
+  )
 
   object AdjustState {
     val default: AdjustState = AdjustState(
@@ -787,7 +808,7 @@ object TestTcsEpicsSystem {
     )
   }
 
-  def buildM1Channels[F[_]: Applicative](
+  def buildM1Channels[F[_]: Temporal](
     s: Ref[F, State],
     l: Lens[State, M1CommandsState]
   ): M1Channels[F] = M1Channels[F](
@@ -809,7 +830,7 @@ object TestTcsEpicsSystem {
     )
   )
 
-  def buildAgMechChannels[F[_]: Applicative](
+  def buildAgMechChannels[F[_]: Temporal](
     s: Ref[F, State],
     l: Lens[State, AgMechState]
   ): AgMechChannels[F] = AgMechChannels[F](
@@ -817,7 +838,7 @@ object TestTcsEpicsSystem {
     new TestChannel[F, State, String](s, l.andThen(Focus[AgMechState](_.position)))
   )
 
-  def buildChannels[F[_]: Applicative](s: Ref[F, State]): TcsChannels[F] =
+  def buildChannels[F[_]: Temporal](s: Ref[F, State]): TcsChannels[F] =
     TcsChannels(
       telltale =
         TelltaleChannel[F]("TCS", new TestChannel[F, State, String](s, Focus[State](_.telltale))),

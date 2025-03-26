@@ -3,7 +3,6 @@
 
 package navigate.server.tcs
 
-import cats.Applicative
 import cats.Parallel
 import cats.effect.Ref
 import cats.effect.Temporal
@@ -23,7 +22,7 @@ object TestCrcsEpicsSystem {
     TestChannel.State.of("")
   )
 
-  def buildChannels[F[_]: Applicative](
+  def buildChannels[F[_]: Temporal](
     s: Ref[F, State]
   ): CrcsChannels[F] = new CrcsChannels[F](
     telltale =

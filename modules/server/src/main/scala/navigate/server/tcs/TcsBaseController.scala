@@ -63,7 +63,9 @@ trait TcsBaseController[F[_]] {
   def m1ZeroFigure: F[ApplyCommandResult]
   def m1LoadAoFigure: F[ApplyCommandResult]
   def m1LoadNonAoFigure: F[ApplyCommandResult]
-  def acquisitionAdj(offset: Offset, ipa: Option[Angle], iaa: Option[Angle])(guide: GuideConfig): F[ApplyCommandResult]
+  def acquisitionAdj(offset: Offset, ipa: Option[Angle], iaa: Option[Angle])(
+    guide: GuideConfig
+  ): F[ApplyCommandResult]
 
   // Queries
   def getGuideState: F[GuideState]

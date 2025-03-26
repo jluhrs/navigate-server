@@ -14,8 +14,17 @@ import lucuma.core.enums.LightSinkName
 import lucuma.core.enums.M1Source
 import lucuma.core.enums.MountGuideOption
 import lucuma.core.enums.TipTiltSource
-import lucuma.core.math.{Angle, HourAngle, Offset, Parallax, ProperMotion, RadialVelocity, Wavelength}
-import lucuma.core.model.{GuideConfig, M1GuideConfig, M2GuideConfig, TelescopeGuideConfig}
+import lucuma.core.math.Angle
+import lucuma.core.math.HourAngle
+import lucuma.core.math.Offset
+import lucuma.core.math.Parallax
+import lucuma.core.math.ProperMotion
+import lucuma.core.math.RadialVelocity
+import lucuma.core.math.Wavelength
+import lucuma.core.model.GuideConfig
+import lucuma.core.model.M1GuideConfig
+import lucuma.core.model.M2GuideConfig
+import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.Enumerated
 import lucuma.core.util.TimeSpan
 import monocle.Focus.focus
@@ -47,10 +56,10 @@ import navigate.server.tcs.TcsEpicsSystem.ProbeTrackingCommand
 import navigate.server.tcs.TcsEpicsSystem.TargetCommand
 import navigate.server.tcs.TcsEpicsSystem.TcsCommands
 
-import scala.concurrent.duration.*
-import TcsBaseController.{EquinoxDefault, FixedSystem, SwapConfig, SystemDefault, TcsConfig}
-
 import java.util.concurrent.TimeUnit
+import scala.concurrent.duration.*
+
+import TcsBaseController.{EquinoxDefault, FixedSystem, SwapConfig, SystemDefault, TcsConfig}
 
 /* This class implements the common TCS commands */
 abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel}](
@@ -1084,31 +1093,46 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel}](
     .post
     .verifiedRun(ConnectionTimeout)
 
-  private def applyAcquisitionAdj(offset: Offset, ipa: Option[Angle], iaa: Option[Angle]): F[ApplyCommandResult] = {
+  private def applyAcquisitionAdj(
+    offset: Offset,
+    ipa:    Option[Angle],
+    iaa:    Option[Angle]
+  ): F[ApplyCommandResult] = {
     val degreesToArcseconds: Double = 60.0 * 60.0
-    val size: Double = Math.sqrt(Math.pow(offset.p.toAngle.toSignedDoubleDegrees*degreesToArcseconds, 2.0)
-      + Math.pow(offset.q.toAngle.toSignedDoubleDegrees*degreesToArcseconds, 2.0)
+    val size: Double                = Math.sqrt(
+      Math.pow(offset.p.toAngle.toSignedDoubleDegrees * degreesToArcseconds, 2.0)
+        + Math.pow(offset.q.toAngle.toSignedDoubleDegrees * degreesToArcseconds, 2.0)
     )
-    val angle: Angle = Angle.fromDoubleRadians(Math.atan2(offset.p.toSignedDoubleRadians, -offset.q.toSignedDoubleRadians))
+    val angle: Angle                = Angle.fromDoubleRadians(
+      Math.atan2(offset.p.toSignedDoubleRadians, -offset.q.toSignedDoubleRadians)
+    )
 
-    (
-      for {
-        _ <- (ipa, iaa).mapN {
-            (ip, ia) => sys.tcsEpics.startCommand(timeout).rotatorCommand.ipa(ip).rotatorCommand.iaa(ia).post
-          }.getOrElse(VerifiedEpics.pureF(ApplyCommandResult.Completed))
-        ret <- (if(Math.abs(size) > 1e-6) {
-                  sys.tcsEpics.startCommand(timeout)
-                    .poAdjustCommand.frame(ReferenceFrame.Instrument)
-                    .poAdjustCommand.size(size)
-                    .poAdjustCommand.angle(angle)
-                    .poAdjustCommand.vtMask(List(VirtualTelescope.SourceA, VirtualTelescope.SourceB, VirtualTelescope.SourceC))
-                    .post
-                } else VerifiedEpics.pureF(ApplyCommandResult.Completed))
-          _ <- if (Math.abs(size) > 1e-6 || (ipa.isDefined && iaa.isDefined))
-                  sys.tcsEpics.status.waitInPosition(FiniteDuration.apply(1, TimeUnit.SECONDS), FiniteDuration.apply(5, TimeUnit.SECONDS))
-               else VerifiedEpics.unit[F, F]
-          } yield ret
-    ).verifiedRun(ConnectionTimeout)
+    (ipa, iaa)
+      .mapN { (ip, ia) =>
+        sys.tcsEpics.startCommand(timeout).rotatorCommand.ipa(ip).rotatorCommand.iaa(ia).post
+      }
+      .getOrElse(VerifiedEpics.pureF(ApplyCommandResult.Completed))
+      .verifiedRun(ConnectionTimeout) *>
+      (if (Math.abs(size) > 1e-6) {
+         sys.tcsEpics
+           .startCommand(timeout)
+           .poAdjustCommand
+           .frame(ReferenceFrame.Instrument)
+           .poAdjustCommand
+           .size(size)
+           .poAdjustCommand
+           .angle(angle)
+           .poAdjustCommand
+           .vtMask(
+             List(VirtualTelescope.SourceA, VirtualTelescope.SourceB, VirtualTelescope.SourceC)
+           )
+           .post
+       } else VerifiedEpics.pureF(ApplyCommandResult.Completed)).verifiedRun(ConnectionTimeout) <*
+      (if (Math.abs(size) > 1e-6 || (ipa.isDefined && iaa.isDefined))
+         sys.tcsEpics.status.waitInPosition(FiniteDuration.apply(1, TimeUnit.SECONDS),
+                                            FiniteDuration.apply(5, TimeUnit.SECONDS)
+         )
+       else VerifiedEpics.unit[F, F]).verifiedRun(ConnectionTimeout)
 
   }
 
@@ -1118,11 +1142,15 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel}](
       offset.q.toAngle =!= Angle.Angle0
 
   import TcsBaseControllerEpics.*
-  override def acquisitionAdj(offset: Offset, ipa: Option[Angle], iaa: Option[Angle])(guide: GuideConfig): F[ApplyCommandResult] =
+  override def acquisitionAdj(offset: Offset, ipa: Option[Angle], iaa: Option[Angle])(
+    guide: GuideConfig
+  ): F[ApplyCommandResult] =
     getGuideState.flatMap { gs =>
       disableGuide.whenA(gs.isGuiding && shouldPauseGuide(offset, ipa, iaa)) *>
         applyAcquisitionAdj(offset, ipa, iaa) <*
-        enableGuide(guide.tcsGuide).whenA(guide.tcsGuide.isGuiding && shouldPauseGuide(offset, ipa, iaa))
+        enableGuide(guide.tcsGuide).whenA(
+          guide.tcsGuide.isGuiding && shouldPauseGuide(offset, ipa, iaa)
+        )
     }
 }
 
@@ -1161,11 +1189,13 @@ object TcsBaseControllerEpics {
   }
 
   extension (x: TelescopeGuideConfig) {
-    def isGuiding: Boolean = x.m1Guide =!= M1GuideConfig.M1GuideOff || x.m2Guide =!= M2GuideConfig.M2GuideOff || x.probeGuide.isDefined
+    def isGuiding: Boolean =
+      x.m1Guide =!= M1GuideConfig.M1GuideOff || x.m2Guide =!= M2GuideConfig.M2GuideOff || x.probeGuide.isDefined
   }
 
   extension (x: GuideState) {
-    def isGuiding: Boolean = x.m1Guide =!= M1GuideConfig.M1GuideOff || x.m2Guide =!= M2GuideConfig.M2GuideOff
+    def isGuiding: Boolean =
+      x.m1Guide =!= M1GuideConfig.M1GuideOff || x.m2Guide =!= M2GuideConfig.M2GuideOff
   }
 
 }

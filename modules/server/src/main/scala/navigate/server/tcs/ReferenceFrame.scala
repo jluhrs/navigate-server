@@ -7,7 +7,7 @@ import lucuma.core.util.Enumerated
 
 enum ReferenceFrame(val tag: String) derives Enumerated {
   case AzimuthElevation extends ReferenceFrame("AzimuthElevation")
-  case XY extends ReferenceFrame("XY")
-  case Instrument extends ReferenceFrame("Instrument")
-  case Tracking extends ReferenceFrame("Tracking")
+  case XY               extends ReferenceFrame("XY")
+  case Instrument       extends ReferenceFrame("Instrument")
+  case Tracking         extends ReferenceFrame("Tracking")
 }

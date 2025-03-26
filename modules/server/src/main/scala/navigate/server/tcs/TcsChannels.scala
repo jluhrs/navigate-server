@@ -60,8 +60,8 @@ case class TcsChannels[F[_]](
   p2ProbeTrackingState: ProbeTrackingChannels[F],
   oiProbeTrackingState: ProbeTrackingChannels[F],
   aoProbeTrackingState: ProbeTrackingChannels[F],
-  poAdjust: AdjustChannels[F],
-  inPosition: Channel[F, String]
+  poAdjust:             AdjustChannels[F],
+  inPosition:           Channel[F, String]
 )
 
 object TcsChannels {
@@ -619,22 +619,22 @@ object TcsChannels {
   }
 
   case class AdjustChannels[F[_]](
-    frame: Channel[F, String],
-    size: Channel[F, String],
-    angle: Channel[F, String],
+    frame:  Channel[F, String],
+    size:   Channel[F, String],
+    angle:  Channel[F, String],
     vtMask: Channel[F, String]
-                           )
+  )
 
   object AdjustChannels {
     def build[F[_]](
-                     service: EpicsService[F],
-                     top: TcsTop,
-                     name: String
-                   ): Resource[F, AdjustChannels[F]] = for {
+      service: EpicsService[F],
+      top:     TcsTop,
+      name:    String
+    ): Resource[F, AdjustChannels[F]] = for {
       frm <- service.getChannel[String](top.value, s"${name}Adjust.A")
-      sz <- service.getChannel[String](top.value, s"${name}Adjust.B")
-      an <- service.getChannel[String](top.value, s"${name}Adjust.C")
-      vt <- service.getChannel[String](top.value, s"${name}Adjust.D")
+      sz  <- service.getChannel[String](top.value, s"${name}Adjust.B")
+      an  <- service.getChannel[String](top.value, s"${name}Adjust.C")
+      vt  <- service.getChannel[String](top.value, s"${name}Adjust.D")
     } yield AdjustChannels(frm, sz, an, vt)
   }
 

@@ -205,5 +205,7 @@ class TcsBaseControllerSim[F[_]: Sync](
 
   override def m1LoadNonAoFigure: F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
 
-  override def acquisitionAdj(offset: Offset, ipa: Option[Angle], iaa: Option[Angle])(guide: GuideConfig): F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
+  override def acquisitionAdj(offset: Offset, ipa: Option[Angle], iaa: Option[Angle])(
+    guide: GuideConfig
+  ): F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
 }

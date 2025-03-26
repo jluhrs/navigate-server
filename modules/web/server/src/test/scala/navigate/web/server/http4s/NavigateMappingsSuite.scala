@@ -1480,7 +1480,11 @@ object NavigateMappingsTest {
         case _                    => none
       ).pure[IO]
 
-      override def acquisitionAdj(offset: Offset, iaa: Option[Angle], ipa: Option[Angle]): IO[Unit] = IO.unit
+      override def acquisitionAdj(
+        offset: Offset,
+        iaa:    Option[Angle],
+        ipa:    Option[Angle]
+      ): IO[Unit] = IO.unit
     }
   }
 
