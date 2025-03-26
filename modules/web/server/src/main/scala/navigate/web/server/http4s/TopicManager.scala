@@ -12,6 +12,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.Appender
 import fs2.Stream
 import fs2.concurrent.Topic
+import navigate.model.AcquisitionAdjustment
 import navigate.model.NavigateEvent
 import navigate.server.NavigateEngine
 import navigate.server.NavigateFailure
@@ -25,12 +26,13 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.*
 
 class TopicManager[F[_]] private (
-  val navigateEvents: Topic[F, NavigateEvent],
-  val loggingEvents:  Topic[F, ILoggingEvent],
-  val guideState:     Topic[F, GuideState],
-  val guidersQuality: Topic[F, GuidersQualityValues],
-  val telescopeState: Topic[F, TelescopeState],
-  val logBuffer:      Ref[F, Seq[ILoggingEvent]]
+  val navigateEvents:        Topic[F, NavigateEvent],
+  val loggingEvents:         Topic[F, ILoggingEvent],
+  val guideState:            Topic[F, GuideState],
+  val guidersQuality:        Topic[F, GuidersQualityValues],
+  val telescopeState:        Topic[F, TelescopeState],
+  val acquisitionAdjustment: Topic[F, AcquisitionAdjustment],
+  val logBuffer:             Ref[F, Seq[ILoggingEvent]]
 ) {
 
   private def genericPoll[A](
@@ -155,11 +157,12 @@ object TopicManager {
    */
   def create[F[_]: Async: Logger](dispatcher: Dispatcher[F]): Resource[F, TopicManager[F]] =
     for {
-      navigateEvents <- Resource.eval(Topic[F, NavigateEvent])
-      loggingEvents  <- Resource.eval(Topic[F, ILoggingEvent])
-      guideState     <- Resource.eval(Topic[F, GuideState])
-      guidersQuality <- Resource.eval(Topic[F, GuidersQualityValues])
-      telescopeState <- Resource.eval(Topic[F, TelescopeState])
+      navigateEvents        <- Resource.eval(Topic[F, NavigateEvent])
+      loggingEvents         <- Resource.eval(Topic[F, ILoggingEvent])
+      guideState            <- Resource.eval(Topic[F, GuideState])
+      guidersQuality        <- Resource.eval(Topic[F, GuidersQualityValues])
+      telescopeState        <- Resource.eval(Topic[F, TelescopeState])
+      acquisitionAdjustment <- Resource.eval(Topic[F, AcquisitionAdjustment])
 
       // Setup log buffer
       logBuffer <- bufferLogMessages(loggingEvents)
@@ -171,6 +174,7 @@ object TopicManager {
       guideState,
       guidersQuality,
       telescopeState,
+      acquisitionAdjustment,
       logBuffer
     )
 }

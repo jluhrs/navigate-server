@@ -1,4 +1,4 @@
-#import NonEmptyString, Sidereal, GuideProbe, TargetId, Nonsidereal from "lucuma/schemas/ObservationDB.graphql"
+#import NonEmptyString, Offset, Angle, Sidereal, GuideProbe, TargetId, Nonsidereal from "lucuma/schemas/ObservationDB.graphql"
 #import SiderealInput, OffsetInput, NonsiderealInput, WavelengthInput, AngleInput from "lucuma/schemas/ObservationDB.graphql"
 #import Long, BigDecimal, Timestamp, TimeSpanInput from "lucuma/schemas/ObservationDB.graphql"
 #import Instrument from "lucuma/schemas/ObservationDB.graphql"
@@ -261,6 +261,13 @@ input AcquisitionAdjustmentInput {
     option: AcquisitionAdjustmentOption! = ASK_USER
 }
 
+type AcquisitionAdjustmentState {
+    offset: Offset!
+    ipa: Angle
+    iaa: Angle
+    option: AcquisitionAdjustmentOption!
+}
+
 type Query {
     telescopeState: TelescopeState!
     guideState: GuideConfigurationState!
@@ -308,4 +315,5 @@ type Subscription {
     guidersQualityValues: GuidersQualityValues!
     telescopeState: TelescopeState!
     navigateState: NavigateState!
+    acquisitionAdjustmentState: AcquisitionAdjustmentState!
 }

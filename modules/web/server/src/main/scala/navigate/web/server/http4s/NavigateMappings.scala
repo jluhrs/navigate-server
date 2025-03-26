@@ -54,8 +54,8 @@ import mouse.boolean.given
 import navigate.model.AcquisitionAdjustment
 import navigate.model.Distance
 import navigate.model.NavigateState
-import navigate.model.enums.LightSource
 import navigate.model.enums.AcquisitionAdjustmentOption
+import navigate.model.enums.LightSource
 import navigate.server.NavigateEngine
 import navigate.server.tcs.AutoparkAowfs
 import navigate.server.tcs.AutoparkGems
@@ -94,14 +94,15 @@ import scala.reflect.classTag
 import encoder.given
 
 class NavigateMappings[F[_]: Sync](
-  server:              NavigateEngine[F],
-  logTopic:            Topic[F, ILoggingEvent],
-  guideStateTopic:     Topic[F, GuideState],
-  guidersQualityTopic: Topic[F, GuidersQualityValues],
-  telescopeStateTopic: Topic[F, TelescopeState],
-  logBuffer:           Ref[F, Seq[ILoggingEvent]]
+  server:                     NavigateEngine[F],
+  logTopic:                   Topic[F, ILoggingEvent],
+  guideStateTopic:            Topic[F, GuideState],
+  guidersQualityTopic:        Topic[F, GuidersQualityValues],
+  telescopeStateTopic:        Topic[F, TelescopeState],
+  acquisitionAdjustmentTopic: Topic[F, AcquisitionAdjustment],
+  logBuffer:                  Ref[F, Seq[ILoggingEvent]]
 )(
-  override val schema: Schema
+  override val schema:        Schema
 ) extends CirceMapping[F] {
   import NavigateMappings._
 
@@ -390,7 +391,8 @@ class NavigateMappings[F[_]: Sync](
     env
       .get[AcquisitionAdjustment]("adjustment")
       .map { adj =>
-        Result.success(OperationOutcome.success).pure[F]
+        acquisitionAdjustmentTopic.publish1(adj) *>
+          Result.success(OperationOutcome.success).pure[F]
       }
       .getOrElse {
         Result
@@ -663,6 +665,13 @@ class NavigateMappings[F[_]: Sync](
               .map(_.asJson)
               .map(circeCursor(p, env, _))
               .map(Result.success)
+          },
+          RootStream.computeCursor("acquisitionAdjustmentState") { (p, env) =>
+            acquisitionAdjustmentTopic
+              .subscribe(1024)
+              .map(_.asJson)
+              .map(circeCursor(p, env, _))
+              .map(Result.success)
           }
         )
       )
@@ -677,12 +686,13 @@ object NavigateMappings extends GrackleParsers {
     .build
 
   def apply[F[_]: Sync](
-    server:              NavigateEngine[F],
-    logTopic:            Topic[F, ILoggingEvent],
-    guideStateTopic:     Topic[F, GuideState],
-    guidersQualityTopic: Topic[F, GuidersQualityValues],
-    telescopeStateTopic: Topic[F, TelescopeState],
-    logBuffer:           Ref[F, Seq[ILoggingEvent]]
+    server:                     NavigateEngine[F],
+    logTopic:                   Topic[F, ILoggingEvent],
+    guideStateTopic:            Topic[F, GuideState],
+    guidersQualityTopic:        Topic[F, GuidersQualityValues],
+    telescopeStateTopic:        Topic[F, TelescopeState],
+    acquisitionAdjustmentTopic: Topic[F, AcquisitionAdjustment],
+    logBuffer:                  Ref[F, Seq[ILoggingEvent]]
   ): F[NavigateMappings[F]] = loadSchema.flatMap {
     case Result.Success(schema)           =>
       new NavigateMappings[F](server,
@@ -690,6 +700,7 @@ object NavigateMappings extends GrackleParsers {
                               guideStateTopic,
                               guidersQualityTopic,
                               telescopeStateTopic,
+                              acquisitionAdjustmentTopic,
                               logBuffer
       )(schema)
         .pure[F]
@@ -699,6 +710,7 @@ object NavigateMappings extends GrackleParsers {
                               guideStateTopic,
                               guidersQualityTopic,
                               telescopeStateTopic,
+                              acquisitionAdjustmentTopic,
                               logBuffer
       )(schema)
         .pure[F]

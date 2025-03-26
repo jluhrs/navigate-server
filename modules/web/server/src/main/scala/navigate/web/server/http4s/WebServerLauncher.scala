@@ -123,6 +123,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
                                        topics.guideState,
                                        topics.guidersQuality,
                                        topics.telescopeState,
+                                       topics.acquisitionAdjustment,
                                        topics.logBuffer
       )
         .service(wsBuilder),
