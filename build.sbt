@@ -46,7 +46,7 @@ lazy val sbtDockerPublish =
 
 ThisBuild / githubWorkflowBuild +=
   WorkflowStep.Use(
-    UseRef.Public("kamilkisiela", "graphql-inspector", "master"),
+    UseRef.Public("kamilkisiela", "graphql-inspector", "v3.4.0"),
     name = Some("Validate GraphQL schema changes"),
     params = Map(
       "schema"        -> "main:modules/web/server/src/main/resources/NewTCC.graphql",
