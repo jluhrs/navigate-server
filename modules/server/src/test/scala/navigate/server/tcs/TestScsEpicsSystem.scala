@@ -3,7 +3,6 @@
 
 package navigate.server.tcs
 
-import cats.Applicative
 import cats.Parallel
 import cats.effect.Ref
 import cats.effect.Temporal
@@ -23,7 +22,7 @@ object TestScsEpicsSystem {
     TestChannel.State.of("")
   )
 
-  def buildChannels[F[_]: Applicative](
+  def buildChannels[F[_]: Temporal](
     s: Ref[F, State]
   ): ScsChannels[F] = new ScsChannels[F](
     telltale =
@@ -31,7 +30,7 @@ object TestScsEpicsSystem {
     follow = new TestChannel[F, State, String](s, Focus[State](_.follow))
   )
 
-  def build[F[_]: Temporal: Parallel](
+  def build[F[_]: {Temporal, Parallel}](
     s: Ref[F, State]
   ): ScsEpicsSystem[F] = ScsEpicsSystem.buildSystem(buildChannels(s))
 }

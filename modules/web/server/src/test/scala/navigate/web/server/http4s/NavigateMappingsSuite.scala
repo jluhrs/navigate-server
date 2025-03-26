@@ -24,6 +24,7 @@ import lucuma.core.enums.M1Source
 import lucuma.core.enums.MountGuideOption
 import lucuma.core.enums.TipTiltSource
 import lucuma.core.math.Angle
+import lucuma.core.math.Offset
 import lucuma.core.model.M1GuideConfig
 import lucuma.core.model.M2GuideConfig
 import lucuma.core.model.TelescopeGuideConfig
@@ -1478,6 +1479,12 @@ object NavigateMappingsTest {
         case Instrument.GmosNorth => 5.some
         case _                    => none
       ).pure[IO]
+
+      override def acquisitionAdj(
+        offset: Offset,
+        iaa:    Option[Angle],
+        ipa:    Option[Angle]
+      ): IO[Unit] = IO.unit
     }
   }
 

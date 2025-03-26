@@ -6,6 +6,8 @@ package navigate.server.tcs
 import lucuma.core.enums.Instrument
 import lucuma.core.enums.LightSinkName
 import lucuma.core.math.Angle
+import lucuma.core.math.Offset
+import lucuma.core.model.GuideConfig
 import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.TimeSpan
 import navigate.model.enums.CentralBafflePosition
@@ -61,7 +63,11 @@ trait TcsBaseController[F[_]] {
   def m1ZeroFigure: F[ApplyCommandResult]
   def m1LoadAoFigure: F[ApplyCommandResult]
   def m1LoadNonAoFigure: F[ApplyCommandResult]
+  def acquisitionAdj(offset: Offset, ipa: Option[Angle], iaa: Option[Angle])(
+    guide: GuideConfig
+  ): F[ApplyCommandResult]
 
+  // Queries
   def getGuideState: F[GuideState]
   def getGuideQuality: F[GuidersQualityValues]
   def getTelescopeState: F[TelescopeState]

@@ -40,7 +40,7 @@ object WfsEpicsSystem {
     def setFocusGain(v: Double): S
   }
 
-  private[tcs] def buildSystem[F[_]: Temporal: Parallel](
+  private[tcs] def buildSystem[F[_]: {Temporal, Parallel}](
     channels: WfsChannels[F]
   ): WfsEpicsSystem[F] = new WfsEpicsSystem[F] {
     override def startGainCommand(timeout: FiniteDuration): WfsGainCommands[F] =
@@ -58,7 +58,7 @@ object WfsEpicsSystem {
     }
   }
 
-  def build[F[_]: Dispatcher: Temporal: Parallel](
+  def build[F[_]: {Dispatcher, Temporal, Parallel}](
     service:             EpicsService[F],
     sysName:             String,
     top:                 NonEmptyString,
@@ -109,7 +109,7 @@ object WfsEpicsSystem {
     )(1.0.pure[F])
   }
 
-  private[tcs] class WfsGainCommandsImpl[F[_]: Monad: Parallel](
+  private[tcs] class WfsGainCommandsImpl[F[_]: {Monad, Parallel}](
     wfsEpics: WfsEpics[F],
     timeout:  FiniteDuration,
     params:   ParameterList[F] = List.empty[VerifiedEpics[F, F, Unit]]

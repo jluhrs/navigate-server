@@ -3,7 +3,6 @@
 
 package navigate.server.tcs
 
-import cats.Applicative
 import cats.Parallel
 import cats.effect.Ref
 import cats.effect.Temporal
@@ -30,7 +29,7 @@ object TestOiwfsEpicsSystem {
     TestChannel.State.default
   )
 
-  def buildChannels[F[_]: Applicative](s: Ref[F, State]): OiwfsChannels[F] = OiwfsChannels(
+  def buildChannels[F[_]: Temporal](s: Ref[F, State]): OiwfsChannels[F] = OiwfsChannels(
     detSigModeSeqDarkDir = TestChannel(s, Focus[State](_.detSigModeSeqDarkDir)),
     seqDarkFilename = TestChannel(s, Focus[State](_.seqDarkFilename)),
     detSigModeSeqDir = TestChannel(s, Focus[State](_.detSigModeSeqDir)),
@@ -39,7 +38,7 @@ object TestOiwfsEpicsSystem {
     darkFilename = TestChannel(s, Focus[State](_.darkFilename))
   )
 
-  def build[F[_]: Temporal: Parallel](
+  def build[F[_]: {Temporal, Parallel}](
     wfs:   Ref[F, TestWfsEpicsSystem.State],
     oiwfs: Ref[F, State]
   ): OiwfsEpicsSystem[F] =

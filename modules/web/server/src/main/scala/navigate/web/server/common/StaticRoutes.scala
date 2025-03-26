@@ -21,7 +21,7 @@ import org.http4s.server.middleware.GZip
 
 import scala.concurrent.duration.*
 
-class StaticRoutes[F[_]: Sync: Compression: Files]:
+class StaticRoutes[F[_]: {Sync, Compression, Files}]:
   private val NavigateUiBase = "/navigate-ui"
 
   private val OneYear: FiniteDuration = 365.days

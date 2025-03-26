@@ -119,8 +119,10 @@ object VerifiedEpics {
     override val run: F[Unit]                                            = fa.flatMap(ch.put)
   }
 
-  case class EventStream[F[_]: Dispatcher: Concurrent, A](tt: TelltaleChannel[F], ch: Channel[F, A])
-      extends VerifiedEpics[F, Resource[F, *], Stream[F, StreamEvent[A]]] {
+  case class EventStream[F[_]: {Dispatcher, Concurrent}, A](
+    tt: TelltaleChannel[F],
+    ch: Channel[F, A]
+  ) extends VerifiedEpics[F, Resource[F, *], Stream[F, StreamEvent[A]]] {
     override val systems: Map[TelltaleChannel[F], Set[RemoteChannel[F]]] = Map(tt -> Set(ch))
     override val run: Resource[F, Stream[F, StreamEvent[A]]]             = ch.eventStream
   }
@@ -134,7 +136,7 @@ object VerifiedEpics {
   def writeChannel[F[_]: FlatMap, A](tt: TelltaleChannel[F], ch: Channel[F, A])(
     fa: F[A]
   ): VerifiedEpics[F, F, Unit] = Put(tt, ch, fa)
-  def eventStream[F[_]: Dispatcher: Concurrent, A](
+  def eventStream[F[_]: {Dispatcher, Concurrent}, A](
     tt: TelltaleChannel[F],
     ch: Channel[F, A]
   ): VerifiedEpics[F, Resource[F, *], Stream[F, StreamEvent[A]]] = EventStream(tt, ch)
@@ -159,7 +161,7 @@ object VerifiedEpics {
 
   }
 
-  extension [F[_]: Async: Parallel, A](v: VerifiedEpics[F, F, A]) {
+  extension [F[_]: {Async, Parallel}, A](v: VerifiedEpics[F, F, A]) {
     def verifiedRun(connectionTimeout: FiniteDuration): F[A] =
       v.systems
         .map { case (k, v) => EpicsSystem(k, v) }

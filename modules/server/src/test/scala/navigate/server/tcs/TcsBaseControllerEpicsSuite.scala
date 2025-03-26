@@ -5,6 +5,7 @@ package navigate.server.tcs
 
 import cats.effect.IO
 import cats.effect.Ref
+import cats.effect.std.Dispatcher
 import cats.syntax.all.*
 import lucuma.core.enums.ComaOption
 import lucuma.core.enums.GuideProbe
@@ -18,7 +19,9 @@ import lucuma.core.math.Angle
 import lucuma.core.math.Coordinates
 import lucuma.core.math.Epoch
 import lucuma.core.math.HourAngle
+import lucuma.core.math.Offset
 import lucuma.core.math.Wavelength
+import lucuma.core.model.GuideConfig
 import lucuma.core.model.M1GuideConfig
 import lucuma.core.model.M2GuideConfig
 import lucuma.core.model.M2GuideConfig.M2GuideOn
@@ -57,7 +60,8 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   private val DefaultTimeout: FiniteDuration = FiniteDuration(1, TimeUnit.SECONDS)
 
-  private val Tolerance: Double                            = 1e-6
+  private val Tolerance: Double = 1e-6
+
   private def compareDouble(a: Double, b: Double): Boolean = Math.abs(a - b) < Tolerance
 
   test("Mount commands") {
@@ -1378,6 +1382,57 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     }
   }
 
+  test("Apply acquisition offset") {
+    val guideCfg = TelescopeGuideConfig(
+      mountGuide = MountGuideOption.MountGuideOn,
+      m1Guide = M1GuideConfig.M1GuideOn(M1Source.OIWFS),
+      m2Guide = M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
+      dayTimeMode = Some(false),
+      probeGuide = none
+    )
+
+    val pOffset  = Angle.fromMicroarcseconds(4000000)
+    val qOffset  = Angle.fromMicroarcseconds(-3000000)
+    val expFrame = 2
+    val expSize  = 5.0
+    val expAngle = Angle.fromDoubleRadians(Math.atan2(4.0, 3.0)).toDoubleDegrees
+    val expVt    = -(0x0002 | 0x0004 | 0x0008)
+
+    for {
+      x        <- createController()
+      (st, ctr) = x
+      _        <- setOiwfsTrackingState(st.tcs)
+      _        <- ctr.enableGuide(guideCfg)
+      _        <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
+      _        <- ctr.acquisitionAdj(Offset(Offset.P(pOffset), Offset.Q(qOffset)), none, none)(
+                    GuideConfig(guideCfg, none)
+                  )
+      r        <- st.tcs.get
+    } yield {
+      assert(r.inPosition.connected)
+      assert(r.poAdjust.frame.connected)
+      assert(r.poAdjust.size.connected)
+      assert(r.poAdjust.angle.connected)
+      assert(r.poAdjust.vt.connected)
+      r.poAdjust.frame.value
+        .flatMap(_.toIntOption)
+        .map(x => assertEquals(x, expFrame))
+        .getOrElse(fail("No value for parameter frame"))
+      r.poAdjust.size.value
+        .flatMap(_.toDoubleOption)
+        .map(x => assertEqualsDouble(x, expSize, 1e-6))
+        .getOrElse(fail("No value for parameter size"))
+      r.poAdjust.angle.value
+        .flatMap(_.toDoubleOption)
+        .map(x => assertEqualsDouble(x, expAngle, 1e-6))
+        .getOrElse(fail("No value for parameter angle"))
+      r.poAdjust.vt.value
+        .flatMap(_.toIntOption)
+        .map(x => assertEquals(x, expVt))
+        .getOrElse(fail("No value for parameter vt"))
+    }
+  }
+
   case class StateRefs[F[_]](
     tcs:  Ref[F, TestTcsEpicsSystem.State],
     p1:   Ref[F, TestWfsEpicsSystem.State],
@@ -1392,54 +1447,57 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
   )
 
   def createController(site: Site = Site.GS): IO[(StateRefs[IO], TcsBaseControllerEpics[IO])] =
-    for {
-      tcs  <- Ref.of[IO, TestTcsEpicsSystem.State](TestTcsEpicsSystem.defaultState)
-      p1   <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
-      p2   <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
-      oiw  <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
-      oi   <- Ref.of[IO, TestOiwfsEpicsSystem.State](TestOiwfsEpicsSystem.defaultState)
-      mcs  <- Ref.of[IO, TestMcsEpicsSystem.State](TestMcsEpicsSystem.defaultState)
-      scs  <- Ref.of[IO, TestScsEpicsSystem.State](TestScsEpicsSystem.defaultState)
-      crcs <- Ref.of[IO, TestCrcsEpicsSystem.State](TestCrcsEpicsSystem.defaultState)
-      ags  <- Ref.of[IO, TestAgsEpicsSystem.State](TestAgsEpicsSystem.defaultState)
-      st   <- Ref.of[IO, TcsBaseControllerEpics.State](TcsBaseControllerEpics.State.default)
-      ac   <- Ref.of[IO, TestAcquisitionCameraEpicsSystem.State](
-                TestAcquisitionCameraEpicsSystem.defaultState
-              )
-    } yield (
-      StateRefs(tcs, p1, p2, oiw, oi, mcs, scs, crcs, ags, ac),
-      (site === Site.GS).fold(
-        new TcsSouthControllerEpics[IO](
-          EpicsSystems(
-            TestTcsEpicsSystem.build(tcs),
-            TestWfsEpicsSystem.build("PWFS1", p1),
-            TestWfsEpicsSystem.build("PWFS2", p2),
-            TestOiwfsEpicsSystem.build(oiw, oi),
-            TestMcsEpicsSystem.build(mcs),
-            TestScsEpicsSystem.build(scs),
-            TestCrcsEpicsSystem.build(crcs),
-            TestAgsEpicsSystem.build(ags),
-            TestAcquisitionCameraEpicsSystem.build(ac)
+    Dispatcher.parallel[IO](true).use { dispatcher =>
+      given Dispatcher[IO] = dispatcher
+      for {
+        tcs  <- Ref.of[IO, TestTcsEpicsSystem.State](TestTcsEpicsSystem.defaultState)
+        p1   <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
+        p2   <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
+        oiw  <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
+        oi   <- Ref.of[IO, TestOiwfsEpicsSystem.State](TestOiwfsEpicsSystem.defaultState)
+        mcs  <- Ref.of[IO, TestMcsEpicsSystem.State](TestMcsEpicsSystem.defaultState)
+        scs  <- Ref.of[IO, TestScsEpicsSystem.State](TestScsEpicsSystem.defaultState)
+        crcs <- Ref.of[IO, TestCrcsEpicsSystem.State](TestCrcsEpicsSystem.defaultState)
+        ags  <- Ref.of[IO, TestAgsEpicsSystem.State](TestAgsEpicsSystem.defaultState)
+        st   <- Ref.of[IO, TcsBaseControllerEpics.State](TcsBaseControllerEpics.State.default)
+        ac   <- Ref.of[IO, TestAcquisitionCameraEpicsSystem.State](
+                  TestAcquisitionCameraEpicsSystem.defaultState
+                )
+      } yield (
+        StateRefs(tcs, p1, p2, oiw, oi, mcs, scs, crcs, ags, ac),
+        (site === Site.GS).fold(
+          new TcsSouthControllerEpics[IO](
+            EpicsSystems(
+              TestTcsEpicsSystem.build(tcs),
+              TestWfsEpicsSystem.build("PWFS1", p1),
+              TestWfsEpicsSystem.build("PWFS2", p2),
+              TestOiwfsEpicsSystem.build(oiw, oi),
+              TestMcsEpicsSystem.build(mcs),
+              TestScsEpicsSystem.build(scs),
+              TestCrcsEpicsSystem.build(crcs),
+              TestAgsEpicsSystem.build(ags),
+              TestAcquisitionCameraEpicsSystem.build(ac)
+            ),
+            DefaultTimeout,
+            st
           ),
-          DefaultTimeout,
-          st
-        ),
-        new TcsNorthControllerEpics[IO](
-          EpicsSystems(
-            TestTcsEpicsSystem.build(tcs),
-            TestWfsEpicsSystem.build("PWFS1", p1),
-            TestWfsEpicsSystem.build("PWFS2", p2),
-            TestOiwfsEpicsSystem.build(oiw, oi),
-            TestMcsEpicsSystem.build(mcs),
-            TestScsEpicsSystem.build(scs),
-            TestCrcsEpicsSystem.build(crcs),
-            TestAgsEpicsSystem.build(ags),
-            TestAcquisitionCameraEpicsSystem.build(ac)
-          ),
-          DefaultTimeout,
-          st
+          new TcsNorthControllerEpics[IO](
+            EpicsSystems(
+              TestTcsEpicsSystem.build(tcs),
+              TestWfsEpicsSystem.build("PWFS1", p1),
+              TestWfsEpicsSystem.build("PWFS2", p2),
+              TestOiwfsEpicsSystem.build(oiw, oi),
+              TestMcsEpicsSystem.build(mcs),
+              TestScsEpicsSystem.build(scs),
+              TestCrcsEpicsSystem.build(crcs),
+              TestAgsEpicsSystem.build(ags),
+              TestAcquisitionCameraEpicsSystem.build(ac)
+            ),
+            DefaultTimeout,
+            st
+          )
         )
       )
-    )
+    }
 
 }

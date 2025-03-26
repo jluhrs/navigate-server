@@ -66,7 +66,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
   private given Logger[IO] = Slf4jLogger.getLoggerFromName[IO]("navigate")
 
   // Try to load configs for deployment and staging and fall back to the common one in the class path
-  private def config[F[_]: Sync: Logger]: F[ConfigObjectSource] =
+  private def config[F[_]: {Sync, Logger}]: F[ConfigObjectSource] =
     for
       confDir <- baseDir[F].map(_.resolve("conf"))
       deploy   = confDir.resolve("local").resolve("app.conf")

@@ -51,7 +51,7 @@ object GeminiApplyCommand {
   case class ApplyValChange(v: Int)    extends Event
   case class CarValChange(v: CarState) extends Event
 
-  final class GeminiApplyCommandImpl[F[_]: Dispatcher: Temporal](
+  final class GeminiApplyCommandImpl[F[_]: {Dispatcher, Temporal}](
     telltaleChannel: TelltaleChannel[F],
     apply:           ApplyRecord[F],
     car:             CarRecord[F]
@@ -171,7 +171,7 @@ object GeminiApplyCommand {
 
   }
 
-  def build[F[_]: Dispatcher: Temporal](
+  def build[F[_]: {Dispatcher, Temporal}](
     srv:             EpicsService[F],
     telltaleChannel: TelltaleChannel[F],
     applyName:       String,

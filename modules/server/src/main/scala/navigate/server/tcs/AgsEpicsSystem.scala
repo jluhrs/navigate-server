@@ -119,7 +119,7 @@ object AgsEpicsSystem {
       }
     }
 
-  def build[F[_]: Dispatcher: Temporal: Parallel](
+  def build[F[_]: {Dispatcher, Temporal, Parallel}](
     service: EpicsService[F],
     top:     NonEmptyString
   ): Resource[F, AgsEpicsSystem[F]] = AgsChannels.build[F](service, top).map(buildSystem)

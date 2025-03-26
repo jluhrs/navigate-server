@@ -11,7 +11,7 @@ import navigate.server.ConnectionTimeout
 
 import scala.concurrent.duration.FiniteDuration
 
-class TcsSouthControllerEpics[F[_]: Async: Parallel](
+class TcsSouthControllerEpics[F[_]: {Async, Parallel}](
   sys:      EpicsSystems[F],
   timeout:  FiniteDuration,
   stateRef: Ref[F, TcsBaseControllerEpics.State]
@@ -47,7 +47,7 @@ class TcsSouthControllerEpics[F[_]: Async: Parallel](
 
 object TcsSouthControllerEpics {
 
-  def build[F[_]: Async: Parallel](
+  def build[F[_]: {Async, Parallel}](
     sys:     EpicsSystems[F],
     timeout: FiniteDuration
   ): F[TcsSouthControllerEpics[F]] =

@@ -88,7 +88,7 @@ object AcquisitionCameraEpicsSystem {
     def stop: AcquisitionCameraCommands[F]
   }
 
-  case class AcquisitionCameraCommandsImpl[F[_]: Monad: Parallel](
+  case class AcquisitionCameraCommandsImpl[F[_]: {Monad, Parallel}](
     applyCmd: GeminiApplyCommand[F],
     chs:      AcquisitionCameraChannels[F],
     timeout:  FiniteDuration,
@@ -177,7 +177,7 @@ object AcquisitionCameraEpicsSystem {
     )
   }
 
-  private[tcs] def buildSystem[F[_]: Monad: Parallel](
+  private[tcs] def buildSystem[F[_]: {Monad, Parallel}](
     applyCmd: GeminiApplyCommand[F],
     chs:      AcquisitionCameraChannels[F]
   ): AcquisitionCameraEpicsSystem[F] =
@@ -194,7 +194,7 @@ object AcquisitionCameraEpicsSystem {
         AcquisitionCameraCommandsImpl(applyCmd, chs, timeout, List.empty)
     }
 
-  def build[F[_]: Dispatcher: Temporal: Parallel](
+  def build[F[_]: {Dispatcher, Temporal, Parallel}](
     service: EpicsService[F],
     top:     NonEmptyString
   ): Resource[F, AcquisitionCameraEpicsSystem[F]] =

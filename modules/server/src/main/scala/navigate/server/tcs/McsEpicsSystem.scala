@@ -33,7 +33,7 @@ object McsEpicsSystem {
           }
     }
 
-  def build[F[_]: Dispatcher: Temporal: Parallel](
+  def build[F[_]: {Dispatcher, Temporal, Parallel}](
     service: EpicsService[F],
     top:     NonEmptyString
   ): Resource[F, McsEpicsSystem[F]] =

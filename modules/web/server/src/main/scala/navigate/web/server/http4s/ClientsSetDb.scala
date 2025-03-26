@@ -27,7 +27,7 @@ object ClientsSetDb {
   type UserAgent  = `User-Agent`
   type ClientsSet = Map[ClientId, (Instant, ClientAddr, Option[UserAgent])]
 
-  def apply[F[_]: Sync: Logger](ref: Ref[F, ClientsSet]): ClientsSetDb[F] = new ClientsSetDb[F] {
+  def apply[F[_]: {Sync, Logger}](ref: Ref[F, ClientsSet]): ClientsSetDb[F] = new ClientsSetDb[F] {
     def newClient(id: ClientId, addr: ClientsSetDb.ClientAddr, ua: Option[UserAgent]): F[Unit] =
       Sync[F].delay(Instant.now).flatMap(i => ref.update(_ + (id -> ((i, addr, ua)))))
     def removeClient(id: ClientId): F[Unit]                                                    =
