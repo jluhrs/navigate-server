@@ -44,6 +44,17 @@ lazy val sbtDockerPublish =
     name = Some("Build and Publish Docker image")
   )
 
+ThisBuild / githubWorkflowBuild +=
+  WorkflowStep.Use(
+    UseRef.Public("kamilkisiela", "graphql-inspector", "master"),
+    name = Some("Validate GraphQL schema changes"),
+    params = Map(
+      "schema"        -> "main:modules/web/server/src/main/resources/NewTCC.graphql",
+      "approve-label" -> "expected-breaking-change"
+    ),
+    cond = Some("github.event_name == 'pull_request'")
+  )
+
 ThisBuild / githubWorkflowAddedJobs +=
   WorkflowJob(
     "deploy",
