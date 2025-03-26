@@ -1330,7 +1330,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
       p   <- mp.compileAndRun(
                """
-          |mutation { requestAcquisitionAdjustment (
+          |mutation { acquisitionAdjustment (
           |  adjustment: {
           |    offset: {
           |      p: {
@@ -1355,7 +1355,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     } yield assertEquals(
       p.hcursor
         .downField("data")
-        .downField("requestAcquisitionAdjustment")
+        .downField("acquisitionAdjustment")
         .downField("result")
         .as[String]
         .toOption,

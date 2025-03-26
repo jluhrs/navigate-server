@@ -249,10 +249,16 @@ enum LightSink {
     IGRINS2
 }
 
+enum AcquisitionAdjustmentOption {
+    ASK_USER
+    USER_CONFIRMS
+}
+
 input AcquisitionAdjustmentInput {
     offset: OffsetInput!
     ipa: AngleInput
     iaa: AngleInput
+    option: AcquisitionAdjustmentOption! = ASK_USER
 }
 
 type Query {
@@ -293,7 +299,7 @@ type Mutation {
     m1LoadAoFigure: OperationOutcome!
     m1LoadNonAoFigure: OperationOutcome!
     lightpathConfig(from: LightSource, to: LightSink): OperationOutcome!
-    requestAcquisitionAdjustment(adjustment: AcquisitionAdjustmentInput!): OperationOutcome!
+    acquisitionAdjustment(adjustment: AcquisitionAdjustmentInput!): OperationOutcome!
 }
 
 type Subscription {

@@ -55,6 +55,7 @@ import navigate.model.AcquisitionAdjustment
 import navigate.model.Distance
 import navigate.model.NavigateState
 import navigate.model.enums.LightSource
+import navigate.model.enums.AcquisitionAdjustmentOption
 import navigate.server.NavigateEngine
 import navigate.server.tcs.AutoparkAowfs
 import navigate.server.tcs.AutoparkGems
@@ -393,7 +394,7 @@ class NavigateMappings[F[_]: Sync](
       }
       .getOrElse {
         Result
-          .failure[OperationOutcome]("requestAcquisitionAdjustment parameters could not be parsed.")
+          .failure[OperationOutcome]("acquisitionAdjustment parameters could not be parsed.")
           .pure[F]
       }
 
@@ -422,20 +423,20 @@ class NavigateMappings[F[_]: Sync](
   val SubscriptionType: TypeRef = schema.ref("Subscription")
 
   override val selectElaborator: SelectElaborator = SelectElaborator {
-    case (MutationType, "mountFollow", List(Binding("enable", BooleanValue(en))))           =>
+    case (MutationType, "mountFollow", List(Binding("enable", BooleanValue(en))))               =>
       Elab.env("enable" -> en)
-    case (MutationType, "rotatorFollow", List(Binding("enable", BooleanValue(en))))         =>
+    case (MutationType, "rotatorFollow", List(Binding("enable", BooleanValue(en))))             =>
       Elab.env("enable" -> en)
-    case (MutationType, "rotatorConfig", List(Binding("config", ObjectValue(fields))))      =>
+    case (MutationType, "rotatorConfig", List(Binding("config", ObjectValue(fields))))          =>
       for {
         x <- Elab.liftR(
                parseRotatorConfig(fields).toResult("Could not parse rotatorConfig parameters.")
              )
         _ <- Elab.env("config", x)
       } yield ()
-    case (MutationType, "scsFollow", List(Binding("enable", BooleanValue(en))))             =>
+    case (MutationType, "scsFollow", List(Binding("enable", BooleanValue(en))))                 =>
       Elab.env("enable" -> en)
-    case (MutationType, "tcsConfig", List(Binding("config", ObjectValue(fields))))          =>
+    case (MutationType, "tcsConfig", List(Binding("config", ObjectValue(fields))))              =>
       for {
         x <-
           Elab.liftR(parseTcsConfigInput(fields).toResult("Could not parse TCS config parameters."))
@@ -452,7 +453,7 @@ class NavigateMappings[F[_]: Sync](
         y <- Elab.liftR(parseTcsConfigInput(cf).toResult("Could not parse TCS config parameters."))
         _ <- Elab.env("config" -> y)
       } yield ()
-    case (MutationType, "swapTarget", List(Binding("swapConfig", ObjectValue(fields))))     =>
+    case (MutationType, "swapTarget", List(Binding("swapConfig", ObjectValue(fields))))         =>
       for {
         x <-
           Elab.liftR(
@@ -460,7 +461,7 @@ class NavigateMappings[F[_]: Sync](
           )
         _ <- Elab.env("swapConfig", x)
       } yield ()
-    case (MutationType, "restoreTarget", List(Binding("config", ObjectValue(fields))))      =>
+    case (MutationType, "restoreTarget", List(Binding("config", ObjectValue(fields))))          =>
       for {
         x <-
           Elab.liftR(
@@ -480,22 +481,22 @@ class NavigateMappings[F[_]: Sync](
              )
         _ <- Elab.env("instrumentSpecificsParams" -> x)
       } yield ()
-    case (MutationType, "oiwfsTarget", List(Binding("target", ObjectValue(fields))))        =>
+    case (MutationType, "oiwfsTarget", List(Binding("target", ObjectValue(fields))))            =>
       for {
         x <-
           Elab.liftR(parseTargetInput(fields).toResult("Could not parse oiwfsTarget parameters."))
         _ <- Elab.env("target" -> x)
       } yield ()
-    case (MutationType, "oiwfsProbeTracking", List(Binding("config", ObjectValue(fields)))) =>
+    case (MutationType, "oiwfsProbeTracking", List(Binding("config", ObjectValue(fields))))     =>
       for {
         x <- Elab.liftR(
                parseTrackingInput(fields).toResult("Could not parse oiwfsProbeTracking parameters.")
              )
         _ <- Elab.env("config" -> x)
       } yield ()
-    case (MutationType, "oiwfsFollow", List(Binding("enable", BooleanValue(en))))           =>
+    case (MutationType, "oiwfsFollow", List(Binding("enable", BooleanValue(en))))               =>
       Elab.env("enable" -> en)
-    case (MutationType, "oiwfsObserve", List(Binding("period", ObjectValue(fields))))       =>
+    case (MutationType, "oiwfsObserve", List(Binding("period", ObjectValue(fields))))           =>
       for {
         x <- Elab.liftR(
                parseTimeSpan(fields).toResult(
@@ -504,7 +505,7 @@ class NavigateMappings[F[_]: Sync](
              )
         _ <- Elab.env("period" -> x)
       } yield ()
-    case (MutationType, "acObserve", List(Binding("period", ObjectValue(fields))))          =>
+    case (MutationType, "acObserve", List(Binding("period", ObjectValue(fields))))              =>
       for {
         x <- Elab.liftR(
                parseTimeSpan(fields).toResult(
@@ -513,7 +514,7 @@ class NavigateMappings[F[_]: Sync](
              )
         _ <- Elab.env("period" -> x)
       } yield ()
-    case (MutationType, "guideEnable", List(Binding("config", ObjectValue(fields))))        =>
+    case (MutationType, "guideEnable", List(Binding("config", ObjectValue(fields))))            =>
       for {
         x <- Elab.liftR(
                parseGuideConfig(fields).toResult(
@@ -540,10 +541,7 @@ class NavigateMappings[F[_]: Sync](
         _    <- Elab.env("from" -> from)
         _    <- Elab.env("to" -> to)
       } yield ()
-    case (MutationType,
-          "requestAcquisitionAdjustment",
-          List(Binding("adjustment", ObjectValue(adj)))
-        ) =>
+    case (MutationType, "acquisitionAdjustment", List(Binding("adjustment", ObjectValue(adj)))) =>
       Elab
         .liftR(
           parseAcquisitionAdjustment(adj)
@@ -552,7 +550,7 @@ class NavigateMappings[F[_]: Sync](
         .flatMap { x =>
           Elab.env("adjustment" -> x)
         }
-    case (QueryType, "instrumentPort", List(Binding("instrument", EnumValue(ins))))         =>
+    case (QueryType, "instrumentPort", List(Binding("instrument", EnumValue(ins))))             =>
       Elab
         .liftR(
           parseEnumerated[Instrument](ins)
@@ -624,7 +622,7 @@ class NavigateMappings[F[_]: Sync](
             simpleCommand(server.m1LoadNonAoFigure)
           ),
           RootEffect.computeEncodable("lightpathConfig")((p, env) => lightpathConfig(p, env)),
-          RootEffect.computeEncodable("requestAcquisitionAdjustment") { (p, env) =>
+          RootEffect.computeEncodable("acquisitionAdjustment") { (p, env) =>
             acquisitionAdjustment(p, env)
           }
         )
@@ -926,11 +924,17 @@ object NavigateMappings extends GrackleParsers {
     q <- l.collectFirst { case ("q", ObjectValue(v)) => parseAngle(v) }.flatten
   } yield Offset(p.p, q.q)
 
-  def parseAcquisitionAdjustment(l: List[(String, Value)]): Option[AcquisitionAdjustment] = for {
-    o   <-
-      l.collectFirst { case ("offset", ObjectValue(v)) => parseOffset(v) }.flatten
-    ipa <- l.collectFirst { case ("ipa", ObjectValue(v)) => parseAngle(v) }
-    iaa <- l.collectFirst { case ("iaa", ObjectValue(v)) => parseAngle(v) }
-  } yield AcquisitionAdjustment(o, ipa, iaa)
+  def parseAcquisitionAdjustment(l: List[(String, Value)]): Option[AcquisitionAdjustment] =
+    for {
+      o   <-
+        l.collectFirst { case ("offset", ObjectValue(v)) => parseOffset(v) }.flatten
+      ipa <- l.collectFirst { case ("ipa", ObjectValue(v)) => parseAngle(v) }
+      iaa <- l.collectFirst { case ("iaa", ObjectValue(v)) => parseAngle(v) }
+      opt  = l.collectFirst { case ("option", Value.EnumValue(v)) =>
+               parseEnumerated[AcquisitionAdjustmentOption](v)
+             }.flatten
+    } yield opt
+      .map(AcquisitionAdjustment(o, ipa, iaa, _))
+      .getOrElse(AcquisitionAdjustment(o, ipa, iaa))
 
 }
