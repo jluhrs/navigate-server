@@ -25,7 +25,7 @@ import scala.concurrent.duration.FiniteDuration
  * @tparam F
  *   Effect that encapsulate the reading and writing of channels.
  */
-case class EpicsSystem[F[_]: Async: Parallel](
+case class EpicsSystem[F[_]: {Async, Parallel}](
   telltale:    TelltaleChannel[F],
   channelList: Set[RemoteChannel[F]]
 ) {

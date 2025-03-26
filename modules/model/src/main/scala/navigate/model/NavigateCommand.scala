@@ -5,6 +5,7 @@ package navigate.model
 
 import cats.kernel.Eq
 import lucuma.core.math.Angle
+import lucuma.core.math.Offset
 import navigate.model.enums.DomeMode
 import navigate.model.enums.ShutterMode
 
@@ -74,6 +75,7 @@ object NavigateCommand {
   case object M1LoadAoFigure              extends NavigateCommand
   case object M1LoadNonAoFigure           extends NavigateCommand
   case object LightPathConfig             extends NavigateCommand
+  case class AcquisitionAdjust(offset: Offset, ipa: Option[Angle], iaa: Option[Angle]) extends NavigateCommand
 
   given Eq[NavigateCommand] = Eq.fromUniversalEquals
 
@@ -132,6 +134,7 @@ object NavigateCommand {
       case M1LoadAoFigure        => "M1 Load Ao Figure"
       case M1LoadNonAoFigure     => "M1 Load Non Ao Figure"
       case LightPathConfig       => "Light Path Configuration"
+      case AcquisitionAdjust(_, _, _) => "Acquisition Adjustment Offset"
     }
   }
 

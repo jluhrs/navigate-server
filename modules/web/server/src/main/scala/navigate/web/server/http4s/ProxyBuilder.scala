@@ -14,7 +14,7 @@ import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.headers.*
 
 object ProxyBuilder:
-  def buildService[F[_]: Async: Network](
+  def buildService[F[_]: {Async, Network}](
     baseUri:   Uri,
     localPath: Uri.Path
   ): Resource[F, HttpRoutes[F]] =

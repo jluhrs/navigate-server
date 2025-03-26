@@ -39,7 +39,7 @@ object TestOiwfsEpicsSystem {
     darkFilename = TestChannel(s, Focus[State](_.darkFilename))
   )
 
-  def build[F[_]: Temporal: Parallel](
+  def build[F[_]: {Temporal, Parallel}](
     wfs:   Ref[F, TestWfsEpicsSystem.State],
     oiwfs: Ref[F, State]
   ): OiwfsEpicsSystem[F] =

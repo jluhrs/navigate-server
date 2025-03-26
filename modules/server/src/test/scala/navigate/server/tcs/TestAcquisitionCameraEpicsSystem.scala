@@ -100,7 +100,7 @@ object TestAcquisitionCameraEpicsSystem {
     observeInProgress = new TestChannel[F, State, CarState](s, Focus[State](_.observeInProgress))
   )
 
-  def build[F[_]: Temporal: Parallel](
+  def build[F[_]: {Temporal, Parallel}](
     s: Ref[F, State]
   ): AcquisitionCameraEpicsSystem[F] = AcquisitionCameraEpicsSystem.buildSystem(
     (timeout: FiniteDuration) =>

@@ -82,7 +82,7 @@ object TestAgsEpicsSystem {
     )
   )
 
-  def build[F[_]: Temporal: Parallel](
+  def build[F[_]: {Temporal, Parallel}](
     s: Ref[F, State]
   ): AgsEpicsSystem[F] = AgsEpicsSystem.buildSystem(buildChannels(s))
 }

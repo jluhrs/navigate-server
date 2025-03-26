@@ -5,6 +5,7 @@ package navigate.server.tcs
 
 import cats.effect.IO
 import cats.effect.Ref
+import cats.effect.std.Dispatcher
 import cats.syntax.all.*
 import lucuma.core.enums.ComaOption
 import lucuma.core.enums.GuideProbe
@@ -1391,7 +1392,8 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     ac:   Ref[F, TestAcquisitionCameraEpicsSystem.State]
   )
 
-  def createController(site: Site = Site.GS): IO[(StateRefs[IO], TcsBaseControllerEpics[IO])] =
+  def createController(site: Site = Site.GS): IO[(StateRefs[IO], TcsBaseControllerEpics[IO])] = Dispatcher.parallel[IO](true).use { dispatcher =>
+    given Dispatcher[IO] = dispatcher
     for {
       tcs  <- Ref.of[IO, TestTcsEpicsSystem.State](TestTcsEpicsSystem.defaultState)
       p1   <- Ref.of[IO, TestWfsEpicsSystem.State](TestWfsEpicsSystem.defaultState)
@@ -1441,5 +1443,6 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
         )
       )
     )
+  }
 
 }

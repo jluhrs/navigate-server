@@ -9,6 +9,8 @@ import cats.syntax.all.*
 import lucuma.core.enums.LightSinkName
 import lucuma.core.enums.MountGuideOption
 import lucuma.core.math.Angle
+import lucuma.core.math.Offset
+import lucuma.core.model.GuideConfig
 import lucuma.core.model.M1GuideConfig
 import lucuma.core.model.M2GuideConfig
 import lucuma.core.model.TelescopeGuideConfig
@@ -202,4 +204,6 @@ class TcsBaseControllerSim[F[_]: Sync](
   override def m1LoadAoFigure: F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
 
   override def m1LoadNonAoFigure: F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
+
+  override def acquisitionAdj(offset: Offset, ipa: Option[Angle], iaa: Option[Angle])(guide: GuideConfig): F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
 }

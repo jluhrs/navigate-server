@@ -26,7 +26,7 @@ case class Systems[F[_]](
 )
 
 object Systems {
-  def build[F[_]: Async: Dispatcher: Parallel](
+  def build[F[_]: {Async, Dispatcher, Parallel}](
     site:     Site,
     client:   Client[F],
     conf:     NavigateEngineConfiguration,

@@ -31,7 +31,7 @@ object TestMcsEpicsSystem {
     follow = new TestChannel[F, State, String](s, Focus[State](_.follow))
   )
 
-  def build[F[_]: Temporal: Parallel](
+  def build[F[_]: {Temporal, Parallel}](
     s: Ref[F, State]
   ): McsEpicsSystem[F] = McsEpicsSystem.buildSystem(buildChannels(s))
 }

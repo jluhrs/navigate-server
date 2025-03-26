@@ -51,7 +51,7 @@ object TestWfsEpicsSystem {
     centroidDetected = new TestChannel[F, State, Int](s, Focus[State](_.centroid))
   )
 
-  def build[F[_]: Temporal: Parallel](
+  def build[F[_]: {Temporal, Parallel}](
     sysName: String,
     s:       Ref[F, State]
   ): WfsEpicsSystem[F] = WfsEpicsSystem.buildSystem(buildChannels(sysName, s))

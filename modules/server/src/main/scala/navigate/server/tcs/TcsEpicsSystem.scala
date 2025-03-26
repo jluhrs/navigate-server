@@ -6,18 +6,18 @@ package navigate.server.tcs
 import cats.Applicative
 import cats.Monad
 import cats.Parallel
-import cats.effect.Resource
-import cats.effect.Temporal
+import cats.effect.{Async, Resource, Temporal}
 import cats.effect.std.Dispatcher
 import cats.syntax.all.*
 import eu.timepit.refined.types.string.NonEmptyString
+import fs2.Stream
 import lucuma.core.enums.GuideProbe
 import lucuma.core.math.Angle
 import lucuma.core.model.ProbeGuide
 import mouse.all.*
-import navigate.epics.EpicsService
+import navigate.epics.{EpicsService, VerifiedEpics}
+import navigate.epics.Channel.StreamEvent
 import navigate.epics.EpicsSystem.TelltaleChannel
-import navigate.epics.VerifiedEpics
 import navigate.epics.VerifiedEpics.*
 import navigate.model.Distance
 import navigate.model.enums.AoFoldPosition
@@ -41,16 +41,11 @@ import navigate.server.epicsdata.NodState
 import navigate.server.tcs.TcsEpicsSystem.TcsStatus
 
 import scala.concurrent.duration.FiniteDuration
-
 import ScienceFoldPositionCodex.given
-import TcsChannels.{
-  AgMechChannels,
-  ProbeChannels,
-  ProbeTrackingChannels,
-  SlewChannels,
-  TargetChannels,
-  WfsChannels
-}
+import TcsChannels.{AgMechChannels, ProbeChannels, ProbeTrackingChannels, SlewChannels, TargetChannels, WfsChannels}
+import lucuma.core.util.Enumerated
+
+import java.util.concurrent.TimeUnit.MILLISECONDS
 
 trait TcsEpicsSystem[F[_]] {
   // TcsCommands accumulates the list of channels that need to be written to set parameters.
@@ -208,9 +203,7 @@ object TcsEpicsSystem {
     // // This functions returns a F that, when run, first waits tcsSettleTime to absorb in-position transients, then waits
     // // for the in-position to change to true and stay true for stabilizationTime. It will wait up to `timeout`
     // // seconds for that to happen.
-    // def waitInPosition(stabilizationTime: Duration, timeout: FiniteDuration)(using
-    //   T:                                  Timer[F]
-    // ): F[Unit]
+    def waitInPosition(stabilizationTime: FiniteDuration, timeout: FiniteDuration): VerifiedEpics[F, F, Unit]
     // // `waitAGInPosition` works like `waitInPosition`, but for the AG in-position flag.
     // /* TODO: AG inposition can take up to 1[s] to react to a TCS command. If the value is read before that, it may induce
     //   * an error. A better solution is to detect the edge, from not in position to in-position.
@@ -317,7 +310,7 @@ object TcsEpicsSystem {
 
   object TcsStatus {
 
-    def build[F[_]: Applicative](channels: TcsChannels[F]): TcsStatus[F] =
+    def build[F[_]: {Async, Dispatcher}](channels: TcsChannels[F]): TcsStatus[F] =
       new TcsStatus[F] {
         override def absorbTipTilt: VerifiedEpics[F, F, Int]        =
           VerifiedEpics.readChannel(channels.telltale, channels.guide.absorbTipTilt)
@@ -355,18 +348,59 @@ object TcsEpicsSystem {
           buildProbeGuideConfig(channels.telltale, channels.oiProbeTrackingState)
         override val aowfsProbeGuideConfig: ProbeGuideConfig[F]     =
           buildProbeGuideConfig(channels.telltale, channels.aoProbeTrackingState)
+
+        private val tcsSettleTime = FiniteDuration(2800, MILLISECONDS)
+        override def waitInPosition(stabilizationTime: FiniteDuration, timeout: FiniteDuration): VerifiedEpics[F, F, Unit] = {
+          val presV: VerifiedEpics[F, Resource[F, *], (Stream[F, StreamEvent[String]], F[String])] = for {
+            valStr <- VerifiedEpics.eventStream(channels.telltale, channels.inPosition)
+            valRdr <- VerifiedEpics.readChannel(channels.telltale, channels.inPosition).map(Resource.pure[F, F[String]])
+          } yield for {
+            x <- valStr
+            y <- valRdr
+          } yield (x, y)
+
+          presV.map(_.use { pair =>
+            val (stream, read): (Stream[F, StreamEvent[String]], F[String]) = pair
+            Temporal[F].realTime.flatMap { t0 =>
+              stream.flatMap {
+                case StreamEvent.ValueChanged(v) => Stream(v)
+                case StreamEvent.Disconnected    =>
+                  Stream.raiseError[F](new Throwable(s"TCS in-position channel disconnected"))
+                case _                           => Stream.empty
+              }
+                .keepAlive[F, String](stabilizationTime, read)
+                .zip(Stream.eval(Temporal[F].realTime.map(_-t0)).repeat)
+                .dropWhile { case (_, t) => t < tcsSettleTime }
+                .mapAccumulate(none[(String, FiniteDuration)]) { case (acc, (v, t)) =>
+                  acc.map { case (vOld, tOld) =>
+                    if( v === vOld)
+                      if(t-tOld >= stabilizationTime) (acc, v.some)
+                      else (acc, none)
+                    else ((v,t).some, none)
+                  }.getOrElse(((v, t).some, none))
+                }
+                .map(_._2)
+                .flattenOption
+                .takeThrough(_ === "TRUE")
+                .timeout(timeout)
+                .compile
+                .drain
+            }
+          })
+
+        }
       }
   }
 
   val className: String = getClass.getName
 
-  private[tcs] def buildSystem[F[_]: Monad: Parallel](
+  private[tcs] def buildSystem[F[_]: {Parallel, Async, Dispatcher}](
     applyCmd: GeminiApplyCommand[F],
     channels: TcsChannels[F]
   ): TcsEpicsSystem[F] =
-    new TcsEpicsSystemImpl[F](new TcsEpicsImpl[F](applyCmd, channels), TcsStatus.build(channels))
+    new TcsEpicsSystemImpl[F](channels, new TcsEpicsImpl[F](applyCmd, channels), TcsStatus.build(channels))
 
-  def build[F[_]: Dispatcher: Temporal: Parallel](
+  def build[F[_]: {Dispatcher, Parallel, Async}](
     service: EpicsService[F],
     tops:    Map[String, String]
   ): Resource[F, TcsEpicsSystem[F]] = {
@@ -390,17 +424,18 @@ object TcsEpicsSystem {
     } yield buildSystem(applyCmd, channels)
   }
 
-  case class TcsCommandsImpl[F[_]: Monad: Parallel](
+  case class TcsCommandsImpl[F[_]: {Monad, Parallel}](
+    channels: TcsChannels[F],
     tcsEpics: TcsEpics[F],
     timeout:  FiniteDuration,
     params:   ParameterList[F]
   ) extends TcsCommands[F] {
 
     private def addParam(p: VerifiedEpics[F, F, Unit]): TcsCommands[F] =
-      TcsCommandsImpl(tcsEpics, timeout, params :+ p)
+      this.copy(params = params :+ p)
 
     private def addMultipleParams(c: ParameterList[F]): TcsCommands[F] =
-      TcsCommandsImpl(tcsEpics, timeout, params ++ c)
+      this.copy(params = params ++ c)
 
     override def post: VerifiedEpics[F, F, ApplyCommandResult] =
       params.compile *> tcsEpics.post(timeout)
@@ -979,38 +1014,64 @@ object TcsEpicsSystem {
         tcsEpics.m1Cmds.ao(enable.fold(BinaryOnOffCapitalized.On, BinaryOnOffCapitalized.Off))
       )
     }
+    override val poAdjustCommand: AdjustCommand[F, TcsCommands[F]] = new AdjustCommand[F, TcsCommands[F]] {
+      override def frame(frm: ReferenceFrame): TcsCommands[F] = addParam(writeCadParam(channels.telltale, channels.poAdjust.frame)(frm))
+
+      override def size(sz: Double): TcsCommands[F] = addParam(writeCadParam(channels.telltale, channels.poAdjust.size)(sz))
+
+      override def angle(a: Angle): TcsCommands[F] = addParam(writeCadParam(channels.telltale, channels.poAdjust.angle)(a.toDoubleDegrees))
+
+      override def vtMask(vts: List[VirtualTelescope]): TcsCommands[F] = addParam(writeCadParam(channels.telltale, channels.poAdjust.vtMask)(vts))
+    }
   }
 
-  class TcsEpicsSystemImpl[F[_]: Monad: Parallel](epics: TcsEpics[F], st: TcsStatus[F])
+  class TcsEpicsSystemImpl[F[_]: {Monad, Parallel}](channels: TcsChannels[F], epics: TcsEpics[F], st: TcsStatus[F])
       extends TcsEpicsSystem[F] {
     override def startCommand(timeout: FiniteDuration): TcsCommands[F] =
-      TcsCommandsImpl(epics, timeout, List.empty)
+      TcsCommandsImpl(channels, epics, timeout, List.empty)
 
     override val status: TcsStatus[F] = st
+  }
+
+  given Encoder[GuideProbe, String] = _ match {
+    case GuideProbe.GmosOIWFS => "OIWFS"
+    case GuideProbe.F2OIWFS => "OIWFS"
+    case GuideProbe.PWFS1 => "PWFS1"
+    case GuideProbe.PWFS2 => "PWFS2"
+  }
+
+  given Encoder[CentralBafflePosition, String] = _ match {
+    case CentralBafflePosition.Open => "Open"
+    case CentralBafflePosition.Closed => "Closed"
+  }
+
+  given Encoder[DeployableBafflePosition, String] = _ match {
+    case DeployableBafflePosition.ThermalIR => "Retracted"
+    case DeployableBafflePosition.NearIR => "Near IR"
+    case DeployableBafflePosition.Visible => "Visible"
+    case DeployableBafflePosition.Extended => "Extended"
+  }
+
+  given Encoder[ReferenceFrame, String] = (x: ReferenceFrame) => {
+    (x match {
+      case ReferenceFrame.AzimuthElevation => 0
+      case ReferenceFrame.XY => 1
+      case ReferenceFrame.Instrument => 2
+      case ReferenceFrame.Tracking => 3
+    }).toString
+  }
+
+  given Encoder[List[VirtualTelescope], String] = (x: List[VirtualTelescope]) => {
+    val m: Int = Enumerated[VirtualTelescope].all.zipWithIndex.foldRight(0) {
+      case ((vt, idx), acc) => x.contains(vt).fold(acc | (1 << idx), acc)
+    }
+    (-m).toString
   }
 
   class TcsEpicsImpl[F[_]: Monad](
     applyCmd: GeminiApplyCommand[F],
     channels: TcsChannels[F]
   ) extends TcsEpics[F] {
-    given Encoder[GuideProbe, String] = _ match {
-      case GuideProbe.GmosOIWFS => "OIWFS"
-      case GuideProbe.F2OIWFS   => "OIWFS"
-      case GuideProbe.PWFS1     => "PWFS1"
-      case GuideProbe.PWFS2     => "PWFS2"
-    }
-
-    given Encoder[CentralBafflePosition, String] = _ match {
-      case CentralBafflePosition.Open   => "Open"
-      case CentralBafflePosition.Closed => "Closed"
-    }
-
-    given Encoder[DeployableBafflePosition, String] = _ match {
-      case DeployableBafflePosition.ThermalIR => "Retracted"
-      case DeployableBafflePosition.NearIR    => "Near IR"
-      case DeployableBafflePosition.Visible   => "Visible"
-      case DeployableBafflePosition.Extended  => "Extended"
-    }
 
     override def post(timeout: FiniteDuration): VerifiedEpics[F, F, ApplyCommandResult] =
       applyCmd.post(timeout)
@@ -1584,6 +1645,13 @@ object TcsEpicsSystem {
     def ao(enable:            Boolean): S
   }
 
+  trait AdjustCommand[F[_], +S] {
+    def frame(frm: ReferenceFrame): S
+    def size(sz: Double): S
+    def angle(a: Angle): S
+    def vtMask(vts: List[VirtualTelescope]): S
+  }
+
   trait TcsCommands[F[_]] {
     def post: VerifiedEpics[F, F, ApplyCommandResult]
     val mcsParkCommand: BaseCommand[F, TcsCommands[F]]
@@ -1621,6 +1689,7 @@ object TcsEpicsSystem {
     val scienceFoldCommands: AgMechCommands[F, ScienceFold.Position, TcsCommands[F]]
     val aoFoldCommands: AgMechCommands[F, AoFoldPosition, TcsCommands[F]]
     val m1Commands: M1Commands[F, TcsCommands[F]]
+    val poAdjustCommand: AdjustCommand[F, TcsCommands[F]]
   }
   /*
 

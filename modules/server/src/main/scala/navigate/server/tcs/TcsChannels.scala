@@ -59,7 +59,9 @@ case class TcsChannels[F[_]](
   p1ProbeTrackingState: ProbeTrackingChannels[F],
   p2ProbeTrackingState: ProbeTrackingChannels[F],
   oiProbeTrackingState: ProbeTrackingChannels[F],
-  aoProbeTrackingState: ProbeTrackingChannels[F]
+  aoProbeTrackingState: ProbeTrackingChannels[F],
+  poAdjust: AdjustChannels[F],
+  inPosition: Channel[F, String]
 )
 
 object TcsChannels {
@@ -616,6 +618,26 @@ object TcsChannels {
     } yield M2BafflesChannels(dpl, cnt)
   }
 
+  case class AdjustChannels[F[_]](
+    frame: Channel[F, String],
+    size: Channel[F, String],
+    angle: Channel[F, String],
+    vtMask: Channel[F, String]
+                           )
+
+  object AdjustChannels {
+    def build[F[_]](
+                     service: EpicsService[F],
+                     top: TcsTop,
+                     name: String
+                   ): Resource[F, AdjustChannels[F]] = for {
+      frm <- service.getChannel[String](top.value, s"${name}Adjust.A")
+      sz <- service.getChannel[String](top.value, s"${name}Adjust.B")
+      an <- service.getChannel[String](top.value, s"${name}Adjust.C")
+      vt <- service.getChannel[String](top.value, s"${name}Adjust.D")
+    } yield AdjustChannels(frm, sz, an, vt)
+  }
+
   /**
    * Build all TcsChannels It will construct the desired raw channel or call the build function for
    * channels group
@@ -674,6 +696,8 @@ object TcsChannels {
       p2gs <- buildProbeTrackingStateChannels(service, tcsTop, "Pwfs2")
       oigs <- buildProbeTrackingStateChannels(service, tcsTop, "Oiwfs")
       aogs <- buildProbeTrackingStateChannels(service, tcsTop, "Aowfs")
+      poAd <- AdjustChannels.build(service, tcsTop, "po")
+      inpo <- service.getChannel[String](tcsTop.value, "sad:inPosition.VAL")
     } yield TcsChannels[F](
       tt,
       tpd,
@@ -713,7 +737,9 @@ object TcsChannels {
       p1gs,
       p2gs,
       oigs,
-      aogs
+      aogs,
+      poAd,
+      inpo
     )
   }
 }

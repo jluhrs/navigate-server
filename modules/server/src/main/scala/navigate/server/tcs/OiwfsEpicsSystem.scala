@@ -46,7 +46,7 @@ object OiwfsEpicsSystem {
 
   val commandWaitTime: FiniteDuration = FiniteDuration(500, TimeUnit.MILLISECONDS)
 
-  private class DarkCommandImpl[F[_]: Temporal: Parallel](
+  private class DarkCommandImpl[F[_]: {Temporal, Parallel}](
     telltale: TelltaleChannel[F],
     channels: OiwfsChannels[F],
     timeout:  FiniteDuration,
@@ -66,7 +66,7 @@ object OiwfsEpicsSystem {
     )
   }
 
-  private class ClosedLoopCommandImpl[F[_]: Temporal: Parallel](
+  private class ClosedLoopCommandImpl[F[_]: {Temporal, Parallel}](
     telltale: TelltaleChannel[F],
     channels: OiwfsChannels[F],
     timeout:  FiniteDuration,
@@ -86,7 +86,7 @@ object OiwfsEpicsSystem {
     )
   }
 
-  private class SignalProcCommandImpl[F[_]: Temporal: Parallel](
+  private class SignalProcCommandImpl[F[_]: {Temporal, Parallel}](
     telltale: TelltaleChannel[F],
     channels: OiwfsChannels[F],
     timeout:  FiniteDuration,
@@ -106,7 +106,7 @@ object OiwfsEpicsSystem {
     )
   }
 
-  private[tcs] def buildSystem[F[_]: Temporal: Parallel](
+  private[tcs] def buildSystem[F[_]: {Temporal, Parallel}](
     wfsChannels:   WfsChannels[F],
     oiwfsChannels: OiwfsChannels[F]
   ): OiwfsEpicsSystem[F] = new OiwfsEpicsSystem[F] {
@@ -127,7 +127,7 @@ object OiwfsEpicsSystem {
 
   val systemName: String = "OIWFS"
 
-  def build[F[_]: Dispatcher: Temporal: Parallel](
+  def build[F[_]: {Dispatcher, Temporal, Parallel}](
     service:      EpicsService[F],
     top:          NonEmptyString,
     fluxName:     NonEmptyString,

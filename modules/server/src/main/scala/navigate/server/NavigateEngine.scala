@@ -18,7 +18,7 @@ import lucuma.core.enums.Instrument
 import lucuma.core.enums.LightSinkName
 import lucuma.core.enums.MountGuideOption
 import lucuma.core.enums.Site
-import lucuma.core.math.Angle
+import lucuma.core.math.{Angle, Offset}
 import lucuma.core.model.GuideConfig
 import lucuma.core.model.M1GuideConfig
 import lucuma.core.model.M2GuideConfig
@@ -63,7 +63,6 @@ import org.typelevel.log4cats.Logger
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
-
 import NavigateEvent.NullEvent
 
 trait NavigateEngine[F[_]] {
@@ -108,6 +107,7 @@ trait NavigateEngine[F[_]] {
   def m1LoadAoFigure: F[Unit]
   def m1LoadNonAoFigure: F[Unit]
   def lightpathConfig(from:                          LightSource, to:        LightSinkName): F[Unit]
+  def acquisitionAdj(offset:                         Offset, iaa:            Option[Angle], ipa: Option[Angle]): F[Unit]
   def getGuideState: F[GuideState]
   def getGuidersQuality: F[GuidersQualityValues]
   def getTelescopeState: F[TelescopeState]
@@ -143,7 +143,7 @@ object NavigateEngine {
     }
   }
 
-  private case class NavigateEngineImpl[F[_]: Temporal: Logger](
+  private case class NavigateEngineImpl[F[_]: {Temporal, Logger}](
     site:     Site,
     systems:  Systems[F],
     conf:     NavigateEngineConfiguration,
@@ -490,9 +490,12 @@ object NavigateEngine {
         }
         (a =!= 0).option(a)
       }
+
+    override def acquisitionAdj(offset: Offset, iaa: Option[Angle], ipa: Option[Angle]): F[Unit] =
+      simpleCommand(engine, AcquisitionAdjust(offset, ipa, iaa), stateRef.get.flatMap(s => systems.tcsCommon.acquisitionAdj(offset, ipa, iaa)(s.guideConfig)))
   }
 
-  def build[F[_]: Temporal: Logger](
+  def build[F[_]: {Temporal, Logger}](
     site:    Site,
     systems: Systems[F],
     conf:    NavigateEngineConfiguration
@@ -540,7 +543,7 @@ object NavigateEngine {
    * @return
    *   Effect that, when evaluated, will schedule the execution of the command in the state machine.
    */
-  private def simpleCommand[F[_]: MonadThrow: Logger](
+  private def simpleCommand[F[_]: {MonadThrow, Logger}](
     engine:  StateEngine[F, State, NavigateEvent],
     cmdType: NavigateCommand,
     cmd:     F[ApplyCommandResult]
@@ -596,7 +599,7 @@ object NavigateEngine {
    * @return
    *   Effect that, when evaluated, will schedule the execution of the command in the state machine.
    */
-  private def command[F[_]: MonadThrow: Logger](
+  private def command[F[_]: {MonadThrow, Logger}](
     engine:  StateEngine[F, State, NavigateEvent],
     cmdType: NavigateCommand,
     cmd:     Handler[F, State, Event[F, State, NavigateEvent], Unit]
@@ -627,7 +630,7 @@ object NavigateEngine {
         CommandFailure(cmdType, s"${cmdType.name} command failed with error: ${e.getMessage}")
     }
 
-  private def transformCommand[F[_]: MonadThrow: Logger](
+  private def transformCommand[F[_]: {MonadThrow, Logger}](
     cmdType: NavigateCommand,
     cmd:     Handler[F, State, ApplyCommandResult, Unit]
   ): Handler[F, State, Event[F, State, NavigateEvent], Unit] =

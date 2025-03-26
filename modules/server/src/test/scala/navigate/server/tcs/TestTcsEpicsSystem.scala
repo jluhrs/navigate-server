@@ -4,9 +4,9 @@
 package navigate.server.tcs
 
 import cats.Applicative
-import cats.Monad
 import cats.Parallel
-import cats.effect.Ref
+import cats.effect.std.Dispatcher
+import cats.effect.{Async, Ref}
 import monocle.Focus
 import monocle.Lens
 import navigate.epics.EpicsSystem.TelltaleChannel
@@ -19,25 +19,7 @@ import navigate.server.acm.GeminiApplyCommand
 import navigate.server.epicsdata.BinaryOnOff
 import navigate.server.epicsdata.BinaryOnOffCapitalized
 import navigate.server.epicsdata.BinaryYesNo
-import navigate.server.tcs.TcsChannels.AgMechChannels
-import navigate.server.tcs.TcsChannels.EnclosureChannels
-import navigate.server.tcs.TcsChannels.GuideConfigStatusChannels
-import navigate.server.tcs.TcsChannels.M1Channels
-import navigate.server.tcs.TcsChannels.M1GuideConfigChannels
-import navigate.server.tcs.TcsChannels.M2BafflesChannels
-import navigate.server.tcs.TcsChannels.M2GuideConfigChannels
-import navigate.server.tcs.TcsChannels.MountGuideChannels
-import navigate.server.tcs.TcsChannels.OiwfsSelectChannels
-import navigate.server.tcs.TcsChannels.OriginChannels
-import navigate.server.tcs.TcsChannels.ProbeChannels
-import navigate.server.tcs.TcsChannels.ProbeGuideModeChannels
-import navigate.server.tcs.TcsChannels.ProbeTrackingChannels
-import navigate.server.tcs.TcsChannels.RotatorChannels
-import navigate.server.tcs.TcsChannels.SlewChannels
-import navigate.server.tcs.TcsChannels.TargetChannels
-import navigate.server.tcs.TcsChannels.WfsChannels
-import navigate.server.tcs.TcsChannels.WfsClosedLoopChannels
-import navigate.server.tcs.TcsChannels.WfsObserveChannels
+import navigate.server.tcs.TcsChannels.{AdjustChannels, AgMechChannels, EnclosureChannels, GuideConfigStatusChannels, M1Channels, M1GuideConfigChannels, M2BafflesChannels, M2GuideConfigChannels, MountGuideChannels, OiwfsSelectChannels, OriginChannels, ProbeChannels, ProbeGuideModeChannels, ProbeTrackingChannels, RotatorChannels, SlewChannels, TargetChannels, WfsChannels, WfsClosedLoopChannels, WfsObserveChannels}
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -255,7 +237,9 @@ object TestTcsEpicsSystem {
     scienceFoldMech:  AgMechState,
     aoFoldMech:       AgMechState,
     m1Cmds:           M1CommandsState,
-    nodState:         TestChannel.State[String]
+    nodState:         TestChannel.State[String],
+    poAdjust:         AdjustState,
+    inPosition:       TestChannel.State[String]
   )
 
   val defaultState: State = State(
@@ -383,7 +367,9 @@ object TestTcsEpicsSystem {
     scienceFoldMech = AgMechState.default,
     aoFoldMech = AgMechState.default,
     m1Cmds = M1CommandsState.default,
-    nodState = TestChannel.State.of("A")
+    nodState = TestChannel.State.of("A"),
+    poAdjust = AdjustState.default,
+    inPosition = TestChannel.State.of("FALSE")
   )
 
   def buildEnclosureChannels[F[_]: Applicative](s: Ref[F, State]): EnclosureChannels[F] =
@@ -741,6 +727,16 @@ object TestTcsEpicsSystem {
     new TestChannel[F, State, String](s, l.andThen(Focus[M2BafflesState](_.centralBaffle)))
   )
 
+  def buildAdjustChannels[F[_]: Applicative](
+                                              s: Ref[F, State],
+                                              l: Lens[State, AdjustState]
+                                            ): AdjustChannels[F] = AdjustChannels(
+    new TestChannel[F, State, String](s, l.andThen(Focus[AdjustState](_.frame))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[AdjustState](_.size))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[AdjustState](_.angle))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[AdjustState](_.vt)))
+  )
+
   case class AgMechState(
     parkDir:  TestChannel.State[CadDirective],
     position: TestChannel.State[String]
@@ -772,6 +768,22 @@ object TestTcsEpicsSystem {
       TestChannel.State.default[String],
       TestChannel.State.default[String],
       TestChannel.State.default[BinaryOnOffCapitalized]
+    )
+  }
+
+  case class AdjustState(
+    frame: TestChannel.State[String],
+    size: TestChannel.State[String],
+    angle: TestChannel.State[String],
+    vt: TestChannel.State[String]
+                        )
+
+  object AdjustState {
+    val default: AdjustState = AdjustState(
+      TestChannel.State.default[String],
+      TestChannel.State.default[String],
+      TestChannel.State.default[String],
+      TestChannel.State.default[String]
     )
   }
 
@@ -847,10 +859,12 @@ object TestTcsEpicsSystem {
       p1ProbeTrackingState = buildProbeTrackingChannels(s, Focus[State](_.pwfs1Tracking)),
       p2ProbeTrackingState = buildProbeTrackingChannels(s, Focus[State](_.pwfs2Tracking)),
       oiProbeTrackingState = buildProbeTrackingChannels(s, Focus[State](_.oiwfsTracking)),
-      aoProbeTrackingState = buildProbeTrackingChannels(s, Focus[State](_.aowfsTracking))
+      aoProbeTrackingState = buildProbeTrackingChannels(s, Focus[State](_.aowfsTracking)),
+      poAdjust = buildAdjustChannels(s, Focus[State](_.poAdjust)),
+      inPosition = new TestChannel[F, State, String](s, Focus[State](_.inPosition))
     )
 
-  def build[F[_]: Monad: Parallel](s: Ref[F, State]): TcsEpicsSystem[F] =
+  def build[F[_]: {Async, Parallel, Dispatcher}](s: Ref[F, State]): TcsEpicsSystem[F] =
     TcsEpicsSystem.buildSystem(new TestApplyCommand[F], buildChannels(s))
 
 }
