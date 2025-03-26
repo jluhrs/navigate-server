@@ -942,10 +942,10 @@ object NavigateMappings extends GrackleParsers {
         l.collectFirst { case ("offset", ObjectValue(v)) => parseOffset(v) }.flatten
       ipa <- l.collectFirst { case ("ipa", ObjectValue(v)) => parseAngle(v) }
       iaa <- l.collectFirst { case ("iaa", ObjectValue(v)) => parseAngle(v) }
-      opt  = l.collectFirst { case ("option", Value.EnumValue(v)) =>
+      cmd  = l.collectFirst { case ("command", Value.EnumValue(v)) =>
                parseEnumerated[AcquisitionAdjustmentOption](v)
              }.flatten
-    } yield opt
+    } yield cmd
       .map(AcquisitionAdjustment(o, ipa, iaa, _))
       .getOrElse(AcquisitionAdjustment(o, ipa, iaa))
 

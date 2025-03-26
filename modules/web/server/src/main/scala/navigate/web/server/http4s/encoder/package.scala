@@ -89,10 +89,10 @@ package object encoder {
 
   given Encoder[AcquisitionAdjustment] = s =>
     Json.obj(
-      "offset" -> s.offset.asJson,
-      "ipa"    -> s.ipa.asJson,
-      "iaa"    -> s.iaa.asJson,
-      "option" -> s.option.asJson
+      "offset"  -> s.offset.asJson,
+      "ipa"     -> s.ipa.asJson,
+      "iaa"     -> s.iaa.asJson,
+      "command" -> s.command.asJson
     )
 
   given Encoder[NavigateState] = s =>

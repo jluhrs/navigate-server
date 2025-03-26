@@ -10,8 +10,8 @@ import lucuma.core.math.Offset
 import navigate.model.enums.AcquisitionAdjustmentOption
 
 case class AcquisitionAdjustment(
-  offset: Offset,
-  ipa:    Option[Angle],
-  iaa:    Option[Angle],
-  option: AcquisitionAdjustmentOption = AcquisitionAdjustmentOption.AskUser
+  offset:  Offset,
+  ipa:     Option[Angle],
+  iaa:     Option[Angle],
+  command: AcquisitionAdjustmentOption = AcquisitionAdjustmentOption.AskUser
 ) derives Eq

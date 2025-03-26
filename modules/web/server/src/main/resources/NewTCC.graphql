@@ -258,14 +258,14 @@ input AcquisitionAdjustmentInput {
     offset: OffsetInput!
     ipa: AngleInput
     iaa: AngleInput
-    option: AcquisitionAdjustmentOption! = ASK_USER
+    command: AcquisitionAdjustmentOption! = ASK_USER
 }
 
 type AcquisitionAdjustmentState {
     offset: Offset!
     ipa: Angle
     iaa: Angle
-    option: AcquisitionAdjustmentOption!
+    command: AcquisitionAdjustmentOption!
 }
 
 type Query {
