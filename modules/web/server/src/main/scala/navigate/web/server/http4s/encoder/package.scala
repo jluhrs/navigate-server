@@ -10,6 +10,9 @@ import io.circe.syntax.*
 import lucuma.core.model.M1GuideConfig
 import lucuma.core.model.M2GuideConfig
 import lucuma.core.util.Timestamp
+import lucuma.odb.json.angle.query.given
+import lucuma.odb.json.offset.query.given
+import navigate.model.AcquisitionAdjustment
 import navigate.model.NavigateState
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuidersQualityValues
@@ -82,6 +85,14 @@ package object encoder {
       "pwfs1" -> s.pwfs1.asJson,
       "pwfs2" -> s.pwfs2.asJson,
       "oiwfs" -> s.oiwfs.asJson
+    )
+
+  given Encoder[AcquisitionAdjustment] = s =>
+    Json.obj(
+      "offset"  -> s.offset.asJson,
+      "ipa"     -> s.ipa.asJson,
+      "iaa"     -> s.iaa.asJson,
+      "command" -> s.command.asJson
     )
 
   given Encoder[NavigateState] = s =>

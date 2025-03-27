@@ -3,17 +3,12 @@
 
 package edu.gemini.schema.util
 
-import cats.Eq
-import cats.data.Ior
-import cats.effect.{IO, Resource}
-import cats.syntax.all.*
+import cats.effect.IO
 import grackle.Result.Success
 import grackle.{Result, Schema}
-import junit.framework.TestCase
 import munit.Assertions.*
 import munit.CatsEffectSuite
 
-import scala.io.Source
 import java.nio.file.Path
 
 class SchemaStitcherTest extends CatsEffectSuite {

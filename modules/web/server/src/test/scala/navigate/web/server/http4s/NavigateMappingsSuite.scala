@@ -32,8 +32,10 @@ import lucuma.core.util.Enumerated
 import lucuma.core.util.TimeSpan
 import lucuma.core.util.Timestamp
 import munit.CatsEffectSuite
+import navigate.model.AcquisitionAdjustment
 import navigate.model.NavigateEvent
 import navigate.model.NavigateState
+import navigate.model.enums.AcquisitionAdjustmentCommand
 import navigate.model.enums.DomeMode
 import navigate.model.enums.LightSource
 import navigate.model.enums.ShutterMode
@@ -84,8 +86,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       r   <- mp.compileAndRun("mutation { mountFollow(enable: true) { result } }")
     } yield assert(
       extractResult[OperationOutcome](r, "mountFollow").exists(_ === OperationOutcome.success)
@@ -100,8 +103,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       r   <- mp.compileAndRun("mutation { mountPark { result } }")
     } yield assert(
       extractResult[OperationOutcome](r, "mountPark").exists(_ === OperationOutcome.success)
@@ -116,8 +120,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       r   <- mp.compileAndRun("mutation { scsFollow(enable: true) { result } }")
     } yield assert(
       extractResult[OperationOutcome](r, "scsFollow").exists(_ === OperationOutcome.success)
@@ -132,8 +137,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       r   <- mp.compileAndRun(
                """
                 |mutation { slew (
@@ -234,8 +240,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       r   <- mp.compileAndRun(
                """
           |mutation { tcsConfig ( config: {
@@ -316,8 +323,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       r   <- mp.compileAndRun(
                """
           |mutation { swapTarget ( swapConfig: {
@@ -377,8 +385,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       r   <- mp.compileAndRun(
                """
           |mutation { restoreTarget ( config: {
@@ -459,8 +468,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       r   <- mp.compileAndRun(
                """
                 |mutation { instrumentSpecifics (instrumentSpecificsParams: {
@@ -498,8 +508,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       r   <- mp.compileAndRun(
                """
                 |mutation { oiwfsTarget (target: {
@@ -534,8 +545,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       r   <- mp.compileAndRun(
                """
           |mutation { oiwfsProbeTracking (config: {
@@ -562,8 +574,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
 
       r <- mp.compileAndRun("mutation { oiwfsFollow(enable: true) { result } }")
     } yield assert(
@@ -578,8 +591,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
 
       r <- mp.compileAndRun("mutation { oiwfsPark { result } }")
     } yield assert(
@@ -594,8 +608,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       r   <- mp.compileAndRun("mutation { rotatorFollow(enable: true) { result } }")
     } yield assert(
       extractResult[OperationOutcome](r, "rotatorFollow").exists(_ === OperationOutcome.success)
@@ -609,8 +624,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       r   <- mp.compileAndRun("mutation { rotatorPark { result } }")
     } yield assert(
       extractResult[OperationOutcome](r, "rotatorPark").exists(_ === OperationOutcome.success)
@@ -624,8 +640,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       r   <- mp.compileAndRun(
                """
           |mutation { rotatorConfig( config: {
@@ -664,8 +681,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd   <- Topic[IO, GuideState]
       gq   <- Topic[IO, GuidersQualityValues]
       ts   <- Topic[IO, TelescopeState]
+      aa   <- Topic[IO, AcquisitionAdjustment]
       lb   <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp   <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp   <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       logs <- mp.compileAndRunSubscription(
                 """
           | subscription {
@@ -712,8 +730,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd   <- Topic[IO, GuideState]
       gq   <- Topic[IO, GuidersQualityValues]
       ts   <- Topic[IO, TelescopeState]
+      aa   <- Topic[IO, AcquisitionAdjustment]
       lb   <- Ref.of[IO, Seq[ILoggingEvent]](Seq(bufferedMessage))
-      mp   <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp   <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       logs <- mp.compileAndRunSubscription(
                 """
           | subscription {
@@ -784,8 +803,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       up  <- mp.compileAndRunSubscription(
                """
             | subscription {
@@ -821,8 +841,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       r   <- mp.compileAndRun(
                """
           | query {
@@ -867,8 +888,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       r   <- mp.compileAndRun(
                """
           | query {
@@ -921,8 +943,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       up  <- mp.compileAndRunSubscription(
                """
             | subscription {
@@ -971,6 +994,86 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   }
 
+  test("Provide acquisition adjustment state subscription") {
+    import lucuma.core.math.Angle
+    import lucuma.core.math.Offset
+    import navigate.model.enums.AcquisitionAdjustmentCommand
+
+    val changes: List[AcquisitionAdjustment] = List(
+      AcquisitionAdjustment(
+        offset = Offset.signedDecimalArcseconds.reverseGet(2, 3),
+        ipa = Angle.fromDoubleArcseconds(0.1).some,
+        iaa = Angle.fromDoubleArcseconds(0.2).some,
+        command = AcquisitionAdjustmentCommand.AskUser
+      ),
+      AcquisitionAdjustment(
+        offset = Offset.signedDecimalArcseconds.reverseGet(4, 5),
+        ipa = Angle.fromDoubleArcseconds(0.2).some,
+        iaa = Angle.fromDoubleArcseconds(0.3).some,
+        command = AcquisitionAdjustmentCommand.UserConfirms
+      ),
+      AcquisitionAdjustment(
+        offset = Offset.signedDecimalArcseconds.reverseGet(5, 6),
+        ipa = None,
+        iaa = None,
+        command = AcquisitionAdjustmentCommand.AskUser
+      )
+    )
+
+    def putAcquisitionAdjustmentUpdates(topic: Topic[IO, AcquisitionAdjustment]): IO[Unit] =
+      changes.map(topic.publish1).sequence.void
+
+    val s: IO[List[Result[AcquisitionAdjustment]]] = for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      gd  <- Topic[IO, GuideState]
+      gq  <- Topic[IO, GuidersQualityValues]
+      ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
+      lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
+      up  <- mp.compileAndRunSubscription(
+               """
+             | subscription {
+             |   acquisitionAdjustmentState {
+             |     offset {
+             |       p {
+             |         milliarcseconds
+             |       }
+             |       q {
+             |         milliarcseconds
+             |       }
+             |     }
+             |     ipa {
+             |       microarcseconds
+             |     }
+             |     iaa {
+             |       milliarcseconds
+             |     }
+             |     command
+             |   }
+             | }
+             |""".stripMargin
+             ).map { a =>
+               a.hcursor
+                 .downField("data")
+                 .downField("acquisitionAdjustmentState")
+                 .as[AcquisitionAdjustment]
+             }.take(changes.length)
+               .compile
+               .toList
+               .timeout(Duration.fromNanos(10e9))
+               .both(putAcquisitionAdjustmentUpdates(aa).delayBy(Duration.fromNanos(1e9)))
+               .map(_._1)
+    } yield up
+
+    s.map { l =>
+      val g: List[AcquisitionAdjustment] = l.collect { case Right(a) => a }
+      assertEquals(g.length, changes.length)
+      assertEquals(g, changes)
+    }
+  }
+
   test("Process guide disable command") {
     for {
       eng <- buildServer
@@ -978,8 +1081,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       r   <- mp.compileAndRun("mutation { guideDisable { result } }")
     } yield assert(
       extractResult[OperationOutcome](r, "guideDisable").exists(_ === OperationOutcome.success)
@@ -993,8 +1097,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       r   <- mp.compileAndRun(
                """
           |mutation { guideEnable( config: {
@@ -1021,8 +1126,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       r   <- mp.compileAndRun(
                """
           |mutation { oiwfsObserve( period: {
@@ -1045,8 +1151,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       r   <- mp.compileAndRun(
                """
           |mutation { oiwfsStopObserve {
@@ -1066,8 +1173,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       r   <- mp.compileAndRun(
                """
           |mutation { acObserve( period: {
@@ -1090,8 +1198,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       r   <- mp.compileAndRun(
                """
           |mutation { acStopObserve {
@@ -1111,8 +1220,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       r   <- mp.compileAndRun(
                """
           |mutation { acStopObserve {
@@ -1133,8 +1243,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
         gd  <- Topic[IO, GuideState]
         gq  <- Topic[IO, GuidersQualityValues]
         ts  <- Topic[IO, TelescopeState]
+        aa  <- Topic[IO, AcquisitionAdjustment]
         lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-        mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+        mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
         r   <- mp.compileAndRun(
                  s"""
             |mutation { $mutation {
@@ -1168,8 +1279,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       r   <- mp.compileAndRun(
                """
           |mutation { guideEnable( config: {
@@ -1200,8 +1312,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       r   <- mp.compileAndRun(
                """
           |mutation { guideEnable( config: {
@@ -1232,8 +1345,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       p   <- mp.compileAndRun(
                """
           |mutation { lightpathConfig (
@@ -1297,8 +1411,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       p   <- mp.compileAndRun(
                """
           |query {
@@ -1319,6 +1434,97 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     }
   }
 
+  test("request acquisition adjustment") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      gd  <- Topic[IO, GuideState]
+      gq  <- Topic[IO, GuidersQualityValues]
+      ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
+      lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
+      p   <- mp.compileAndRun(
+               """
+          |mutation { acquisitionAdjustment (
+          |  adjustment: {
+          |    offset: {
+          |      p: {
+          |        arcseconds: 0.1
+          |      }
+          |      q: {
+          |        arcseconds: 0.1
+          |      }
+          |    },
+          |    ipa: {
+          |       milliseconds: 10
+          |    },
+          |    iaa: {
+          |       milliseconds: 10
+          |    }
+          |  }
+          |) {
+          |  result
+          |} }
+          |""".stripMargin
+             )
+    } yield assertEquals(
+      p.hcursor
+        .downField("data")
+        .downField("acquisitionAdjustment")
+        .downField("result")
+        .as[String]
+        .toOption,
+      "SUCCESS".some
+    )
+  }
+
+  test("confirm request acquisition adjustment") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      gd  <- Topic[IO, GuideState]
+      gq  <- Topic[IO, GuidersQualityValues]
+      ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
+      lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
+      p   <- mp.compileAndRun(
+               """
+          |mutation { acquisitionAdjustment (
+          |  adjustment: {
+          |    offset: {
+          |      p: {
+          |        arcseconds: 0.1
+          |      }
+          |      q: {
+          |        arcseconds: 0.1
+          |      }
+          |    },
+          |    ipa: {
+          |       milliseconds: 10
+          |    },
+          |    iaa: {
+          |       milliseconds: 10
+          |    },
+          |    command: USER_CONFIRMS
+          |  }
+          |) {
+          |  result
+          |} }
+          |""".stripMargin
+             )
+    } yield assertEquals(
+      p.hcursor
+        .downField("data")
+        .downField("acquisitionAdjustment")
+        .downField("result")
+        .as[String]
+        .toOption,
+      "SUCCESS".some
+    )
+  }
+
   test("Get server version") {
     for {
       eng <- buildServer
@@ -1326,8 +1532,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       gd  <- Topic[IO, GuideState]
       gq  <- Topic[IO, GuidersQualityValues]
       ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
       lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
-      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, lb)
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
       p   <- mp.compileAndRun(
                """
           |query {
@@ -1343,6 +1550,8 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 }
 
 object NavigateMappingsTest {
+  import lucuma.odb.json.offset.query.given
+  import lucuma.odb.json.angle.query.given
 
   val dummyClient = Client.fromHttpApp(HttpApp.notFound[IO])
 
@@ -1601,5 +1810,13 @@ object NavigateMappingsTest {
     for {
       swp <- h.downField("onSwappedTarget").as[Boolean]
     } yield NavigateState(swp)
+
+  given Decoder[AcquisitionAdjustment] = h =>
+    for {
+      offset <- h.downField("offset").as[Offset]
+      ipa    <- h.downField("ipa").as[Option[Angle]]
+      iaa    <- h.downField("iaa").as[Option[Angle]]
+      cmd    <- h.downField("command").as[AcquisitionAdjustmentCommand]
+    } yield AcquisitionAdjustment(offset = offset, ipa = ipa, iaa = iaa, command = cmd)
 
 }

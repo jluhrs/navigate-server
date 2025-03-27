@@ -39,6 +39,7 @@ import lucuma.core.enums.TipTiltSource
 import lucuma.core.math.Coordinates
 import lucuma.core.math.Declination
 import lucuma.core.math.Epoch
+import lucuma.core.math.Offset
 import lucuma.core.math.Parallax
 import lucuma.core.math.ProperMotion
 import lucuma.core.math.RadialVelocity
@@ -50,8 +51,10 @@ import lucuma.core.model.ProbeGuide
 import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.TimeSpan
 import mouse.boolean.given
+import navigate.model.AcquisitionAdjustment
 import navigate.model.Distance
 import navigate.model.NavigateState
+import navigate.model.enums.AcquisitionAdjustmentCommand
 import navigate.model.enums.LightSource
 import navigate.server.NavigateEngine
 import navigate.server.tcs.AutoparkAowfs
@@ -91,14 +94,15 @@ import scala.reflect.classTag
 import encoder.given
 
 class NavigateMappings[F[_]: Sync](
-  server:              NavigateEngine[F],
-  logTopic:            Topic[F, ILoggingEvent],
-  guideStateTopic:     Topic[F, GuideState],
-  guidersQualityTopic: Topic[F, GuidersQualityValues],
-  telescopeStateTopic: Topic[F, TelescopeState],
-  logBuffer:           Ref[F, Seq[ILoggingEvent]]
+  server:                     NavigateEngine[F],
+  logTopic:                   Topic[F, ILoggingEvent],
+  guideStateTopic:            Topic[F, GuideState],
+  guidersQualityTopic:        Topic[F, GuidersQualityValues],
+  telescopeStateTopic:        Topic[F, TelescopeState],
+  acquisitionAdjustmentTopic: Topic[F, AcquisitionAdjustment],
+  logBuffer:                  Ref[F, Seq[ILoggingEvent]]
 )(
-  override val schema: Schema
+  override val schema:        Schema
 ) extends CirceMapping[F] {
   import NavigateMappings._
 
@@ -383,6 +387,24 @@ class NavigateMappings[F[_]: Sync](
         Result.failure[OperationOutcome]("guideEnable parameters could not be parsed.").pure[F]
       )
 
+  def acquisitionAdjustment(p: Path, env: Env): F[Result[OperationOutcome]] =
+    env
+      .get[AcquisitionAdjustment]("adjustment")
+      .map { adj =>
+        // First publish the adjustment. if the action fails other clients will be informed anyway
+        acquisitionAdjustmentTopic.publish1(adj) *>
+          // Run the adjustment if the user confirms, preserve the upstream error
+          (adj.command === AcquisitionAdjustmentCommand.UserConfirms)
+            .valueOrPure[F, Result[OperationOutcome]](
+              simpleCommand(server.acquisitionAdj(adj.offset, adj.iaa, adj.ipa))
+            )(Result.success(OperationOutcome.success))
+      }
+      .getOrElse {
+        Result
+          .failure[OperationOutcome]("acquisitionAdjustment parameters could not be parsed.")
+          .pure[F]
+      }
+
   def lightpathConfig(p: Path, env: Env): F[Result[OperationOutcome]] = (for {
     from <- env.get[LightSource]("from")
     to   <- env.get[LightSinkName]("to")
@@ -408,20 +430,20 @@ class NavigateMappings[F[_]: Sync](
   val SubscriptionType: TypeRef = schema.ref("Subscription")
 
   override val selectElaborator: SelectElaborator = SelectElaborator {
-    case (MutationType, "mountFollow", List(Binding("enable", BooleanValue(en))))           =>
+    case (MutationType, "mountFollow", List(Binding("enable", BooleanValue(en))))               =>
       Elab.env("enable" -> en)
-    case (MutationType, "rotatorFollow", List(Binding("enable", BooleanValue(en))))         =>
+    case (MutationType, "rotatorFollow", List(Binding("enable", BooleanValue(en))))             =>
       Elab.env("enable" -> en)
-    case (MutationType, "rotatorConfig", List(Binding("config", ObjectValue(fields))))      =>
+    case (MutationType, "rotatorConfig", List(Binding("config", ObjectValue(fields))))          =>
       for {
         x <- Elab.liftR(
                parseRotatorConfig(fields).toResult("Could not parse rotatorConfig parameters.")
              )
         _ <- Elab.env("config", x)
       } yield ()
-    case (MutationType, "scsFollow", List(Binding("enable", BooleanValue(en))))             =>
+    case (MutationType, "scsFollow", List(Binding("enable", BooleanValue(en))))                 =>
       Elab.env("enable" -> en)
-    case (MutationType, "tcsConfig", List(Binding("config", ObjectValue(fields))))          =>
+    case (MutationType, "tcsConfig", List(Binding("config", ObjectValue(fields))))              =>
       for {
         x <-
           Elab.liftR(parseTcsConfigInput(fields).toResult("Could not parse TCS config parameters."))
@@ -438,7 +460,7 @@ class NavigateMappings[F[_]: Sync](
         y <- Elab.liftR(parseTcsConfigInput(cf).toResult("Could not parse TCS config parameters."))
         _ <- Elab.env("config" -> y)
       } yield ()
-    case (MutationType, "swapTarget", List(Binding("swapConfig", ObjectValue(fields))))     =>
+    case (MutationType, "swapTarget", List(Binding("swapConfig", ObjectValue(fields))))         =>
       for {
         x <-
           Elab.liftR(
@@ -446,7 +468,7 @@ class NavigateMappings[F[_]: Sync](
           )
         _ <- Elab.env("swapConfig", x)
       } yield ()
-    case (MutationType, "restoreTarget", List(Binding("config", ObjectValue(fields))))      =>
+    case (MutationType, "restoreTarget", List(Binding("config", ObjectValue(fields))))          =>
       for {
         x <-
           Elab.liftR(
@@ -466,22 +488,22 @@ class NavigateMappings[F[_]: Sync](
              )
         _ <- Elab.env("instrumentSpecificsParams" -> x)
       } yield ()
-    case (MutationType, "oiwfsTarget", List(Binding("target", ObjectValue(fields))))        =>
+    case (MutationType, "oiwfsTarget", List(Binding("target", ObjectValue(fields))))            =>
       for {
         x <-
           Elab.liftR(parseTargetInput(fields).toResult("Could not parse oiwfsTarget parameters."))
         _ <- Elab.env("target" -> x)
       } yield ()
-    case (MutationType, "oiwfsProbeTracking", List(Binding("config", ObjectValue(fields)))) =>
+    case (MutationType, "oiwfsProbeTracking", List(Binding("config", ObjectValue(fields))))     =>
       for {
         x <- Elab.liftR(
                parseTrackingInput(fields).toResult("Could not parse oiwfsProbeTracking parameters.")
              )
         _ <- Elab.env("config" -> x)
       } yield ()
-    case (MutationType, "oiwfsFollow", List(Binding("enable", BooleanValue(en))))           =>
+    case (MutationType, "oiwfsFollow", List(Binding("enable", BooleanValue(en))))               =>
       Elab.env("enable" -> en)
-    case (MutationType, "oiwfsObserve", List(Binding("period", ObjectValue(fields))))       =>
+    case (MutationType, "oiwfsObserve", List(Binding("period", ObjectValue(fields))))           =>
       for {
         x <- Elab.liftR(
                parseTimeSpan(fields).toResult(
@@ -490,7 +512,7 @@ class NavigateMappings[F[_]: Sync](
              )
         _ <- Elab.env("period" -> x)
       } yield ()
-    case (MutationType, "acObserve", List(Binding("period", ObjectValue(fields))))          =>
+    case (MutationType, "acObserve", List(Binding("period", ObjectValue(fields))))              =>
       for {
         x <- Elab.liftR(
                parseTimeSpan(fields).toResult(
@@ -499,7 +521,7 @@ class NavigateMappings[F[_]: Sync](
              )
         _ <- Elab.env("period" -> x)
       } yield ()
-    case (MutationType, "guideEnable", List(Binding("config", ObjectValue(fields))))        =>
+    case (MutationType, "guideEnable", List(Binding("config", ObjectValue(fields))))            =>
       for {
         x <- Elab.liftR(
                parseGuideConfig(fields).toResult(
@@ -526,7 +548,16 @@ class NavigateMappings[F[_]: Sync](
         _    <- Elab.env("from" -> from)
         _    <- Elab.env("to" -> to)
       } yield ()
-    case (QueryType, "instrumentPort", List(Binding("instrument", EnumValue(ins))))         =>
+    case (MutationType, "acquisitionAdjustment", List(Binding("adjustment", ObjectValue(adj)))) =>
+      Elab
+        .liftR(
+          parseAcquisitionAdjustment(adj)
+            .toResult("Could not parse adjustment parameter \"adjustment\"")
+        )
+        .flatMap { x =>
+          Elab.env("adjustment" -> x)
+        }
+    case (QueryType, "instrumentPort", List(Binding("instrument", EnumValue(ins))))             =>
       Elab
         .liftR(
           parseEnumerated[Instrument](ins)
@@ -597,7 +628,10 @@ class NavigateMappings[F[_]: Sync](
           RootEffect.computeEncodable("m1LoadNonAoFigure")((p, env) =>
             simpleCommand(server.m1LoadNonAoFigure)
           ),
-          RootEffect.computeEncodable("lightpathConfig")((p, env) => lightpathConfig(p, env))
+          RootEffect.computeEncodable("lightpathConfig")((p, env) => lightpathConfig(p, env)),
+          RootEffect.computeEncodable("acquisitionAdjustment") { (p, env) =>
+            acquisitionAdjustment(p, env)
+          }
         )
       ),
       ObjectMapping(
@@ -636,6 +670,13 @@ class NavigateMappings[F[_]: Sync](
               .map(_.asJson)
               .map(circeCursor(p, env, _))
               .map(Result.success)
+          },
+          RootStream.computeCursor("acquisitionAdjustmentState") { (p, env) =>
+            acquisitionAdjustmentTopic
+              .subscribe(1024)
+              .map(_.asJson)
+              .map(circeCursor(p, env, _))
+              .map(Result.success)
           }
         )
       )
@@ -646,16 +687,17 @@ class NavigateMappings[F[_]: Sync](
 object NavigateMappings extends GrackleParsers {
 
   def loadSchema[F[_]: Sync]: F[Result[Schema]] = SchemaStitcher
-    .apply[F](JPath.of("NewTCC.graphql"), SourceResolver.fromResource(getClass.getClassLoader))
+    .apply[F](JPath.of("navigate.graphql"), SourceResolver.fromResource(getClass.getClassLoader))
     .build
 
   def apply[F[_]: Sync](
-    server:              NavigateEngine[F],
-    logTopic:            Topic[F, ILoggingEvent],
-    guideStateTopic:     Topic[F, GuideState],
-    guidersQualityTopic: Topic[F, GuidersQualityValues],
-    telescopeStateTopic: Topic[F, TelescopeState],
-    logBuffer:           Ref[F, Seq[ILoggingEvent]]
+    server:                     NavigateEngine[F],
+    logTopic:                   Topic[F, ILoggingEvent],
+    guideStateTopic:            Topic[F, GuideState],
+    guidersQualityTopic:        Topic[F, GuidersQualityValues],
+    telescopeStateTopic:        Topic[F, TelescopeState],
+    acquisitionAdjustmentTopic: Topic[F, AcquisitionAdjustment],
+    logBuffer:                  Ref[F, Seq[ILoggingEvent]]
   ): F[NavigateMappings[F]] = loadSchema.flatMap {
     case Result.Success(schema)           =>
       new NavigateMappings[F](server,
@@ -663,6 +705,7 @@ object NavigateMappings extends GrackleParsers {
                               guideStateTopic,
                               guidersQualityTopic,
                               telescopeStateTopic,
+                              acquisitionAdjustmentTopic,
                               logBuffer
       )(schema)
         .pure[F]
@@ -672,6 +715,7 @@ object NavigateMappings extends GrackleParsers {
                               guideStateTopic,
                               guidersQualityTopic,
                               telescopeStateTopic,
+                              acquisitionAdjustmentTopic,
                               logBuffer
       )(schema)
         .pure[F]
@@ -891,5 +935,22 @@ object NavigateMappings extends GrackleParsers {
         )
       }
   }
+
+  def parseOffset(l: List[(String, Value)]): Option[Offset] =
+    for {
+      p <- l.collectFirst { case ("p", ObjectValue(v)) => parseAngle(v) }.flatten
+      q <- l.collectFirst { case ("q", ObjectValue(v)) => parseAngle(v) }.flatten
+    } yield Offset(p.p, q.q)
+
+  def parseAcquisitionAdjustment(l: List[(String, Value)]): Option[AcquisitionAdjustment] =
+    for {
+      o   <-
+        l.collectFirst { case ("offset", ObjectValue(v)) => parseOffset(v) }.flatten
+      ipa <- l.collectFirst { case ("ipa", ObjectValue(v)) => parseAngle(v) }
+      iaa <- l.collectFirst { case ("iaa", ObjectValue(v)) => parseAngle(v) }
+      cmd  = l.collectFirst { case ("command", Value.EnumValue(v)) =>
+               parseEnumerated[AcquisitionAdjustmentCommand](v)
+             }.flatten
+    } yield cmd.fold(AcquisitionAdjustment(o, ipa, iaa))(AcquisitionAdjustment(o, ipa, iaa, _))
 
 }

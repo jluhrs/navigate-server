@@ -30,9 +30,11 @@ object ClientsSetDb {
   def apply[F[_]: {Sync, Logger}](ref: Ref[F, ClientsSet]): ClientsSetDb[F] = new ClientsSetDb[F] {
     def newClient(id: ClientId, addr: ClientsSetDb.ClientAddr, ua: Option[UserAgent]): F[Unit] =
       Sync[F].delay(Instant.now).flatMap(i => ref.update(_ + (id -> ((i, addr, ua)))))
-    def removeClient(id: ClientId): F[Unit]                                                    =
+
+    def removeClient(id: ClientId): F[Unit] =
       ref.update(_ - id)
-    def report: F[Unit]                                                                        =
+
+    def report: F[Unit] =
       ref.get.flatMap { m =>
         Logger[F].debug("Clients Summary:") *>
           Logger[F].debug("----------------") *>
@@ -44,4 +46,7 @@ object ClientsSetDb {
       }
 
   }
+
+  def create[F[_]: Sync: Logger]: F[ClientsSetDb[F]] =
+    Ref.of[F, ClientsSet](Map.empty).map(apply(_))
 }

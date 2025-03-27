@@ -8,32 +8,24 @@ import cats.effect.*
 import cats.effect.std.Dispatcher
 import cats.effect.syntax.all.*
 import cats.syntax.all.*
-import ch.qos.logback.classic.spi.ILoggingEvent
-import ch.qos.logback.core.Appender
 import com.comcast.ip4s.Dns
 import fs2.Stream
 import fs2.compression.Compression
-import fs2.concurrent.Topic
 import fs2.io.file.Files
 import fs2.io.net.Network
 import fs2.io.net.tls.TLSContext
 import natchez.Trace.Implicits.noop
-import navigate.model.NavigateEvent
 import navigate.model.config.*
 import navigate.server.CaServiceInit
 import navigate.server.NavigateEngine
 import navigate.server.NavigateFailure
 import navigate.server.Systems
-import navigate.server.tcs.GuideState
-import navigate.server.tcs.GuidersQualityValues
-import navigate.server.tcs.TelescopeState
 import navigate.web.server.OcsBuildInfo
 import navigate.web.server.common.LogInitialization
 import navigate.web.server.common.RedirectToHttpsRoutes
 import navigate.web.server.common.StaticRoutes
 import navigate.web.server.common.baseDir
 import navigate.web.server.config.*
-import navigate.web.server.logging.SubscriptionAppender
 import org.http4s.HttpRoutes
 import org.http4s.Uri
 import org.http4s.blaze.server.BlazeServerBuilder
@@ -54,7 +46,6 @@ import java.nio.file.Files as JavaFiles
 import java.security.KeyStore
 import java.security.Security
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManagerFactory
@@ -84,7 +75,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
           .optional
           .withFallback(ConfigSource.resources("app.conf").optional)
 
-  def makeContext[F[_]: Sync](tls: TLSConfig): F[SSLContext] = Sync[F].delay {
+  def makeContext[F[_]: Sync](tls: TLSConfig): F[SSLContext] = Sync[F].blocking {
     val ksStream   = new FileInputStream(tls.keyStore.toFile.getAbsolutePath)
     val ks         = KeyStore.getInstance("JKS")
     ks.load(ksStream, tls.keyStorePwd.toCharArray)
@@ -118,26 +109,22 @@ object WebServerLauncher extends IOApp with LogInitialization {
 
   /** Resource that yields the running web server */
   def webServer[F[_]: Logger: Async: Dns: Files: Compression: Network](
-    conf:                NavigateConfiguration,
-    outputs:             Topic[F, NavigateEvent],
-    logTopic:            Topic[F, ILoggingEvent],
-    guideTopic:          Topic[F, GuideState],
-    guidersQualityTopic: Topic[F, GuidersQualityValues],
-    telescopeStateTopic: Topic[F, TelescopeState],
-    se:                  NavigateEngine[F],
-    clientsDb:           ClientsSetDb[F],
-    logBuffer:           Ref[F, Seq[ILoggingEvent]]
+    conf:      NavigateConfiguration,
+    topics:    TopicManager[F],
+    se:        NavigateEngine[F],
+    clientsDb: ClientsSetDb[F]
   ): Resource[F, Server] = {
     val ssl: F[Option[SSLContext]] = conf.webServer.tls.map(makeContext[F]).sequence
 
     def router(wsBuilder: WebSocketBuilder2[F], proxyService: HttpRoutes[F]) = Router[F](
       "/"                 -> new StaticRoutes().service,
       "/navigate"         -> new GraphQlRoutes(se,
-                                       logTopic,
-                                       guideTopic,
-                                       guidersQualityTopic,
-                                       telescopeStateTopic,
-                                       logBuffer
+                                       topics.loggingEvents,
+                                       topics.guideState,
+                                       topics.guidersQuality,
+                                       topics.telescopeState,
+                                       topics.acquisitionAdjustment,
+                                       topics.logBuffer
       )
         .service(wsBuilder),
       ProxyRoute.toString -> proxyService
@@ -188,60 +175,12 @@ object WebServerLauncher extends IOApp with LogInitialization {
     Logger[F].info(banner + msg)
   }
 
-  // We need to manually update the configuration of the logging subsystem
-  // to support capturing log messages and forward them to the clients
-  def logToClients(
-    out:        Topic[IO, ILoggingEvent],
-    dispatcher: Dispatcher[IO]
-  ): IO[Appender[ILoggingEvent]] = IO.apply {
-    import ch.qos.logback.classic.{AsyncAppender, Logger, LoggerContext}
-    import org.slf4j.LoggerFactory
-
-    val asyncAppender = new AsyncAppender
-    val appender      = new SubscriptionAppender[IO](out)(using dispatcher)
-    Option(LoggerFactory.getILoggerFactory)
-      .collect { case lc: LoggerContext =>
-        lc
-      }
-      .foreach { ctx =>
-        asyncAppender.setContext(ctx)
-        appender.setContext(ctx)
-        asyncAppender.addAppender(appender)
-      }
-
-    Option(LoggerFactory.getLogger("navigate"))
-      .collect { case l: Logger =>
-        l
-      }
-      .foreach { l =>
-        l.addAppender(asyncAppender)
-        asyncAppender.start()
-        appender.start()
-      }
-    asyncAppender
-  }
-
   // Logger of error of last resort.
   def logError[F[_]: Logger]: PartialFunction[Throwable, F[Unit]] = {
     case e: NavigateFailure =>
       Logger[F].error(e)(s"Navigate global error handler ${NavigateFailure.explain(e)}")
     case e: Exception       => Logger[F].error(e)("Navigate global error handler")
   }
-
-  /**
-   * Buffer log messages to be able to send old messages to new clients
-   */
-  def bufferLogMessages(log: Topic[IO, ILoggingEvent]): Resource[IO, Ref[IO, Seq[ILoggingEvent]]] =
-    val maxQueueSize = 30
-    for
-      buffer <- Ref.empty[IO, Seq[ILoggingEvent]].toResource
-      _      <- log
-                  .subscribe(1024)
-                  .evalMap(event => buffer.update(events => events.takeRight(maxQueueSize - 1) :+ event))
-                  .compile
-                  .drain
-                  .background
-    yield buffer
 
   /** Reads the configuration and launches the navigate engine and web server */
   def navigate[I]: IO[ExitCode] = {
@@ -285,40 +224,14 @@ object WebServerLauncher extends IOApp with LogInitialization {
         _      <- Resource.eval(configLog[IO]) // Initialize log before the engine is setup
         conf   <- Resource.eval(config[IO].flatMap(loadConfiguration[IO]))
         _      <- Resource.eval(printBanner(conf))
-        cli    <- client(10.seconds)
-        out    <- Resource.eval(Topic[IO, NavigateEvent])
-        log    <- Resource.eval(Topic[IO, ILoggingEvent])
-        lb     <- bufferLogMessages(log)
-        gd     <- Resource.eval(Topic[IO, GuideState])
-        gq     <- Resource.eval(Topic[IO, GuidersQualityValues])
-        ts     <- Resource.eval(Topic[IO, TelescopeState])
         dsp    <- Dispatcher.sequential[IO]
-        _      <- Resource.eval(logToClients(log, dsp))
-        cs     <- Resource.eval(
-                    Ref.of[IO, ClientsSetDb.ClientsSet](Map.empty).map(ClientsSetDb.apply[IO](_))
-                  )
+        cli    <- client(10.seconds)
+        topics <- TopicManager.create[IO](dsp)
+        cs     <- Resource.eval(ClientsSetDb.create[IO])
         _      <- Resource.eval(publishStats(cs).compile.drain.start)
         engine <- engineIO(conf, cli)
-        _      <- webServer[IO](conf, out, log, gd, gq, ts, engine, cs, lb)
-        _      <- Resource.eval(
-                    out.subscribers
-                      .evalMap(l => Logger[IO].debug(s"Subscribers amount: $l").whenA(l > 1))
-                      .compile
-                      .drain
-                      .start
-                  )
-        _      <- Resource.eval(
-                    guideStatePoll(engine, gd).compile.drain.start
-                  )
-        _      <- Resource.eval(
-                    guiderQualityPoll(engine, gq).compile.drain.start
-                  )
-        _      <- Resource.eval(
-                    telescopeStatePoll(engine, ts).compile.drain.start
-                  )
-        f      <- Resource.eval(
-                    engine.eventStream.through(out.publish).compile.drain.onError(logError).start
-                  )
+        _      <- webServer[IO](conf, topics, engine, cs)
+        f      <- Resource.eval(topics.startAll(engine))
         _      <- Resource.eval(f.join)        // We need to join to catch uncaught errors
       } yield ExitCode.Success
 
@@ -332,38 +245,5 @@ object WebServerLauncher extends IOApp with LogInitialization {
       if (oc.isSuccess) IO.unit
       else IO(Console.println(s"Exit code $oc")) // scalastyle:off console.io
     }
-
-  def guideStatePoll(eng: NavigateEngine[IO], t: Topic[IO, GuideState]): Stream[IO, Unit] =
-    Stream
-      .fixedRate[IO](FiniteDuration(1, TimeUnit.SECONDS))
-      .evalMap(_ => eng.getGuideState)
-      .evalMapAccumulate(none) { (acc, gs) =>
-        (if (acc.contains(gs)) IO.unit else t.publish1(gs).void).as(gs.some, ())
-      }
-      .void
-
-  def guiderQualityPoll(
-    eng: NavigateEngine[IO],
-    t:   Topic[IO, GuidersQualityValues]
-  ): Stream[IO, Unit] =
-    Stream
-      .fixedRate[IO](FiniteDuration(1, TimeUnit.SECONDS))
-      .evalMap(_ => eng.getGuidersQuality)
-      .evalMapAccumulate(none) { (acc, gs) =>
-        (if (acc.contains(gs)) IO.unit else t.publish1(gs).void).as(gs.some, ())
-      }
-      .void
-
-  def telescopeStatePoll(
-    eng: NavigateEngine[IO],
-    t:   Topic[IO, TelescopeState]
-  ): Stream[IO, Unit] =
-    Stream
-      .fixedRate[IO](FiniteDuration(1, TimeUnit.SECONDS))
-      .evalMap(_ => eng.getTelescopeState)
-      .evalMapAccumulate(none) { (acc, ts) =>
-        (if (acc.contains(ts)) IO.unit else t.publish1(ts).void).as(ts.some, ())
-      }
-      .void
 
 }

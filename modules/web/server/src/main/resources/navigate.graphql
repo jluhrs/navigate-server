@@ -1,5 +1,5 @@
-#import NonEmptyString, Sidereal, GuideProbe, TargetId, Nonsidereal from "lucuma/schemas/ObservationDB.graphql"
-#import SiderealInput, NonsiderealInput, WavelengthInput, AngleInput from "lucuma/schemas/ObservationDB.graphql"
+#import NonEmptyString, Offset, Angle, Sidereal, GuideProbe, TargetId, Nonsidereal from "lucuma/schemas/ObservationDB.graphql"
+#import SiderealInput, OffsetInput, NonsiderealInput, WavelengthInput, AngleInput from "lucuma/schemas/ObservationDB.graphql"
 #import Long, BigDecimal, Timestamp, TimeSpanInput from "lucuma/schemas/ObservationDB.graphql"
 #import Instrument from "lucuma/schemas/ObservationDB.graphql"
 
@@ -249,6 +249,27 @@ enum LightSink {
     IGRINS2
 }
 
+enum AcquistionAdjustmentCommand {
+    """ Request the user to confirm the adjustment """
+    ASK_USER
+    """ User confirms to apply the adjustment """
+    USER_CONFIRMS
+}
+
+input AcquisitionAdjustmentInput {
+    offset: OffsetInput!
+    ipa: AngleInput
+    iaa: AngleInput
+    command: AcquistionAdjustmentCommand! = ASK_USER
+}
+
+type AcquisitionAdjustmentState {
+    offset: Offset!
+    ipa: Angle
+    iaa: Angle
+    command: AcquistionAdjustmentCommand!
+}
+
 type Query {
     telescopeState: TelescopeState!
     guideState: GuideConfigurationState!
@@ -287,6 +308,7 @@ type Mutation {
     m1LoadAoFigure: OperationOutcome!
     m1LoadNonAoFigure: OperationOutcome!
     lightpathConfig(from: LightSource, to: LightSink): OperationOutcome!
+    acquisitionAdjustment(adjustment: AcquisitionAdjustmentInput!): OperationOutcome!
 }
 
 type Subscription {
@@ -295,4 +317,5 @@ type Subscription {
     guidersQualityValues: GuidersQualityValues!
     telescopeState: TelescopeState!
     navigateState: NavigateState!
+    acquisitionAdjustmentState: AcquisitionAdjustmentState!
 }
