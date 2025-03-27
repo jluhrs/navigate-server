@@ -1161,7 +1161,6 @@ object TcsBaseControllerEpics {
       .flatMap { _ =>
         instrument match
           case Instrument.GmosNorth | Instrument.GmosSouth => "GMOS".some
-          case Instrument.Nifs                             => "NIFS".some
           case Instrument.Gnirs                            => "GNIRS".some
           case Instrument.Niri                             => "NIRI".some
           case Instrument.Flamingos2                       => "F2".some

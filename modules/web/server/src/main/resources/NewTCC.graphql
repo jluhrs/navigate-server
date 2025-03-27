@@ -239,13 +239,11 @@ enum LightSink {
     NIRI_F32
     AC
     HR
-    NIFS
     GMOS_IFU
     GNIRS
     VISITOR
     F2
     GSAOI
-    PHOENIX
     GPI
     GHOST
     IGRINS2

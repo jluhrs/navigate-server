@@ -208,9 +208,7 @@ extension (i: Instrument) {
     case Instrument.Gpi        => LightSinkName.Gpi
     case Instrument.Gsaoi      => LightSinkName.Gsaoi
     case Instrument.Igrins2    => LightSinkName.Igrins2
-    case Instrument.Nifs       => LightSinkName.Nifs
     case Instrument.Niri       => LightSinkName.Niri_f6 // TODO: handle the other cases
-    case Instrument.Phoenix    => LightSinkName.Phoenix
     case Instrument.Visitor    => LightSinkName.Visitor
     case Instrument.Alopeke    => LightSinkName.Visitor
     case Instrument.Zorro      => LightSinkName.Visitor

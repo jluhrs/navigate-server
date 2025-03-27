@@ -484,7 +484,6 @@ object NavigateEngine {
           case Instrument.Gnirs      => x.gnirsPort
           case Instrument.Gpi        => x.gpiPort
           case Instrument.Gsaoi      => x.gsaoiPort
-          case Instrument.Nifs       => x.nifsPort
           case Instrument.Niri       => x.niriPort
           case Instrument.Alopeke    => (site === Site.GN).fold(2, 0)
           case Instrument.Zorro      => (site === Site.GS).fold(2, 0)
