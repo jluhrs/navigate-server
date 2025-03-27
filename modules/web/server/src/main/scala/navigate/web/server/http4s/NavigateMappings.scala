@@ -687,7 +687,7 @@ class NavigateMappings[F[_]: Sync](
 object NavigateMappings extends GrackleParsers {
 
   def loadSchema[F[_]: Sync]: F[Result[Schema]] = SchemaStitcher
-    .apply[F](JPath.of("NewTCC.graphql"), SourceResolver.fromResource(getClass.getClassLoader))
+    .apply[F](JPath.of("navigate.graphql"), SourceResolver.fromResource(getClass.getClassLoader))
     .build
 
   def apply[F[_]: Sync](
