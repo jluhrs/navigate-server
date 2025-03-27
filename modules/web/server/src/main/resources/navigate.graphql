@@ -254,6 +254,8 @@ enum AcquistionAdjustmentCommand {
     ASK_USER
     """ User confirms to apply the adjustment """
     USER_CONFIRMS
+    """ User cancels the adjustment """
+    USER_CANCELS
 }
 
 input AcquisitionAdjustmentInput {
