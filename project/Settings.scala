@@ -55,12 +55,12 @@ object Settings {
 
     // Lucuma
     val lucumaCore    = "0.120.0"
-    val lucumaSchemas = "0.123.2"
+    val lucumaSchemas = "0.124.0"
     val navigateUi    = "0.5.10"
 
     val grackle = "0.24.0"
 
-    val graphQLRoutes = "0.8.17"
+    val graphQLRoutes = "0.8.18"
 
     val clue = "0.35.0"
 
