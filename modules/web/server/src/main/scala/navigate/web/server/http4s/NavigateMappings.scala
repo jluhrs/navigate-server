@@ -951,8 +951,6 @@ object NavigateMappings extends GrackleParsers {
       cmd  = l.collectFirst { case ("command", Value.EnumValue(v)) =>
                parseEnumerated[AcquisitionAdjustmentCommand](v)
              }.flatten
-    } yield cmd
-      .map(AcquisitionAdjustment(o, ipa, iaa, _))
-      .getOrElse(AcquisitionAdjustment(o, ipa, iaa))
+  } yield cmd.fold(AcquisitionAdjustment(o, ipa, iaa))(AcquisitionAdjustment(o, ipa, iaa, _))
 
 }
