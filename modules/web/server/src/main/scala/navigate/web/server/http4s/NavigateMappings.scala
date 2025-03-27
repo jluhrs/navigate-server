@@ -54,7 +54,7 @@ import mouse.boolean.given
 import navigate.model.AcquisitionAdjustment
 import navigate.model.Distance
 import navigate.model.NavigateState
-import navigate.model.enums.AcquisitionAdjustmentOption
+import navigate.model.enums.AcquisitionAdjustmentCommand
 import navigate.model.enums.LightSource
 import navigate.server.NavigateEngine
 import navigate.server.tcs.AutoparkAowfs
@@ -391,8 +391,13 @@ class NavigateMappings[F[_]: Sync](
     env
       .get[AcquisitionAdjustment]("adjustment")
       .map { adj =>
+        // First publish the adjustment. if the action fails other clients will be informed anyway
         acquisitionAdjustmentTopic.publish1(adj) *>
-          Result.success(OperationOutcome.success).pure[F]
+          // Run the adjustment if the user confirms, preserve the upstream error
+          (adj.command === AcquisitionAdjustmentCommand.UserConfirms)
+            .valueOrPure[F, Result[OperationOutcome]](
+              simpleCommand(server.acquisitionAdj(adj.offset, adj.iaa, adj.ipa))
+            )(Result.success(OperationOutcome.success))
       }
       .getOrElse {
         Result
@@ -931,10 +936,11 @@ object NavigateMappings extends GrackleParsers {
       }
   }
 
-  def parseOffset(l: List[(String, Value)]): Option[Offset] = for {
-    p <- l.collectFirst { case ("p", ObjectValue(v)) => parseAngle(v) }.flatten
-    q <- l.collectFirst { case ("q", ObjectValue(v)) => parseAngle(v) }.flatten
-  } yield Offset(p.p, q.q)
+  def parseOffset(l: List[(String, Value)]): Option[Offset] =
+    for {
+      p <- l.collectFirst { case ("p", ObjectValue(v)) => parseAngle(v) }.flatten
+      q <- l.collectFirst { case ("q", ObjectValue(v)) => parseAngle(v) }.flatten
+    } yield Offset(p.p, q.q)
 
   def parseAcquisitionAdjustment(l: List[(String, Value)]): Option[AcquisitionAdjustment] =
     for {
@@ -943,7 +949,7 @@ object NavigateMappings extends GrackleParsers {
       ipa <- l.collectFirst { case ("ipa", ObjectValue(v)) => parseAngle(v) }
       iaa <- l.collectFirst { case ("iaa", ObjectValue(v)) => parseAngle(v) }
       cmd  = l.collectFirst { case ("command", Value.EnumValue(v)) =>
-               parseEnumerated[AcquisitionAdjustmentOption](v)
+               parseEnumerated[AcquisitionAdjustmentCommand](v)
              }.flatten
     } yield cmd
       .map(AcquisitionAdjustment(o, ipa, iaa, _))

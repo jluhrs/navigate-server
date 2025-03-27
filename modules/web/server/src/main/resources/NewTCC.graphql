@@ -249,8 +249,10 @@ enum LightSink {
     IGRINS2
 }
 
-enum AcquisitionAdjustmentOption {
+enum AcquistionAdjustmentCommand {
+    """ Request the user to confirm the adjustment """
     ASK_USER
+    """ User confirms to apply the adjustment """
     USER_CONFIRMS
 }
 
@@ -258,14 +260,14 @@ input AcquisitionAdjustmentInput {
     offset: OffsetInput!
     ipa: AngleInput
     iaa: AngleInput
-    command: AcquisitionAdjustmentOption! = ASK_USER
+    command: AcquistionAdjustmentCommand! = ASK_USER
 }
 
 type AcquisitionAdjustmentState {
     offset: Offset!
     ipa: Angle
     iaa: Angle
-    command: AcquisitionAdjustmentOption!
+    command: AcquistionAdjustmentCommand!
 }
 
 type Query {

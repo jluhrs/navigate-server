@@ -35,7 +35,7 @@ import munit.CatsEffectSuite
 import navigate.model.AcquisitionAdjustment
 import navigate.model.NavigateEvent
 import navigate.model.NavigateState
-import navigate.model.enums.AcquisitionAdjustmentOption
+import navigate.model.enums.AcquisitionAdjustmentCommand
 import navigate.model.enums.DomeMode
 import navigate.model.enums.LightSource
 import navigate.model.enums.ShutterMode
@@ -997,26 +997,26 @@ class NavigateMappingsSuite extends CatsEffectSuite {
   test("Provide acquisition adjustment state subscription") {
     import lucuma.core.math.Angle
     import lucuma.core.math.Offset
-    import navigate.model.enums.AcquisitionAdjustmentOption
+    import navigate.model.enums.AcquisitionAdjustmentCommand
 
     val changes: List[AcquisitionAdjustment] = List(
       AcquisitionAdjustment(
         offset = Offset.signedDecimalArcseconds.reverseGet(2, 3),
         ipa = Angle.fromDoubleArcseconds(0.1).some,
         iaa = Angle.fromDoubleArcseconds(0.2).some,
-        command = AcquisitionAdjustmentOption.AskUser
+        command = AcquisitionAdjustmentCommand.AskUser
       ),
       AcquisitionAdjustment(
         offset = Offset.signedDecimalArcseconds.reverseGet(4, 5),
         ipa = Angle.fromDoubleArcseconds(0.2).some,
         iaa = Angle.fromDoubleArcseconds(0.3).some,
-        command = AcquisitionAdjustmentOption.UserConfirms
+        command = AcquisitionAdjustmentCommand.UserConfirms
       ),
       AcquisitionAdjustment(
         offset = Offset.signedDecimalArcseconds.reverseGet(5, 6),
         ipa = None,
         iaa = None,
-        command = AcquisitionAdjustmentOption.AskUser
+        command = AcquisitionAdjustmentCommand.AskUser
       )
     )
 
@@ -1055,7 +1055,6 @@ class NavigateMappingsSuite extends CatsEffectSuite {
              | }
              |""".stripMargin
              ).map { a =>
-               println(a)
                a.hcursor
                  .downField("data")
                  .downField("acquisitionAdjustmentState")
@@ -1480,6 +1479,52 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     )
   }
 
+  test("confirm request acquisition adjustment") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      gd  <- Topic[IO, GuideState]
+      gq  <- Topic[IO, GuidersQualityValues]
+      ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
+      lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
+      p   <- mp.compileAndRun(
+               """
+          |mutation { acquisitionAdjustment (
+          |  adjustment: {
+          |    offset: {
+          |      p: {
+          |        arcseconds: 0.1
+          |      }
+          |      q: {
+          |        arcseconds: 0.1
+          |      }
+          |    },
+          |    ipa: {
+          |       milliseconds: 10
+          |    },
+          |    iaa: {
+          |       milliseconds: 10
+          |    },
+          |    command: USER_CONFIRMS
+          |  }
+          |) {
+          |  result
+          |} }
+          |""".stripMargin
+             )
+    } yield assertEquals(
+      p.hcursor
+        .downField("data")
+        .downField("acquisitionAdjustment")
+        .downField("result")
+        .as[String]
+        .toOption,
+      "SUCCESS".some
+    )
+  }
+
   test("Get server version") {
     for {
       eng <- buildServer
@@ -1771,7 +1816,7 @@ object NavigateMappingsTest {
       offset <- h.downField("offset").as[Offset]
       ipa    <- h.downField("ipa").as[Option[Angle]]
       iaa    <- h.downField("iaa").as[Option[Angle]]
-      cmd    <- h.downField("command").as[AcquisitionAdjustmentOption]
+      cmd    <- h.downField("command").as[AcquisitionAdjustmentCommand]
     } yield AcquisitionAdjustment(offset = offset, ipa = ipa, iaa = iaa, command = cmd)
 
 }

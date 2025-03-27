@@ -5,6 +5,6 @@ package navigate.model.enums
 
 import lucuma.core.util.Enumerated
 
-enum AcquisitionAdjustmentOption(val tag: String) derives Enumerated:
-  case AskUser      extends AcquisitionAdjustmentOption("ASK_USER")
-  case UserConfirms extends AcquisitionAdjustmentOption("USER_CONFIRMS")
+enum AcquisitionAdjustmentCommand(val tag: String) derives Enumerated:
+  case AskUser      extends AcquisitionAdjustmentCommand("ASK_USER")
+  case UserConfirms extends AcquisitionAdjustmentCommand("USER_CONFIRMS")

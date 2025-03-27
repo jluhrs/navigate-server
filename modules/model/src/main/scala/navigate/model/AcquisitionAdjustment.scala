@@ -7,11 +7,11 @@ import cats.Eq
 import cats.derived.*
 import lucuma.core.math.Angle
 import lucuma.core.math.Offset
-import navigate.model.enums.AcquisitionAdjustmentOption
+import navigate.model.enums.AcquisitionAdjustmentCommand
 
 case class AcquisitionAdjustment(
   offset:  Offset,
   ipa:     Option[Angle],
   iaa:     Option[Angle],
-  command: AcquisitionAdjustmentOption = AcquisitionAdjustmentOption.AskUser
+  command: AcquisitionAdjustmentCommand = AcquisitionAdjustmentCommand.AskUser
 ) derives Eq
