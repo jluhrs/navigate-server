@@ -8,3 +8,4 @@ import lucuma.core.util.Enumerated
 enum AcquisitionAdjustmentCommand(val tag: String) derives Enumerated:
   case AskUser      extends AcquisitionAdjustmentCommand("ASK_USER")
   case UserConfirms extends AcquisitionAdjustmentCommand("USER_CONFIRMS")
+  case UserCancels  extends AcquisitionAdjustmentCommand("USER_CANCELS")
