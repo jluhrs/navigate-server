@@ -34,7 +34,7 @@ object Settings {
 
     // test libraries
     val scalaMock              = "5.2.0"
-    val munitCatsEffectVersion = "2.0.0"
+    val munitCatsEffectVersion = "2.1.0"
 
     val gmpCommandRecords   = "0.7.7"
     val giapi               = "1.1.7"
