@@ -202,10 +202,10 @@ object WebServerLauncher extends IOApp with LogInitialization {
       httpClient: Client[IO]
     ): Resource[IO, NavigateEngine[IO]] =
       for {
-        backend                        <- Resource.pure(Http4sHttpBackend(httpClient))
-        dspt <- Dispatcher.sequential[IO]
-        cas  <- CaServiceInit.caInit[IO](conf.navigateEngine)
-        sys  <-
+        backend <- Resource.pure(Http4sHttpBackend(httpClient))
+        dspt    <- Dispatcher.sequential[IO]
+        cas     <- CaServiceInit.caInit[IO](conf.navigateEngine)
+        sys     <-
           Systems
             .build[IO](conf.site, httpClient, conf, cas)(using
               Async[IO],
@@ -214,9 +214,9 @@ object WebServerLauncher extends IOApp with LogInitialization {
               dspt,
               Parallel[IO]
             )
-        seqE <- Resource.eval[IO, NavigateEngine[IO]](
-                  NavigateEngine.build[IO](conf.site, sys, conf.navigateEngine)
-                )
+        seqE    <- Resource.eval[IO, NavigateEngine[IO]](
+                     NavigateEngine.build[IO](conf.site, sys, conf.navigateEngine)
+                   )
       } yield seqE
 
     def publishStats[F[_]: Temporal](cs: ClientsSetDb[F]): Stream[F, Unit] =
