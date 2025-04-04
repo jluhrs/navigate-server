@@ -23,7 +23,6 @@ case class NavigateConfiguration(
   site:           Site,
   mode:           Mode,
   navigateEngine: NavigateEngineConfiguration,
-  lucumaSSO:      LucumaSSOConfiguration,
   webServer:      WebServerConfiguration
 )
 

@@ -6,14 +6,11 @@ package navigate.web.server.config
 import cats.effect.Sync
 import cats.syntax.all.*
 import lucuma.core.enums.Site
-import lucuma.sso.client.util.GpgPublicKeyReader
 import navigate.model.config.*
 import pureconfig.*
 import pureconfig.error.*
 import pureconfig.module.catseffect.syntax.*
 import pureconfig.module.http4s.*
-
-import java.security.PublicKey
 
 case class SiteValueUnknown(site: String)         extends FailureReason {
   def description: String = s"site '$site' invalid"
@@ -24,18 +21,6 @@ case class ModeValueUnknown(mode: String)         extends FailureReason {
 case class StrategyValueUnknown(strategy: String) extends FailureReason {
   def description: String = s"strategy '$strategy' invalid"
 }
-case class PublicKeyUnknown(value: String)        extends FailureReason {
-  def description: String = s"publicKey '$value' invalid"
-}
-
-given ConfigReader[PublicKey] =
-  ConfigReader.fromCursor[PublicKey] { cf =>
-    cf.asString.flatMap { c =>
-      GpgPublicKeyReader
-        .publicKey(c)
-        .leftFlatMap(_ => cf.failed(PublicKeyUnknown(c)))
-    }
-  }
 
 given ConfigReader[Site] = ConfigReader.fromCursor[Site] { cf =>
   cf.asString.flatMap {

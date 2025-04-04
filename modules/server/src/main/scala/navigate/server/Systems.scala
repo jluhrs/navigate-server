@@ -8,23 +8,14 @@ import cats.effect.Async
 import cats.effect.Resource
 import cats.effect.std.Dispatcher
 import cats.syntax.all.*
-import clue.FetchClient
-import clue.http4s.Http4sHttpBackend
-import clue.http4s.Http4sHttpClient
 import lucuma.core.enums.Site
 import lucuma.refined.*
-import lucuma.schemas.ObservationDB
 import mouse.boolean.*
 import navigate.epics.EpicsService
 import navigate.model.config.ControlStrategy
-import navigate.model.config.NavigateConfiguration
+import navigate.model.config.NavigateEngineConfiguration
 import navigate.server.tcs.*
-import org.http4s.AuthScheme
-import org.http4s.Credentials
-import org.http4s.Headers
 import org.http4s.client.Client
-import org.http4s.headers.Authorization
-import org.typelevel.log4cats.Logger
 
 case class Systems[F[_]](
   odb:       OdbProxy[F],
@@ -35,34 +26,19 @@ case class Systems[F[_]](
 )
 
 object Systems {
-  def build[F[_]: {Async, Logger, Http4sHttpBackend, Dispatcher, Parallel}](
+  def build[F[_]: {Async, Dispatcher, Parallel}](
     site:     Site,
     client:   Client[F],
-    conf:     NavigateConfiguration,
+    conf:     NavigateEngineConfiguration,
     epicsSrv: EpicsService[F]
   ): Resource[F, Systems[F]] = {
-    val tops = decodeTops(conf.navigateEngine.tops)
+    val tops = decodeTops(conf.tops)
 
     // These are placeholders.
-    def buildOdbProxy: Resource[F, OdbProxy[F]] =
-      val odb = for
-        given FetchClient[F, ObservationDB] <-
-          Http4sHttpClient.of[F, ObservationDB](
-            conf.navigateEngine.odb,
-            "ODB",
-            Headers(
-              Authorization(Credentials.Token(AuthScheme.Bearer, conf.lucumaSSO.serviceToken))
-            )
-          )
-        odbCommands                         <-
-          if (conf.navigateEngine.odbNotifications)
-            OdbProxy.OdbCommandsImpl[F].pure[F]
-          else new OdbProxy.DummyOdbCommands[F].pure[F]
-      yield OdbProxy[F](odbCommands)
-      Resource.eval(odb)
+    def buildOdbProxy: Resource[F, OdbProxy[F]] = Resource.eval(OdbProxy.build)
 
     def buildTcsSouthController: Resource[F, TcsSouthController[F]] =
-      if (conf.navigateEngine.systemControl.tcs === ControlStrategy.FullControl)
+      if (conf.systemControl.tcs === ControlStrategy.FullControl)
         for {
           tcs  <- TcsEpicsSystem.build(epicsSrv, tops)
           p1   <- WfsEpicsSystem.build(
@@ -95,16 +71,14 @@ object Systems {
           r    <-
             Resource.eval(
               TcsSouthControllerEpics
-                .build(EpicsSystems(tcs, p1, p2, oi, mcs, scs, crcs, ags, hr),
-                       conf.navigateEngine.ioTimeout
-                )
+                .build(EpicsSystems(tcs, p1, p2, oi, mcs, scs, crcs, ags, hr), conf.ioTimeout)
             )
         } yield r
       else
         Resource.eval(TcsSouthControllerSim.build)
 
     def buildTcsNorthController: Resource[F, TcsNorthController[F]] =
-      if (conf.navigateEngine.systemControl.tcs === ControlStrategy.FullControl)
+      if (conf.systemControl.tcs === ControlStrategy.FullControl)
         for {
           tcs  <- TcsEpicsSystem.build(epicsSrv, tops)
           p1   <- WfsEpicsSystem.build(epicsSrv, "PWFS1", readTop(tops, "pwfs1".refined))
@@ -123,7 +97,7 @@ object Systems {
           r    <- Resource.eval(
                     TcsNorthControllerEpics.build(
                       EpicsSystems(tcs, p1, p2, oi, mcs, scs, crcs, ags, hr),
-                      conf.navigateEngine.ioTimeout
+                      conf.ioTimeout
                     )
                   )
         } yield r
