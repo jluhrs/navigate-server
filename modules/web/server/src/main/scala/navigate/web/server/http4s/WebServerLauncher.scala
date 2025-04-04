@@ -8,6 +8,7 @@ import cats.effect.*
 import cats.effect.std.Dispatcher
 import cats.effect.syntax.all.*
 import cats.syntax.all.*
+import clue.http4s.Http4sHttpBackend
 import com.comcast.ip4s.Dns
 import fs2.Stream
 import fs2.compression.Compression
@@ -201,12 +202,15 @@ object WebServerLauncher extends IOApp with LogInitialization {
       httpClient: Client[IO]
     ): Resource[IO, NavigateEngine[IO]] =
       for {
+        backend                        <- Resource.pure(Http4sHttpBackend(httpClient))
         dspt <- Dispatcher.sequential[IO]
         cas  <- CaServiceInit.caInit[IO](conf.navigateEngine)
         sys  <-
           Systems
-            .build[IO](conf.site, httpClient, conf.navigateEngine, cas)(using
+            .build[IO](conf.site, httpClient, conf, cas)(using
               Async[IO],
+              Logger[IO],
+              backend,
               dspt,
               Parallel[IO]
             )
