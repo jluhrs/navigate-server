@@ -70,8 +70,6 @@ val stopNavigateAllCommands  = List(
 addCommandAlias("startNavigateAll", startNavigateAllCommands.mkString(";", ";", ""))
 addCommandAlias("stopNavigateAll", stopNavigateAllCommands.mkString(";", ";", ""))
 
-ThisBuild / scalafixDependencies += "edu.gemini" % "lucuma-schemas_3" % LibraryVersions.lucumaSchemas
-
 //////////////
 // Projects
 //////////////

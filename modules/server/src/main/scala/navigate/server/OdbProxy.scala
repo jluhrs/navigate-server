@@ -4,14 +4,12 @@
 package navigate.server
 
 import cats.Applicative
-import cats.syntax.all.*
 import cats.effect.kernel.Sync
 import clue.FetchClient
 import lucuma.core.enums.SlewStage
 import lucuma.core.model.Observation
 import lucuma.schemas.ObservationDB
 import org.typelevel.log4cats.Logger
-import navigate.queries.ObsQueriesGQL.AddSlewEventMutation
 
 trait OdbProxy[F[_]] {
   def addSlewEvent(
@@ -51,10 +49,7 @@ object OdbProxy {
     client: FetchClient[F, ObservationDB]
   ) extends OdbEventCommands[F] {
 
-    override def addSlewEvent(obsId: Observation.Id, stage: SlewStage): F[Unit] =
-      AddSlewEventMutation[F]
-        .execute(obsId = obsId, stg = stage)
-        .void
+    override def addSlewEvent(obsId: Observation.Id, stage: SlewStage): F[Unit] = ???
 
   }
 }

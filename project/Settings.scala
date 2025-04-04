@@ -54,16 +54,16 @@ object Settings {
     val jca = "2.4.10"
 
     // Lucuma
-    val lucumaCore    = "0.121.1"
-    val lucumaSchemas = "0.129.0"
-    val lucumaSSO     = "0.8.8"
+    val lucumaCore    = "0.120.0"
+    val lucumaSchemas = "0.126.0"
+    val lucumaSSO     = "0.8.6"
     val navigateUi    = "0.5.11"
 
     val grackle = "0.24.0"
 
     val graphQLRoutes = "0.8.18"
 
-    val clue = "0.43.1"
+    val clue = "0.35.0"
 
     // Natchez
     val natchez = "0.3.7"
