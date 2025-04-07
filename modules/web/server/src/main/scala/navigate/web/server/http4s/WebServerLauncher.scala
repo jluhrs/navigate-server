@@ -143,7 +143,14 @@ object WebServerLauncher extends IOApp with LogInitialization {
 
 """
     val msg    =
-      s"""Start web server for site ${conf.site} on ${conf.mode} mode, version ${OcsBuildInfo.version}"""
+      s"""Start navigate server
+        |  Site        : ${conf.site}
+        |  Mode        : ${conf.mode} mode
+        |  Version     : ${OcsBuildInfo.version}
+        |  Web server  : ${conf.webServer.host}:${conf.webServer.port}
+        |  External URL: ${conf.webServer.externalBaseUrl}
+        |  ODB         : ${conf.navigateEngine.odb}
+       """.stripMargin
     Logger[F].info(banner + msg)
   }
 
