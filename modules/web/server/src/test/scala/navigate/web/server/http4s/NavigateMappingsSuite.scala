@@ -27,6 +27,7 @@ import lucuma.core.math.Angle
 import lucuma.core.math.Offset
 import lucuma.core.model.M1GuideConfig
 import lucuma.core.model.M2GuideConfig
+import lucuma.core.model.Observation
 import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.Enumerated
 import lucuma.core.util.TimeSpan
@@ -130,7 +131,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   }
 
-  test("Process slew command") {
+  test("Process slew command without obs id") {
     for {
       eng <- buildServer
       log <- Topic[IO, ILoggingEvent]
@@ -222,7 +223,112 @@ class NavigateMappingsSuite extends CatsEffectSuite {
                 |      mode: TRACKING
                 |    }
                 |    instrument: GMOS_NORTH
-                |  }
+                |  },
+                |  obsId: null
+                |) {
+                |  result
+                |} }
+                |""".stripMargin
+             )
+    } yield assert(
+      extractResult[OperationOutcome](r, "slew").exists(_ === OperationOutcome.success)
+    )
+  }
+
+  test("Process slew command with obs id") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      gd  <- Topic[IO, GuideState]
+      gq  <- Topic[IO, GuidersQualityValues]
+      ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
+      lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
+      r   <- mp.compileAndRun(
+               """
+                |mutation { slew (
+                |  slewOptions: {
+                |    zeroChopThrow: true
+                |    zeroSourceOffset: true
+                |    zeroSourceDiffTrack: true
+                |    zeroMountOffset: true
+                |    zeroMountDiffTrack: true
+                |    shortcircuitTargetFilter: true
+                |    shortcircuitMountFilter: true
+                |    resetPointing: true
+                |    stopGuide: true
+                |    zeroGuideOffset: true
+                |    zeroInstrumentOffset: true
+                |    autoparkPwfs1: true
+                |    autoparkPwfs2: true
+                |    autoparkOiwfs: true
+                |    autoparkGems: true
+                |    autoparkAowfs: true
+                |  },
+                |  config: {
+                |    sourceATarget: {
+                |      id: "T0001"
+                |      name: "Dummy"
+                |      sidereal: {
+                |        ra: {
+                |          hms: "21:15:33"
+                |        }
+                |        dec: {
+                |          dms: "-30:26:38"
+                |        }
+                |        epoch:"J2000.000"
+                |     }
+                |      wavelength: {
+                |        nanometers: "400"
+                |      }
+                |    }
+                |    instParams: {
+                |      iaa: {
+                |        degrees: 178.38
+                |      }
+                |      focusOffset: {
+                |         micrometers: 1234
+                |      }
+                |      agName: "gmos"
+                |      origin: {
+                |        x: {
+                |          micrometers: 3012
+                |        }
+                |        y: {
+                |          micrometers: -1234
+                |        }
+                |      }
+                |    }
+                |    oiwfs: {
+                |      target: {
+                |        name: "OiwfsDummy"
+                |        sidereal: {
+                |          ra: {
+                |            hms: "10:11:12"
+                |          }
+                |          dec: {
+                |            dms: "-30:31:32"
+                |          }
+                |          epoch:"J2000.000"
+                |        }
+                |      }
+                |      tracking: {
+                |        nodAchopA: true
+                |        nodAchopB: false
+                |        nodBchopA: false
+                |        nodBchopB: true
+                |      }
+                |    }
+                |    rotator: {
+                |      ipa: {
+                |        degrees: 89.76
+                |      }
+                |      mode: TRACKING
+                |    }
+                |    instrument: GMOS_NORTH
+                |  },
+                |  obsId: "o-2446"
                 |) {
                 |  result
                 |} }
@@ -1610,7 +1716,11 @@ object NavigateMappingsTest {
 
       override def ecsVentGatesMove(gateEast: Double, westGate: Double): IO[Unit] = IO.unit
 
-      override def slew(slewOptions: SlewOptions, config: TcsConfig): IO[Unit] = IO.unit
+      override def slew(
+        slewOptions: SlewOptions,
+        config:      TcsConfig,
+        oid:         Option[Observation.Id]
+      ): IO[Unit] = IO.unit
 
       override def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): IO[Unit] =
         IO.unit

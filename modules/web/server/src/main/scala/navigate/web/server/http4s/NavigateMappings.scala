@@ -21,9 +21,11 @@ import grackle.Result
 import grackle.Schema
 import grackle.TypeRef
 import grackle.Value
+import grackle.Value.AbsentValue
 import grackle.Value.BooleanValue
 import grackle.Value.EnumValue
 import grackle.Value.ListValue
+import grackle.Value.NullValue
 import grackle.Value.ObjectValue
 import grackle.Value.StringValue
 import grackle.circe.CirceMapping
@@ -47,8 +49,10 @@ import lucuma.core.math.RightAscension
 import lucuma.core.math.Wavelength
 import lucuma.core.model.M1GuideConfig
 import lucuma.core.model.M2GuideConfig
+import lucuma.core.model.Observation
 import lucuma.core.model.ProbeGuide
 import lucuma.core.model.TelescopeGuideConfig
+import lucuma.core.util.Gid
 import lucuma.core.util.TimeSpan
 import mouse.boolean.given
 import navigate.model.AcquisitionAdjustment
@@ -215,16 +219,19 @@ class NavigateMappings[F[_]: Sync](
       )
 
   def slew(p: Path, env: Env): F[Result[OperationOutcome]] = (for {
-    so <- env.get[SlewOptions]("slewOptions")(using classTag[SlewOptions])
-    tc <- env.get[TcsConfig]("config")(using classTag[TcsConfig])
+    oid <- env.get[Option[Observation.Id]]("obsId")
+    so  <- env.get[SlewOptions]("slewOptions")
+    tc  <- env.get[TcsConfig]("config")
   } yield server
-    .slew(so, tc)
+    .slew(so, tc, oid)
     .attempt
     .map(x =>
       Result.success(
         x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
       )
-    )).getOrElse(Result.failure[OperationOutcome]("Slew parameters could not be parsed.").pure[F])
+    )).getOrElse(
+    Result.failure[OperationOutcome](s"Slew parameters $env oid could not be parsed.").pure[F]
+  )
 
   def tcsConfig(p: Path, env: Env): F[Result[OperationOutcome]] =
     env
@@ -451,9 +458,28 @@ class NavigateMappings[F[_]: Sync](
       } yield ()
     case (MutationType,
           "slew",
-          List(Binding("slewOptions", ObjectValue(so)), Binding("config", ObjectValue(cf)))
+          List(Binding("slewOptions", ObjectValue(so)),
+               Binding("config", ObjectValue(cf)),
+               Binding("obsId", AbsentValue | NullValue)
+          )
         ) =>
       for {
+        x <-
+          Elab.liftR(parseSlewOptionsInput(so).toResult("Could not parse Slew options parameters."))
+        _ <- Elab.env("slewOptions" -> x)
+        y <- Elab.liftR(parseTcsConfigInput(cf).toResult("Could not parse TCS config parameters."))
+        _ <- Elab.env("config" -> y)
+        _ <- Elab.env("obsId" -> none[Observation.Id])
+      } yield ()
+    case (MutationType,
+          "slew",
+          List(Binding("slewOptions", ObjectValue(so)),
+               Binding("config", ObjectValue(cf)),
+               Binding("obsId", StringValue(oi))
+          )
+        ) =>
+      for {
+        _ <- Elab.env("obsId" -> parseObservationIdInput(oi))
         x <-
           Elab.liftR(parseSlewOptionsInput(so).toResult("Could not parse Slew options parameters."))
         _ <- Elab.env("slewOptions" -> x)
@@ -732,6 +758,9 @@ object NavigateMappings extends GrackleParsers {
 
   }
 
+  def parseObservationIdInput(oi: String): Option[Observation.Id] =
+    parseGid[Observation.Id](oi, "Observation Id").toOption
+
   def parseSlewOptionsInput(l: List[(String, Value)]): Option[SlewOptions] = for {
     zct  <-
       l.collectFirst { case ("zeroChopThrow", BooleanValue(v)) => v }.map(ZeroChopThrow.value(_))
@@ -763,24 +792,7 @@ object NavigateMappings extends GrackleParsers {
     ag   <- l.collectFirst { case ("autoparkGems", BooleanValue(v)) => v }.map(AutoparkGems.value(_))
     aa   <-
       l.collectFirst { case ("autoparkAowfs", BooleanValue(v)) => v }.map(AutoparkAowfs.value(_))
-  } yield SlewOptions(
-    zct,
-    zso,
-    zsdt,
-    zmo,
-    zmdt,
-    stf,
-    smf,
-    rp,
-    sg,
-    zgo,
-    zio,
-    ap1,
-    ap2,
-    ao,
-    ag,
-    aa
-  )
+  } yield SlewOptions(zct, zso, zsdt, zmo, zmdt, stf, smf, rp, sg, zgo, zio, ap1, ap2, ao, ag, aa)
 
   def parseSiderealTarget(
     name:         String,
@@ -827,6 +839,9 @@ object NavigateMappings extends GrackleParsers {
             )
   } yield bt
 
+  def parseGid[A: Gid](s: String, name: String): Either[String, A] =
+    Gid[A].fromString.getOption(s).toRight(s"'$s' is not a valid $name id")
+
   def parseGuideTargetInput(l: List[(String, Value)]): Option[Target] = for {
     nm <- l.collectFirst { case ("name", StringValue(v)) => v }
     bt <- l.collectFirst { case ("sidereal", ObjectValue(v)) => v }
@@ -854,12 +869,7 @@ object NavigateMappings extends GrackleParsers {
     focOffset <- l.collectFirst { case ("focusOffset", ObjectValue(v)) => parseDistance(v) }.flatten
     agName    <- l.collectFirst { case ("agName", StringValue(v)) => v }
     origin    <- l.collectFirst { case ("origin", ObjectValue(v)) => parseOrigin(v) }.flatten
-  } yield InstrumentSpecifics(
-    iaa,
-    focOffset,
-    agName,
-    origin
-  )
+  } yield InstrumentSpecifics(iaa, focOffset, agName, origin)
 
   def parseGuiderConfig(l: List[(String, Value)]): Option[GuiderConfig] = for {
     target   <- l.collectFirst { case ("target", ObjectValue(v)) => parseGuideTargetInput(v) }.flatten
