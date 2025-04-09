@@ -1,5 +1,5 @@
 #import NonEmptyString, Offset, Angle, Sidereal, GuideProbe, TargetId, Nonsidereal from "lucuma/schemas/ObservationDB.graphql"
-#import SiderealInput, OffsetInput, NonsiderealInput, WavelengthInput, AngleInput from "lucuma/schemas/ObservationDB.graphql"
+#import SiderealInput, ObservationId, OffsetInput, NonsiderealInput, WavelengthInput, AngleInput from "lucuma/schemas/ObservationDB.graphql"
 #import Long, BigDecimal, Timestamp, TimeSpanInput from "lucuma/schemas/ObservationDB.graphql"
 #import Instrument from "lucuma/schemas/ObservationDB.graphql"
 
@@ -286,7 +286,7 @@ type Mutation {
     rotatorPark: OperationOutcome!
     rotatorFollow(enable: Boolean!): OperationOutcome!
     scsFollow(enable: Boolean!): OperationOutcome!
-    slew(slewOptions: SlewOptionsInput!, config: TcsConfigInput!): OperationOutcome!
+    slew(slewOptions: SlewOptionsInput!, config: TcsConfigInput!, obsId: ObservationId): OperationOutcome!
     tcsConfig(config: TcsConfigInput!): OperationOutcome!
     swapTarget(swapConfig: SwapConfigInput!): OperationOutcome!
     restoreTarget(config: TcsConfigInput!): OperationOutcome!

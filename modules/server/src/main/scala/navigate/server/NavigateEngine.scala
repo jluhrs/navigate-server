@@ -18,11 +18,13 @@ import lucuma.core.enums.Instrument
 import lucuma.core.enums.LightSinkName
 import lucuma.core.enums.MountGuideOption
 import lucuma.core.enums.Site
+import lucuma.core.enums.SlewStage
 import lucuma.core.math.Angle
 import lucuma.core.math.Offset
 import lucuma.core.model.GuideConfig
 import lucuma.core.model.M1GuideConfig
 import lucuma.core.model.M2GuideConfig
+import lucuma.core.model.Observation
 import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.TimeSpan
 import monocle.Lens
@@ -87,7 +89,7 @@ trait NavigateEngine[F[_]] {
   ): F[Unit]
   def ecsVentGatesMove(gateEast:                     Double, westGate:       Double): F[Unit]
   def tcsConfig(config:                              TcsConfig): F[Unit]
-  def slew(slewOptions:                              SlewOptions, tcsConfig: TcsConfig): F[Unit]
+  def slew(slewOptions:                              SlewOptions, tcsConfig: TcsConfig, oid:     Option[Observation.Id]): F[Unit]
   def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): F[Unit]
   def oiwfsTarget(target:                            Target): F[Unit]
   def oiwfsProbeTracking(config:                     TrackingConfig): F[Unit]
@@ -248,17 +250,34 @@ object NavigateEngine {
       )
     )
 
-    override def slew(slewOptions: SlewOptions, tcsConfig: TcsConfig): F[Unit] = command(
-      engine,
-      Slew,
-      transformCommand(
-        Slew,
-        Handler.modify[F, State, ApplyCommandResult](_.focus(_.onSwappedTarget).replace(false)) *>
-          Handler.fromStream(
-            Stream.eval(systems.tcsCommon.slew(slewOptions, tcsConfig))
+    override def slew(
+      slewOptions: SlewOptions,
+      tcsConfig:   TcsConfig,
+      oid:         Option[Observation.Id]
+    ): F[Unit] =
+      Logger[F].info(s"Starting slew to ${oid}") *>
+        command(
+          engine,
+          Slew,
+          transformCommand(
+            Slew,
+            Handler.modify[F, State, ApplyCommandResult](
+              _.focus(_.onSwappedTarget).replace(false)
+            ) *>
+              Handler.fromStream(
+                Stream.eval(
+                  systems.tcsCommon
+                    .slew(slewOptions, tcsConfig)
+                    // if succesful send an event to the odb
+                    .flatTap(_ =>
+                      oid
+                        .map(systems.odb.addSlewEvent(_, SlewStage.StartSlew))
+                        .getOrElse(Applicative[F].unit)
+                    )
+                )
+              )
           )
-      )
-    )
+        )
 
     override def swapTarget(swapConfig: SwapConfig): F[Unit] = command(
       engine,
