@@ -56,7 +56,7 @@ object Settings {
     val lucumaCore    = "0.121.1"
     val lucumaSchemas = "0.129.0"
     val lucumaSSO     = "0.8.8"
-    val navigateUi    = "0.5.12"
+    val navigateUi    = "0.5.13"
 
     val grackle = "0.24.0"
 

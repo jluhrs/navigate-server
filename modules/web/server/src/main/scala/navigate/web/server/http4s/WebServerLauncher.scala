@@ -10,6 +10,7 @@ import cats.effect.syntax.all.*
 import cats.syntax.all.*
 import clue.http4s.Http4sHttpBackend
 import com.comcast.ip4s.Dns
+import edu.gemini.schema.util.SourceResolver
 import fs2.Stream
 import fs2.compression.Compression
 import fs2.io.file.Files
@@ -42,6 +43,7 @@ import pureconfig.ConfigObjectSource
 import pureconfig.ConfigSource
 
 import java.nio.file.Files as JavaFiles
+import java.nio.file.Path
 import java.util.Locale
 import scala.concurrent.duration.*
 
@@ -132,7 +134,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
       .build
   }
 
-  def printBanner[F[_]: Logger](conf: NavigateConfiguration): F[Unit] = {
+  def printBanner[F[_]: Logger](conf: NavigateConfiguration, frontendVersion: String): F[Unit] = {
     val banner = """
     _   __            _             __
    / | / /___ __   __(_)___ _____ _/ /____
@@ -147,6 +149,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
         |  Site        : ${conf.site}
         |  Mode        : ${conf.mode} mode
         |  Version     : ${OcsBuildInfo.version}
+        |  Frontend    : ${frontendVersion}
         |  Web server  : ${conf.webServer.host}:${conf.webServer.port}
         |  External URL: ${conf.webServer.externalBaseUrl}
         |  ODB         : ${conf.navigateEngine.odb}
@@ -200,12 +203,18 @@ object WebServerLauncher extends IOApp with LogInitialization {
     def publishStats[F[_]: Temporal](cs: ClientsSetDb[F]): Stream[F, Unit] =
       Stream.fixedRate[F](10.minute).flatMap(_ => Stream.eval(cs.report))
 
+    val getFrontendVersion: Resource[IO, String] = SourceResolver
+      .fromResource[IO](getClass.getClassLoader())
+      .resolve(Path.of("navigate-ui/version.txt"))
+      .map(_.getLines.mkString("\n").trim())
+
     val navigate: Resource[IO, ExitCode] =
       for {
         _      <- Resource.eval(IO.delay(Locale.setDefault(Locale.ENGLISH)))
         _      <- Resource.eval(configLog[IO]) // Initialize log before the engine is setup
         conf   <- Resource.eval(config[IO].flatMap(loadConfiguration[IO]))
-        _      <- Resource.eval(printBanner(conf))
+        feV    <- getFrontendVersion
+        _      <- Resource.eval(printBanner(conf, feV))
         dsp    <- Dispatcher.sequential[IO]
         cli    <- client(10.seconds)
         topics <- TopicManager.create[IO](dsp)
