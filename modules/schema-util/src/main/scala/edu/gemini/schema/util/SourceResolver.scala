@@ -3,12 +3,13 @@
 
 package edu.gemini.schema.util
 
-import scala.io.Source
-import java.nio.file.Path
+import cats.effect.MonadCancelThrow
 import cats.effect.Resource
 import cats.effect.Sync
 import cats.syntax.all.*
-import cats.effect.MonadCancelThrow
+
+import java.nio.file.Path
+import scala.io.Source
 
 // Trait used to find the schema file
 trait SourceResolver[F[_]] {
@@ -18,9 +19,7 @@ trait SourceResolver[F[_]] {
 object SourceResolver {
 
   def fromResource[F[_]: Sync](classLoader: ClassLoader): SourceResolver[F] = (name: Path) =>
-    Resource.make(Sync[F].delay(Source.fromResource(name.toString, classLoader)))(x =>
-      Sync[F].delay(x.close)
-    )
+    Resource.fromAutoCloseable(Sync[F].blocking(Source.fromResource(name.toString, classLoader)))
 
   def fromString[F[_]: Sync](name: Path, content: String): SourceResolver[F] = (n: Path) =>
     if (n === name) Resource.pure(Source.fromString(content))
