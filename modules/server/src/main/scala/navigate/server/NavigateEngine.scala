@@ -584,15 +584,13 @@ object NavigateEngine {
                   cmd.attempt
                     .map(cmdResultToNavigateEvent(cmdType, _))
                     .flatMap(x =>
-                      Logger[F]
-                        .info(s"Command ${cmdType.name} ended with result $x")
-                        .as(
-                          Event(
-                            engine
-                              .modifyState(_.focus(_.commandInProgress).replace(None))
-                              .as(x.some)
-                          )
+                      logEvent(x, cmdType).as(
+                        Event(
+                          engine
+                            .modifyState(_.focus(_.commandInProgress).replace(None))
+                            .as(x.some)
                         )
+                      )
                     )
               )
             )
@@ -667,21 +665,25 @@ object NavigateEngine {
           ) *>
             ss.attempt.map(cmdResultToNavigateEvent(cmdType, _)).flatMap { x =>
               Stream.eval(
-                Logger[F]
-                  .info(s"Command ${cmdType.name} ended with result $x")
-                  .as(
-                    Event(
-                      Handler
-                        .modify[F, State, Event[F, State, NavigateEvent]](
-                          _.focus(_.commandInProgress).replace(None)
-                        )
-                        .as(x.some)
-                    )
+                logEvent(x, cmdType).as(
+                  Event(
+                    Handler
+                      .modify[F, State, Event[F, State, NavigateEvent]](
+                        _.focus(_.commandInProgress).replace(None)
+                      )
+                      .as(x.some)
                   )
+                )
               )
             }
         }
       )
     })
+
+  private def logEvent[F[_]: Logger](x: NavigateEvent, cmdType: NavigateCommand): F[Unit] =
+    val logMessage = s"Command ${cmdType.name} ended with result $x"
+    x match
+      case _: CommandFailure => Logger[F].error(logMessage)
+      case _                 => Logger[F].info(logMessage)
 
 }
