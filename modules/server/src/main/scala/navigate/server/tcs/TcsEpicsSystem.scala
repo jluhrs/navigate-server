@@ -403,9 +403,9 @@ object TcsEpicsSystem {
                     .getOrElse(((v, t).some, none))
                 }
                 .map(_._2)
-                .flattenOption
+                .unNone
                 .filter(_ === "TRUE")
-                .take(1)
+                .head
                 .timeout(timeout)
                 .compile
                 .drain

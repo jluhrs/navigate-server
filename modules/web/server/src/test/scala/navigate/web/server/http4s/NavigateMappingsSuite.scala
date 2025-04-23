@@ -1871,7 +1871,7 @@ object NavigateMappingsTest {
         .downField("m2Inputs")
         .as[List[String]]
         .toOption
-        .map(_.map(x => Enumerated[TipTiltSource].fromTag(x.toLowerCase.capitalize)).flattenOption)
+        .map(_.flatMap(x => Enumerated[TipTiltSource].fromTag(x.toLowerCase.capitalize)))
       val m1 = h
         .downField("m1Input")
         .as[String]
