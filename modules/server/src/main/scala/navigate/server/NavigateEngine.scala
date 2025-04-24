@@ -269,11 +269,7 @@ object NavigateEngine {
                   systems.tcsCommon
                     .slew(slewOptions, tcsConfig)
                     // if succesful send an event to the odb
-                    .flatTap(_ =>
-                      oid
-                        .map(systems.odb.addSlewEvent(_, SlewStage.StartSlew))
-                        .getOrElse(Applicative[F].unit)
-                    )
+                    .flatTap(_ => oid.traverse_(systems.odb.addSlewEvent(_, SlewStage.StartSlew)))
                 )
               )
           )
@@ -442,7 +438,7 @@ object NavigateEngine {
           (ss.some, if (acc.contains(ss)) none else ss.some)
         }
         .map(_._2)
-        .flattenOption
+        .unNone
 
     override def m1Park: F[Unit] = simpleCommand(
       engine,
@@ -583,16 +579,13 @@ object NavigateEngine {
                 Logger[F].info(s"Start command ${cmdType.name}") *>
                   cmd.attempt
                     .map(cmdResultToNavigateEvent(cmdType, _))
-                    .flatMap(x =>
-                      Logger[F]
-                        .info(s"Command ${cmdType.name} ended with result $x")
-                        .as(
-                          Event(
-                            engine
-                              .modifyState(_.focus(_.commandInProgress).replace(None))
-                              .as(x.some)
-                          )
-                        )
+                    .flatTap(logEvent(_, cmdType))
+                    .map(x =>
+                      Event(
+                        engine
+                          .modifyState(_.focus(_.commandInProgress).replace(None))
+                          .as(x.some)
+                      )
                     )
               )
             )
@@ -665,23 +658,26 @@ object NavigateEngine {
           Stream.eval(
             Logger[F].info(s"Start command ${cmdType.name}")
           ) *>
-            ss.attempt.map(cmdResultToNavigateEvent(cmdType, _)).flatMap { x =>
-              Stream.eval(
-                Logger[F]
-                  .info(s"Command ${cmdType.name} ended with result $x")
-                  .as(
-                    Event(
-                      Handler
-                        .modify[F, State, Event[F, State, NavigateEvent]](
-                          _.focus(_.commandInProgress).replace(None)
-                        )
-                        .as(x.some)
+            ss.attempt
+              .map(cmdResultToNavigateEvent(cmdType, _))
+              .evalTap(logEvent(_, cmdType))
+              .map { x =>
+                Event(
+                  Handler
+                    .modify[F, State, Event[F, State, NavigateEvent]](
+                      _.focus(_.commandInProgress).replace(None)
                     )
-                  )
-              )
-            }
+                    .as(x.some)
+                )
+              }
         }
       )
     })
+
+  private def logEvent[F[_]: Logger](x: NavigateEvent, cmdType: NavigateCommand): F[Unit] =
+    val logMessage = s"Command ${cmdType.name} ended with result $x"
+    x match
+      case _: CommandFailure => Logger[F].error(logMessage)
+      case _                 => Logger[F].info(logMessage)
 
 }

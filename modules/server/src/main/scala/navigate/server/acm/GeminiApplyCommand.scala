@@ -164,7 +164,7 @@ object GeminiApplyCommand {
           }
       }
       .evalMap(_._2)
-      .flattenOption
+      .unNone
       .take(1)
       .compile
       .lastOrError

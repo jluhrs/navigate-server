@@ -5,13 +5,15 @@ package edu.gemini.schema.util
 
 import cats.data.NonEmptySet
 import cats.effect.Sync
-import cats.parse.Parser.*
-import cats.parse.Rfc5234.{alpha, digit, wsp}
 import cats.parse.Parser
+import cats.parse.Parser.*
+import cats.parse.Rfc5234.alpha
+import cats.parse.Rfc5234.digit
+import cats.parse.Rfc5234.wsp
 import cats.syntax.all.*
-import grackle.*
-import eu.timepit.refined.types.string.NonEmptyString
 import eu.timepit.refined.cats.given
+import eu.timepit.refined.types.string.NonEmptyString
+import grackle.*
 
 import java.nio.file.Path
 
@@ -104,14 +106,14 @@ object SchemaStitcher {
       Schema(src) match {
         case Result.Success(b)    =>
           resolveTypes(b.types,
-                       l.toList.map(x => b.types.find(_.name === x.toString)).flattenOption,
+                       l.toList.flatMap(x => b.types.find(_.name === x.toString)),
                        List.empty
           )
             .map(SchemaRenderer.renderTypeDefn)
             .mkString("\n")
         case Result.Warning(_, b) =>
           resolveTypes(b.types,
-                       l.toList.map(x => b.types.find(_.name === x.toString)).flattenOption,
+                       l.toList.flatMap(x => b.types.find(_.name === x.toString)),
                        List.empty
           )
             .map(SchemaRenderer.renderTypeDefn)
@@ -130,10 +132,10 @@ object SchemaStitcher {
         val uniqueNews = newNames.distinct
         val nextVals   = uniqueNews
           .flatMap {
-            case fields: TypeWithFields                => fields.fields.map(_.tpe.underlying.asNamed).flattenOption
+            case fields: TypeWithFields                => fields.fields.flatMap(_.tpe.underlying.asNamed)
             case UnionType(_, _, members, _)           => members
             case InputObjectType(_, _, inputFields, _) =>
-              inputFields.map(_.tpe.underlying.asNamed).flattenOption
+              inputFields.flatMap(_.tpe.underlying.asNamed)
             case _                                     => List.empty
           }
           .map(_.dealias)

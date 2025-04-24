@@ -34,12 +34,12 @@ class TestChannel[F[_]: Temporal, S, A: Eq](s: Ref[F, S], l: Lens[S, State[A]])
       Stream
         .fixedRate(pollingT)
         .zipRight(Stream.eval(s.get.map(x => l.get(x).value)).repeat)
-        .flattenOption
+        .unNone
         .mapAccumulate(none[A]) { case (acc, v) =>
           (v.some, acc.forall(_ =!= v).option(v))
         }
         .map(_._2)
-        .flattenOption
+        .unNone
     )
 
   override def connectionStream(using
@@ -53,7 +53,7 @@ class TestChannel[F[_]: Temporal, S, A: Eq](s: Ref[F, S], l: Lens[S, State[A]])
           (v.some, acc.forall(_ =!= v).option(v))
         }
         .map(_._2)
-        .flattenOption
+        .unNone
     )
 
   override def eventStream(using
