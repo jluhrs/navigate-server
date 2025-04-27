@@ -118,6 +118,7 @@ trait NavigateEngine[F[_]] {
   def getNavigateState: F[NavigateState]
   def getNavigateStateStream: Stream[F, NavigateState]
   def getInstrumentPort(instrument:                  Instrument): F[Option[Int]]
+  def getGuideDemand: F[GuideConfig]
 }
 
 object NavigateEngine {
@@ -517,6 +518,8 @@ object NavigateEngine {
         AcquisitionAdjust(offset, ipa, iaa),
         stateRef.get.flatMap(s => systems.tcsCommon.acquisitionAdj(offset, ipa, iaa)(s.guideConfig))
       )
+
+    override def getGuideDemand: F[GuideConfig] = stateRef.get.map(_.guideConfig)
   }
 
   def build[F[_]: {Temporal, Logger}](

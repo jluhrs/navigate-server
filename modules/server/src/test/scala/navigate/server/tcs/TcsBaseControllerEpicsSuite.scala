@@ -1407,29 +1407,62 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       _        <- ctr.acquisitionAdj(Offset(Offset.P(pOffset), Offset.Q(qOffset)), none, none)(
                     GuideConfig(guideCfg, none)
                   )
-      r        <- st.tcs.get
+      r1       <- st.tcs.get
     } yield {
-      assert(r.inPosition.connected)
-      assert(r.poAdjust.frame.connected)
-      assert(r.poAdjust.size.connected)
-      assert(r.poAdjust.angle.connected)
-      assert(r.poAdjust.vt.connected)
-      r.poAdjust.frame.value
+      assert(r1.inPosition.connected)
+      assert(r1.poAdjust.frame.connected)
+      assert(r1.poAdjust.size.connected)
+      assert(r1.poAdjust.angle.connected)
+      assert(r1.poAdjust.vt.connected)
+      r1.poAdjust.frame.value
         .flatMap(_.toIntOption)
         .map(x => assertEquals(x, expFrame))
         .getOrElse(fail("No value for parameter frame"))
-      r.poAdjust.size.value
+      r1.poAdjust.size.value
         .flatMap(_.toDoubleOption)
         .map(x => assertEqualsDouble(x, expSize, 1e-6))
         .getOrElse(fail("No value for parameter size"))
-      r.poAdjust.angle.value
+      r1.poAdjust.angle.value
         .flatMap(_.toDoubleOption)
         .map(x => assertEqualsDouble(x, expAngle, 1e-6))
         .getOrElse(fail("No value for parameter angle"))
-      r.poAdjust.vt.value
+      r1.poAdjust.vt.value
         .flatMap(_.toIntOption)
         .map(x => assertEquals(x, expVt))
         .getOrElse(fail("No value for parameter vt"))
+      assert(r1.m1GuideConfig.source.connected)
+      assert(r1.m1Guide.connected)
+      assert(r1.m1GuideConfig.source.connected)
+      assert(r1.m1GuideConfig.frames.connected)
+      assert(r1.m1GuideConfig.weighting.connected)
+      assert(r1.m1GuideConfig.filename.connected)
+      assert(r1.m2Guide.connected)
+      assert(r1.m2GuideConfig.source.connected)
+      assert(r1.m2GuideConfig.beam.connected)
+      assert(r1.m2GuideConfig.filter.connected)
+      assert(r1.m2GuideConfig.samplefreq.connected)
+      assert(r1.m2GuideConfig.reset.connected)
+      assert(r1.m2GuideMode.connected)
+      assert(r1.m2GuideReset.connected)
+      assert(r1.mountGuide.mode.connected)
+      assert(r1.mountGuide.source.connected)
+
+      assertEquals(r1.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
+      assertEquals(r1.m1GuideConfig.source.value, M1Source.OIWFS.tag.toUpperCase.some)
+      assertEquals(r1.m1GuideConfig.frames.value.flatMap(_.toIntOption), 1.some)
+      assertEquals(r1.m1GuideConfig.weighting.value, "none".some)
+      assertEquals(r1.m1GuideConfig.filename.value, "".some)
+      assertEquals(r1.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
+      assertEquals(r1.m2GuideConfig.source.value, TipTiltSource.OIWFS.tag.toUpperCase.some)
+      assertEquals(r1.m2GuideConfig.beam.value, "A".some)
+      assertEquals(r1.m2GuideConfig.filter.value, "raw".some)
+      assertEquals(r1.m2GuideConfig.samplefreq.value.flatMap(_.toDoubleOption), 200.0.some)
+      assertEquals(r1.m2GuideConfig.reset.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.Off.some
+      )
+      assertEquals(r1.m2GuideMode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.On.some
+      )
     }
   }
 

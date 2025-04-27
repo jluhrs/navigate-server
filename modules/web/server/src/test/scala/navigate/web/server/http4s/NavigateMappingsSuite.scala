@@ -25,6 +25,7 @@ import lucuma.core.enums.MountGuideOption
 import lucuma.core.enums.TipTiltSource
 import lucuma.core.math.Angle
 import lucuma.core.math.Offset
+import lucuma.core.model.GuideConfig
 import lucuma.core.model.M1GuideConfig
 import lucuma.core.model.M2GuideConfig
 import lucuma.core.model.Observation
@@ -32,6 +33,7 @@ import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.Enumerated
 import lucuma.core.util.TimeSpan
 import lucuma.core.util.Timestamp
+import monocle.Focus.focus
 import munit.CatsEffectSuite
 import navigate.model.AcquisitionAdjustment
 import navigate.model.NavigateEvent
@@ -1680,6 +1682,7 @@ object NavigateMappingsTest {
              GuidersQualityValues.GuiderQuality(0, false)
            )
          )
+    g <- Ref.of[IO, GuideConfig](GuideConfig.defaultGuideConfig)
   } yield {
     val tcsSouth = new TcsSouthControllerSim[IO](r, p)
     new NavigateEngine[IO] {
@@ -1735,13 +1738,16 @@ object NavigateMappingsTest {
 
       override def rotTrackingConfig(cfg: RotatorTrackConfig): IO[Unit] = IO.unit
 
-      override def enableGuide(config: TelescopeGuideConfig): IO[Unit] = r.update(
-        _.copy(
-          mountOffload = config.mountGuide,
-          m1Guide = config.m1Guide,
-          m2Guide = config.m2Guide
+      override def enableGuide(config: TelescopeGuideConfig): IO[Unit] = {
+        g.update(_.focus(_.tcsGuide).replace(config))
+        r.update(
+          _.copy(
+            mountOffload = config.mountGuide,
+            m1Guide = config.m1Guide,
+            m2Guide = config.m2Guide
+          )
         )
-      )
+      }
 
       override def disableGuide: IO[Unit] = r.update(
         _.copy(
@@ -1804,6 +1810,8 @@ object NavigateMappingsTest {
         iaa:    Option[Angle],
         ipa:    Option[Angle]
       ): IO[Unit] = IO.unit
+
+      override def getGuideDemand: IO[GuideConfig] = g.get
     }
   }
 
