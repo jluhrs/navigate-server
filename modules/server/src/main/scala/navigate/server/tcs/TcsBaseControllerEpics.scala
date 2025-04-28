@@ -1149,7 +1149,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel}](
       disableGuide.whenA(gs.isGuiding && shouldPauseGuide(offset, ipa, iaa)) *>
         applyAcquisitionAdj(offset, ipa, iaa) <*
         enableGuide(guide.tcsGuide).whenA(
-          guide.tcsGuide.isGuiding && shouldPauseGuide(offset, ipa, iaa)
+          guide.tcsGuide.isGuiding && (!gs.isGuiding || shouldPauseGuide(offset, ipa, iaa))
         )
     }
 }
