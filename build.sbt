@@ -205,10 +205,13 @@ lazy val deploy = preventPublication(project.in(file("deploy")))
   .settings(navigateCommonSettings: _*)
   .settings(releaseAppMappings: _*)
   .settings(
-    description          := "Navigate server",
-    Docker / packageName := "gpp-nav",
-    dockerUpdateLatest   := true,
-    dockerUsername       := Some("noirlab")
+    description            := "Navigate server",
+    Docker / packageName   := "gpp-nav",
+    Docker / daemonUserUid := Some("3624"),
+    Docker / daemonUser    := "software",
+    dockerBuildOptions ++= Seq("--platform", "linux/amd64"),
+    dockerUpdateLatest     := true,
+    dockerUsername         := Some("noirlab")
   )
 
 // Mappings for a particular release.
