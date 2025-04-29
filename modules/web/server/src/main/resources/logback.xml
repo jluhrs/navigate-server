@@ -8,74 +8,76 @@
 
  It supports auto reloading scanning every 60s
 -->
-<configuration scan="true" scanPeriod="60 seconds">
-  <logger name="org.http4s" level="INFO"/>
+<configuration scan="true" scanPeriod="60 seconds" debug="true">
+    <logger name="org.http4s" level="INFO" />
 
-  <if condition='property("HOSTNAME").contains("navigate")'>
-    <!-- Configuration when running on the test or production servers -->
-    <then>
-        <!-- Files are rotated daily for up to 90 days -->
-        <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-            <file>/gemsoft/var/log/navigate/navigate.log</file>
-            <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-                <fileNamePattern>/gemsoft/var/log/navigate/navigate.%d{yyyy-MM-dd}.log</fileNamePattern>
-                <maxHistory>90</maxHistory>
-                <totalSizeCap>3GB</totalSizeCap>
-            </rollingPolicy>
-            <encoder>
-              <pattern>%d [%thread] %-5level %logger{35} - %msg %n</pattern>
-            </encoder>
-        </appender>
+    <property name="appEnv" value="${APP_ENV}" />
 
-        <!-- Intermediate async appender for improved performance -->
-        <appender name="ASYNC500" class="ch.qos.logback.classic.AsyncAppender">
-            <queueSize>2000</queueSize>
-            <discardingThreshold>0</discardingThreshold>
-            <appender-ref ref="FILE" />
-        </appender>
+    <if condition='property("appEnv").contains("production")'>
+        <!-- Configuration when running on the test or production servers -->
+        <then>
+            <!-- Files are rotated daily for up to 90 days -->
+            <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+                <file>/gemsoft/var/log/navigate/navigate.log</file>
+                <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+                    <fileNamePattern>/gemsoft/var/log/navigate/navigate.%d{yyyy-MM-dd}.log</fileNamePattern>
+                    <maxHistory>90</maxHistory>
+                    <totalSizeCap>3GB</totalSizeCap>
+                </rollingPolicy>
+                <encoder>
+                    <pattern>%d [%thread] %-5level %logger{35} - %msg %n</pattern>
+                </encoder>
+            </appender>
 
-        <root level="DEBUG">
-            <appender-ref ref="ASYNC500" />
-        </root>
-        <logger name="com.cosylab.epics" level="DEBUG">
-            <appender-ref ref="ASYNC500" />
-        </logger>
-        <logger name="gov.aps.jca" level="DEBUG">
-            <appender-ref ref="ASYNC500" />
-        </logger>
-        <logger name="org.apache.activemq" level="INFO">
-            <appender-ref ref="ASYNC500" />
-        </logger>
-        <logger name="io.netty" level="INFO">
-            <appender-ref ref="ASYNC500" />
-        </logger>
-        <logger name="org.asynchttpclient.netty" level="INFO">
-            <appender-ref ref="ASYNC500" />
-        </logger>
+            <!-- Intermediate async appender for improved performance -->
+            <appender name="ASYNC500" class="ch.qos.logback.classic.AsyncAppender">
+                <queueSize>2000</queueSize>
+                <discardingThreshold>0</discardingThreshold>
+                <appender-ref ref="FILE" />
+            </appender>
 
-    </then>
-    <else>
-        <!-- Configuration for development and local deployment -->
-        <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-            <encoder>
-                <pattern>%d [%thread] %-5level %logger{35} - %msg %n</pattern>
-            </encoder>
-        </appender>
+            <root level="DEBUG">
+                <appender-ref ref="ASYNC500" />
+            </root>
+            <logger name="com.cosylab.epics" level="DEBUG">
+                <appender-ref ref="ASYNC500" />
+            </logger>
+            <logger name="gov.aps.jca" level="DEBUG">
+                <appender-ref ref="ASYNC500" />
+            </logger>
+            <logger name="org.apache.activemq" level="INFO">
+                <appender-ref ref="ASYNC500" />
+            </logger>
+            <logger name="io.netty" level="INFO">
+                <appender-ref ref="ASYNC500" />
+            </logger>
+            <logger name="org.asynchttpclient.netty" level="INFO">
+                <appender-ref ref="ASYNC500" />
+            </logger>
 
-        <logger name="org.apache.activemq" level="INFO">
-            <appender-ref ref="STDOUT" />
-        </logger>
-        <logger name="io.netty" level="INFO">
-            <appender-ref ref="STDOUT" />
-        </logger>
-        <logger name="org.asynchttpclient.netty" level="INFO">
-            <appender-ref ref="STDOUT" />
-        </logger>
+        </then>
+        <else>
+            <!-- Configuration for development and local deployment -->
+            <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+                <encoder>
+                    <pattern>%d [%thread] %-5level %logger{35} - %msg %n</pattern>
+                </encoder>
+            </appender>
 
-        <root level="DEBUG">
-            <appender-ref ref="STDOUT" />
-        </root>
-    </else>
-  </if>
+            <logger name="org.apache.activemq" level="INFO">
+                <appender-ref ref="STDOUT" />
+            </logger>
+            <logger name="io.netty" level="INFO">
+                <appender-ref ref="STDOUT" />
+            </logger>
+            <logger name="org.asynchttpclient.netty" level="INFO">
+                <appender-ref ref="STDOUT" />
+            </logger>
+
+            <root level="DEBUG">
+                <appender-ref ref="STDOUT" />
+            </root>
+        </else>
+    </if>
 
 </configuration>
