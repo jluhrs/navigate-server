@@ -643,6 +643,43 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel}](
         )
     }
 
+  def pauseGuide: F[ApplyCommandResult] = sys.tcsEpics
+    .startCommand(timeout)
+    .m1GuideCommand
+    .state(false)
+    .m2GuideModeCommand
+    .coma(false)
+    .m2GuideCommand
+    .state(false)
+    .mountGuideCommand
+    .mode(false)
+    .probeGuideModeCommand
+    .setMode(None)
+    .post
+    .verifiedRun(ConnectionTimeout)
+
+  def resumeGuide(config: TelescopeGuideConfig): F[ApplyCommandResult] = {
+    val comaVal = config.m2Guide match {
+      case M2GuideConfig.M2GuideOff         => false
+      case M2GuideConfig.M2GuideOn(coma, _) => coma === ComaOption.ComaOn
+    }
+
+    sys.tcsEpics
+      .startCommand(timeout)
+      .m1GuideCommand
+      .state(config.m1Guide =!= M1GuideConfig.M1GuideOff)
+      .m2GuideCommand
+      .state(config.m2Guide =!= M2GuideConfig.M2GuideOff)
+      .m2GuideModeCommand
+      .coma(comaVal)
+      .probeGuideModeCommand
+      .setMode(config.probeGuide)
+      .mountGuideCommand
+      .mode(config.mountGuide === MountGuideOption.MountGuideOn)
+      .post
+      .verifiedRun(ConnectionTimeout)
+  }
+
   def darkFileName(prefix: String, exposureTime: TimeSpan): String =
     if (exposureTime > TimeSpan.unsafeFromMicroseconds(1000000))
       s"${prefix}${math.round(1000.0 / exposureTime.toSeconds.toDouble)}mHz.fits"
@@ -1146,9 +1183,9 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel}](
     guide: GuideConfig
   ): F[ApplyCommandResult] =
     getGuideState.flatMap { gs =>
-      disableGuide.whenA(gs.isGuiding && shouldPauseGuide(offset, ipa, iaa)) *>
+      pauseGuide.whenA(gs.isGuiding && shouldPauseGuide(offset, ipa, iaa)) *>
         applyAcquisitionAdj(offset, ipa, iaa) <*
-        enableGuide(guide.tcsGuide).whenA(
+        resumeGuide(guide.tcsGuide).whenA(
           guide.tcsGuide.isGuiding && (!gs.isGuiding || shouldPauseGuide(offset, ipa, iaa))
         )
     }

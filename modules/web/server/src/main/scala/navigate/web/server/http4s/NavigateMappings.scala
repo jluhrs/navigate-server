@@ -954,13 +954,13 @@ object NavigateMappings extends GrackleParsers {
 
   def parseAcquisitionAdjustment(l: List[(String, Value)]): Option[AcquisitionAdjustment] =
     for {
-      o   <-
+      o  <-
         l.collectFirst { case ("offset", ObjectValue(v)) => parseOffset(v) }.flatten
-      ipa <- l.collectFirst { case ("ipa", ObjectValue(v)) => parseAngle(v) }
-      iaa <- l.collectFirst { case ("iaa", ObjectValue(v)) => parseAngle(v) }
-      cmd  = l.collectFirst { case ("command", Value.EnumValue(v)) =>
-               parseEnumerated[AcquisitionAdjustmentCommand](v)
-             }.flatten
+      ipa = l.collectFirst { case ("ipa", ObjectValue(v)) => parseAngle(v) }.flatten
+      iaa = l.collectFirst { case ("iaa", ObjectValue(v)) => parseAngle(v) }.flatten
+      cmd = l.collectFirst { case ("command", Value.EnumValue(v)) =>
+              parseEnumerated[AcquisitionAdjustmentCommand](v)
+            }.flatten
     } yield cmd.fold(AcquisitionAdjustment(o, ipa, iaa))(AcquisitionAdjustment(o, ipa, iaa, _))
 
 }
