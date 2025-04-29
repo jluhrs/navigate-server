@@ -36,9 +36,9 @@ import scala.concurrent.duration.FiniteDuration
 
 class NavigateEngineSpec extends CatsEffectSuite {
 
-  private given Logger[IO] = Slf4jLogger.getLoggerFromName[IO]("observe-engine")
+  private given Logger[IO] = Slf4jLogger.getLoggerFromName[IO]("navigate-engine")
 
-  test("NavigateEnigine must memorize requested guide configuration.") {
+  test("NavigateEngine must memorize requested guide configuration.") {
 
     val guideCfg = TelescopeGuideConfig(
       mountGuide = MountGuideOption.MountGuideOn,

@@ -55,6 +55,7 @@ import navigate.server.tcs.TcsEpicsSystem.ProbeGuideConfig
 import navigate.server.tcs.TcsEpicsSystem.ProbeTrackingCommand
 import navigate.server.tcs.TcsEpicsSystem.TargetCommand
 import navigate.server.tcs.TcsEpicsSystem.TcsCommands
+import org.typelevel.log4cats.Logger
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.*
@@ -62,7 +63,7 @@ import scala.concurrent.duration.*
 import TcsBaseController.{EquinoxDefault, FixedSystem, SwapConfig, SystemDefault, TcsConfig}
 
 /* This class implements the common TCS commands */
-abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel}](
+abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
   sys:      EpicsSystems[F],
   timeout:  FiniteDuration,
   stateRef: Ref[F, TcsBaseControllerEpics.State]
@@ -1183,10 +1184,22 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel}](
     guide: GuideConfig
   ): F[ApplyCommandResult] =
     getGuideState.flatMap { gs =>
-      pauseGuide.whenA(gs.isGuiding && shouldPauseGuide(offset, ipa, iaa)) *>
+      Logger[F].debug(
+        (gs.isGuiding && shouldPauseGuide(offset, ipa, iaa)).fold("P", "Not p") +
+          s"ausing loops because isGuiding = ${gs.isGuiding} and requirePause = ${shouldPauseGuide(offset, ipa, iaa)}"
+      ) *>
+        pauseGuide.whenA(gs.isGuiding && shouldPauseGuide(offset, ipa, iaa)) *>
         applyAcquisitionAdj(offset, ipa, iaa) <*
-        resumeGuide(guide.tcsGuide).whenA(
-          guide.tcsGuide.isGuiding && (!gs.isGuiding || shouldPauseGuide(offset, ipa, iaa))
+        (
+          Logger[F].debug(
+            (guide.tcsGuide.isGuiding && (!gs.isGuiding || shouldPauseGuide(offset, ipa, iaa)))
+              .fold("R", "Not r") +
+              s"esuming loops because requestedGuide = ${guide.tcsGuide.isGuiding} and wasNotGuiding = ${!gs.isGuiding} or hadToPause = ${shouldPauseGuide(offset, ipa, iaa)}"
+          ) *>
+            resumeGuide(guide.tcsGuide)
+              .whenA(
+                guide.tcsGuide.isGuiding && (!gs.isGuiding || shouldPauseGuide(offset, ipa, iaa))
+              )
         )
     }
 }
