@@ -8,10 +8,11 @@ import cats.effect.Async
 import cats.effect.Ref
 import cats.syntax.all.*
 import navigate.server.ConnectionTimeout
+import org.typelevel.log4cats.Logger
 
 import scala.concurrent.duration.FiniteDuration
 
-class TcsNorthControllerEpics[F[_]: {Async, Parallel}](
+class TcsNorthControllerEpics[F[_]: {Async, Parallel, Logger}](
   sys:      EpicsSystems[F],
   timeout:  FiniteDuration,
   stateRef: Ref[F, TcsBaseControllerEpics.State]
@@ -49,7 +50,7 @@ class TcsNorthControllerEpics[F[_]: {Async, Parallel}](
 
 object TcsNorthControllerEpics {
 
-  def build[F[_]: {Async, Parallel}](
+  def build[F[_]: {Async, Parallel, Logger}](
     sys:     EpicsSystems[F],
     timeout: FiniteDuration
   ): F[TcsNorthControllerEpics[F]] =

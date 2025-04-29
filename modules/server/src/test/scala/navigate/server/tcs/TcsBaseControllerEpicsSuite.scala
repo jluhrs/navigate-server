@@ -48,6 +48,8 @@ import navigate.server.tcs.FollowStatus.Following
 import navigate.server.tcs.FollowStatus.NotFollowing
 import navigate.server.tcs.ParkStatus.NotParked
 import navigate.server.tcs.ParkStatus.Parked
+import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
@@ -63,6 +65,8 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
   private val Tolerance: Double = 1e-6
 
   private def compareDouble(a: Double, b: Double): Boolean = Math.abs(a - b) < Tolerance
+
+  private given Logger[IO] = Slf4jLogger.getLoggerFromName[IO]("navigate-engine")
 
   test("Mount commands") {
     for {
