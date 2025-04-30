@@ -1131,6 +1131,9 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     .post
     .verifiedRun(ConnectionTimeout)
 
+  val SettleTime: FiniteDuration    = FiniteDuration.apply(1, TimeUnit.SECONDS)
+  val AcqAdjTimeout: FiniteDuration = FiniteDuration.apply(10, TimeUnit.SECONDS)
+
   private def applyAcquisitionAdj(
     offset: Offset,
     ipa:    Option[Angle],
@@ -1167,9 +1170,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
            .post
        } else VerifiedEpics.pureF(ApplyCommandResult.Completed)).verifiedRun(ConnectionTimeout) <*
       (if (Math.abs(size) > 1e-6 || (ipa.isDefined && iaa.isDefined))
-         sys.tcsEpics.status.waitInPosition(FiniteDuration.apply(1, TimeUnit.SECONDS),
-                                            FiniteDuration.apply(5, TimeUnit.SECONDS)
-         )
+         sys.tcsEpics.status.waitInPosition(SettleTime, AcqAdjTimeout)
        else VerifiedEpics.unit[F, F]).verifiedRun(ConnectionTimeout)
 
   }
