@@ -341,6 +341,89 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     )
   }
 
+  test("Process slew command with azimuth/elevation target") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      gd  <- Topic[IO, GuideState]
+      gq  <- Topic[IO, GuidersQualityValues]
+      ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
+      lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
+      r   <- mp.compileAndRun(
+               """
+          |mutation { slew (
+          |  slewOptions: {
+          |    zeroChopThrow: true
+          |    zeroSourceOffset: true
+          |    zeroSourceDiffTrack: true
+          |    zeroMountOffset: true
+          |    zeroMountDiffTrack: true
+          |    shortcircuitTargetFilter: true
+          |    shortcircuitMountFilter: true
+          |    resetPointing: true
+          |    stopGuide: true
+          |    zeroGuideOffset: true
+          |    zeroInstrumentOffset: true
+          |    autoparkPwfs1: true
+          |    autoparkPwfs2: true
+          |    autoparkOiwfs: true
+          |    autoparkGems: true
+          |    autoparkAowfs: true
+          |  },
+          |  config: {
+          |    sourceATarget: {
+          |      id: "T0001"
+          |      name: "Dummy"
+          |      azel: {
+          |        azimuth: {
+          |          dms: "01:15:33"
+          |        }
+          |        elevation: {
+          |          dms: "-30:26:38"
+          |        }
+          |     }
+          |      wavelength: {
+          |        nanometers: "400"
+          |      }
+          |    }
+          |    instParams: {
+          |      iaa: {
+          |        degrees: 178.38
+          |      }
+          |      focusOffset: {
+          |         micrometers: 1234
+          |      }
+          |      agName: "gmos"
+          |      origin: {
+          |        x: {
+          |          micrometers: 3012
+          |        }
+          |        y: {
+          |          micrometers: -1234
+          |        }
+          |      }
+          |    }
+          |    rotator: {
+          |      ipa: {
+          |        degrees: 89.76
+          |      }
+          |      mode: TRACKING
+          |    }
+          |    instrument: GMOS_NORTH
+          |  },
+          |  obsId: null
+          |) {
+          |  result
+          |} }
+          |""".stripMargin
+             )
+    } yield assert(
+      extractResult[OperationOutcome](r, "slew").exists(_ === OperationOutcome.success)
+    )
+  }
+
   test("Process TCS configure command") {
     for {
       eng <- buildServer

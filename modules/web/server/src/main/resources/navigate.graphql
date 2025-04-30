@@ -9,6 +9,7 @@ input TargetPropertiesInput {
   name: NonEmptyString!
   sidereal: SiderealInput
   nonsidereal: NonsiderealInput
+  azel: AzElTargetInput
   wavelength: WavelengthInput
 }
 
@@ -26,6 +27,11 @@ type Distance {
 input DistanceInput {
     micrometers: Long
     millimeters: BigDecimal
+}
+
+input AzElTargetInput {
+    azimuth: AngleInput!
+    elevation: AngleInput!
 }
 
 type PointOrigin {

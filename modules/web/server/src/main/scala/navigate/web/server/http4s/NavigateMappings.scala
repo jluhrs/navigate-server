@@ -818,6 +818,22 @@ object NavigateMappings extends GrackleParsers {
     l:    List[(String, Value)]
   ): Option[Target.SiderealTarget] = none
 
+  def parseAzElTarget(
+    name: String,
+    w:    Option[Wavelength],
+    l:    List[(String, Value)]
+  ): Option[Target.AzElTarget] = for {
+    az <- l.collectFirst { case ("azimuth", ObjectValue(v)) => parseAngle(v) }.flatten
+    el <- l.collectFirst { case ("elevation", ObjectValue(v)) => parseAngle(v) }.flatten
+  } yield Target.AzElTarget(
+    name,
+    w,
+    Target.AzElCoordinates(
+      Target.Azimuth(az),
+      Target.Elevation(el)
+    )
+  )
+
   def parseEphemerisTarget(
     name: String,
     w:    Option[Wavelength],
@@ -836,6 +852,10 @@ object NavigateMappings extends GrackleParsers {
             .orElse(
               l.collectFirst { case ("nonsidereal", ObjectValue(v)) => v }
                 .flatMap(parseNonSiderealTarget(nm, wv, _))
+            )
+            .orElse(
+              l.collectFirst { case ("azel", ObjectValue(v)) => v }
+                .flatMap(parseAzElTarget(nm, wv, _))
             )
   } yield bt
 
