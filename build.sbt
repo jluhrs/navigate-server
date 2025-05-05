@@ -137,7 +137,8 @@ lazy val navigate_web_server = project
     reStart / mainClass := Some("navigate.web.server.http4s.WebServerLauncher"),
     // Don't include configuration files in the JAR. We want them outside, so they are editable.
     Compile / packageBin / mappings ~= {
-      _.filterNot(f => f._1.getName.endsWith(".conf") || f._1.getName.endsWith("logback.xml"))
+      // _.filterNot(f => f._1.getName.endsWith(".conf") || f._1.getName.endsWith("logback.xml"))
+      _.filterNot(f => f._1.getName.endsWith("logback.xml"))
     }
   )
   .settings(
@@ -193,44 +194,29 @@ lazy val navigate_server = project
   .dependsOn(epics)
   .dependsOn(stateengine)
 
-/**
- * Project for the navigate server app for development
- */
-lazy val deploy = preventPublication(project.in(file("deploy")))
-  .dependsOn(navigate_web_server)
-  .enablePlugins(NoPublishPlugin)
-  .enablePlugins(DockerPlugin)
-  .enablePlugins(JavaServerAppPackaging)
-  .enablePlugins(GitBranchPrompt)
-  .settings(navigateCommonSettings: _*)
-  .settings(releaseAppMappings: _*)
-  .settings(
-    description            := "Navigate server",
-    Docker / packageName   := "gpp-nav",
-    Docker / daemonUserUid := Some("3624"),
-    Docker / daemonUser    := "software",
-    dockerBuildOptions ++= Seq("--platform", "linux/amd64"),
-    dockerUpdateLatest     := true,
-    dockerUsername         := Some("noirlab")
-  )
-
 // Mappings for a particular release.
-lazy val releaseAppMappings = Seq(
+lazy val deployedAppMappings = Seq(
   // Copy the resource directory, with customized configuration files, but first remove existing mappings.
   Universal / mappings := { // maps =>
-    val resourceDir         = (Compile / resourceDirectory).value
-    val resourceDirMappings =
-      directory(resourceDir).map(path => path._1 -> path._1.relativeTo(resourceDir).get.getPath)
-    val resourceDirFiles    = resourceDirMappings.map(_._2)
-    (Universal / mappings).value.filterNot(map => resourceDirFiles.contains(map._2)) ++
-      resourceDirMappings
+    // val resourceDir         = (Compile / resourceDirectory).value
+    // val resourceDirMappings =
+    //   directory(resourceDir).map(path => path._1 -> path._1.relativeTo(resourceDir).get.getPath)
+    // val resourceDirFiles    = resourceDirMappings.map(_._2)
+    // (Universal / mappings).value.filterNot(map => resourceDirFiles.contains(map._2)) ++
+    //   resourceDirMappings
+    val siteConfigDir: File                     = (ThisProject / baseDirectory).value / "conf"
+    val siteConfigMappings: Seq[(File, String)] = directory(siteConfigDir).map(path =>
+      path._1 -> ("conf/" + path._1.relativeTo(siteConfigDir).get.getPath)
+    )
+    // clientMappings ++ siteConfigMappings
+    siteConfigMappings
   }
 )
 
 /**
  * Common settings for the Navigate instances
  */
-lazy val navigateCommonSettings = Seq(
+lazy val deployedAppSettings = Seq(
   // Main class for launching
   Compile / mainClass           := Some("navigate.web.server.http4s.WebServerLauncher"),
   // This is important to keep the file generation order correctly
@@ -270,4 +256,24 @@ lazy val navigateCommonSettings = Seq(
     "-J-XX:HeapDumpPath=/tmp",
     "-J-Xrunjdwp:transport=dt_socket,address=8457,server=y,suspend=n"
   )
-) ++ commonSettings
+) ++ deployedAppMappings ++ commonSettings
+
+/**
+ * Project for the navigate server app for development
+ */
+lazy val deploy = preventPublication(project.in(file("deploy")))
+  .dependsOn(navigate_web_server)
+  .enablePlugins(NoPublishPlugin)
+  .enablePlugins(DockerPlugin)
+  .enablePlugins(JavaServerAppPackaging)
+  .enablePlugins(GitBranchPrompt)
+  .settings(deployedAppSettings: _*)
+  .settings(
+    description            := "Navigate server",
+    Docker / packageName   := "gpp-nav-server",
+    Docker / daemonUserUid := Some("3624"),
+    Docker / daemonUser    := "software",
+    dockerBuildOptions ++= Seq("--platform", "linux/amd64"),
+    dockerUpdateLatest     := true,
+    dockerUsername         := Some("noirlab")
+  )
