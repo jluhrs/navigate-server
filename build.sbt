@@ -197,18 +197,11 @@ lazy val navigate_server = project
 // Mappings for a particular release.
 lazy val deployedAppMappings = Seq(
   // Copy the resource directory, with customized configuration files, but first remove existing mappings.
-  Universal / mappings := { // maps =>
-    // val resourceDir         = (Compile / resourceDirectory).value
-    // val resourceDirMappings =
-    //   directory(resourceDir).map(path => path._1 -> path._1.relativeTo(resourceDir).get.getPath)
-    // val resourceDirFiles    = resourceDirMappings.map(_._2)
-    // (Universal / mappings).value.filterNot(map => resourceDirFiles.contains(map._2)) ++
-    //   resourceDirMappings
+  Universal / mappings ++= { // maps =>
     val siteConfigDir: File                     = (ThisProject / baseDirectory).value / "conf"
     val siteConfigMappings: Seq[(File, String)] = directory(siteConfigDir).map(path =>
       path._1 -> ("conf/" + path._1.relativeTo(siteConfigDir).get.getPath)
     )
-    // clientMappings ++ siteConfigMappings
     siteConfigMappings
   }
 )
@@ -218,21 +211,14 @@ lazy val deployedAppMappings = Seq(
  */
 lazy val deployedAppSettings = Seq(
   // Main class for launching
-  Compile / mainClass           := Some("navigate.web.server.http4s.WebServerLauncher"),
-  // This is important to keep the file generation order correctly
-  Universal / parallelExecution := false,
+  Compile / mainClass      := Some("navigate.web.server.http4s.WebServerLauncher"),
   // Name of the launch script
-  executableScriptName          := "navigate-server",
+  executableScriptName     := "navigate-server",
   // Don't create launchers for Windows
-  makeBatScripts                := Seq.empty,
+  makeBatScripts           := Seq.empty,
   // Specify a different name for the config file
-  bashScriptConfigLocation      := Some("${app_home}/../conf/launcher.args"),
+  bashScriptConfigLocation := Some("${app_home}/../conf/launcher.args"),
   bashScriptExtraDefines += """addJava "-Dlogback.configurationFile=${app_home}/../conf/logback.xml"""",
-  // Copy logback.xml to let users customize it on site
-  Universal / mappings += {
-    val f = (navigate_web_server / Compile / resourceDirectory).value / "logback.xml"
-    f -> ("conf/" + f.getName)
-  },
   // Launch options
   Universal / javaOptions ++= Seq(
     // -J params will be added as jvm parameters
