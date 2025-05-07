@@ -11,9 +11,9 @@
 <configuration scan="true" scanPeriod="60 seconds" debug="true">
     <logger name="org.http4s" level="INFO" />
 
-    <property name="appEnv" value="${APP_ENV}" />
+    <property name="appSite" value="${SITE}" />
 
-    <if condition='property("appEnv").contains("production")'>
+    <if condition='property("appSite").contains("production")'>
         <!-- Configuration when running on the test or production servers -->
         <then>
             <!-- Files are rotated daily for up to 90 days -->
