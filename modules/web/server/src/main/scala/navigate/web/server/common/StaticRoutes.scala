@@ -42,7 +42,7 @@ class StaticRoutes[F[_]: {Sync, Compression, Files}]:
   )
 
   def localFile(path: String, req: Request[F]): OptionT[F, Response[F]] =
-    StaticFile.fromResource(NavigateUiBase + path, Some(req))
+    StaticFile.fromPath(fs2.io.file.Path(NavigateUiBase + path), Some(req))
 
   extension (req: Request[F])
     def endsWith(exts: String*): Boolean = exts.exists(req.pathInfo.toString.endsWith)
