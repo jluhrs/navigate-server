@@ -23,7 +23,7 @@ Global / resolvers ++= Resolver.sonatypeOssRepos("public")
 // Uncomment for local testing
 // ThisBuild / resolvers += "Local Repository" at "file://"+Path.userHome.absolutePath+"/.ivy2/local"
 
-ThisBuild / dockerExposedPorts ++= Seq(7070, 7071) // Must match deployed app.conf web-server.port
+ThisBuild / dockerExposedPorts ++= Seq(9090, 9091) // Must match deployed app.conf web-server.port
 ThisBuild / dockerBaseImage := "eclipse-temurin:17-jre"
 
 val mainCond                 = "github.ref == 'refs/heads/main'"
@@ -129,8 +129,7 @@ lazy val navigate_web_server = project
       Http4sCirce,
       GrackleRoutes,
       Natchez,
-      LucumaSchemas,
-      NavigateUi
+      LucumaSchemas
     ) ++
       Http4sClient ++ Http4s ++ PureConfig ++ Logging.value ++ MUnit.value ++ Grackle.value,
     // Supports launching the server in the background
