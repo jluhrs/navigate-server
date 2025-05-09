@@ -56,7 +56,6 @@ object Settings {
     val lucumaCore    = "0.121.2"
     val lucumaSchemas = "0.129.0"
     val lucumaSSO     = "0.8.8"
-    val navigateUi    = "0.5.15"
 
     val grackle = "0.24.0"
 
@@ -177,8 +176,6 @@ object Settings {
       )
     )
     val LucumaSchemas = "edu.gemini" %% "lucuma-schemas" % LibraryVersions.lucumaSchemas
-
-    val NavigateUi = "edu.gemini" % "navigate-ui" % LibraryVersions.navigateUi
 
     val Grackle = Def.setting(
       Seq(
