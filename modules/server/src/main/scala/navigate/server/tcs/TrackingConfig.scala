@@ -8,7 +8,9 @@ case class TrackingConfig(
   nodAchopB: Boolean,
   nodBchopA: Boolean,
   nodBchopB: Boolean
-)
+) {
+  lazy val active: Boolean = nodAchopA || nodAchopB || nodBchopA || nodBchopB
+}
 
 object TrackingConfig {
   val default: TrackingConfig    = TrackingConfig(true, false, false, true)

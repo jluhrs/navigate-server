@@ -18,6 +18,7 @@ import io.circe.Decoder.Result
 import io.circe.DecodingFailure
 import io.circe.Json
 import lucuma.core.enums.ComaOption
+import lucuma.core.enums.GuideProbe
 import lucuma.core.enums.Instrument
 import lucuma.core.enums.LightSinkName
 import lucuma.core.enums.M1Source
@@ -1895,6 +1896,8 @@ object NavigateMappingsTest {
       ): IO[Unit] = IO.unit
 
       override def getGuideDemand: IO[GuideConfig] = g.get
+
+      override def wfsSky(wfs: GuideProbe, period: TimeSpan): IO[Unit] = IO.unit
     }
   }
 

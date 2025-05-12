@@ -218,6 +218,7 @@ object TcsEpicsSystem {
       stabilizationTime: FiniteDuration,
       timeout:           FiniteDuration
     ): VerifiedEpics[F, F, Unit]
+    def waitOiwfsSky(timeout: FiniteDuration): VerifiedEpics[F, F, Unit]
     // // `waitAGInPosition` works like `waitInPosition`, but for the AG in-position flag.
     // /* TODO: AG inposition can take up to 1[s] to react to a TCS command. If the value is read before that, it may induce
     //   * an error. A better solution is to detect the edge, from not in position to in-position.
@@ -405,6 +406,58 @@ object TcsEpicsSystem {
                 .map(_._2)
                 .unNone
                 .filter(_ === "TRUE")
+                .head
+                .timeout(timeout)
+                .compile
+                .drain
+            }
+          })
+        }
+
+        def waitOiwfsSky(timeout: FiniteDuration): VerifiedEpics[F, F, Unit] = {
+          val presV: VerifiedEpics[F,
+                                   Resource[F, *],
+                                   (Stream[F, StreamEvent[BinaryYesNo]], F[BinaryYesNo])
+          ] =
+            for {
+              valStr <-
+                VerifiedEpics.eventStream(channels.telltale, channels.guide.oiwfsIntegrating)
+              valRdr <- VerifiedEpics
+                          .readChannel(channels.telltale, channels.guide.oiwfsIntegrating)
+                          .map(Resource.pure[F, F[BinaryYesNo]])
+            } yield for {
+              x <- valStr
+              y <- valRdr
+            } yield (x, y)
+
+          presV.map(_.use { pair =>
+            val (stream, read): (Stream[F, StreamEvent[BinaryYesNo]], F[BinaryYesNo]) = pair
+            Temporal[F].realTime.flatMap { t0 =>
+              stream
+                .flatMap {
+                  case StreamEvent.ValueChanged(v) => Stream(v)
+                  case StreamEvent.Disconnected    =>
+                    Stream.raiseError[F](
+                      new Throwable(s"OIWFS integration status channel disconnected")
+                    )
+                  case _                           => Stream.empty
+                }
+                .keepAlive[F, BinaryYesNo](FiniteDuration(500, TimeUnit.MILLISECONDS), read)
+                .zip(Stream.eval(Temporal[F].realTime.map(_ - t0)).repeat)
+                .dropWhile { case (_, t) => t < FiniteDuration(500, TimeUnit.MILLISECONDS) }
+                .mapAccumulate(none[(BinaryYesNo, FiniteDuration)]) { case (acc, (v, t)) =>
+                  acc
+                    .map { case (vOld, tOld) =>
+                      if (v === vOld)
+                        if (t - tOld >= FiniteDuration(500, TimeUnit.MILLISECONDS)) (acc, v.some)
+                        else (acc, none)
+                      else ((v, t).some, none)
+                    }
+                    .getOrElse(((v, t).some, none))
+                }
+                .map(_._2)
+                .unNone
+                .filter(_ === BinaryYesNo.No)
                 .head
                 .timeout(timeout)
                 .compile
@@ -1040,6 +1093,26 @@ object TcsEpicsSystem {
         tcsEpics.m1Cmds.ao(enable.fold(BinaryOnOffCapitalized.On, BinaryOnOffCapitalized.Off))
       )
     }
+
+    override val targetAdjustCommand: AdjustCommand[F, TcsCommands[F]] =
+      new AdjustCommand[F, TcsCommands[F]] {
+        override def frame(frm: ReferenceFrame): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.targetAdjust.frame)(frm)
+        )
+
+        override def size(sz: Double): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.targetAdjust.size)(sz)
+        )
+
+        override def angle(a: Angle): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.targetAdjust.angle)(a.toDoubleDegrees)
+        )
+
+        override def vtMask(vts: List[VirtualTelescope]): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.targetAdjust.vtMask)(vts)
+        )
+      }
+
     override val originAdjustCommand: AdjustCommand[F, TcsCommands[F]] =
       new AdjustCommand[F, TcsCommands[F]] {
         override def frame(frm: ReferenceFrame): TcsCommands[F] = addParam(
@@ -1056,6 +1129,27 @@ object TcsEpicsSystem {
 
         override def vtMask(vts: List[VirtualTelescope]): TcsCommands[F] = addParam(
           writeCadParam(channels.telltale, channels.originAdjust.vtMask)(vts)
+        )
+      }
+
+    override val targetFilter: TargetFilterCommand[F, TcsCommands[F]] =
+      new TargetFilterCommand[F, TcsCommands[F]] {
+        override def bandwidth(bw: Double): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.targetFilter.bandWidth)(bw)
+        )
+
+        override def maxVelocity(mv: Double): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.targetFilter.bandWidth)(mv)
+        )
+
+        override def grabRadius(gr: Double): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.targetFilter.bandWidth)(gr)
+        )
+
+        override def shortcircuit(sc: ShortcircuitTargetFilter.Type): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.targetFilter.bandWidth)(
+            sc.value.fold("CLOSED", "OPEN")
+          )
         )
       }
   }
@@ -1689,6 +1783,13 @@ object TcsEpicsSystem {
     def vtMask(vts: List[VirtualTelescope]): S
   }
 
+  trait TargetFilterCommand[F[_], +S] {
+    def bandwidth(bw:    Double): S
+    def maxVelocity(mv:  Double): S
+    def grabRadius(gr:   Double): S
+    def shortcircuit(sc: ShortcircuitTargetFilter.Type): S
+  }
+
   trait TcsCommands[F[_]] {
     def post: VerifiedEpics[F, F, ApplyCommandResult]
     val mcsParkCommand: BaseCommand[F, TcsCommands[F]]
@@ -1726,7 +1827,9 @@ object TcsEpicsSystem {
     val scienceFoldCommands: AgMechCommands[F, ScienceFold.Position, TcsCommands[F]]
     val aoFoldCommands: AgMechCommands[F, AoFoldPosition, TcsCommands[F]]
     val m1Commands: M1Commands[F, TcsCommands[F]]
+    val targetAdjustCommand: AdjustCommand[F, TcsCommands[F]]
     val originAdjustCommand: AdjustCommand[F, TcsCommands[F]]
+    val targetFilter: TargetFilterCommand[F, TcsCommands[F]]
   }
   /*
 

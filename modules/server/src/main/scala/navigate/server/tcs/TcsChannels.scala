@@ -63,7 +63,8 @@ case class TcsChannels[F[_]](
   targetAdjust:         AdjustChannels[F],
   originAdjust:         AdjustChannels[F],
   pointingAdjust:       PointingModelAdjustChannels[F],
-  inPosition:           Channel[F, String]
+  inPosition:           Channel[F, String],
+  targetFilter:         TargetFilterChannels[F]
 )
 
 object TcsChannels {
@@ -641,17 +642,17 @@ object TcsChannels {
   }
 
   case class PointingModelAdjustChannels[F[_]](
-                                                frame: Channel[F, String],
-                                                size:  Channel[F, String],
-                                                angle: Channel[F, String]
-                                              )
+    frame: Channel[F, String],
+    size:  Channel[F, String],
+    angle: Channel[F, String]
+  )
 
   object PointingModelAdjustChannels {
     def build[F[_]](
-                     service: EpicsService[F],
-                     top:     TcsTop,
-                     cadName: String
-                   ): Resource[F, PointingModelAdjustChannels[F]] = for {
+      service: EpicsService[F],
+      top:     TcsTop,
+      cadName: String
+    ): Resource[F, PointingModelAdjustChannels[F]] = for {
       frm <- service.getChannel[String](top.value, s"$cadName.A")
       sze <- service.getChannel[String](top.value, s"$cadName.A")
       ang <- service.getChannel[String](top.value, s"$cadName.A")
@@ -659,6 +660,30 @@ object TcsChannels {
       frm,
       sze,
       ang
+    )
+  }
+
+  case class TargetFilterChannels[F[_]](
+    bandWidth:    Channel[F, String],
+    maxVelocity:  Channel[F, String],
+    grabRadius:   Channel[F, String],
+    shortCircuit: Channel[F, String]
+  )
+
+  object TargetFilterChannels {
+    def build[F[_]](
+      service: EpicsService[F],
+      top:     TcsTop
+    ): Resource[F, TargetFilterChannels[F]] = for {
+      bw <- service.getChannel[String](top.value, "filter1.A")
+      mv <- service.getChannel[String](top.value, "filter1.B")
+      gr <- service.getChannel[String](top.value, "filter1.C")
+      sc <- service.getChannel[String](top.value, "filter1.D")
+    } yield TargetFilterChannels(
+      bw,
+      mv,
+      gr,
+      sc
     )
   }
 
@@ -724,6 +749,7 @@ object TcsChannels {
       oigs <- buildProbeTrackingStateChannels(service, tcsTop, "Oiwfs")
       aogs <- buildProbeTrackingStateChannels(service, tcsTop, "Aowfs")
       inpo <- service.getChannel[String](tcsTop.value, "sad:inPosition.VAL")
+      tf   <- TargetFilterChannels.build(service, tcsTop)
     } yield TcsChannels[F](
       tt,
       tpd,
@@ -767,7 +793,8 @@ object TcsChannels {
       trad,
       orad,
       pmad,
-      inpo
+      inpo,
+      tf
     )
   }
 }
