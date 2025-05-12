@@ -1739,6 +1739,36 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     )
   }
 
+  test("Take WFS sky") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      gd  <- Topic[IO, GuideState]
+      gq  <- Topic[IO, GuidersQualityValues]
+      ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
+      lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
+      p   <- mp.compileAndRun(
+               """
+          |mutation {
+          |  wfsSky(
+          |    wfs: GMOS_OIWFS,
+          |    period: {
+          |      milliseconds: 20
+          |    }
+          |  ) {
+          |    result
+          |  }
+          |}
+          |""".stripMargin
+             )
+    } yield assertEquals(
+      p.hcursor.downField("data").downField("wfsSky").downField("result").as[String].toOption,
+      "SUCCESS".some
+    )
+  }
+
 }
 
 object NavigateMappingsTest {

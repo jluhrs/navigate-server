@@ -411,6 +411,18 @@ class NavigateMappings[F[_]: Sync](
           .failure[OperationOutcome]("acquisitionAdjustment parameters could not be parsed.")
           .pure[F]
       }
+  def wfsSky(p: Path, env: Env): F[Result[OperationOutcome]]                = (for {
+    wfs <- env.get[GuideProbe]("wfs")
+    exp <- env.get[TimeSpan]("period")
+  } yield server
+    .wfsSky(wfs, exp)
+    .attempt
+    .map(x =>
+      Result.success(
+        x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+      )
+    ))
+    .getOrElse(Result.failure[OperationOutcome]("WFS Sky parameters could not be parsed.").pure[F])
 
   def lightpathConfig(p: Path, env: Env): F[Result[OperationOutcome]] = (for {
     from <- env.get[LightSource]("from")
@@ -583,6 +595,24 @@ class NavigateMappings[F[_]: Sync](
         .flatMap { x =>
           Elab.env("adjustment" -> x)
         }
+    case (MutationType,
+          "wfsSky",
+          List(Binding("wfs", EnumValue(wfs)), Binding("period", ObjectValue(fields)))
+        ) =>
+      for {
+        w <- Elab.liftR(
+               parseEnumerated[GuideProbe](wfs).toResult(
+                 "Could not parse wfsSky parameter \"wfs\""
+               )
+             )
+        t <- Elab.liftR(
+               parseTimeSpan(fields).toResult(
+                 "Could not parse wfsSky parameter \"period\""
+               )
+             )
+        _ <- Elab.env("wfs" -> w)
+        _ <- Elab.env("period" -> t)
+      } yield ()
     case (QueryType, "instrumentPort", List(Binding("instrument", EnumValue(ins))))             =>
       Elab
         .liftR(
@@ -590,7 +620,6 @@ class NavigateMappings[F[_]: Sync](
             .toResult("Could not parse instrumentPort parameter \"instrument\"")
         )
         .flatMap(x => Elab.env("instrument" -> x))
-
   }
 
   override val typeMappings: TypeMappings = TypeMappings(
@@ -657,6 +686,9 @@ class NavigateMappings[F[_]: Sync](
           RootEffect.computeEncodable("lightpathConfig")((p, env) => lightpathConfig(p, env)),
           RootEffect.computeEncodable("acquisitionAdjustment") { (p, env) =>
             acquisitionAdjustment(p, env)
+          },
+          RootEffect.computeEncodable("wfsSky") { (p, env) =>
+            wfsSky(p, env)
           }
         )
       ),

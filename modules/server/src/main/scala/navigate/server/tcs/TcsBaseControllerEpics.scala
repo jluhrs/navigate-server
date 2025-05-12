@@ -888,7 +888,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
                     .post
                     .verifiedRun(ConnectionTimeout)
       _        <- sys.tcsEpics.status.waitOiwfsSky(expTimeout).verifiedRun(ConnectionTimeout)
-      _        <- oiwfsObserve(exposureTime)
+      _        <- oiwfsObserve(exposureTime).whenA(oiActive)
     } yield ret
   }
 

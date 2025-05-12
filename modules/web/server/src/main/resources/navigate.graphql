@@ -317,6 +317,7 @@ type Mutation {
     m1LoadNonAoFigure: OperationOutcome!
     lightpathConfig(from: LightSource, to: LightSink): OperationOutcome!
     acquisitionAdjustment(adjustment: AcquisitionAdjustmentInput!): OperationOutcome!
+    wfsSky(wfs: GuideProbe!, period: TimeSpanInput!): OperationOutcome!
 }
 
 type Subscription {
