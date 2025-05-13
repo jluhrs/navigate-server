@@ -414,6 +414,10 @@ object TcsEpicsSystem {
           })
         }
 
+        //  WFS monitoring period
+        val WfsMonitorDelay: FiniteDuration = FiniteDuration(500, TimeUnit.MILLISECONDS)
+        val WfsSettleTime: FiniteDuration   = FiniteDuration(500, TimeUnit.MILLISECONDS)
+
         def waitOiwfsSky(timeout: FiniteDuration): VerifiedEpics[F, F, Unit] = {
           val presV: VerifiedEpics[F,
                                    Resource[F, *],
@@ -442,14 +446,14 @@ object TcsEpicsSystem {
                     )
                   case _                           => Stream.empty
                 }
-                .keepAlive[F, BinaryYesNo](FiniteDuration(500, TimeUnit.MILLISECONDS), read)
+                .keepAlive[F, BinaryYesNo](WfsMonitorDelay, read)
                 .zip(Stream.eval(Temporal[F].realTime.map(_ - t0)).repeat)
-                .dropWhile { case (_, t) => t < FiniteDuration(500, TimeUnit.MILLISECONDS) }
+                .dropWhile { case (_, t) => t < WfsSettleTime }
                 .mapAccumulate(none[(BinaryYesNo, FiniteDuration)]) { case (acc, (v, t)) =>
                   acc
                     .map { case (vOld, tOld) =>
                       if (v === vOld)
-                        if (t - tOld >= FiniteDuration(500, TimeUnit.MILLISECONDS)) (acc, v.some)
+                        if (t - tOld >= WfsSettleTime) (acc, v.some)
                         else (acc, none)
                       else ((v, t).some, none)
                     }

@@ -853,13 +853,16 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       .targetAdjustCommand
       .angle(Angle.Angle0)
       .targetAdjustCommand
-      .size(size.toSignedDoubleDegrees * 3600.0)
+      .size(size.toSignedDoubleDegrees * DegreesToArcseconds)
       .targetAdjustCommand
       .vtMask(List(VirtualTelescope.SourceA))
       .post
       .verifiedRun(ConnectionTimeout)
 
-  val SkyFrames: Int = 200
+  // Number of frames taken for a Sky image.
+  val SkyFrames: Int   = 200
+  // Offset to take the Sky
+  val SkyOffset: Angle = Angle.fromDoubleArcseconds(60.0)
 
   def takeOiwfsSky(exposureTime: TimeSpan): F[ApplyCommandResult] = {
     val expTimeout: FiniteDuration = FiniteDuration(exposureTime.toMicroseconds,
@@ -905,9 +908,9 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     _  <- disableTargetFilter
     _  <- pauseWfsTracking(pg).verifiedRun(ConnectionTimeout)
     _  <- pauseGuide
-    _  <- skyOffset(Angle.fromMicroarcseconds(60 * 1000000))
+    _  <- skyOffset(SkyOffset)
     r  <- takeOiwfsSky(exposureTime)
-    _  <- skyOffset(Angle.fromMicroarcseconds(-60 * 1000000))
+    _  <- skyOffset(-SkyOffset)
     _  <- resumeGuide(guide.tcsGuide)
     _  <- resumeWfsTracking(pg).verifiedRun(ConnectionTimeout)
   } yield r
@@ -1268,17 +1271,18 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
   val SettleTime: FiniteDuration    = FiniteDuration.apply(1, TimeUnit.SECONDS)
   val AcqAdjTimeout: FiniteDuration = FiniteDuration.apply(10, TimeUnit.SECONDS)
 
+  val DegreesToArcseconds: Double = 60.0 * 60.0
+
   private def applyAcquisitionAdj(
     offset: Offset,
     ipa:    Option[Angle],
     iaa:    Option[Angle]
   ): F[ApplyCommandResult] = {
-    val degreesToArcseconds: Double = 60.0 * 60.0
-    val size: Double                = Math.sqrt(
-      Math.pow(offset.p.toAngle.toSignedDoubleDegrees * degreesToArcseconds, 2.0)
-        + Math.pow(offset.q.toAngle.toSignedDoubleDegrees * degreesToArcseconds, 2.0)
+    val size: Double = Math.sqrt(
+      Math.pow(offset.p.toAngle.toSignedDoubleDegrees * DegreesToArcseconds, 2.0)
+        + Math.pow(offset.q.toAngle.toSignedDoubleDegrees * DegreesToArcseconds, 2.0)
     )
-    val angle: Angle                = Angle.fromDoubleRadians(
+    val angle: Angle = Angle.fromDoubleRadians(
       Math.atan2(offset.p.toSignedDoubleRadians, -offset.q.toSignedDoubleRadians)
     )
 
