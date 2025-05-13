@@ -53,9 +53,9 @@ object Settings {
     val jca = "2.4.10"
 
     // Lucuma
-    val lucumaCore    = "0.121.2"
-    val lucumaSchemas = "0.129.0"
-    val lucumaSSO     = "0.8.8"
+    val lucumaCore    = "0.127.1"
+    val lucumaSchemas = "0.133.0"
+    val lucumaSSO     = "0.8.13"
 
     val grackle = "0.24.0"
 
@@ -64,7 +64,7 @@ object Settings {
     val clue = "0.43.1"
 
     // Natchez
-    val natchez = "0.3.7"
+    val natchez = "0.3.8"
   }
 
   /**

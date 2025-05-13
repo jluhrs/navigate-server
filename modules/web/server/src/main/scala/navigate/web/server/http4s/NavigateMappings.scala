@@ -795,35 +795,35 @@ object NavigateMappings extends GrackleParsers {
 
   def parseSlewOptionsInput(l: List[(String, Value)]): Option[SlewOptions] = for {
     zct  <-
-      l.collectFirst { case ("zeroChopThrow", BooleanValue(v)) => v }.map(ZeroChopThrow.value(_))
+      l.collectFirst { case ("zeroChopThrow", BooleanValue(v)) => v }.map(ZeroChopThrow(_))
     zso  <- l.collectFirst { case ("zeroSourceOffset", BooleanValue(v)) => v }
-              .map(ZeroSourceOffset.value(_))
+              .map(ZeroSourceOffset(_))
     zsdt <- l.collectFirst { case ("zeroSourceDiffTrack", BooleanValue(v)) => v }
-              .map(ZeroSourceDiffTrack.value(_))
+              .map(ZeroSourceDiffTrack(_))
     zmo  <- l.collectFirst { case ("zeroMountOffset", BooleanValue(v)) => v }
-              .map(ZeroMountOffset.value(_))
+              .map(ZeroMountOffset(_))
     zmdt <- l.collectFirst { case ("zeroMountDiffTrack", BooleanValue(v)) => v }
-              .map(ZeroMountDiffTrack.value(_))
+              .map(ZeroMountDiffTrack(_))
     stf  <- l.collectFirst { case ("shortcircuitTargetFilter", BooleanValue(v)) => v }
-              .map(ShortcircuitTargetFilter.value(_))
+              .map(ShortcircuitTargetFilter(_))
     smf  <- l.collectFirst { case ("shortcircuitMountFilter", BooleanValue(v)) => v }
-              .map(ShortcircuitMountFilter.value(_))
+              .map(ShortcircuitMountFilter(_))
     rp   <-
-      l.collectFirst { case ("resetPointing", BooleanValue(v)) => v }.map(ResetPointing.value(_))
-    sg   <- l.collectFirst { case ("stopGuide", BooleanValue(v)) => v }.map(StopGuide.value(_))
+      l.collectFirst { case ("resetPointing", BooleanValue(v)) => v }.map(ResetPointing(_))
+    sg   <- l.collectFirst { case ("stopGuide", BooleanValue(v)) => v }.map(StopGuide(_))
     zgo  <- l.collectFirst { case ("zeroGuideOffset", BooleanValue(v)) => v }
-              .map(ZeroGuideOffset.value(_))
+              .map(ZeroGuideOffset(_))
     zio  <- l.collectFirst { case ("zeroInstrumentOffset", BooleanValue(v)) => v }
-              .map(ZeroInstrumentOffset.value(_))
+              .map(ZeroInstrumentOffset(_))
     ap1  <-
-      l.collectFirst { case ("autoparkPwfs1", BooleanValue(v)) => v }.map(AutoparkPwfs1.value(_))
+      l.collectFirst { case ("autoparkPwfs1", BooleanValue(v)) => v }.map(AutoparkPwfs1(_))
     ap2  <-
-      l.collectFirst { case ("autoparkPwfs2", BooleanValue(v)) => v }.map(AutoparkPwfs2.value(_))
+      l.collectFirst { case ("autoparkPwfs2", BooleanValue(v)) => v }.map(AutoparkPwfs2(_))
     ao   <-
-      l.collectFirst { case ("autoparkOiwfs", BooleanValue(v)) => v }.map(AutoparkOiwfs.value(_))
-    ag   <- l.collectFirst { case ("autoparkGems", BooleanValue(v)) => v }.map(AutoparkGems.value(_))
+      l.collectFirst { case ("autoparkOiwfs", BooleanValue(v)) => v }.map(AutoparkOiwfs(_))
+    ag   <- l.collectFirst { case ("autoparkGems", BooleanValue(v)) => v }.map(AutoparkGems(_))
     aa   <-
-      l.collectFirst { case ("autoparkAowfs", BooleanValue(v)) => v }.map(AutoparkAowfs.value(_))
+      l.collectFirst { case ("autoparkAowfs", BooleanValue(v)) => v }.map(AutoparkAowfs(_))
   } yield SlewOptions(zct, zso, zsdt, zmo, zmdt, stf, smf, rp, sg, zgo, zio, ap1, ap2, ao, ag, aa)
 
   def parseSiderealTarget(
