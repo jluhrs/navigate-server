@@ -54,7 +54,7 @@ object WfsEpicsSystem {
         VerifiedEpics.readChannel(channels.telltale, channels.flux)
       override val centroidDetected: VerifiedEpics[F, F, Boolean] = VerifiedEpics
         .readChannel(channels.telltale, channels.centroidDetected)
-        .flatMap(x => VerifiedEpics.liftF[F, F, Boolean](x.map(_ === 1)))
+        .flatMap(x => VerifiedEpics.liftF[F, F, Boolean](x.map(_ === 0)))
     }
   }
 
