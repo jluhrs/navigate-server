@@ -68,6 +68,9 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
   timeout:  FiniteDuration,
   stateRef: Ref[F, TcsBaseControllerEpics.State]
 ) extends TcsBaseController[F] {
+
+  import TcsBaseControllerEpics.*
+
   override def mcsPark: F[ApplyCommandResult] =
     sys.tcsEpics
       .startCommand(timeout)
@@ -778,6 +781,140 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
         .replace(None)
     )
 
+  def getProbeGuideConfig(chopnod: ProbeGuideConfig[F]): VerifiedEpics[F, F, TrackingConfig] = for {
+    aaf <- chopnod.nodAchopA
+    abf <- chopnod.nodAchopB
+    baf <- chopnod.nodBchopA
+    bbf <- chopnod.nodBchopB
+  } yield for {
+    aa <- aaf
+    ab <- abf
+    ba <- baf
+    bb <- bbf
+  } yield TrackingConfig(aa === BinaryOnOff.On,
+                         ab === BinaryOnOff.On,
+                         ba === BinaryOnOff.On,
+                         bb === BinaryOnOff.On
+  )
+
+  def getProbesGuideConfig: VerifiedEpics[F, F, WfsGuideStates] = for {
+    p1f <- getProbeGuideConfig(sys.tcsEpics.status.pwfs1ProbeGuideConfig)
+    p2f <- getProbeGuideConfig(sys.tcsEpics.status.pwfs2ProbeGuideConfig)
+    oif <- getProbeGuideConfig(sys.tcsEpics.status.oiwfsProbeGuideConfig)
+    aof <- getProbeGuideConfig(sys.tcsEpics.status.aowfsProbeGuideConfig)
+  } yield for {
+    p1 <- p1f
+    p2 <- p2f
+    oi <- oif
+    ao <- aof
+  } yield WfsGuideStates(p1, p2, oi, ao)
+
+  // TODO: Add other WFSs when implemented
+  def pauseWfsTracking(current: WfsGuideStates): VerifiedEpics[F, F, ApplyCommandResult] = {
+    val params = List(
+      current.oiwfs.active.option(
+        setProbeTracking(
+          Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
+            _.oiwfsProbeTrackingCommand
+          ),
+          TrackingConfig.noTracking
+        )
+      )
+    ).flattenOption
+
+    if (params.isEmpty) VerifiedEpics.pureF(ApplyCommandResult.Completed)
+    else
+      params.reduce((a, b) => a.compose(b))(sys.tcsEpics.startCommand(timeout)).post
+  }
+
+  // TODO: Add other WFSs when implemented
+  def resumeWfsTracking(current: WfsGuideStates): VerifiedEpics[F, F, ApplyCommandResult] = {
+    val params = List(
+      current.oiwfs.active.option(
+        setProbeTracking(
+          Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
+            _.oiwfsProbeTrackingCommand
+          ),
+          current.oiwfs
+        )
+      )
+    ).flattenOption
+
+    if (params.isEmpty) VerifiedEpics.pureF(ApplyCommandResult.Completed)
+    else
+      params.reduce((a, b) => a.compose(b))(sys.tcsEpics.startCommand(timeout)).post
+  }
+
+  def skyOffset(size: Angle): F[ApplyCommandResult] =
+    sys.tcsEpics
+      .startCommand(timeout)
+      .targetAdjustCommand
+      .frame(ReferenceFrame.Instrument)
+      .targetAdjustCommand
+      .angle(Angle.Angle0)
+      .targetAdjustCommand
+      .size(size.toSignedDoubleDegrees * DegreesToArcseconds)
+      .targetAdjustCommand
+      .vtMask(List(VirtualTelescope.SourceA))
+      .post
+      .verifiedRun(ConnectionTimeout)
+
+  // Number of frames taken for a Sky image.
+  val SkyFrames: Int   = 200
+  // Offset to take the Sky
+  val SkyOffset: Angle = Angle.fromDoubleArcseconds(60.0)
+
+  def takeOiwfsSky(exposureTime: TimeSpan): F[ApplyCommandResult] = {
+    val expTimeout: FiniteDuration = FiniteDuration(exposureTime.toMicroseconds,
+                                                    TimeUnit.MICROSECONDS
+    ) * (SkyFrames * 1.1).longValue + FiniteDuration.apply(5, TimeUnit.SECONDS)
+
+    for {
+      oiActive <-
+        sys.tcsEpics.status.oiwfsOn.map(_.map(_ === BinaryYesNo.Yes)).verifiedRun(ConnectionTimeout)
+      _        <- oiwfsStopObserve.whenA(oiActive)
+      _        <- sys.tcsEpics
+                    .startCommand(timeout)
+                    .oiWfsCommands
+                    .dark
+                    .filename(darkFileName(oiPrefix, exposureTime))
+                    .post
+                    .verifiedRun(ConnectionTimeout)
+      ret      <- sys.tcsEpics
+                    .startCommand(timeout)
+                    .oiWfsCommands
+                    .observe
+                    .numberOfExposures(SkyFrames)
+                    .oiWfsCommands
+                    .observe
+                    .interval(exposureTime.toSeconds.toDouble)
+                    .post
+                    .verifiedRun(ConnectionTimeout)
+      _        <- sys.tcsEpics.status.waitOiwfsSky(expTimeout).verifiedRun(ConnectionTimeout)
+      _        <- oiwfsObserve(exposureTime).whenA(oiActive)
+    } yield ret
+  }
+
+  def disableTargetFilter: F[ApplyCommandResult] =
+    sys.tcsEpics
+      .startCommand(timeout)
+      .targetFilter
+      .shortcircuit(ShortcircuitTargetFilter(true))
+      .post
+      .verifiedRun(ConnectionTimeout)
+
+  override def oiwfsSky(exposureTime: TimeSpan)(guide: GuideConfig): F[ApplyCommandResult] = for {
+    pg <- getProbesGuideConfig.verifiedRun(ConnectionTimeout)
+    _  <- disableTargetFilter
+    _  <- pauseWfsTracking(pg).verifiedRun(ConnectionTimeout)
+    _  <- pauseGuide
+    _  <- skyOffset(SkyOffset)
+    r  <- takeOiwfsSky(exposureTime)
+    _  <- skyOffset(-SkyOffset)
+    _  <- resumeGuide(guide.tcsGuide)
+    _  <- resumeWfsTracking(pg).verifiedRun(ConnectionTimeout)
+  } yield r
+
   // Time to wait after selecting the OIWFS in the AG Sequencer, to let the values propagate to TCS.
   private val OiwfsSelectionDelay: Duration = 1500.milliseconds
 
@@ -1134,17 +1271,18 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
   val SettleTime: FiniteDuration    = FiniteDuration.apply(1, TimeUnit.SECONDS)
   val AcqAdjTimeout: FiniteDuration = FiniteDuration.apply(10, TimeUnit.SECONDS)
 
+  val DegreesToArcseconds: Double = 60.0 * 60.0
+
   private def applyAcquisitionAdj(
     offset: Offset,
     ipa:    Option[Angle],
     iaa:    Option[Angle]
   ): F[ApplyCommandResult] = {
-    val degreesToArcseconds: Double = 60.0 * 60.0
-    val size: Double                = Math.sqrt(
-      Math.pow(offset.p.toAngle.toSignedDoubleDegrees * degreesToArcseconds, 2.0)
-        + Math.pow(offset.q.toAngle.toSignedDoubleDegrees * degreesToArcseconds, 2.0)
+    val size: Double = Math.sqrt(
+      Math.pow(offset.p.toAngle.toSignedDoubleDegrees * DegreesToArcseconds, 2.0)
+        + Math.pow(offset.q.toAngle.toSignedDoubleDegrees * DegreesToArcseconds, 2.0)
     )
-    val angle: Angle                = Angle.fromDoubleRadians(
+    val angle: Angle = Angle.fromDoubleRadians(
       Math.atan2(offset.p.toSignedDoubleRadians, -offset.q.toSignedDoubleRadians)
     )
 
@@ -1157,13 +1295,13 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       (if (Math.abs(size) > 1e-6) {
          sys.tcsEpics
            .startCommand(timeout)
-           .poAdjustCommand
+           .originAdjustCommand
            .frame(ReferenceFrame.Instrument)
-           .poAdjustCommand
+           .originAdjustCommand
            .size(size)
-           .poAdjustCommand
+           .originAdjustCommand
            .angle(angle)
-           .poAdjustCommand
+           .originAdjustCommand
            .vtMask(
              List(VirtualTelescope.SourceA, VirtualTelescope.SourceB, VirtualTelescope.SourceC)
            )
@@ -1180,7 +1318,6 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       offset.p.toAngle =!= Angle.Angle0 ||
       offset.q.toAngle =!= Angle.Angle0
 
-  import TcsBaseControllerEpics.*
   override def acquisitionAdj(offset: Offset, ipa: Option[Angle], iaa: Option[Angle])(
     guide: GuideConfig
   ): F[ApplyCommandResult] =
@@ -1237,6 +1374,13 @@ object TcsBaseControllerEpics {
       WfsConfigState(None, None)
     )
   }
+
+  case class WfsGuideStates(
+    pwfs1: TrackingConfig,
+    pwfs2: TrackingConfig,
+    oiwfs: TrackingConfig,
+    aowfs: TrackingConfig
+  )
 
   extension (x: TelescopeGuideConfig) {
     def isGuiding: Boolean =

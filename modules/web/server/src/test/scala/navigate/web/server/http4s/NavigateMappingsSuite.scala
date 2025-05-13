@@ -18,6 +18,7 @@ import io.circe.Decoder.Result
 import io.circe.DecodingFailure
 import io.circe.Json
 import lucuma.core.enums.ComaOption
+import lucuma.core.enums.GuideProbe
 import lucuma.core.enums.Instrument
 import lucuma.core.enums.LightSinkName
 import lucuma.core.enums.M1Source
@@ -1738,6 +1739,36 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     )
   }
 
+  test("Take WFS sky") {
+    for {
+      eng <- buildServer
+      log <- Topic[IO, ILoggingEvent]
+      gd  <- Topic[IO, GuideState]
+      gq  <- Topic[IO, GuidersQualityValues]
+      ts  <- Topic[IO, TelescopeState]
+      aa  <- Topic[IO, AcquisitionAdjustment]
+      lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
+      mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, lb)
+      p   <- mp.compileAndRun(
+               """
+          |mutation {
+          |  wfsSky(
+          |    wfs: GMOS_OIWFS,
+          |    period: {
+          |      milliseconds: 20
+          |    }
+          |  ) {
+          |    result
+          |  }
+          |}
+          |""".stripMargin
+             )
+    } yield assertEquals(
+      p.hcursor.downField("data").downField("wfsSky").downField("result").as[String].toOption,
+      "SUCCESS".some
+    )
+  }
+
 }
 
 object NavigateMappingsTest {
@@ -1895,6 +1926,8 @@ object NavigateMappingsTest {
       ): IO[Unit] = IO.unit
 
       override def getGuideDemand: IO[GuideConfig] = g.get
+
+      override def wfsSky(wfs: GuideProbe, period: TimeSpan): IO[Unit] = IO.unit
     }
   }
 

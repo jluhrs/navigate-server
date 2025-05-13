@@ -1414,27 +1414,26 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       r1       <- st.tcs.get
     } yield {
       assert(r1.inPosition.connected)
-      assert(r1.poAdjust.frame.connected)
-      assert(r1.poAdjust.size.connected)
-      assert(r1.poAdjust.angle.connected)
-      assert(r1.poAdjust.vt.connected)
-      r1.poAdjust.frame.value
+      assert(r1.originAdjust.frame.connected)
+      assert(r1.originAdjust.size.connected)
+      assert(r1.originAdjust.angle.connected)
+      assert(r1.originAdjust.vt.connected)
+      r1.originAdjust.frame.value
         .flatMap(_.toIntOption)
         .map(x => assertEquals(x, expFrame))
         .getOrElse(fail("No value for parameter frame"))
-      r1.poAdjust.size.value
+      r1.originAdjust.size.value
         .flatMap(_.toDoubleOption)
         .map(x => assertEqualsDouble(x, expSize, 1e-6))
         .getOrElse(fail("No value for parameter size"))
-      r1.poAdjust.angle.value
+      r1.originAdjust.angle.value
         .flatMap(_.toDoubleOption)
         .map(x => assertEqualsDouble(x, expAngle, 1e-6))
         .getOrElse(fail("No value for parameter angle"))
-      r1.poAdjust.vt.value
+      r1.originAdjust.vt.value
         .flatMap(_.toIntOption)
         .map(x => assertEquals(x, expVt))
         .getOrElse(fail("No value for parameter vt"))
-      assert(r1.m1GuideConfig.source.connected)
       assert(r1.m1Guide.connected)
       assert(r1.m1GuideConfig.source.connected)
       assert(r1.m1GuideConfig.frames.connected)
@@ -1468,6 +1467,47 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
                    BinaryOnOff.On.some
       )
     }
+  }
+
+  test("Take OIWFS sky") {
+    val guideCfg = TelescopeGuideConfig(
+      mountGuide = MountGuideOption.MountGuideOn,
+      m1Guide = M1GuideConfig.M1GuideOn(M1Source.OIWFS),
+      m2Guide = M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
+      dayTimeMode = Some(false),
+      probeGuide = none
+    )
+    val expTime  = TimeSpan.unsafeFromMicroseconds(50000)
+
+    for {
+      x        <- createController()
+      (st, ctr) = x
+      _        <- setOiwfsTrackingState(st.tcs)
+      _        <- ctr.enableGuide(guideCfg)
+      _        <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
+      _        <- ctr.oiwfsSky(expTime)(GuideConfig(guideCfg, none))
+      r1       <- st.tcs.get
+    } yield {
+      assert(r1.oiWfs.dark.connected)
+      assertEquals(r1.oiWfs.dark.value, "data/20Hz.fits".some)
+
+      assert(r1.m1Guide.connected)
+      assert(r1.m1GuideConfig.source.connected)
+      assert(r1.m2Guide.connected)
+      assert(r1.m2GuideConfig.source.connected)
+      assert(r1.m2GuideConfig.beam.connected)
+      assert(r1.m2GuideMode.connected)
+
+      assertEquals(r1.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
+      assertEquals(r1.m1GuideConfig.source.value, M1Source.OIWFS.tag.toUpperCase.some)
+      assertEquals(r1.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
+      assertEquals(r1.m2GuideConfig.source.value, TipTiltSource.OIWFS.tag.toUpperCase.some)
+      assertEquals(r1.m2GuideConfig.beam.value, "A".some)
+      assertEquals(r1.m2GuideMode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.On.some
+      )
+    }
+
   }
 
   case class StateRefs[F[_]](

@@ -14,6 +14,8 @@ import fs2.Pipe
 import fs2.Stream
 import fs2.concurrent.Topic
 import io.circe.syntax.*
+import lucuma.core.enums
+import lucuma.core.enums.GuideProbe
 import lucuma.core.enums.Instrument
 import lucuma.core.enums.LightSinkName
 import lucuma.core.enums.MountGuideOption
@@ -112,6 +114,7 @@ trait NavigateEngine[F[_]] {
   def m1LoadNonAoFigure: F[Unit]
   def lightpathConfig(from:                          LightSource, to:        LightSinkName): F[Unit]
   def acquisitionAdj(offset:                         Offset, iaa:            Option[Angle], ipa: Option[Angle]): F[Unit]
+  def wfsSky(wfs:                                    GuideProbe, period:     TimeSpan): F[Unit]
   def getGuideState: F[GuideState]
   def getGuidersQuality: F[GuidersQualityValues]
   def getTelescopeState: F[TelescopeState]
@@ -514,6 +517,17 @@ object NavigateEngine {
         AcquisitionAdjust(offset, ipa, iaa),
         stateRef.get.flatMap(s => systems.tcsCommon.acquisitionAdj(offset, ipa, iaa)(s.guideConfig))
       )
+
+    override def wfsSky(wfs: GuideProbe, period: TimeSpan): F[Unit] = wfs match {
+      case enums.GuideProbe.PWFS1                                => Applicative[F].unit
+      case enums.GuideProbe.PWFS2                                => Applicative[F].unit
+      case enums.GuideProbe.GmosOIWFS | enums.GuideProbe.F2OIWFS =>
+        simpleCommand(
+          engine,
+          WfsSky(wfs, period),
+          stateRef.get.flatMap(s => systems.tcsCommon.oiwfsSky(period)(s.guideConfig))
+        )
+    }
 
     override def getGuideDemand: F[GuideConfig] = stateRef.get.map(_.guideConfig)
   }

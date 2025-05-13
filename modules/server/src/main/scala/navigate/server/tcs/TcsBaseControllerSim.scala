@@ -113,6 +113,9 @@ class TcsBaseControllerSim[F[_]: Sync](
     )
     .as(ApplyCommandResult.Completed)
 
+  override def oiwfsSky(exposureTime: TimeSpan)(guide: GuideConfig): F[ApplyCommandResult] =
+    ApplyCommandResult.Completed.pure[F]
+
   override def rotTrackingConfig(cfg: RotatorTrackConfig): F[ApplyCommandResult] =
     ApplyCommandResult.Completed.pure[F]
 
@@ -208,4 +211,5 @@ class TcsBaseControllerSim[F[_]: Sync](
   override def acquisitionAdj(offset: Offset, ipa: Option[Angle], iaa: Option[Angle])(
     guide: GuideConfig
   ): F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
+
 }
