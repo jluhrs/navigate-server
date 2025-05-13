@@ -1097,8 +1097,8 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Read guide quality values") {
     val testGuideQuality = GuidersQualityValues(
-      GuidersQualityValues.GuiderQuality(1000, true),
-      GuidersQualityValues.GuiderQuality(500, false),
+      GuidersQualityValues.GuiderQuality(1000, false),
+      GuidersQualityValues.GuiderQuality(500, true),
       GuidersQualityValues.GuiderQuality(1500, false)
     )
     for {
