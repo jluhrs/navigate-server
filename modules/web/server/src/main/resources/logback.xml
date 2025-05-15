@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
- Configuration of logging for seqexec for test
- and production. It will select the file location
- based on the host name
+ Configuration of logging for development and local deployment.
 
- File based logs are rotated daily up to 90 days
+ File based logs are rotated daily up to 90 days.
 
- It supports auto reloading scanning every 60s
+ It supports auto reloading scanning every 60s.
 -->
 <configuration scan="true" scanPeriod="60 seconds" debug="true">
     <logger name="org.http4s" level="INFO" />
