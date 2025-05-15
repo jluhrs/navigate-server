@@ -36,6 +36,10 @@ case class TcsChannels[F[_]](
   rotator:              RotatorChannels[F],
   origin:               OriginChannels[F],
   focusOffset:          Channel[F, String],
+  p1ProbeTracking:      ProbeTrackingChannels[F],
+  p1Probe:              ProbeChannels[F],
+  p2ProbeTracking:      ProbeTrackingChannels[F],
+  p2Probe:              ProbeChannels[F],
   oiProbeTracking:      ProbeTrackingChannels[F],
   oiProbe:              ProbeChannels[F],
   m1Guide:              Channel[F, String],
@@ -56,10 +60,10 @@ case class TcsChannels[F[_]](
   aoFoldMech:           AgMechChannels[F],
   m1Channels:           M1Channels[F],
   nodState:             Channel[F, String],
-  p1ProbeTrackingState: ProbeTrackingChannels[F],
-  p2ProbeTrackingState: ProbeTrackingChannels[F],
-  oiProbeTrackingState: ProbeTrackingChannels[F],
-  aoProbeTrackingState: ProbeTrackingChannels[F],
+  p1ProbeTrackingState: ProbeTrackingStateChannels[F],
+  p2ProbeTrackingState: ProbeTrackingStateChannels[F],
+  oiProbeTrackingState: ProbeTrackingStateChannels[F],
+  aoProbeTrackingState: ProbeTrackingStateChannels[F],
   targetAdjust:         AdjustChannels[F],
   originAdjust:         AdjustChannels[F],
   pointingAdjust:       PointingModelAdjustChannels[F],
@@ -219,6 +223,13 @@ object TcsChannels {
     nodbchopb: Channel[F, String]
   )
 
+  case class ProbeTrackingStateChannels[F[_]](
+    nodachopa: Channel[F, String],
+    nodachopb: Channel[F, String],
+    nodbchopa: Channel[F, String],
+    nodbchopb: Channel[F, String]
+  )
+
   case class SlewChannels[F[_]](
     zeroChopThrow:            Channel[F, String],
     zeroSourceOffset:         Channel[F, String],
@@ -352,12 +363,12 @@ object TcsChannels {
     service: EpicsService[F],
     top:     TcsTop,
     name:    String
-  ): Resource[F, ProbeTrackingChannels[F]] = for {
+  ): Resource[F, ProbeTrackingStateChannels[F]] = for {
     aa <- service.getChannel[String](top.value, s"config$name.VALA")
     ab <- service.getChannel[String](top.value, s"config$name.VALB")
     ba <- service.getChannel[String](top.value, s"config$name.VALD")
     bb <- service.getChannel[String](top.value, s"config$name.VALE")
-  } yield ProbeTrackingChannels(aa, ab, ba, bb)
+  } yield ProbeTrackingStateChannels(aa, ab, ba, bb)
 
   def buildSlewChannels[F[_]](
     service: EpicsService[F],
@@ -721,6 +732,10 @@ object TcsChannels {
       rot  <- buildRotatorChannels(service, tcsTop)
       org  <- buildOriginChannels(service, tcsTop)
       foc  <- service.getChannel[String](tcsTop.value, "dtelFocus.A")
+      p1g  <- buildProbeTrackingChannels(service, tcsTop, "Pwfs1")
+      p1p  <- buildProbeChannels(service, s"${tcsTop.value.value}pwfs1")
+      p2g  <- buildProbeTrackingChannels(service, tcsTop, "Pwfs2")
+      p2p  <- buildProbeChannels(service, s"${tcsTop.value.value}pwfs2")
       oig  <- buildProbeTrackingChannels(service, tcsTop, "Oiwfs")
       op   <- buildProbeChannels(service, s"${tcsTop.value.value}oiwfs")
       m1g  <- service.getChannel[String](tcsTop.value, "m1GuideMode.A")
@@ -766,6 +781,10 @@ object TcsChannels {
       rot,
       org,
       foc,
+      p1g,
+      p1p,
+      p2g,
+      p2p,
       oig,
       op,
       m1g,

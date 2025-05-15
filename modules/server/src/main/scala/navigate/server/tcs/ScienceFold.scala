@@ -13,6 +13,7 @@ sealed trait ScienceFold extends Product with Serializable
 object ScienceFold {
   case object Parked                                                             extends ScienceFold
   final case class Position(source: LightSource, sink: LightSinkName, port: Int) extends ScienceFold
+  final case class Generic(name: String)                                         extends ScienceFold
 
   given Eq[Position] = Eq.by(x => (x.source, x.sink, x.port))
 

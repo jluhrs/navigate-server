@@ -18,6 +18,7 @@ object TestAgsEpicsSystem {
     inPosition: TestChannel.State[Int],
     sfParked:   TestChannel.State[Int],
     aoParked:   TestChannel.State[Int],
+    hwParked:   TestChannel.State[Int],
     p1Parked:   TestChannel.State[Int],
     p1Follow:   TestChannel.State[String],
     p2Parked:   TestChannel.State[Int],
@@ -31,12 +32,16 @@ object TestAgsEpicsSystem {
     gpiPort:    TestChannel.State[Int],
     gsaoiPort:  TestChannel.State[Int],
     nifsPort:   TestChannel.State[Int],
-    niriPort:   TestChannel.State[Int]
+    niriPort:   TestChannel.State[Int],
+    aoName:     TestChannel.State[String],
+    hwName:     TestChannel.State[String],
+    sfName:     TestChannel.State[String]
   )
 
   val defaultState: State = State(
     TestChannel.State.of(""),
     TestChannel.State.of(0),
+    TestChannel.State.of(1),
     TestChannel.State.of(1),
     TestChannel.State.of(1),
     TestChannel.State.of(1),
@@ -52,7 +57,10 @@ object TestAgsEpicsSystem {
     TestChannel.State.of(5),
     TestChannel.State.of(0),
     TestChannel.State.of(0),
-    TestChannel.State.of(0)
+    TestChannel.State.of(0),
+    TestChannel.State.of(""),
+    TestChannel.State.of(""),
+    TestChannel.State.of("")
   )
 
   def buildChannels[F[_]: Temporal](
@@ -63,6 +71,7 @@ object TestAgsEpicsSystem {
     inPosition = new TestChannel[F, State, Int](s, Focus[State](_.inPosition)),
     sfParked = new TestChannel[F, State, Int](s, Focus[State](_.sfParked)),
     aoParked = new TestChannel[F, State, Int](s, Focus[State](_.aoParked)),
+    hwParked = new TestChannel[F, State, Int](s, Focus[State](_.hwParked)),
     p1Parked = new TestChannel[F, State, Int](s, Focus[State](_.p1Parked)),
     p1Follow = new TestChannel[F, State, String](s, Focus[State](_.p1Follow)),
     p2Parked = new TestChannel[F, State, Int](s, Focus[State](_.p2Parked)),
@@ -78,7 +87,10 @@ object TestAgsEpicsSystem {
       gnirs = new TestChannel[F, State, Int](s, Focus[State](_.gnirsPort)),
       nifs = new TestChannel[F, State, Int](s, Focus[State](_.nifsPort)),
       ghost = new TestChannel[F, State, Int](s, Focus[State](_.ghostPort))
-    )
+    ),
+    aoName = new TestChannel[F, State, String](s, Focus[State](_.aoName)),
+    hwName = new TestChannel[F, State, String](s, Focus[State](_.hwName)),
+    sfName = new TestChannel[F, State, String](s, Focus[State](_.sfName))
   )
 
   def build[F[_]: {Temporal, Parallel}](
