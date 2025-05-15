@@ -56,7 +56,7 @@ import scala.concurrent.duration.FiniteDuration
 
 import Target.SiderealTarget
 import TcsBaseController.*
-import TestTcsEpicsSystem.{GuideConfigState, ProbeTrackingState}
+import TestTcsEpicsSystem.{GuideConfigState, ProbeTrackingStateState}
 
 class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
@@ -618,8 +618,8 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
   }
 
   def setOiwfsTrackingState(r: Ref[IO, TestTcsEpicsSystem.State]): IO[Unit] = r.update(
-    _.focus(_.oiwfsTracking).replace(
-      ProbeTrackingState(
+    _.focus(_.oiwfsTrackingState).replace(
+      ProbeTrackingStateState(
         TestChannel.State.of("On"),
         TestChannel.State.of("Off"),
         TestChannel.State.of("Off"),
@@ -1358,14 +1358,67 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       x        <- createController(site = Site.GN)
       (st, ctr) = x
       _        <- st.ags.update(_.focus(_.gmosPort.value).replace(3.some))
+      _        <- st.ags.update(
+                    _.focus(_.aoParked.value)
+                      .replace(0.some)
+                      .focus(_.aoName.value)
+                      .replace("IN".some)
+                      .focus(_.hwParked.value)
+                      .replace(0.some)
+                      .focus(_.hwName.value)
+                      .replace("IN".some)
+                      .focus(_.sfParked.value)
+                      .replace(1.some)
+                  )
       _        <- ctr.lightPath(LightSource.Sky, LightSinkName.Gmos)
       r0       <- st.tcs.get
+      _        <- st.ags.update(
+                    _.focus(_.aoParked.value)
+                      .replace(1.some)
+                      .focus(_.hwParked.value)
+                      .replace(0.some)
+                      .focus(_.hwName.value)
+                      .replace("IN".some)
+                      .focus(_.sfParked.value)
+                      .replace(0.some)
+                  )
       _        <- ctr.lightPath(LightSource.AO, LightSinkName.Gmos)
       r1       <- st.tcs.get
+      _        <- st.ags.update(
+                    _.focus(_.aoParked.value)
+                      .replace(0.some)
+                      .focus(_.aoName.value)
+                      .replace("IN".some)
+                      .focus(_.hwParked.value)
+                      .replace(0.some)
+                      .focus(_.hwName.value)
+                      .replace("IN".some)
+                      .focus(_.sfParked.value)
+                      .replace(0.some)
+                  )
+      _        <- st.tcs.update(_.focus(_.aoFoldMech.parkDir.value).replace(CadDirective.CLEAR.some))
       _        <- ctr.lightPath(LightSource.GCAL, LightSinkName.Gmos)
       r2       <- st.tcs.get
+      _        <- st.ags.update(
+                    _.focus(_.aoParked.value)
+                      .replace(0.some)
+                      .focus(_.aoName.value)
+                      .replace("IN".some)
+                      .focus(_.hwParked.value)
+                      .replace(1.some)
+                      .focus(_.sfParked.value)
+                      .replace(0.some)
+                  )
       _        <- ctr.lightPath(LightSource.Sky, LightSinkName.Ac)
       r3       <- st.tcs.get
+      _        <- st.ags.update(
+                    _.focus(_.aoParked.value)
+                      .replace(1.some)
+                      .focus(_.hwParked.value)
+                      .replace(1.some)
+                      .focus(_.sfParked.value)
+                      .replace(0.some)
+                  )
       _        <- ctr.lightPath(LightSource.AO, LightSinkName.Ac)
       r4       <- st.tcs.get
     } yield {
@@ -1376,13 +1429,92 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assert(r1.aoFoldMech.position.connected)
       assertEquals(r1.aoFoldMech.position.value, "IN".some)
       assertEquals(r1.scienceFoldMech.position.value, "ao2gmos3".some)
-      assertEquals(r2.aoFoldMech.parkDir.value, CadDirective.MARK.some)
+      assertEquals(r2.aoFoldMech.parkDir.value, CadDirective.CLEAR.some)
       assertEquals(r2.scienceFoldMech.position.value, "gcal2gmos3".some)
       assert(r3.hrwfsMech.position.connected)
       assertEquals(r3.scienceFoldMech.parkDir.value, CadDirective.MARK.some)
       assertEquals(r3.hrwfsMech.position.value, "IN".some)
       assertEquals(r4.aoFoldMech.position.value, "IN".some)
       assertEquals(r4.scienceFoldMech.position.value, "ao2ac".some)
+    }
+  }
+
+  test("Don't reconfigure light path") {
+    for {
+      x        <- createController(site = Site.GN)
+      (st, ctr) = x
+      _        <- st.ags.update(_.focus(_.gmosPort.value).replace(3.some))
+      _        <- st.ags.update(
+                    _.focus(_.aoParked.value)
+                      .replace(1.some)
+                      .focus(_.hwParked.value)
+                      .replace(1.some)
+                      .focus(_.sfParked.value)
+                      .replace(0.some)
+                      .focus(_.sfName.value)
+                      .replace("gmos3".some)
+                  )
+      _        <- ctr.lightPath(LightSource.Sky, LightSinkName.Gmos)
+      _        <- st.ags.update(
+                    _.focus(_.aoParked.value)
+                      .replace(0.some)
+                      .focus(_.aoName.value)
+                      .replace("IN".some)
+                      .focus(_.hwParked.value)
+                      .replace(1.some)
+                      .focus(_.sfParked.value)
+                      .replace(0.some)
+                      .focus(_.sfName.value)
+                      .replace("ao2gmos3".some)
+                  )
+      _        <- ctr.lightPath(LightSource.AO, LightSinkName.Gmos)
+      _        <- st.ags.update(
+                    _.focus(_.aoParked.value)
+                      .replace(0.some)
+                      .focus(_.aoName.value)
+                      .replace("IN".some)
+                      .focus(_.hwParked.value)
+                      .replace(1.some)
+                      .focus(_.sfParked.value)
+                      .replace(0.some)
+                      .focus(_.sfName.value)
+                      .replace("gcal2gmos3".some)
+                  )
+      _        <- ctr.lightPath(LightSource.GCAL, LightSinkName.Gmos)
+      _        <- st.ags.update(
+                    _.focus(_.aoParked.value)
+                      .replace(1.some)
+                      .focus(_.hwParked.value)
+                      .replace(0.some)
+                      .focus(_.hwName.value)
+                      .replace("IN".some)
+                      .focus(_.sfParked.value)
+                      .replace(1.some)
+                  )
+      _        <- ctr.lightPath(LightSource.Sky, LightSinkName.Ac)
+      _        <- st.ags.update(
+                    _.focus(_.aoParked.value)
+                      .replace(0.some)
+                      .focus(_.aoName.value)
+                      .replace("IN".some)
+                      .focus(_.hwParked.value)
+                      .replace(0.some)
+                      .focus(_.hwName.value)
+                      .replace("IN".some)
+                      .focus(_.sfParked.value)
+                      .replace(0.some)
+                      .focus(_.sfName.value)
+                      .replace("ao2ac".some)
+                  )
+      _        <- ctr.lightPath(LightSource.AO, LightSinkName.Ac)
+      r0       <- st.tcs.get
+    } yield {
+      assert(!r0.scienceFoldMech.position.connected)
+      assert(!r0.scienceFoldMech.parkDir.connected)
+      assert(!r0.hrwfsMech.position.connected)
+      assert(!r0.hrwfsMech.parkDir.connected)
+      assert(!r0.aoFoldMech.position.connected)
+      assert(!r0.aoFoldMech.parkDir.connected)
     }
   }
 

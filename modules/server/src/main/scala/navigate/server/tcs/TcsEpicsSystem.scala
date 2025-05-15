@@ -53,6 +53,7 @@ import TcsChannels.{
   AgMechChannels,
   ProbeChannels,
   ProbeTrackingChannels,
+  ProbeTrackingStateChannels,
   SlewChannels,
   TargetChannels,
   WfsChannels
@@ -205,12 +206,10 @@ object TcsEpicsSystem {
     // def instrAA: F[Double]
     // def inPosition: F[String]
     // def agInPosition: F[Double]
-    // val pwfs1ProbeGuideConfig: ProbeGuideConfig[F]
-    // val pwfs2ProbeGuideConfig: ProbeGuideConfig[F]
-    val pwfs1ProbeGuideConfig: ProbeGuideConfig[F]
-    val pwfs2ProbeGuideConfig: ProbeGuideConfig[F]
-    val oiwfsProbeGuideConfig: ProbeGuideConfig[F]
-    val aowfsProbeGuideConfig: ProbeGuideConfig[F]
+    val pwfs1ProbeGuideState: ProbeGuideState[F]
+    val pwfs2ProbeGuideState: ProbeGuideState[F]
+    val oiwfsProbeGuideState: ProbeGuideState[F]
+    val aowfsProbeGuideState: ProbeGuideState[F]
     // // This functions returns a F that, when run, first waits tcsSettleTime to absorb in-position transients, then waits
     // // for the in-position to change to true and stay true for stabilizationTime. It will wait up to `timeout`
     // // seconds for that to happen.
@@ -354,15 +353,15 @@ object TcsEpicsSystem {
         override def nodState: VerifiedEpics[F, F, NodState]        =
           VerifiedEpics
             .readChannel(channels.telltale, channels.nodState)
-            .map(_.map(NodState.valueOf))
-        override val pwfs1ProbeGuideConfig: ProbeGuideConfig[F]     =
-          buildProbeGuideConfig(channels.telltale, channels.p1ProbeTrackingState)
-        override val pwfs2ProbeGuideConfig: ProbeGuideConfig[F]     =
-          buildProbeGuideConfig(channels.telltale, channels.p2ProbeTrackingState)
-        override val oiwfsProbeGuideConfig: ProbeGuideConfig[F]     =
-          buildProbeGuideConfig(channels.telltale, channels.oiProbeTrackingState)
-        override val aowfsProbeGuideConfig: ProbeGuideConfig[F]     =
-          buildProbeGuideConfig(channels.telltale, channels.aoProbeTrackingState)
+            .map(_.map(Enumerated[NodState].fromTag(_).getOrElse(NodState.A)))
+        override val pwfs1ProbeGuideState: ProbeGuideState[F]       =
+          buildProbeGuideState(channels.telltale, channels.p1ProbeTrackingState)
+        override val pwfs2ProbeGuideState: ProbeGuideState[F]       =
+          buildProbeGuideState(channels.telltale, channels.p2ProbeTrackingState)
+        override val oiwfsProbeGuideState: ProbeGuideState[F]       =
+          buildProbeGuideState(channels.telltale, channels.oiProbeTrackingState)
+        override val aowfsProbeGuideState: ProbeGuideState[F]       =
+          buildProbeGuideState(channels.telltale, channels.aoProbeTrackingState)
 
         private val tcsSettleTime = FiniteDuration(2800, MILLISECONDS)
         override def waitInPosition(
@@ -829,36 +828,72 @@ object TcsEpicsSystem {
         )
       }
 
-    override val oiwfsProbeTrackingCommand: ProbeTrackingCommand[F, TcsCommands[F]] =
+    private def buildProbeTrackingCommand(
+      probeChannels: ProbeTrackingChannels[F]
+    ): ProbeTrackingCommand[F, TcsCommands[F]] =
       new ProbeTrackingCommand[F, TcsCommands[F]] {
         override def nodAchopA(v: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsProbeTrackingCmd.nodAchopA(v.fold(BinaryOnOff.On, BinaryOnOff.Off))
+          writeCadParam(channels.telltale, probeChannels.nodachopa)(
+            v.fold(BinaryOnOff.On, BinaryOnOff.Off)
+          )
         )
 
         override def nodAchopB(v: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsProbeTrackingCmd.nodAchopB(v.fold(BinaryOnOff.On, BinaryOnOff.Off))
+          writeCadParam(channels.telltale, probeChannels.nodachopb)(
+            v.fold(BinaryOnOff.On, BinaryOnOff.Off)
+          )
         )
 
         override def nodBchopA(v: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsProbeTrackingCmd.nodBchopA(v.fold(BinaryOnOff.On, BinaryOnOff.Off))
+          writeCadParam(channels.telltale, probeChannels.nodbchopa)(
+            v.fold(BinaryOnOff.On, BinaryOnOff.Off)
+          )
         )
 
         override def nodBchopB(v: Boolean): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsProbeTrackingCmd.nodBchopB(v.fold(BinaryOnOff.On, BinaryOnOff.Off))
+          writeCadParam(channels.telltale, probeChannels.nodbchopb)(
+            v.fold(BinaryOnOff.On, BinaryOnOff.Off)
+          )
         )
       }
-    override val oiwfsProbeCommands: ProbeCommands[F, TcsCommands[F]]               =
-      new ProbeCommands[F, TcsCommands[F]] {
-        override val park: BaseCommand[F, TcsCommands[F]] = new BaseCommand[F, TcsCommands[F]] {
-          override def mark: TcsCommands[F] = addParam(tcsEpics.oiwfsProbeCmds.park.mark)
-        }
 
-        override val follow: FollowCommand[F, TcsCommands[F]] =
-          (enable: Boolean) =>
-            addParam(
-              tcsEpics.oiwfsProbeCmds.follow.setParam1(enable.fold(BinaryOnOff.On, BinaryOnOff.Off))
+    private def buildProbeCommands(
+      probeChannels: ProbeChannels[F]
+    ): ProbeCommands[F, TcsCommands[F]] =
+      new ProbeCommands[F, TcsCommands[F]] {
+        override val park: BaseCommand[F, TcsCommands[F]]     = new BaseCommand[F, TcsCommands[F]] {
+          override def mark: TcsCommands[F] = addParam(
+            ParameterlessCommandChannels[F](channels.telltale, probeChannels.parkDir).mark
+          )
+        }
+        override val follow: FollowCommand[F, TcsCommands[F]] = (enable: Boolean) =>
+          addParam(
+            writeCadParam(channels.telltale, probeChannels.follow)(
+              enable.fold(BinaryOnOff.On, BinaryOnOff.Off)
             )
+          )
       }
+
+    override val pwfs1ProbeTrackingCommand: ProbeTrackingCommand[F, TcsCommands[F]] =
+      buildProbeTrackingCommand(channels.p1ProbeTracking)
+
+    override val pwfs1ProbeCommands: ProbeCommands[F, TcsCommands[F]] = buildProbeCommands(
+      channels.p1Probe
+    )
+
+    override val pwfs2ProbeTrackingCommand: ProbeTrackingCommand[F, TcsCommands[F]] =
+      buildProbeTrackingCommand(channels.p2ProbeTracking)
+
+    override val pwfs2ProbeCommands: ProbeCommands[F, TcsCommands[F]] = buildProbeCommands(
+      channels.p2Probe
+    )
+
+    override val oiwfsProbeTrackingCommand: ProbeTrackingCommand[F, TcsCommands[F]] =
+      buildProbeTrackingCommand(channels.oiProbeTracking)
+
+    override val oiwfsProbeCommands: ProbeCommands[F, TcsCommands[F]] = buildProbeCommands(
+      channels.oiProbe
+    )
 
     override val m1GuideCommand: GuideCommand[F, TcsCommands[F]] =
       (enable: Boolean) =>
@@ -1497,16 +1532,57 @@ object TcsEpicsSystem {
   ): ProbeGuideConfig[F] = new ProbeGuideConfig[F] {
 
     override def nodAchopA: VerifiedEpics[F, F, BinaryOnOff] =
-      VerifiedEpics.readChannel(tt, probeChannels.nodachopa).map(_.map(BinaryOnOff.valueOf))
+      VerifiedEpics
+        .readChannel(tt, probeChannels.nodachopa)
+        .map(_.map(Enumerated[BinaryOnOff].fromTag(_).getOrElse(BinaryOnOff.Off)))
 
     override def nodAchopB: VerifiedEpics[F, F, BinaryOnOff] =
-      VerifiedEpics.readChannel(tt, probeChannels.nodachopb).map(_.map(BinaryOnOff.valueOf))
+      VerifiedEpics
+        .readChannel(tt, probeChannels.nodachopb)
+        .map(_.map(Enumerated[BinaryOnOff].fromTag(_).getOrElse(BinaryOnOff.Off)))
 
     override def nodBchopA: VerifiedEpics[F, F, BinaryOnOff] =
-      VerifiedEpics.readChannel(tt, probeChannels.nodbchopa).map(_.map(BinaryOnOff.valueOf))
+      VerifiedEpics
+        .readChannel(tt, probeChannels.nodbchopa)
+        .map(_.map(Enumerated[BinaryOnOff].fromTag(_).getOrElse(BinaryOnOff.Off)))
 
     override def nodBchopB: VerifiedEpics[F, F, BinaryOnOff] =
-      VerifiedEpics.readChannel(tt, probeChannels.nodbchopb).map(_.map(BinaryOnOff.valueOf))
+      VerifiedEpics
+        .readChannel(tt, probeChannels.nodbchopb)
+        .map(_.map(Enumerated[BinaryOnOff].fromTag(_).getOrElse(BinaryOnOff.Off)))
+  }
+
+  trait ProbeGuideState[F[_]] {
+    def nodAchopA: VerifiedEpics[F, F, BinaryOnOff]
+    def nodAchopB: VerifiedEpics[F, F, BinaryOnOff]
+    def nodBchopA: VerifiedEpics[F, F, BinaryOnOff]
+    def nodBchopB: VerifiedEpics[F, F, BinaryOnOff]
+  }
+
+  def buildProbeGuideState[F[_]: Applicative](
+    tt:            TelltaleChannel[F],
+    probeChannels: ProbeTrackingStateChannels[F]
+  ): ProbeGuideState[F] = new ProbeGuideState[F] {
+
+    override def nodAchopA: VerifiedEpics[F, F, BinaryOnOff] =
+      VerifiedEpics
+        .readChannel(tt, probeChannels.nodachopa)
+        .map(_.map(Enumerated[BinaryOnOff].fromTag(_).getOrElse(BinaryOnOff.Off)))
+
+    override def nodAchopB: VerifiedEpics[F, F, BinaryOnOff] =
+      VerifiedEpics
+        .readChannel(tt, probeChannels.nodachopb)
+        .map(_.map(Enumerated[BinaryOnOff].fromTag(_).getOrElse(BinaryOnOff.Off)))
+
+    override def nodBchopA: VerifiedEpics[F, F, BinaryOnOff] =
+      VerifiedEpics
+        .readChannel(tt, probeChannels.nodbchopa)
+        .map(_.map(Enumerated[BinaryOnOff].fromTag(_).getOrElse(BinaryOnOff.Off)))
+
+    override def nodBchopB: VerifiedEpics[F, F, BinaryOnOff] =
+      VerifiedEpics
+        .readChannel(tt, probeChannels.nodbchopb)
+        .map(_.map(Enumerated[BinaryOnOff].fromTag(_).getOrElse(BinaryOnOff.Off)))
   }
 
   case class AgMechCommandsChannels[F[_]: Monad, A](
@@ -1813,6 +1889,10 @@ object TcsEpicsSystem {
     val rotatorCommand: RotatorCommand[F, TcsCommands[F]]
     val originCommand: OriginCommand[F, TcsCommands[F]]
     val focusOffsetCommand: FocusOffsetCommand[F, TcsCommands[F]]
+    val pwfs1ProbeTrackingCommand: ProbeTrackingCommand[F, TcsCommands[F]]
+    val pwfs1ProbeCommands: ProbeCommands[F, TcsCommands[F]]
+    val pwfs2ProbeTrackingCommand: ProbeTrackingCommand[F, TcsCommands[F]]
+    val pwfs2ProbeCommands: ProbeCommands[F, TcsCommands[F]]
     val oiwfsProbeTrackingCommand: ProbeTrackingCommand[F, TcsCommands[F]]
     val oiwfsProbeCommands: ProbeCommands[F, TcsCommands[F]]
     val m1GuideCommand: GuideCommand[F, TcsCommands[F]]

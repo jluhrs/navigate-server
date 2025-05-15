@@ -14,6 +14,7 @@ import navigate.model.enums.LightSource
 import navigate.model.enums.LightSource.*
 import navigate.server.acm.Decoder
 import navigate.server.acm.Encoder
+import navigate.server.tcs.ScienceFold.Generic
 import navigate.server.tcs.ScienceFold.Parked
 import navigate.server.tcs.ScienceFold.Position
 
@@ -28,18 +29,18 @@ private[server] trait ScienceFoldPositionCodex:
   val lightSink: Parser[LightSinkName] = EnumParsers.enumBy[LightSinkName](_.name)
 
   def prefixed(p: String, s: LightSource): Parser0[ScienceFold] =
-    (Parser.string0(p) *> lightSink ~ int)
+    (Parser.string0(p) *> lightSink ~ int.?)
       .map: (ls, port) =>
-        Position(s, ls, port)
+        Position(s, ls, port.getOrElse(1))
       .widen[ScienceFold]
 
   val park: Parser[ScienceFold] =
     (Parser.string(PARK_POS) <* char.rep.?).as(Parked)
 
-  given Decoder[String, Option[ScienceFold]] = (t: String) =>
+  given Decoder[String, ScienceFold] = (t: String) =>
     (park | prefixed(AO_PREFIX, AO) | prefixed(GCAL_PREFIX, GCAL) | prefixed("", Sky))
       .parseAll(t)
-      .toOption
+      .getOrElse(Generic(t))
 
   given Encoder[Position, String] = (a: Position) =>
     val instAGName = if (a.sink === LightSinkName.Ac) a.sink.name else s"${a.sink.name}${a.port}"

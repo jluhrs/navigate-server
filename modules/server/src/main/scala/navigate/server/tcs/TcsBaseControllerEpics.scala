@@ -46,12 +46,13 @@ import navigate.server.ApplyCommandResult
 import navigate.server.ConnectionTimeout
 import navigate.server.acm.CarState
 import navigate.server.epicsdata
+import navigate.server.epicsdata.AgMechPosition
 import navigate.server.epicsdata.BinaryOnOff
 import navigate.server.epicsdata.BinaryYesNo
 import navigate.server.tcs.AcquisitionCameraEpicsSystem.*
 import navigate.server.tcs.ParkStatus.NotParked
 import navigate.server.tcs.Target.*
-import navigate.server.tcs.TcsEpicsSystem.ProbeGuideConfig
+import navigate.server.tcs.TcsEpicsSystem.ProbeGuideState
 import navigate.server.tcs.TcsEpicsSystem.ProbeTrackingCommand
 import navigate.server.tcs.TcsEpicsSystem.TargetCommand
 import navigate.server.tcs.TcsEpicsSystem.TcsCommands
@@ -446,7 +447,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       .verifiedRun(ConnectionTimeout)
 
   private def calcM2Guide(
-    state: ProbeGuideConfig[F]
+    state: ProbeGuideState[F]
   ): VerifiedEpics[F, F, M2BeamConfig] = {
     def calcBeams(chopA: BinaryOnOff, chopB: BinaryOnOff): M2BeamConfig = (chopA, chopB) match {
       case (BinaryOnOff.Off, BinaryOnOff.Off) => M2BeamConfig.None
@@ -509,22 +510,22 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       for {
         oif  <- cfg.sources
                   .contains(TipTiltSource.OIWFS)
-                  .fold(calcM2Guide(sys.tcsEpics.status.oiwfsProbeGuideConfig),
+                  .fold(calcM2Guide(sys.tcsEpics.status.oiwfsProbeGuideState),
                         VerifiedEpics.pureF(M2BeamConfig.None)
                   )
         p1f  <- cfg.sources
                   .contains(TipTiltSource.PWFS1)
-                  .fold(calcM2Guide(sys.tcsEpics.status.pwfs1ProbeGuideConfig),
+                  .fold(calcM2Guide(sys.tcsEpics.status.pwfs1ProbeGuideState),
                         VerifiedEpics.pureF(M2BeamConfig.None)
                   )
         p2f  <- cfg.sources
                   .contains(TipTiltSource.PWFS2)
-                  .fold(calcM2Guide(sys.tcsEpics.status.pwfs2ProbeGuideConfig),
+                  .fold(calcM2Guide(sys.tcsEpics.status.pwfs2ProbeGuideState),
                         VerifiedEpics.pureF(M2BeamConfig.None)
                   )
         aof  <- cfg.sources
                   .contains(TipTiltSource.GAOS)
-                  .fold(calcM2Guide(sys.tcsEpics.status.aowfsProbeGuideConfig),
+                  .fold(calcM2Guide(sys.tcsEpics.status.aowfsProbeGuideState),
                         VerifiedEpics.pureF(M2BeamConfig.None)
                   )
         oicf <- sys.tcsEpics.status.m2oiGuide.map(_.map(M2BeamConfig.fromTcsGuideConfig))
@@ -591,12 +592,6 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
           .state(false)
           .m2GuideModeCommand
           .coma(false)
-          .mountGuideCommand
-          .mode(config.mountGuide === MountGuideOption.MountGuideOn)
-          .mountGuideCommand
-          .source("SCS")
-          .probeGuideModeCommand
-          .setMode(config.probeGuide)
           .post
       case x @ M2GuideConfig.M2GuideOn(_, _) => enableM2Guide(x)
     }
@@ -781,7 +776,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
         .replace(None)
     )
 
-  def getProbeGuideConfig(chopnod: ProbeGuideConfig[F]): VerifiedEpics[F, F, TrackingConfig] = for {
+  def getProbeGuideState(chopnod: ProbeGuideState[F]): VerifiedEpics[F, F, TrackingConfig] = for {
     aaf <- chopnod.nodAchopA
     abf <- chopnod.nodAchopB
     baf <- chopnod.nodBchopA
@@ -797,11 +792,11 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
                          bb === BinaryOnOff.On
   )
 
-  def getProbesGuideConfig: VerifiedEpics[F, F, WfsGuideStates] = for {
-    p1f <- getProbeGuideConfig(sys.tcsEpics.status.pwfs1ProbeGuideConfig)
-    p2f <- getProbeGuideConfig(sys.tcsEpics.status.pwfs2ProbeGuideConfig)
-    oif <- getProbeGuideConfig(sys.tcsEpics.status.oiwfsProbeGuideConfig)
-    aof <- getProbeGuideConfig(sys.tcsEpics.status.aowfsProbeGuideConfig)
+  def getProbesGuideState: VerifiedEpics[F, F, WfsGuideStates] = for {
+    p1f <- getProbeGuideState(sys.tcsEpics.status.pwfs1ProbeGuideState)
+    p2f <- getProbeGuideState(sys.tcsEpics.status.pwfs2ProbeGuideState)
+    oif <- getProbeGuideState(sys.tcsEpics.status.oiwfsProbeGuideState)
+    aof <- getProbeGuideState(sys.tcsEpics.status.aowfsProbeGuideState)
   } yield for {
     p1 <- p1f
     p2 <- p2f
@@ -904,7 +899,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       .verifiedRun(ConnectionTimeout)
 
   override def oiwfsSky(exposureTime: TimeSpan)(guide: GuideConfig): F[ApplyCommandResult] = for {
-    pg <- getProbesGuideConfig.verifiedRun(ConnectionTimeout)
+    pg <- getProbesGuideState.verifiedRun(ConnectionTimeout)
     _  <- disableTargetFilter
     _  <- pauseWfsTracking(pg).verifiedRun(ConnectionTimeout)
     _  <- pauseGuide
@@ -1122,74 +1117,98 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
 
   override def swapTarget(swapConfig: SwapConfig): F[ApplyCommandResult] =
     disableGuide *>
+      lightPath(LightSource.Sky, LightSinkName.Ac) *>
       sys.hrwfs.status.filter.verifiedRun(ConnectionTimeout).flatMap { x =>
-        (
-          applyPointToGuideConfig(
-            swapConfig.toTcsConfig
-              .focus(_.sourceATarget)
-              .andThen(Target.wavelength)
-              .replace(x.toWavelength.some)
-          ) >>>
-            setLightPath(LightSource.Sky, LightSinkName.Ac, 1)
+        applyPointToGuideConfig(
+          swapConfig.toTcsConfig
+            .focus(_.sourceATarget)
+            .andThen(Target.wavelength)
+            .replace(x.toWavelength.some)
         )(
           sys.tcsEpics.startCommand(timeout)
         ).post
           .verifiedRun(ConnectionTimeout)
       }
 
-  // TODO: consider cases where the light path should go through the AO
-  override def restoreTarget(config: TcsConfig): F[ApplyCommandResult] =
+  override def restoreTarget(config: TcsConfig): F[ApplyCommandResult] = {
+    // TODO: consider cases where the light path should go through the AO
+    val source = LightSource.Sky
+
     disableGuide *>
-      getInstrumentPorts.flatMap { ps =>
-        getPort(ps, config.instrument.toLightSink)
-          .map(p =>
-            (
-              selectOiwfs(config) *>
-                VerifiedEpics.liftF(Temporal[F].sleep(OiwfsSelectionDelay)) *>
-                (applyTcsConfig(config) >>> setLightPath(LightSource.Sky,
-                                                         config.instrument.toLightSink,
-                                                         p
-                ))(
-                  sys.tcsEpics.startCommand(timeout)
-                ).post
-            ).verifiedRun(ConnectionTimeout)
-          )
-          .getOrElse(ApplyCommandResult.Completed.pure[F])
-      }
+      (selectOiwfs(config) *>
+        VerifiedEpics.liftF(Temporal[F].sleep(OiwfsSelectionDelay)) *>
+        applyTcsConfig(config)(sys.tcsEpics.startCommand(timeout)).post)
+        .verifiedRun(ConnectionTimeout) *>
+      lightPath(source, config.instrument.toLightSink)
+  }
 
   private def setLightPath(
-    from: LightSource,
-    to:   LightSinkName,
-    port: Int
+    from:  LightSource,
+    to:    LightSinkName,
+    port:  Int,
+    aoPos: AgMechPosition,
+    hwPos: AgMechPosition,
+    sfPos: ScienceFold
   ): TcsCommands[F] => TcsCommands[F] = (x: TcsCommands[F]) => {
     val aoFold      = (s: TcsCommands[F]) =>
-      (from === LightSource.AO)
-        .fold(s.aoFoldCommands.move.setPosition(AoFoldPosition.In), s.aoFoldCommands.park.mark)
+      (from, aoPos) match {
+        case (LightSource.AO, AgMechPosition.In) => s
+        case (LightSource.AO, _)                 => s.aoFoldCommands.move.setPosition(AoFoldPosition.In)
+        case (LightSource.GCAL, _)               => s
+        case (_, AgMechPosition.Parked)          => s
+        case _                                   => s.aoFoldCommands.park.mark
+      }
     val hrwfsPickup = (s: TcsCommands[F]) =>
-      (to === LightSinkName.Hr || to === LightSinkName.Ac).fold(
-        s.hrwfsCommands.move.setPosition(HrwfsPickupPosition.In),
-        s.hrwfsCommands.park.mark
-      )
+      (to, hwPos) match {
+        case (LightSinkName.Hr, AgMechPosition.In) | (LightSinkName.Ac, AgMechPosition.In) => s
+        case (LightSinkName.Hr, _) | (LightSinkName.Ac, _)                                 =>
+          s.hrwfsCommands.move.setPosition(HrwfsPickupPosition.In)
+        case (_, AgMechPosition.Parked)                                                    => s
+        case _                                                                             => s.hrwfsCommands.park.mark
+      }
+    val reqPos      = ScienceFold.Position(from, to, port)
     val scienceFold = (s: TcsCommands[F]) =>
-      (port === 1 && from === LightSource.Sky).fold(
-        s.scienceFoldCommands.park.mark,
-        s.scienceFoldCommands.move.setPosition(
-          ScienceFold.Position(from, to, port)
-        )
-      )
+      (port, from, sfPos) match {
+        case (1, LightSource.Sky, ScienceFold.Parked)        => s
+        case (1, LightSource.Sky, _)                         => s.scienceFoldCommands.park.mark
+        case (_, _, p: ScienceFold.Position) if p === reqPos => s
+        case _                                               => s.scienceFoldCommands.move.setPosition(reqPos)
+      }
 
     (aoFold >>> hrwfsPickup >>> scienceFold)(x)
   }
 
-  override def lightPath(from: LightSource, to: LightSinkName): F[ApplyCommandResult] =
-    getInstrumentPorts.flatMap { ports =>
+  override def lightPath(from: LightSource, to: LightSinkName): F[ApplyCommandResult] = for {
+    p2Parked <- sys.ags.status.p2Parked.verifiedRun(ConnectionTimeout).map(_ === ParkStatus.Parked)
+    aoParked <- sys.ags.status.aoParked.verifiedRun(ConnectionTimeout).map(_ === ParkStatus.Parked)
+    aoPos    <- aoParked.fold(AgMechPosition.Parked.pure[F],
+                              sys.ags.status.aoName.verifiedRun(ConnectionTimeout)
+                )
+    hwParked <- sys.ags.status.hwParked.verifiedRun(ConnectionTimeout).map(_ === ParkStatus.Parked)
+    hwPos    <- hwParked.fold(AgMechPosition.Parked.pure[F],
+                              sys.ags.status.hwName.verifiedRun(ConnectionTimeout)
+                )
+    sfParked <- sys.ags.status.sfParked.verifiedRun(ConnectionTimeout).map(_ === ParkStatus.Parked)
+    sfPos    <- sfParked.fold(ScienceFold.Parked.pure[F],
+                              sys.ags.status.sfName.verifiedRun(ConnectionTimeout)
+                )
+    ports    <- getInstrumentPorts
+    _        <- sys.tcsEpics
+                  .startCommand(timeout)
+                  .pwfs2ProbeCommands
+                  .park
+                  .mark
+                  .post
+                  .verifiedRun(ConnectionTimeout)
+                  .whenA(!p2Parked && from === LightSource.AO)
+    ret      <-
       getPort(ports, to)
         .map { p =>
-          setLightPath(from, to, p)(sys.tcsEpics.startCommand(timeout)).post
+          setLightPath(from, to, p, aoPos, hwPos, sfPos)(sys.tcsEpics.startCommand(timeout)).post
             .verifiedRun(ConnectionTimeout)
         }
         .getOrElse(ApplyCommandResult.Completed.pure[F])
-    }
+  } yield ret
 
   def getPort(instrumentPorts: InstrumentPorts, lightSinkName: LightSinkName): Option[Int] = {
     val p = lightSinkName match {

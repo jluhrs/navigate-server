@@ -10,13 +10,17 @@ import cats.effect.Temporal
 import cats.effect.std.Dispatcher
 import cats.syntax.all.*
 import eu.timepit.refined.types.string.NonEmptyString
+import lucuma.core.util.Enumerated
 import mouse.boolean.*
 import navigate.epics.*
 import navigate.epics.VerifiedEpics.*
+import navigate.server.acm.Decoder.*
+import navigate.server.epicsdata.AgMechPosition
 import navigate.server.tcs.AgsEpicsSystem.AgsStatus
 
 import FollowStatus.*
 import ParkStatus.*
+import ScienceFoldPositionCodex.given
 
 trait AgsEpicsSystem[F[_]] {
   val status: AgsStatus[F]
@@ -28,6 +32,7 @@ object AgsEpicsSystem {
     def inPosition: VerifiedEpics[F, F, Boolean]
     def sfParked: VerifiedEpics[F, F, ParkStatus]
     def aoParked: VerifiedEpics[F, F, ParkStatus]
+    def hwParked: VerifiedEpics[F, F, ParkStatus]
     def p1Parked: VerifiedEpics[F, F, ParkStatus]
     def p1Follow: VerifiedEpics[F, F, FollowStatus]
     def p2Parked: VerifiedEpics[F, F, ParkStatus]
@@ -42,6 +47,9 @@ object AgsEpicsSystem {
     def gsaoiPort: VerifiedEpics[F, F, Int]
     def nifsPort: VerifiedEpics[F, F, Int]
     def niriPort: VerifiedEpics[F, F, Int]
+    def aoName: VerifiedEpics[F, F, AgMechPosition]
+    def hwName: VerifiedEpics[F, F, AgMechPosition]
+    def sfName: VerifiedEpics[F, F, ScienceFold]
   }
 
   private[tcs] def buildSystem[F[_]: Applicative](
@@ -59,6 +67,10 @@ object AgsEpicsSystem {
 
         override def aoParked: VerifiedEpics[F, F, ParkStatus] = VerifiedEpics
           .readChannel(channels.telltale, channels.aoParked)
+          .map(_.map(a => (a =!= 0).fold(Parked, NotParked)))
+
+        override def hwParked: VerifiedEpics[F, F, ParkStatus] = VerifiedEpics
+          .readChannel(channels.telltale, channels.hwParked)
           .map(_.map(a => (a =!= 0).fold(Parked, NotParked)))
 
         override def p1Parked: VerifiedEpics[F, F, ParkStatus] = VerifiedEpics
@@ -116,6 +128,19 @@ object AgsEpicsSystem {
 
         override def niriPort: VerifiedEpics[F, F, Int] =
           VerifiedEpics.readChannel(channels.telltale, channels.instrumentPorts.niri)
+
+        override def aoName: VerifiedEpics[F, F, AgMechPosition] =
+          VerifiedEpics
+            .readChannel(channels.telltale, channels.aoName)
+            .map(_.map(Enumerated[AgMechPosition].fromTag(_).getOrElse(AgMechPosition.Unknown)))
+
+        override def hwName: VerifiedEpics[F, F, AgMechPosition] =
+          VerifiedEpics
+            .readChannel(channels.telltale, channels.hwName)
+            .map(_.map(Enumerated[AgMechPosition].fromTag(_).getOrElse(AgMechPosition.Unknown)))
+
+        override def sfName: VerifiedEpics[F, F, ScienceFold] =
+          VerifiedEpics.readChannel(channels.telltale, channels.sfName).map(_.map(_.decode))
       }
     }
 

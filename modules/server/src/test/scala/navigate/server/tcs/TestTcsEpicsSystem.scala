@@ -36,6 +36,7 @@ import navigate.server.tcs.TcsChannels.PointingModelAdjustChannels
 import navigate.server.tcs.TcsChannels.ProbeChannels
 import navigate.server.tcs.TcsChannels.ProbeGuideModeChannels
 import navigate.server.tcs.TcsChannels.ProbeTrackingChannels
+import navigate.server.tcs.TcsChannels.ProbeTrackingStateChannels
 import navigate.server.tcs.TcsChannels.RotatorChannels
 import navigate.server.tcs.TcsChannels.SlewChannels
 import navigate.server.tcs.TcsChannels.TargetChannels
@@ -91,6 +92,13 @@ object TestTcsEpicsSystem {
   case class ProbeState(
     parkDir: TestChannel.State[CadDirective],
     follow:  TestChannel.State[String]
+  )
+
+  case class ProbeTrackingStateState(
+    nodAchopA: TestChannel.State[String],
+    nodAchopB: TestChannel.State[String],
+    nodBchopA: TestChannel.State[String],
+    nodBchopB: TestChannel.State[String]
   )
 
   case class SlewChannelsState(
@@ -223,49 +231,54 @@ object TestTcsEpicsSystem {
   }
 
   case class State(
-    telltale:         TestChannel.State[String],
-    telescopeParkDir: TestChannel.State[CadDirective],
-    mountFollow:      TestChannel.State[String],
-    rotStopBrake:     TestChannel.State[String],
-    rotParkDir:       TestChannel.State[CadDirective],
-    rotFollow:        TestChannel.State[String],
-    rotMoveAngle:     TestChannel.State[String],
-    enclosure:        EnclosureChannelsState,
-    sourceA:          TargetChannelsState,
-    oiwfsTarget:      TargetChannelsState,
-    wavelSourceA:     TestChannel.State[String],
-    slew:             SlewChannelsState,
-    rotator:          RotatorChannelState,
-    origin:           OriginChannelState,
-    focusOffset:      TestChannel.State[String],
-    pwfs1Tracking:    ProbeTrackingState,
-    pwfs2Tracking:    ProbeTrackingState,
-    oiwfsTracking:    ProbeTrackingState,
-    oiwfsProbe:       ProbeState,
-    oiWfs:            WfsChannelState,
-    aowfsTracking:    ProbeTrackingState,
-    m1Guide:          TestChannel.State[String],
-    m1GuideConfig:    M1GuideConfigState,
-    m2Guide:          TestChannel.State[String],
-    m2GuideMode:      TestChannel.State[String],
-    m2GuideConfig:    M2GuideConfigState,
-    m2GuideReset:     TestChannel.State[CadDirective],
-    m2Follow:         TestChannel.State[String],
-    mountGuide:       MountGuideState,
-    guideStatus:      GuideConfigState,
-    probeGuideMode:   ProbeGuideModeState,
-    oiwfsSelect:      OiwfsSelectState,
-    m2Baffles:        M2BafflesState,
-    hrwfsMech:        AgMechState,
-    scienceFoldMech:  AgMechState,
-    aoFoldMech:       AgMechState,
-    m1Cmds:           M1CommandsState,
-    nodState:         TestChannel.State[String],
-    targetAdjust:     AdjustCommandState,
-    originAdjust:     AdjustCommandState,
-    pointingAdjust:   PointingAdjustCommandState,
-    inPosition:       TestChannel.State[String],
-    targetFilter:     TargetFilterCommandState
+    telltale:           TestChannel.State[String],
+    telescopeParkDir:   TestChannel.State[CadDirective],
+    mountFollow:        TestChannel.State[String],
+    rotStopBrake:       TestChannel.State[String],
+    rotParkDir:         TestChannel.State[CadDirective],
+    rotFollow:          TestChannel.State[String],
+    rotMoveAngle:       TestChannel.State[String],
+    enclosure:          EnclosureChannelsState,
+    sourceA:            TargetChannelsState,
+    oiwfsTarget:        TargetChannelsState,
+    wavelSourceA:       TestChannel.State[String],
+    slew:               SlewChannelsState,
+    rotator:            RotatorChannelState,
+    origin:             OriginChannelState,
+    focusOffset:        TestChannel.State[String],
+    pwfs1Tracking:      ProbeTrackingState,
+    pwfs1Probe:         ProbeState,
+    pwfs2Tracking:      ProbeTrackingState,
+    pwfs2Probe:         ProbeState,
+    oiwfsTracking:      ProbeTrackingState,
+    oiwfsProbe:         ProbeState,
+    oiWfs:              WfsChannelState,
+    m1Guide:            TestChannel.State[String],
+    m1GuideConfig:      M1GuideConfigState,
+    m2Guide:            TestChannel.State[String],
+    m2GuideMode:        TestChannel.State[String],
+    m2GuideConfig:      M2GuideConfigState,
+    m2GuideReset:       TestChannel.State[CadDirective],
+    m2Follow:           TestChannel.State[String],
+    mountGuide:         MountGuideState,
+    guideStatus:        GuideConfigState,
+    probeGuideMode:     ProbeGuideModeState,
+    oiwfsSelect:        OiwfsSelectState,
+    m2Baffles:          M2BafflesState,
+    hrwfsMech:          AgMechState,
+    scienceFoldMech:    AgMechState,
+    aoFoldMech:         AgMechState,
+    m1Cmds:             M1CommandsState,
+    nodState:           TestChannel.State[String],
+    pwfs1TrackingState: ProbeTrackingStateState,
+    pwfs2TrackingState: ProbeTrackingStateState,
+    oiwfsTrackingState: ProbeTrackingStateState,
+    aowfsTrackingState: ProbeTrackingStateState,
+    targetAdjust:       AdjustCommandState,
+    originAdjust:       AdjustCommandState,
+    pointingAdjust:     PointingAdjustCommandState,
+    inPosition:         TestChannel.State[String],
+    targetFilter:       TargetFilterCommandState
   )
 
   val defaultState: State = State(
@@ -356,12 +369,16 @@ object TestTcsEpicsSystem {
       nodBchopA = TestChannel.State.of("Off"),
       nodBchopB = TestChannel.State.of("Off")
     ),
+    pwfs1Probe =
+      ProbeState(parkDir = TestChannel.State.default, follow = TestChannel.State.default),
     pwfs2Tracking = ProbeTrackingState(
       nodAchopA = TestChannel.State.of("Off"),
       nodAchopB = TestChannel.State.of("Off"),
       nodBchopA = TestChannel.State.of("Off"),
       nodBchopB = TestChannel.State.of("Off")
     ),
+    pwfs2Probe =
+      ProbeState(parkDir = TestChannel.State.default, follow = TestChannel.State.default),
     oiwfsTracking = ProbeTrackingState(
       nodAchopA = TestChannel.State.of("Off"),
       nodAchopB = TestChannel.State.of("Off"),
@@ -371,12 +388,6 @@ object TestTcsEpicsSystem {
     oiwfsProbe =
       ProbeState(parkDir = TestChannel.State.default, follow = TestChannel.State.default),
     oiWfs = WfsChannelState.default,
-    aowfsTracking = ProbeTrackingState(
-      nodAchopA = TestChannel.State.of("Off"),
-      nodAchopB = TestChannel.State.of("Off"),
-      nodBchopA = TestChannel.State.of("Off"),
-      nodBchopB = TestChannel.State.of("Off")
-    ),
     m1Guide = TestChannel.State.default,
     m1GuideConfig = M1GuideConfigState.default,
     m2Guide = TestChannel.State.default,
@@ -394,6 +405,30 @@ object TestTcsEpicsSystem {
     aoFoldMech = AgMechState.default,
     m1Cmds = M1CommandsState.default,
     nodState = TestChannel.State.of("A"),
+    pwfs1TrackingState = ProbeTrackingStateState(
+      nodAchopA = TestChannel.State.of("Off"),
+      nodAchopB = TestChannel.State.of("Off"),
+      nodBchopA = TestChannel.State.of("Off"),
+      nodBchopB = TestChannel.State.of("Off")
+    ),
+    pwfs2TrackingState = ProbeTrackingStateState(
+      nodAchopA = TestChannel.State.of("Off"),
+      nodAchopB = TestChannel.State.of("Off"),
+      nodBchopA = TestChannel.State.of("Off"),
+      nodBchopB = TestChannel.State.of("Off")
+    ),
+    oiwfsTrackingState = ProbeTrackingStateState(
+      nodAchopA = TestChannel.State.of("Off"),
+      nodAchopB = TestChannel.State.of("Off"),
+      nodBchopA = TestChannel.State.of("Off"),
+      nodBchopB = TestChannel.State.of("Off")
+    ),
+    aowfsTrackingState = ProbeTrackingStateState(
+      nodAchopA = TestChannel.State.of("Off"),
+      nodAchopB = TestChannel.State.of("Off"),
+      nodBchopA = TestChannel.State.of("Off"),
+      nodBchopB = TestChannel.State.of("Off")
+    ),
     targetAdjust = AdjustCommandState.default,
     originAdjust = AdjustCommandState.default,
     pointingAdjust = PointingAdjustCommandState.default,
@@ -523,6 +558,16 @@ object TestTcsEpicsSystem {
     new TestChannel[F, State, String](s, l.andThen(Focus[ProbeTrackingState](_.nodAchopB))),
     new TestChannel[F, State, String](s, l.andThen(Focus[ProbeTrackingState](_.nodBchopA))),
     new TestChannel[F, State, String](s, l.andThen(Focus[ProbeTrackingState](_.nodBchopB)))
+  )
+
+  def buildProbeTrackingStateChannels[F[_]: Temporal](
+    s: Ref[F, State],
+    l: Lens[State, ProbeTrackingStateState]
+  ): ProbeTrackingStateChannels[F] = ProbeTrackingStateChannels(
+    new TestChannel[F, State, String](s, l.andThen(Focus[ProbeTrackingStateState](_.nodAchopA))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[ProbeTrackingStateState](_.nodAchopB))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[ProbeTrackingStateState](_.nodBchopA))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[ProbeTrackingStateState](_.nodBchopB)))
   )
 
   def buildProbeChannels[F[_]: Temporal](
@@ -914,6 +959,10 @@ object TestTcsEpicsSystem {
       rotator = buildRotatorChannels(s),
       origin = buildOriginChannels(s),
       focusOffset = new TestChannel[F, State, String](s, Focus[State](_.focusOffset)),
+      p1ProbeTracking = buildProbeTrackingChannels(s, Focus[State](_.pwfs1Tracking)),
+      p1Probe = buildProbeChannels(s, Focus[State](_.pwfs1Probe)),
+      p2ProbeTracking = buildProbeTrackingChannels(s, Focus[State](_.pwfs2Tracking)),
+      p2Probe = buildProbeChannels(s, Focus[State](_.pwfs2Probe)),
       oiProbeTracking = buildProbeTrackingChannels(s, Focus[State](_.oiwfsTracking)),
       oiProbe = buildProbeChannels(s, Focus[State](_.oiwfsProbe)),
       m1Guide = new TestChannel[F, State, String](s, Focus[State](_.m1Guide)),
@@ -934,10 +983,10 @@ object TestTcsEpicsSystem {
       aoFoldMech = buildAgMechChannels(s, Focus[State](_.aoFoldMech)),
       m1Channels = buildM1Channels(s, Focus[State](_.m1Cmds)),
       nodState = new TestChannel[F, State, String](s, Focus[State](_.nodState)),
-      p1ProbeTrackingState = buildProbeTrackingChannels(s, Focus[State](_.pwfs1Tracking)),
-      p2ProbeTrackingState = buildProbeTrackingChannels(s, Focus[State](_.pwfs2Tracking)),
-      oiProbeTrackingState = buildProbeTrackingChannels(s, Focus[State](_.oiwfsTracking)),
-      aoProbeTrackingState = buildProbeTrackingChannels(s, Focus[State](_.aowfsTracking)),
+      p1ProbeTrackingState = buildProbeTrackingStateChannels(s, Focus[State](_.pwfs1TrackingState)),
+      p2ProbeTrackingState = buildProbeTrackingStateChannels(s, Focus[State](_.pwfs2TrackingState)),
+      oiProbeTrackingState = buildProbeTrackingStateChannels(s, Focus[State](_.oiwfsTrackingState)),
+      aoProbeTrackingState = buildProbeTrackingStateChannels(s, Focus[State](_.aowfsTrackingState)),
       targetAdjust = buildAdjustChannels(s, Focus[State](_.targetAdjust)),
       originAdjust = buildAdjustChannels(s, Focus[State](_.originAdjust)),
       pointingAdjust = buildPointingAdjustChannels(s, Focus[State](_.pointingAdjust)),

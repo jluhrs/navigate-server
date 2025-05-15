@@ -15,13 +15,17 @@ case class AgsChannels[F[_]](
   inPosition:      Channel[F, Int],
   sfParked:        Channel[F, Int],
   aoParked:        Channel[F, Int],
+  hwParked:        Channel[F, Int],
   p1Parked:        Channel[F, Int],
   p1Follow:        Channel[F, String],
   p2Parked:        Channel[F, Int],
   p2Follow:        Channel[F, String],
   oiParked:        Channel[F, Int],
   oiFollow:        Channel[F, String],
-  instrumentPorts: AgsChannels.InstrumentPortChannels[F]
+  instrumentPorts: AgsChannels.InstrumentPortChannels[F],
+  aoName:          Channel[F, String],
+  hwName:          Channel[F, String],
+  sfName:          Channel[F, String]
 )
 
 object AgsChannels {
@@ -78,6 +82,7 @@ object AgsChannels {
     inPos    <- service.getChannel[Int](top, "inPosition.VAL")
     sfParked <- service.getChannel[Int](top, "sfParked.VAL")
     aoParked <- service.getChannel[Int](top, "aoParked.VAL")
+    hwParked <- service.getChannel[Int](top, "hwParked.VAL")
     p1Parked <- service.getChannel[Int](top, "p1:probeParked.VAL")
     p1Follow <- service.getChannel[String](top, "p1:followS.VAL")
     p2Parked <- service.getChannel[Int](top, "p2:probeParked.VAL")
@@ -85,17 +90,24 @@ object AgsChannels {
     oiParked <- service.getChannel[Int](top, "oi:probeParked.VAL")
     oiFollow <- service.getChannel[String](top, "oi:followS.VAL")
     ports    <- InstrumentPortChannels.build(service, top)
+    aoName   <- service.getChannel[String](top, "aoName")
+    hwName   <- service.getChannel[String](top, "hwName")
+    sfName   <- service.getChannel[String](top, "sfName")
   } yield AgsChannels(
     t,
     inPos,
     sfParked,
     aoParked,
+    hwParked,
     p1Parked,
     p1Follow,
     p2Parked,
     p2Follow,
     oiParked,
     oiFollow,
-    ports
+    ports,
+    aoName,
+    hwName,
+    sfName
   )
 }
