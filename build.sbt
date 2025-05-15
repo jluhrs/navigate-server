@@ -136,7 +136,6 @@ lazy val navigate_web_server = project
     reStart / mainClass := Some("navigate.web.server.http4s.WebServerLauncher"),
     // Don't include configuration files in the JAR. We want them outside, so they are editable.
     Compile / packageBin / mappings ~= {
-      // _.filterNot(f => f._1.getName.endsWith(".conf") || f._1.getName.endsWith("logback.xml"))
       _.filterNot(f => f._1.getName.endsWith("logback.xml"))
     }
   )
@@ -217,7 +216,7 @@ lazy val deployedAppSettings = Seq(
   makeBatScripts           := Seq.empty,
   // Specify a different name for the config file
   bashScriptConfigLocation := Some("${app_home}/../conf/launcher.args"),
-  bashScriptExtraDefines += """addJava "-Dlogback.configurationFile=${app_home}/../conf/logback.xml"""",
+  bashScriptExtraDefines += """addJava "-Dlogback.configurationFile=${app_home}/../conf/$SITE/logback.xml"""",
   // Launch options
   Universal / javaOptions ++= Seq(
     // -J params will be added as jvm parameters
