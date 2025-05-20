@@ -1175,16 +1175,16 @@ object TcsEpicsSystem {
         )
 
         override def maxVelocity(mv: Double): TcsCommands[F] = addParam(
-          writeCadParam(channels.telltale, channels.targetFilter.bandWidth)(mv)
+          writeCadParam(channels.telltale, channels.targetFilter.maxVelocity)(mv)
         )
 
         override def grabRadius(gr: Double): TcsCommands[F] = addParam(
-          writeCadParam(channels.telltale, channels.targetFilter.bandWidth)(gr)
+          writeCadParam(channels.telltale, channels.targetFilter.grabRadius)(gr)
         )
 
         override def shortcircuit(sc: ShortcircuitTargetFilter.Type): TcsCommands[F] = addParam(
-          writeCadParam(channels.telltale, channels.targetFilter.bandWidth)(
-            sc.value.fold("CLOSED", "OPEN")
+          writeCadParam(channels.telltale, channels.targetFilter.shortCircuit)(
+            sc.value.fold("Closed", "Open")
           )
         )
       }

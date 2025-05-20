@@ -1629,6 +1629,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assert(r1.m2GuideConfig.source.connected)
       assert(r1.m2GuideConfig.beam.connected)
       assert(r1.m2GuideMode.connected)
+      assert(r1.targetFilter.shortcircuit.connected)
 
       assertEquals(r1.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
       assertEquals(r1.m1GuideConfig.source.value, M1Source.OIWFS.tag.toUpperCase.some)
@@ -1638,6 +1639,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assertEquals(r1.m2GuideMode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
                    BinaryOnOff.On.some
       )
+      assertEquals(r1.targetFilter.shortcircuit.value, "Closed".some)
     }
 
   }
