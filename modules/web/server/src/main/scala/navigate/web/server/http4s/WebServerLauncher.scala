@@ -87,13 +87,17 @@ object WebServerLauncher extends IOApp with LogInitialization {
 
     def router(wsBuilder: WebSocketBuilder2[F], proxyService: HttpRoutes[F]) = Router[F](
       "/"                 -> new StaticRoutes().service,
-      "/navigate"         -> new GraphQlRoutes(se,
-                                       topics.loggingEvents,
-                                       topics.guideState,
-                                       topics.guidersQuality,
-                                       topics.telescopeState,
-                                       topics.acquisitionAdjustment,
-                                       topics.logBuffer
+      "/navigate"         -> new GraphQlRoutes(
+        se,
+        topics.loggingEvents,
+        topics.guideState,
+        topics.guidersQuality,
+        topics.telescopeState,
+        topics.acquisitionAdjustment,
+        topics.targetAdjustment,
+        topics.originAdjustment,
+        topics.pointingAdjustment,
+        topics.logBuffer
       )
         .service(wsBuilder),
       ProxyRoute.toString -> proxyService

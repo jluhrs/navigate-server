@@ -14,9 +14,11 @@ import lucuma.odb.json.angle.query.given
 import lucuma.odb.json.offset.query.given
 import navigate.model.AcquisitionAdjustment
 import navigate.model.NavigateState
+import navigate.server.tcs.FocalPlaneOffset
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuidersQualityValues
 import navigate.server.tcs.MechSystemState
+import navigate.server.tcs.TargetOffsets
 import navigate.server.tcs.TelescopeState
 
 package object encoder {
@@ -98,6 +100,20 @@ package object encoder {
   given Encoder[NavigateState] = s =>
     Json.obj(
       "onSwappedTarget" -> s.onSwappedTarget.asJson
+    )
+
+  given Encoder[FocalPlaneOffset] = s =>
+    Json.obj(
+      "deltaX" -> s.deltaX.asJson,
+      "deltaY" -> s.deltaY.asJson
+    )
+
+  given Encoder[TargetOffsets] = s =>
+    Json.obj(
+      "sourceA" -> s.sourceA.asJson,
+      "pwfs1"   -> s.pwfs1.asJson,
+      "pwfs2"   -> s.pwfs2.asJson,
+      "oiwfs"   -> s.oiwfs.asJson
     )
 
 }

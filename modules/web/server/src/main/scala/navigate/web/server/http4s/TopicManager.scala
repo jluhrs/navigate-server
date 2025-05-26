@@ -16,8 +16,10 @@ import navigate.model.AcquisitionAdjustment
 import navigate.model.NavigateEvent
 import navigate.server.NavigateEngine
 import navigate.server.NavigateFailure
+import navigate.server.tcs.FocalPlaneOffset
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuidersQualityValues
+import navigate.server.tcs.TargetOffsets
 import navigate.server.tcs.TelescopeState
 import navigate.web.server.logging.SubscriptionAppender
 import org.typelevel.log4cats.Logger
@@ -32,6 +34,9 @@ class TopicManager[F[_]] private (
   val guidersQuality:        Topic[F, GuidersQualityValues],
   val telescopeState:        Topic[F, TelescopeState],
   val acquisitionAdjustment: Topic[F, AcquisitionAdjustment],
+  val targetAdjustment:      Topic[F, TargetOffsets],
+  val originAdjustment:      Topic[F, FocalPlaneOffset],
+  val pointingAdjustment:    Topic[F, FocalPlaneOffset],
   val logBuffer:             Ref[F, Seq[ILoggingEvent]]
 ) {
 
@@ -163,6 +168,9 @@ object TopicManager {
       guidersQuality        <- Resource.eval(Topic[F, GuidersQualityValues])
       telescopeState        <- Resource.eval(Topic[F, TelescopeState])
       acquisitionAdjustment <- Resource.eval(Topic[F, AcquisitionAdjustment])
+      targetAdjustment      <- Resource.eval(Topic[F, TargetOffsets])
+      originAdjustment      <- Resource.eval(Topic[F, FocalPlaneOffset])
+      pointingAdjustment    <- Resource.eval(Topic[F, FocalPlaneOffset])
 
       // Setup log buffer
       logBuffer <- bufferLogMessages(loggingEvents)
@@ -175,6 +183,9 @@ object TopicManager {
       guidersQuality,
       telescopeState,
       acquisitionAdjustment,
+      targetAdjustment,
+      originAdjustment,
+      pointingAdjustment,
       logBuffer
     )
 }
