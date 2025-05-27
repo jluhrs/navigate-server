@@ -833,7 +833,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     sys.tcsEpics
       .startCommand(timeout)
       .targetAdjustCommand
-      .frame(ReferenceFrame.Instrument)
+      .frame(ReferenceFrame.Tracking)
       .targetAdjustCommand
       .angle(Angle.Angle0)
       .targetAdjustCommand
