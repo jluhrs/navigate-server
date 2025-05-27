@@ -278,12 +278,60 @@ type AcquisitionAdjustmentState {
     command: AcquistionAdjustmentCommand!
 }
 
+input HorizontalOffsetInput {
+    azimuth: AngleInput!
+    elevation: AngleInput!
+}
+
+input FocalPlaneOffsetInput {
+    deltaX: AngleInput!
+    deltaY: AngleInput!
+}
+
+type FocalPlaneOffset {
+    deltaX: Angle!
+    deltaY: Angle!
+}
+
+input EquatorialOffsetInput {
+    deltaRA: AngleInput!
+    deltaDec: AngleInput!
+}
+
+input HandsetAdjustmentInput {
+    """ Azimuth/Elevation coordinate system """
+    horizontalAdjustment: HorizontalOffsetInput
+    """ Telescope focal plane coordinate system (X, Y)"""
+    focalPlaneAdjustment: FocalPlaneOffsetInput
+    """ Instrument coordinate system (P, Q) """
+    instrumentAdjustment: OffsetInput
+    """ Right Ascension/Declination coordinate system """
+    equatorialAdjustment: EquatorialOffsetInput
+}
+
+enum AdjustTarget {
+    SOURCE_A
+    PWFS1
+    PWFS2
+    OIWFS
+}
+
+type TargetOffsets {
+    sourceA: FocalPlaneOffset
+    pwfs1: FocalPlaneOffset
+    pwfs2: FocalPlaneOffset
+    oiwfs: FocalPlaneOffset
+}
+
 type Query {
     telescopeState: TelescopeState!
     guideState: GuideConfigurationState!
     navigateState: NavigateState!
     instrumentPort(instrument: Instrument!): Int
     serverVersion: String
+    targetAdjustmentOffsets: TargetOffsets!
+    originAdjustmentOffset: FocalPlaneOffset!
+    pointingAdjustmentOffset: FocalPlaneOffset!
 }
 
 type Mutation {
@@ -318,6 +366,15 @@ type Mutation {
     lightpathConfig(from: LightSource, to: LightSink): OperationOutcome!
     acquisitionAdjustment(adjustment: AcquisitionAdjustmentInput!): OperationOutcome!
     wfsSky(wfs: GuideProbe!, period: TimeSpanInput!): OperationOutcome!
+    adjustTarget(target: AdjustTarget!, offset: HandsetAdjustmentInput!, openLoops: Boolean!): OperationOutcome!
+    adjustPointing(offset: HandsetAdjustmentInput!, openLoops: Boolean!): OperationOutcome!
+    adjustOrigin(offset: HandsetAdjustmentInput!, openLoops: Boolean!): OperationOutcome!
+    resetTargetAdjustment(target: AdjustTarget!): OperationOutcome!
+    absorbTargetAdjustment(target: AdjustTarget!): OperationOutcome!
+    resetPointingAdjustment: OperationOutcome!
+    absorbPointingAdjustment: OperationOutcome!
+    resetOriginAdjustment: OperationOutcome!
+    absorbOriginAdjustment: OperationOutcome!
 }
 
 type Subscription {
@@ -327,4 +384,7 @@ type Subscription {
     telescopeState: TelescopeState!
     navigateState: NavigateState!
     acquisitionAdjustmentState: AcquisitionAdjustmentState!
+    targetAdjustmentOffsets: TargetOffsets!
+    originAdjustmentOffset: FocalPlaneOffset!
+    pointingAdjustmentOffset: FocalPlaneOffset!
 }

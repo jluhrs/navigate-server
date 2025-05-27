@@ -3,6 +3,7 @@
 
 package navigate.web.server.http4s
 
+import cats.Applicative
 import cats.effect.Sync
 import cats.effect.kernel.Ref
 import cats.syntax.all.*
@@ -66,9 +67,13 @@ import navigate.server.tcs.AutoparkGems
 import navigate.server.tcs.AutoparkOiwfs
 import navigate.server.tcs.AutoparkPwfs1
 import navigate.server.tcs.AutoparkPwfs2
+import navigate.server.tcs.FocalPlaneOffset
+import navigate.server.tcs.FocalPlaneOffset.DeltaX
+import navigate.server.tcs.FocalPlaneOffset.DeltaY
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuiderConfig
 import navigate.server.tcs.GuidersQualityValues
+import navigate.server.tcs.HandsetAdjustment
 import navigate.server.tcs.InstrumentSpecifics
 import navigate.server.tcs.Origin
 import navigate.server.tcs.ResetPointing
@@ -79,10 +84,12 @@ import navigate.server.tcs.ShortcircuitTargetFilter
 import navigate.server.tcs.SlewOptions
 import navigate.server.tcs.StopGuide
 import navigate.server.tcs.Target
+import navigate.server.tcs.TargetOffsets
 import navigate.server.tcs.TcsBaseController.SwapConfig
 import navigate.server.tcs.TcsBaseController.TcsConfig
 import navigate.server.tcs.TelescopeState
 import navigate.server.tcs.TrackingConfig
+import navigate.server.tcs.VirtualTelescope
 import navigate.server.tcs.ZeroChopThrow
 import navigate.server.tcs.ZeroGuideOffset
 import navigate.server.tcs.ZeroInstrumentOffset
@@ -98,15 +105,18 @@ import scala.reflect.classTag
 import encoder.given
 
 class NavigateMappings[F[_]: Sync](
-  server:                     NavigateEngine[F],
-  logTopic:                   Topic[F, ILoggingEvent],
-  guideStateTopic:            Topic[F, GuideState],
-  guidersQualityTopic:        Topic[F, GuidersQualityValues],
-  telescopeStateTopic:        Topic[F, TelescopeState],
-  acquisitionAdjustmentTopic: Topic[F, AcquisitionAdjustment],
-  logBuffer:                  Ref[F, Seq[ILoggingEvent]]
+  val server:                     NavigateEngine[F],
+  val logTopic:                   Topic[F, ILoggingEvent],
+  val guideStateTopic:            Topic[F, GuideState],
+  val guidersQualityTopic:        Topic[F, GuidersQualityValues],
+  val telescopeStateTopic:        Topic[F, TelescopeState],
+  val acquisitionAdjustmentTopic: Topic[F, AcquisitionAdjustment],
+  val targetAdjustmentTopic:      Topic[F, TargetOffsets],
+  val originAdjustmentTopic:      Topic[F, FocalPlaneOffset],
+  val pointingAdjustmentTopic:    Topic[F, FocalPlaneOffset],
+  val logBuffer:                  Ref[F, Seq[ILoggingEvent]]
 )(
-  override val schema:        Schema
+  override val schema:            Schema
 ) extends CirceMapping[F] {
   import NavigateMappings._
 
@@ -118,6 +128,13 @@ class NavigateMappings[F[_]: Sync](
 
   def navigateState(p: Path, env: Env): F[Result[NavigateState]] =
     server.getNavigateState.attempt.map(_.fold(Result.internalError, Result.success))
+
+  def targetAdjustmentOffsets: F[Result[TargetOffsets]]     =
+    Result.success(TargetOffsets.default).pure[F]
+  def originAdjustmentOffset: F[Result[FocalPlaneOffset]]   =
+    Result.success(FocalPlaneOffset.Zero).pure[F]
+  def pointingAdjustmentOffset: F[Result[FocalPlaneOffset]] =
+    Result.success(FocalPlaneOffset.Zero).pure[F]
 
   def instrumentPort(p: Path, env: Env): F[Result[Option[Int]]] =
     env
@@ -436,6 +453,21 @@ class NavigateMappings[F[_]: Sync](
       )
     )).getOrElse(Result.failure[OperationOutcome]("Slew parameters could not be parsed.").pure[F])
 
+  def adjustTarget(p: Path, env: Env): F[Result[OperationOutcome]] =
+    Result.success(OperationOutcome.success).pure[F]
+
+  def adjustOrigin(p: Path, env: Env): F[Result[OperationOutcome]] =
+    Result.success(OperationOutcome.success).pure[F]
+
+  def adjustPointing(p: Path, env: Env): F[Result[OperationOutcome]] =
+    Result.success(OperationOutcome.success).pure[F]
+
+  def resetTargetAdjustment(p: Path, env: Env): F[Result[OperationOutcome]] =
+    Result.success(OperationOutcome.success).pure[F]
+
+  def absorbTargetAdjustment(p: Path, env: Env): F[Result[OperationOutcome]] =
+    Result.success(OperationOutcome.success).pure[F]
+
   def simpleCommand(cmd: F[Unit]): F[Result[OperationOutcome]] =
     cmd.attempt
       .map(x =>
@@ -613,6 +645,76 @@ class NavigateMappings[F[_]: Sync](
         _ <- Elab.env("wfs" -> w)
         _ <- Elab.env("period" -> t)
       } yield ()
+    case (MutationType,
+          "adjustTarget",
+          List(Binding("target", EnumValue(target)),
+               Binding("offset", ObjectValue(offset)),
+               Binding("openLoops", BooleanValue(openLoops))
+          )
+        ) =>
+      for {
+        t <- Elab.liftR(
+               parseEnumerated[VirtualTelescope](target).toResult(
+                 "Could not parse adjustTarget parameter \"target\""
+               )
+             )
+        o <- Elab.liftR(
+               parseHandsetAdjustment(offset).toResult(
+                 "Could not parse adjustTarget parameter \"offset\""
+               )
+             )
+        _ <- Elab.env("target", t)
+        _ <- Elab.env("offset", o)
+        _ <- Elab.env("openLoops", openLoops)
+      } yield ()
+    case (MutationType, "resetTargetAdjustment", List(Binding("target", EnumValue(target))))    =>
+      for {
+        t <- Elab.liftR(
+               parseEnumerated[VirtualTelescope](target).toResult(
+                 "Could not parse resetTargetAdjustment parameter \"target\""
+               )
+             )
+        _ <- Elab.env("target", t)
+      } yield ()
+    case (MutationType, "absorbTargetAdjustment", List(Binding("target", EnumValue(target))))   =>
+      for {
+        t <- Elab.liftR(
+               parseEnumerated[VirtualTelescope](target).toResult(
+                 "Could not parse absorbTargetAdjustment parameter \"target\""
+               )
+             )
+        _ <- Elab.env("target", t)
+      } yield ()
+    case (MutationType,
+          "adjustPointing",
+          List(Binding("offset", ObjectValue(offset)),
+               Binding("openLoops", BooleanValue(openLoops))
+          )
+        ) =>
+      for {
+        o <- Elab.liftR(
+               parseHandsetAdjustment(offset).toResult(
+                 "Could not parse adjustPointing parameter \"offset\""
+               )
+             )
+        _ <- Elab.env("offset", o)
+        _ <- Elab.env("openLoops", openLoops)
+      } yield ()
+    case (MutationType,
+          "adjustOrigin",
+          List(Binding("offset", ObjectValue(offset)),
+               Binding("openLoops", BooleanValue(openLoops))
+          )
+        ) =>
+      for {
+        o <- Elab.liftR(
+               parseHandsetAdjustment(offset).toResult(
+                 "Could not parse adjustOrigin parameter \"offset\""
+               )
+             )
+        _ <- Elab.env("offset", o)
+        _ <- Elab.env("openLoops", openLoops)
+      } yield ()
     case (QueryType, "instrumentPort", List(Binding("instrument", EnumValue(ins))))             =>
       Elab
         .liftR(
@@ -631,7 +733,12 @@ class NavigateMappings[F[_]: Sync](
           RootEffect.computeEncodable("telescopeState")((p, env) => telescopeState(p, env)),
           RootEffect.computeEncodable("navigateState")((p, env) => navigateState(p, env)),
           RootEffect.computeEncodable("instrumentPort")((p, env) => instrumentPort(p, env)),
-          RootEffect.computeEncodable("serverVersion")((_, _) => serverVersion)
+          RootEffect.computeEncodable("serverVersion")((_, _) => serverVersion),
+          RootEffect.computeEncodable("targetAdjustmentOffsets")((_, _) => targetAdjustmentOffsets),
+          RootEffect.computeEncodable("originAdjustmentOffset")((_, _) => originAdjustmentOffset),
+          RootEffect.computeEncodable("pointingAdjustmentOffset")((_, _) =>
+            pointingAdjustmentOffset
+          )
         )
       ),
       ObjectMapping(
@@ -689,7 +796,34 @@ class NavigateMappings[F[_]: Sync](
           },
           RootEffect.computeEncodable("wfsSky") { (p, env) =>
             wfsSky(p, env)
-          }
+          },
+          RootEffect.computeEncodable("adjustTarget") { (p, env) =>
+            adjustTarget(p, env)
+          },
+          RootEffect.computeEncodable("adjustPointing") { (p, env) =>
+            adjustPointing(p, env)
+          },
+          RootEffect.computeEncodable("adjustOrigin") { (p, env) =>
+            adjustOrigin(p, env)
+          },
+          RootEffect.computeEncodable("resetTargetAdjustment")((p, env) =>
+            resetTargetAdjustment(p, env)
+          ),
+          RootEffect.computeEncodable("absorbTargetAdjustment")((p, env) =>
+            absorbTargetAdjustment(p, env)
+          ),
+          RootEffect.computeEncodable("resetPointingAdjustment")((p, env) =>
+            simpleCommand(Applicative[F].unit)
+          ),
+          RootEffect.computeEncodable("absorbPointingAdjustment")((p, env) =>
+            simpleCommand(Applicative[F].unit)
+          ),
+          RootEffect.computeEncodable("resetOriginAdjustment")((p, env) =>
+            simpleCommand(Applicative[F].unit)
+          ),
+          RootEffect.computeEncodable("absorbOriginAdjustment")((p, env) =>
+            simpleCommand(Applicative[F].unit)
+          )
         )
       ),
       ObjectMapping(
@@ -735,6 +869,27 @@ class NavigateMappings[F[_]: Sync](
               .map(_.asJson)
               .map(circeCursor(p, env, _))
               .map(Result.success)
+          },
+          RootStream.computeCursor("targetAdjustmentOffsets") { (p, env) =>
+            targetAdjustmentTopic
+              .subscribe(1024)
+              .map(_.asJson)
+              .map(circeCursor(p, env, _))
+              .map(Result.success)
+          },
+          RootStream.computeCursor("originAdjustmentOffset") { (p, env) =>
+            originAdjustmentTopic
+              .subscribe(1024)
+              .map(_.asJson)
+              .map(circeCursor(p, env, _))
+              .map(Result.success)
+          },
+          RootStream.computeCursor("pointingAdjustmentOffset") { (p, env) =>
+            pointingAdjustmentTopic
+              .subscribe(1024)
+              .map(_.asJson)
+              .map(circeCursor(p, env, _))
+              .map(Result.success)
           }
         )
       )
@@ -755,26 +910,37 @@ object NavigateMappings extends GrackleParsers {
     guidersQualityTopic:        Topic[F, GuidersQualityValues],
     telescopeStateTopic:        Topic[F, TelescopeState],
     acquisitionAdjustmentTopic: Topic[F, AcquisitionAdjustment],
+    targetAdjustmentTopic:      Topic[F, TargetOffsets],
+    originAdjustmentTopic:      Topic[F, FocalPlaneOffset],
+    pointingAdjustmentTopic:    Topic[F, FocalPlaneOffset],
     logBuffer:                  Ref[F, Seq[ILoggingEvent]]
   ): F[NavigateMappings[F]] = loadSchema.flatMap {
     case Result.Success(schema)           =>
-      new NavigateMappings[F](server,
-                              logTopic,
-                              guideStateTopic,
-                              guidersQualityTopic,
-                              telescopeStateTopic,
-                              acquisitionAdjustmentTopic,
-                              logBuffer
+      new NavigateMappings[F](
+        server,
+        logTopic,
+        guideStateTopic,
+        guidersQualityTopic,
+        telescopeStateTopic,
+        acquisitionAdjustmentTopic,
+        targetAdjustmentTopic,
+        originAdjustmentTopic,
+        pointingAdjustmentTopic,
+        logBuffer
       )(schema)
         .pure[F]
     case Result.Warning(problems, schema) =>
-      new NavigateMappings[F](server,
-                              logTopic,
-                              guideStateTopic,
-                              guidersQualityTopic,
-                              telescopeStateTopic,
-                              acquisitionAdjustmentTopic,
-                              logBuffer
+      new NavigateMappings[F](
+        server,
+        logTopic,
+        guideStateTopic,
+        guidersQualityTopic,
+        telescopeStateTopic,
+        acquisitionAdjustmentTopic,
+        targetAdjustmentTopic,
+        originAdjustmentTopic,
+        pointingAdjustmentTopic,
+        logBuffer
       )(schema)
         .pure[F]
     case Result.Failure(problems)         =>
@@ -1014,5 +1180,27 @@ object NavigateMappings extends GrackleParsers {
               parseEnumerated[AcquisitionAdjustmentCommand](v)
             }.flatten
     } yield cmd.fold(AcquisitionAdjustment(o, ipa, iaa))(AcquisitionAdjustment(o, ipa, iaa, _))
+
+  def parseHandsetAdjustment(l: List[(String, Value)]): Option[HandsetAdjustment] =
+    l.find(_._2 != Value.AbsentValue) match {
+      case Some(("horizontalAdjustment", ObjectValue(n)))  =>
+        for {
+          daz <- n.collectFirst { case ("azimuth", ObjectValue(m)) => parseAngle(m) }.flatten
+          del <- n.collectFirst { case ("elevation", ObjectValue(m)) => parseAngle(m) }.flatten
+        } yield HandsetAdjustment.HorizontalAdjustment(daz, del)
+      case Some(("focalPlaneAdjustment", ObjectValue(n)))  =>
+        for {
+          dx <- n.collectFirst { case ("deltaX", ObjectValue(m)) => parseAngle(m) }.flatten
+          dy <- n.collectFirst { case ("deltaY", ObjectValue(m)) => parseAngle(m) }.flatten
+        } yield HandsetAdjustment.FocalPlaneAdjustment(FocalPlaneOffset(DeltaX(dx), DeltaY(dy)))
+      case Some(("instrumentAdjustment", ObjectValue(n)))  =>
+        parseOffset(n).map(HandsetAdjustment.InstrumentAdjustment.apply)
+      case Some(("equatorialAdjustement", ObjectValue(n))) =>
+        for {
+          dra  <- n.collectFirst { case ("deltaRA", ObjectValue(m)) => parseAngle(m) }.flatten
+          ddec <- n.collectFirst { case ("deltaDec", ObjectValue(m)) => parseAngle(m) }.flatten
+        } yield HandsetAdjustment.EquatorialAdjustment(dra, ddec)
+      case _                                               => none
+    }
 
 }

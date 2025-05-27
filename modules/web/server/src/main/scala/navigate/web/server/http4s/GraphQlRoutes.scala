@@ -14,8 +14,10 @@ import lucuma.graphql.routes.Routes
 import natchez.Trace
 import navigate.model.AcquisitionAdjustment
 import navigate.server.NavigateEngine
+import navigate.server.tcs.FocalPlaneOffset
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuidersQualityValues
+import navigate.server.tcs.TargetOffsets
 import navigate.server.tcs.TelescopeState
 import org.http4s.HttpRoutes
 import org.http4s.dsl.Http4sDsl
@@ -30,19 +32,26 @@ class GraphQlRoutes[F[_]: Async: Logger: Trace: Compression](
   guidersQualityTopic:        Topic[F, GuidersQualityValues],
   telescopeStateTopic:        Topic[F, TelescopeState],
   acquisitionAdjustmentTopic: Topic[F, AcquisitionAdjustment],
+  targetAdjustmentTopic:      Topic[F, TargetOffsets],
+  originAdjustmentTopic:      Topic[F, FocalPlaneOffset],
+  pointingAdjustmentTopic:    Topic[F, FocalPlaneOffset],
   logBuffer:                  Ref[F, Seq[ILoggingEvent]]
 ) extends Http4sDsl[F] {
 
   private def commandServices(wsb: WebSocketBuilder2[F]): HttpRoutes[F] = GZip(
     Routes.forService(
       _ =>
-        NavigateMappings(eng,
-                         logTopic,
-                         guideStateTopic,
-                         guidersQualityTopic,
-                         telescopeStateTopic,
-                         acquisitionAdjustmentTopic,
-                         logBuffer
+        NavigateMappings(
+          eng,
+          logTopic,
+          guideStateTopic,
+          guidersQualityTopic,
+          telescopeStateTopic,
+          acquisitionAdjustmentTopic,
+          targetAdjustmentTopic,
+          originAdjustmentTopic,
+          pointingAdjustmentTopic,
+          logBuffer
         )
           .map(
             GraphQLService[F](_).some
