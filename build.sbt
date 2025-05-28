@@ -115,6 +115,9 @@ lazy val stateengine = project
     ) ++ Libraries.MUnit.value
   )
 
+lazy val createNpmProject = taskKey[Unit]("Create NPM project for Navigate web server")
+lazy val npmPublish       = taskKey[Unit]("Run npm publish")
+
 lazy val navigate_web_server = project
   .in(file("modules/web/server"))
   .enablePlugins(BuildInfoPlugin)
@@ -137,6 +140,31 @@ lazy val navigate_web_server = project
     // Don't include configuration files in the JAR. We want them outside, so they are editable.
     Compile / packageBin / mappings ~= {
       _.filterNot(f => f._1.getName.endsWith("logback.xml"))
+    },
+    createNpmProject    := {
+      val npmDir = target.value / "npm"
+      IO.write(
+        npmDir / "package.json",
+        s"""|{
+            |  "name": "navigate-server-schema",
+            |  "version": "0.1.0-${version.value.replace("-", ".")}",
+            |  "license": "${licenses.value.head._1}"
+            |}
+            |""".stripMargin
+      )
+      IO.copyFile(
+        (Compile / resourceDirectory).value / "navigate.graphql",
+        npmDir / "navigate.graphql"
+      )
+      streams.value.log.info(s"Created NPM project in ${npmDir}")
+    },
+    npmPublish          := {
+      import scala.sys.process._
+      val npmDir = target.value / "npm"
+
+      val _ = createNpmProject.value
+      Process(List("npm", "publish"), npmDir).!!
+      streams.value.log.info(s"Published NPM package from ${npmDir}")
     }
   )
   .settings(
