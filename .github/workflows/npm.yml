@@ -5,10 +5,10 @@ name: Publish npm package
 
 on:
   push:
-    # branches:
-    #   - 'main'
-    # paths:
-    #   - '**.graphql'
+    branches:
+      - 'main'
+    paths:
+      - '**.graphql'
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
