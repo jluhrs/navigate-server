@@ -143,19 +143,31 @@ lazy val navigate_web_server = project
     },
     createNpmProject    := {
       val npmDir = target.value / "npm"
+
       IO.write(
         npmDir / "package.json",
         s"""|{
             |  "name": "navigate-server-schema",
-            |  "version": "0.1.0-${version.value.replace("-", ".")}",
+            |  "version": "0.1.0-${version.value}",
             |  "license": "${licenses.value.head._1}"
             |}
             |""".stripMargin
       )
-      IO.copyFile(
-        (Compile / resourceDirectory).value / "navigate.graphql",
-        npmDir / "navigate.graphql"
+
+      // Replace the import path to the schema file to match the NPM package structure
+      val schemaContent = IO
+        .read(
+          (Compile / resourceDirectory).value / "navigate.graphql"
+        )
+        .replace(
+          "from \"lucuma/schemas/ObservationDB.graphql\"",
+          "from \"lucuma-schemas/odb\""
+        )
+      IO.write(
+        npmDir / "navigate.graphql",
+        schemaContent
       )
+
       streams.value.log.info(s"Created NPM project in ${npmDir}")
     },
     npmPublish          := {
