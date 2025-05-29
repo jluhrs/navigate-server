@@ -4,7 +4,7 @@ New telescope control tool for the Gemini Observatory
 
 # Deployment
 
-A Docker image is automatically built and deployed to Dockerhub as `noirlab/gpp-nav` when a PR is merged into the `main` branch.
+A Docker image is automatically built and deployed to Dockerhub as `noirlab/gpp-nav-server` when a PR is merged into the `main` branch.
 
 # Locally desting deployment
 
@@ -37,7 +37,7 @@ etc...
 You can run the container with the following command:
 
 ```
-docker run -p 443:9090 --mount type=bind,src=/opt/navigate/local,dst=/opt/docker/conf/local noirlab/gpp-nav:latest
+docker run -p 443:9090 --mount type=bind,src=/opt/navigate/local,dst=/opt/docker/conf/local noirlab/gpp-nav-server:latest
 ```
 
 NOTE: The image is created with a self-signed TLS certificate in `conf/local` for testing purposes. Please remember to mount a local volume instead to use the correct testing or production certificate.
