@@ -852,18 +852,25 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     val expTimeout: FiniteDuration = FiniteDuration(exposureTime.toMicroseconds,
                                                     TimeUnit.MICROSECONDS
     ) * (SkyFrames * 1.1).longValue + FiniteDuration.apply(5, TimeUnit.SECONDS)
+    val postStopDelay              = FiniteDuration(10, TimeUnit.MILLISECONDS)
+    val postDarkConfigDelay        = FiniteDuration(4, TimeUnit.SECONDS)
+    val postObserveDelay           = FiniteDuration(50, TimeUnit.MILLISECONDS)
 
     for {
       oiActive <-
         sys.tcsEpics.status.oiwfsOn.map(_.map(_ === BinaryYesNo.Yes)).verifiedRun(ConnectionTimeout)
-      _        <- oiwfsStopObserve.whenA(oiActive)
-      _        <- sys.tcsEpics
+      _        <- (sys.tcsEpics
                     .startCommand(timeout)
                     .oiWfsCommands
-                    .dark
+                    .stop
+                    .mark
+                    .post
+                    .verifiedRun(ConnectionTimeout) *> Temporal[F].sleep(postStopDelay)).whenA(oiActive)
+      _        <- sys.oiwfs
+                    .startDarkCommand(timeout)
                     .filename(darkFileName(oiPrefix, exposureTime))
                     .post
-                    .verifiedRun(ConnectionTimeout)
+                    .verifiedRun(ConnectionTimeout) *> Temporal[F].sleep(postDarkConfigDelay)
       ret      <- sys.tcsEpics
                     .startCommand(timeout)
                     .oiWfsCommands
@@ -873,7 +880,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
                     .observe
                     .interval(exposureTime.toSeconds.toDouble)
                     .post
-                    .verifiedRun(ConnectionTimeout)
+                    .verifiedRun(ConnectionTimeout) <* Temporal[F].sleep(postObserveDelay)
       _        <- sys.tcsEpics.status.waitOiwfsSky(expTimeout).verifiedRun(ConnectionTimeout)
       _        <- oiwfsObserve(exposureTime).whenA(oiActive)
     } yield ret
@@ -890,13 +897,13 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
   override def oiwfsSky(exposureTime: TimeSpan)(guide: GuideConfig): F[ApplyCommandResult] = for {
     pg <- getProbesGuideState.verifiedRun(ConnectionTimeout)
     _  <- disableTargetFilter
-    _  <- pauseWfsTracking(pg).verifiedRun(ConnectionTimeout)
     _  <- pauseGuide
+    _  <- pauseWfsTracking(pg).verifiedRun(ConnectionTimeout)
     _  <- skyOffset(SkyOffset)
     r  <- takeOiwfsSky(exposureTime)
     _  <- skyOffset(-SkyOffset)
-    _  <- resumeGuide(guide.tcsGuide)
     _  <- resumeWfsTracking(pg).verifiedRun(ConnectionTimeout)
+    _  <- resumeGuide(guide.tcsGuide)
   } yield r
 
   // Time to wait after selecting the OIWFS in the AG Sequencer, to let the values propagate to TCS.

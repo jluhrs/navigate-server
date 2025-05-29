@@ -984,9 +984,9 @@ object TcsEpicsSystem {
         )
       }
 
-    override val oiWfsCommands: WfsCommands[F, TcsCommands[F]] =
-      new WfsCommands[F, TcsCommands[F]] {
-        override val observe: WfsObserveCommand[F, TcsCommands[F]]             =
+    override val oiWfsCommands: OiwfsCommands[F, TcsCommands[F]] =
+      new OiwfsCommands[F, TcsCommands[F]] {
+        override val observe: WfsObserveCommand[F, TcsCommands[F]] =
           new WfsObserveCommand[F, TcsCommands[F]] {
             override def numberOfExposures(v: Int): TcsCommands[F] = addParam(
               tcsEpics.oiWfsCmds.observe.setParam1(v)
@@ -1010,31 +1010,9 @@ object TcsEpicsSystem {
               tcsEpics.oiWfsCmds.observe.setParam7(v)
             )
           }
-        override val stop: BaseCommand[F, TcsCommands[F]]                      = new BaseCommand[F, TcsCommands[F]] {
+        override val stop: BaseCommand[F, TcsCommands[F]]          = new BaseCommand[F, TcsCommands[F]] {
           override def mark: TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.stop.mark)
         }
-        override val signalProc: WfsSignalProcConfigCommand[F, TcsCommands[F]] = (v: String) =>
-          addParam(tcsEpics.oiWfsCmds.signalProc.setParam1(v))
-        override val dark: WfsDarkCommand[F, TcsCommands[F]]                   = (v: String) =>
-          addParam(tcsEpics.oiWfsCmds.dark.setParam1(v))
-        override val closedLoop: WfsClosedLoopCommand[F, TcsCommands[F]]       =
-          new WfsClosedLoopCommand[F, TcsCommands[F]] {
-            override def global(v: Double): TcsCommands[F] = addParam(
-              tcsEpics.oiWfsCmds.closedLoop.setParam1(v)
-            )
-
-            override def average(v: Int): TcsCommands[F] = addParam(
-              tcsEpics.oiWfsCmds.closedLoop.setParam2(v)
-            )
-
-            override def zernikes2m2(v: Int): TcsCommands[F] = addParam(
-              tcsEpics.oiWfsCmds.closedLoop.setParam3(v)
-            )
-
-            override def mult(v: Double): TcsCommands[F] = addParam(
-              tcsEpics.oiWfsCmds.closedLoop.setParam4(v)
-            )
-          }
       }
 
     override val probeGuideModeCommand: ProbeGuideModeCommand[F, TcsCommands[F]] =
@@ -1838,6 +1816,11 @@ object TcsEpicsSystem {
     val closedLoop: WfsClosedLoopCommand[F, S]
   }
 
+  trait OiwfsCommands[F[_], +S] {
+    val observe: WfsObserveCommand[F, S]
+    val stop: BaseCommand[F, S]
+  }
+
   trait OiwfsSelectCommand[F[_], +S] {
     def oiwfsName(v: String): S
     def output(v:    String): S
@@ -1900,7 +1883,7 @@ object TcsEpicsSystem {
     val m2GuideResetCommand: BaseCommand[F, TcsCommands[F]]
     val m2FollowCommand: FollowCommand[F, TcsCommands[F]]
     val mountGuideCommand: MountGuideCommand[F, TcsCommands[F]]
-    val oiWfsCommands: WfsCommands[F, TcsCommands[F]]
+    val oiWfsCommands: OiwfsCommands[F, TcsCommands[F]]
     val probeGuideModeCommand: ProbeGuideModeCommand[F, TcsCommands[F]]
     val oiwfsSelectCommand: OiwfsSelectCommand[F, TcsCommands[F]]
     val bafflesCommand: BafflesCommand[F, TcsCommands[F]]

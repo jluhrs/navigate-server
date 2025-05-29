@@ -1619,9 +1619,10 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       _        <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
       _        <- ctr.oiwfsSky(expTime)(GuideConfig(guideCfg, none))
       r1       <- st.tcs.get
+      r2       <- st.oi.get
     } yield {
-      assert(r1.oiWfs.dark.connected)
-      assertEquals(r1.oiWfs.dark.value, "data/20Hz.fits".some)
+      assert(r2.seqDarkFilename.connected)
+      assertEquals(r2.seqDarkFilename.value, "data/20Hz.fits".some)
 
       assert(r1.m1Guide.connected)
       assert(r1.m1GuideConfig.source.connected)
