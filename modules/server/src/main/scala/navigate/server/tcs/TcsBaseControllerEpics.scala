@@ -676,7 +676,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     else
       s"${prefix}${math.round(1.0 / exposureTime.toSeconds.toDouble)}Hz.fits"
 
-  val oiPrefix: String = "data/"
+  val dataFolderName: String = "data/"
 
   def setupOiwfsObserve(exposureTime: TimeSpan, isQL: Boolean): F[ApplyCommandResult] =
     stateRef.get.flatMap { st =>
@@ -685,7 +685,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
 
       val setSigProc  = expTimeChange
         .map(t =>
-          sys.oiwfs.startSignalProcCommand(timeout).filename(darkFileName(oiPrefix, t)).post
+          sys.oiwfs.startSignalProcCommand(timeout).filename(darkFileName(dataFolderName, t)).post
         )
         .getOrElse(VerifiedEpics.pureF[F, F, ApplyCommandResult](ApplyCommandResult.Completed)) *>
         qlChange
@@ -868,7 +868,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
                     .verifiedRun(ConnectionTimeout) *> Temporal[F].sleep(postStopDelay)).whenA(oiActive)
       _        <- sys.oiwfs
                     .startDarkCommand(timeout)
-                    .filename(darkFileName(oiPrefix, exposureTime))
+                    .filename(darkFileName("", exposureTime))
                     .post
                     .verifiedRun(ConnectionTimeout) *> Temporal[F].sleep(postDarkConfigDelay)
       ret      <- sys.tcsEpics
