@@ -1622,7 +1622,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       r2       <- st.oi.get
     } yield {
       assert(r2.seqDarkFilename.connected)
-      assertEquals(r2.seqDarkFilename.value, "data/20Hz.fits".some)
+      assertEquals(r2.seqDarkFilename.value, "20Hz.fits".some)
 
       assert(r1.m1Guide.connected)
       assert(r1.m1GuideConfig.source.connected)
