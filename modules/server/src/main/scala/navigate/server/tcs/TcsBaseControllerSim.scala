@@ -17,11 +17,14 @@ import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.TimeSpan
 import monocle.Focus.focus
 import mouse.boolean.*
+import navigate.model.FocalPlaneOffset
+import navigate.model.HandsetAdjustment
 import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
 import navigate.model.enums.LightSource
 import navigate.model.enums.ShutterMode
+import navigate.model.enums.VirtualTelescope
 import navigate.server.ApplyCommandResult
 import navigate.server.tcs.FollowStatus.*
 import navigate.server.tcs.GuidersQualityValues.GuiderQuality
@@ -212,4 +215,22 @@ class TcsBaseControllerSim[F[_]: Sync](
     guide: GuideConfig
   ): F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
 
+  override def getTargetAdjustments: F[TargetOffsets] = TargetOffsets.default.pure[F]
+
+  override def getPointingOffset: F[FocalPlaneOffset] = FocalPlaneOffset.Zero.pure[F]
+
+  override def getOriginOffset: F[FocalPlaneOffset] = FocalPlaneOffset.Zero.pure[F]
+
+  override def targetAdjust(
+    target:            VirtualTelescope,
+    handsetAdjustment: HandsetAdjustment,
+    openLoops:         Boolean
+  )(guide: GuideConfig): F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
+
+  override def originAdjust(handsetAdjustment: HandsetAdjustment, openLoops: Boolean)(
+    guide: GuideConfig
+  ): F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
+
+  override def pointingAdjust(handsetAdjustment: HandsetAdjustment): F[ApplyCommandResult] =
+    ApplyCommandResult.Completed.pure[F]
 }

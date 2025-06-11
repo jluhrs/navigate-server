@@ -15,21 +15,27 @@ import eu.timepit.refined.types.string.NonEmptyString
 import fs2.Stream
 import lucuma.core.enums.GuideProbe
 import lucuma.core.math.Angle
+import lucuma.core.math.Coordinates
+import lucuma.core.math.Declination
+import lucuma.core.math.RightAscension
 import lucuma.core.model.ProbeGuide
 import lucuma.core.util.Enumerated
 import mouse.all.*
+import navigate.epics.Channel
 import navigate.epics.Channel.StreamEvent
 import navigate.epics.EpicsService
 import navigate.epics.EpicsSystem.TelltaleChannel
 import navigate.epics.VerifiedEpics
 import navigate.epics.VerifiedEpics.*
 import navigate.model.Distance
+import navigate.model.FocalPlaneOffset
 import navigate.model.enums.AoFoldPosition
 import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
 import navigate.model.enums.HrwfsPickupPosition
 import navigate.model.enums.ShutterMode
+import navigate.model.enums.VirtualTelescope
 import navigate.server.ApplyCommandResult
 import navigate.server.acm.Encoder
 import navigate.server.acm.Encoder.given
@@ -199,10 +205,6 @@ object TcsEpicsSystem {
     def pwfs2On: VerifiedEpics[F, F, BinaryYesNo]
     def oiwfsOn: VerifiedEpics[F, F, BinaryYesNo]
     def nodState: VerifiedEpics[F, F, NodState]
-    // def sfName: F[String]
-    // def sfParked: F[Int]
-    // def agHwName: F[String]
-    // def agHwParked: F[Int]
     // def instrAA: F[Double]
     // def inPosition: F[String]
     // def agInPosition: F[Double]
@@ -242,7 +244,11 @@ object TcsEpicsSystem {
     // def sfTilt: F[Double]
     // def sfLinear: F[Double]
     // def instrPA: F[Double]
-    // def targetA: F[List[Double]]
+    def sourceATargetReadout: VerifiedEpics[F, F, TargetData]
+    def pwfs1TargetReadout: VerifiedEpics[F, F, TargetData]
+    def pwfs2TargetReadout: VerifiedEpics[F, F, TargetData]
+    def oiwfsTargetReadout: VerifiedEpics[F, F, TargetData]
+    val pointingCorrectionState: PointingCorrectionState[F]
     // def aoFoldPosition: F[String]
     // def useAo: F[BinaryYesNo]
     // def airmass: F[Double]
@@ -465,6 +471,61 @@ object TcsEpicsSystem {
             }
           })
         }
+
+        private def readTarget(
+          name: String,
+          ch:   Channel[F, Array[Double]]
+        ): VerifiedEpics[F, F, TargetData] =
+          VerifiedEpics
+            .readChannel(channels.telltale, ch)
+            .map(_.flatMap { v =>
+              if (v.length >= 8)
+                Declination
+                  .fromRadians(v(1))
+                  .map { dec =>
+                    TargetData(
+                      Coordinates(
+                        RightAscension.fromRadians(v(0)),
+                        dec
+                      ),
+                      FocalPlaneOffset(
+                        FocalPlaneOffset.DeltaX(Angle.fromDoubleRadians(v(2))),
+                        FocalPlaneOffset.DeltaY(Angle.fromDoubleRadians(v(3)))
+                      ),
+                      FocalPlaneOffset(
+                        FocalPlaneOffset.DeltaX(Angle.fromDoubleRadians(v(4)) * FocalPlaneScale),
+                        FocalPlaneOffset.DeltaY(Angle.fromDoubleRadians(v(5)) * FocalPlaneScale)
+                      ),
+                      FocalPlaneOffset(
+                        FocalPlaneOffset.DeltaX(Angle.fromDoubleRadians(v(6)) * FocalPlaneScale),
+                        FocalPlaneOffset.DeltaY(Angle.fromDoubleRadians(v(7)) * FocalPlaneScale)
+                      )
+                    ).pure[F]
+                  }
+                  .getOrElse(
+                    Async[F].raiseError[TargetData](
+                      new Error(s"Bad declination value in $name target array: $v")
+                    )
+                  )
+              else
+                Async[F]
+                  .raiseError[TargetData](new Error(s"Not enough values in $name target array: $v"))
+            })
+
+        override def sourceATargetReadout: VerifiedEpics[F, F, TargetData] =
+          readTarget("SourceA", channels.sourceATargetReadout)
+
+        override def pwfs1TargetReadout: VerifiedEpics[F, F, TargetData] =
+          readTarget("PWFS1", channels.pwfs1TargetReadout)
+
+        override def pwfs2TargetReadout: VerifiedEpics[F, F, TargetData] =
+          readTarget("PWFS2", channels.pwfs2TargetReadout)
+
+        override def oiwfsTargetReadout: VerifiedEpics[F, F, TargetData] =
+          readTarget("OIWFS", channels.oiwfsTargetReadout)
+
+        override val pointingCorrectionState: PointingCorrectionState[F] =
+          PointingCorrectionState.build(channels)
       }
   }
 
@@ -1146,7 +1207,7 @@ object TcsEpicsSystem {
         )
       }
 
-    override val targetFilter: TargetFilterCommand[F, TcsCommands[F]] =
+    override val targetFilter: TargetFilterCommand[F, TcsCommands[F]]            =
       new TargetFilterCommand[F, TcsCommands[F]] {
         override def bandwidth(bw: Double): TcsCommands[F] = addParam(
           writeCadParam(channels.telltale, channels.targetFilter.bandWidth)(bw)
@@ -1164,6 +1225,34 @@ object TcsEpicsSystem {
           writeCadParam(channels.telltale, channels.targetFilter.shortCircuit)(
             sc.value.fold("Closed", "Open")
           )
+        )
+      }
+    override val pointingAdjustCommand: PointingAdjustCommand[F, TcsCommands[F]] =
+      new PointingAdjustCommand[F, TcsCommands[F]] {
+        override def frame(frm: ReferenceFrame): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.pointingAdjust.frame)(frm)
+        )
+
+        override def size(sz: Double): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.pointingAdjust.size)(sz)
+        )
+
+        override def angle(a: Angle): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.pointingAdjust.angle)(a.toDoubleDegrees)
+        )
+      }
+    override val pointingConfigCommand: PointingConfigCommand[F, TcsCommands[F]] =
+      new PointingConfigCommand[F, TcsCommands[F]] {
+        override def name(nm: PointingParameter): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.pointingConfig.name)(nm)
+        )
+
+        override def level(lv: PointingConfigLevel): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.pointingConfig.level)(lv)
+        )
+
+        override def value(v: Double): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.pointingConfig.value)(v)
         )
       }
   }
@@ -1560,6 +1649,35 @@ object TcsEpicsSystem {
         .map(_.map(Enumerated[BinaryOnOff].fromTag(_).getOrElse(BinaryOnOff.Off)))
   }
 
+  trait PointingCorrectionState[F[_]: Applicative] {
+    def localCA: VerifiedEpics[F, F, Angle]
+    def localCE: VerifiedEpics[F, F, Angle]
+    def guideCA: VerifiedEpics[F, F, Angle]
+    def guideCE: VerifiedEpics[F, F, Angle]
+  }
+
+  object PointingCorrectionState {
+    def build[F[_]: Applicative](channels: TcsChannels[F]): PointingCorrectionState[F] =
+      new PointingCorrectionState[F] {
+
+        override def localCA: VerifiedEpics[F, F, Angle] = VerifiedEpics
+          .readChannel(channels.telltale, channels.pointingAdjustmentState.localCA)
+          .map(_.map(Angle.fromDoubleArcseconds))
+
+        override def localCE: VerifiedEpics[F, F, Angle] = VerifiedEpics
+          .readChannel(channels.telltale, channels.pointingAdjustmentState.localCE)
+          .map(_.map(Angle.fromDoubleArcseconds))
+
+        override def guideCA: VerifiedEpics[F, F, Angle] = VerifiedEpics
+          .readChannel(channels.telltale, channels.pointingAdjustmentState.guideCA)
+          .map(_.map(Angle.fromDoubleArcseconds))
+
+        override def guideCE: VerifiedEpics[F, F, Angle] = VerifiedEpics
+          .readChannel(channels.telltale, channels.pointingAdjustmentState.guideCE)
+          .map(_.map(Angle.fromDoubleArcseconds))
+      }
+  }
+
   case class AgMechCommandsChannels[F[_]: Monad, A](
     park:     ParameterlessCommandChannels[F],
     position: Command1Channels[F, A]
@@ -1850,6 +1968,18 @@ object TcsEpicsSystem {
     def shortcircuit(sc: ShortcircuitTargetFilter.Type): S
   }
 
+  trait PointingAdjustCommand[F[_], +S] {
+    def frame(frm: ReferenceFrame): S
+    def size(sz:   Double): S
+    def angle(a:   Angle): S
+  }
+
+  trait PointingConfigCommand[F[_], +S] {
+    def name(nm:  PointingParameter): S
+    def level(lv: PointingConfigLevel): S
+    def value(v:  Double): S
+  }
+
   trait TcsCommands[F[_]] {
     def post: VerifiedEpics[F, F, ApplyCommandResult]
     val mcsParkCommand: BaseCommand[F, TcsCommands[F]]
@@ -1894,6 +2024,8 @@ object TcsEpicsSystem {
     val targetAdjustCommand: AdjustCommand[F, TcsCommands[F]]
     val originAdjustCommand: AdjustCommand[F, TcsCommands[F]]
     val targetFilter: TargetFilterCommand[F, TcsCommands[F]]
+    val pointingAdjustCommand: PointingAdjustCommand[F, TcsCommands[F]]
+    val pointingConfigCommand: PointingConfigCommand[F, TcsCommands[F]]
   }
   /*
 

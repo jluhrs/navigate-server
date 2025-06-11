@@ -214,3 +214,5 @@ extension (i: Instrument) {
     case Instrument.Zorro      => LightSinkName.Visitor
     case _                     => LightSinkName.Ac
 }
+
+val FocalPlaneScale: Double = 1.61144 // arcsec/mm

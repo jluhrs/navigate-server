@@ -1,12 +1,12 @@
 // Copyright (c) 2016-2025 Association of Universities for Research in Astronomy, Inc. (AURA)
 // For license information see LICENSE or https://opensource.org/licenses/BSD-3-Clause
 
-package navigate.server.tcs
+package navigate.model
 
 import lucuma.core.math.Angle
 import lucuma.core.math.Offset
 
-trait HandsetAdjustment
+sealed trait HandsetAdjustment
 
 object HandsetAdjustment {
   case class HorizontalAdjustment(deltaAz: Angle, deltaEl: Angle)  extends HandsetAdjustment

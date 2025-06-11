@@ -37,16 +37,18 @@ import lucuma.core.util.Timestamp
 import monocle.Focus.focus
 import munit.CatsEffectSuite
 import navigate.model.AcquisitionAdjustment
+import navigate.model.FocalPlaneOffset
+import navigate.model.HandsetAdjustment
 import navigate.model.NavigateEvent
 import navigate.model.NavigateState
 import navigate.model.enums.AcquisitionAdjustmentCommand
 import navigate.model.enums.DomeMode
 import navigate.model.enums.LightSource
 import navigate.model.enums.ShutterMode
+import navigate.model.enums.VirtualTelescope
 import navigate.server.NavigateEngine
 import navigate.server.OdbProxy
 import navigate.server.Systems
-import navigate.server.tcs.FocalPlaneOffset
 import navigate.server.tcs.FollowStatus
 import navigate.server.tcs.FollowStatus.*
 import navigate.server.tcs.GuideState
@@ -1542,7 +1544,6 @@ class NavigateMappingsSuite extends CatsEffectSuite {
           |        }
           |      }
           |    }
-          |    openLoops: true
           |  ) {
           |    result
           |  }
@@ -1985,7 +1986,26 @@ object NavigateMappingsTest {
 
       override def getGuideDemand: IO[GuideConfig] = g.get
 
+      def getTargetAdjustments: IO[TargetOffsets] = TargetOffsets.default.pure[IO]
+
       override def wfsSky(wfs: GuideProbe, period: TimeSpan): IO[Unit] = IO.unit
+
+      override def getPointingOffset: IO[FocalPlaneOffset] = FocalPlaneOffset.Zero.pure[IO]
+
+      override def getOriginOffset: IO[FocalPlaneOffset] = FocalPlaneOffset.Zero.pure[IO]
+
+      override def targetAdjust(
+        target:            VirtualTelescope,
+        handsetAdjustment: HandsetAdjustment,
+        openLoops:         Boolean
+      ): IO[Unit] = IO.unit
+
+      override def originAdjust(
+        handsetAdjustment: HandsetAdjustment,
+        openLoops:         Boolean
+      ): IO[Unit] = IO.unit
+
+      override def pointingAdjust(handsetAdjustment: HandsetAdjustment): IO[Unit] = IO.unit
     }
   }
 

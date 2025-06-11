@@ -65,6 +65,16 @@ package object epics {
     }
   }
 
+  given ToJavaType[Array[Double]] = new ToJavaType[Array[Double]] {
+    override type javaType = Array[Double]
+    override val clazz: Class[javaType]                         = classOf[Array[Double]]
+    override val convert: Convert[Array[Double], Array[Double]] =
+      new Convert[Array[Double], Array[Double]] {
+        override def toJava(v:   Array[Double]): Option[Array[Double]] = v.some
+        override def fromJava(x: Array[Double]): Option[Array[Double]] = x.some
+      }
+  }
+
   given ToJavaType[String] = new ToJavaType[String] {
     override type javaType = String
     override val clazz: Class[javaType]           = classOf[String]

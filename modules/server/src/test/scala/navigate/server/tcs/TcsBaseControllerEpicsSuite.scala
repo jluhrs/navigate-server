@@ -34,11 +34,13 @@ import mouse.boolean.given
 import munit.CatsEffectSuite
 import navigate.epics.TestChannel
 import navigate.model.Distance
+import navigate.model.HandsetAdjustment
 import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
 import navigate.model.enums.LightSource
 import navigate.model.enums.ShutterMode
+import navigate.model.enums.VirtualTelescope
 import navigate.server.acm.CadDirective
 import navigate.server.epicsdata
 import navigate.server.epicsdata.BinaryOnOff
@@ -1643,6 +1645,193 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assertEquals(r1.targetFilter.shortcircuit.value, "Closed".some)
     }
 
+  }
+
+  test("Apply target correction") {
+    val guideCfg = TelescopeGuideConfig(
+      mountGuide = MountGuideOption.MountGuideOn,
+      m1Guide = M1GuideConfig.M1GuideOn(M1Source.OIWFS),
+      m2Guide = M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
+      dayTimeMode = Some(false),
+      probeGuide = none
+    )
+
+    for {
+      x        <- createController()
+      (st, ctr) = x
+      _        <- setOiwfsTrackingState(st.tcs)
+      _        <- ctr.enableGuide(guideCfg)
+      _        <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
+      _        <- ctr.targetAdjust(VirtualTelescope.SourceA,
+                                   HandsetAdjustment.EquatorialAdjustment(Angle.fromDoubleArcseconds(-8.0),
+                                                                          Angle.fromDoubleArcseconds(6.0)
+                                   ),
+                                   true
+                  )(GuideConfig(guideCfg, none))
+      r1       <- st.tcs.get
+      _        <- ctr.targetAdjust(
+                    VirtualTelescope.Oiwfs,
+                    HandsetAdjustment.InstrumentAdjustment(
+                      Offset(Offset.P(Angle.fromDoubleArcseconds(-3.0)),
+                             Offset.Q(Angle.fromDoubleArcseconds(3.0))
+                      )
+                    ),
+                    true
+                  )(GuideConfig(guideCfg, none))
+      r2       <- st.tcs.get
+    } yield {
+      assert(r1.m1Guide.connected)
+      assert(r1.m1GuideConfig.source.connected)
+      assert(r1.m2Guide.connected)
+      assert(r1.m2GuideConfig.source.connected)
+      assert(r1.m2GuideConfig.beam.connected)
+      assert(r1.m2GuideMode.connected)
+
+      assertEquals(r1.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
+      assertEquals(r1.m1GuideConfig.source.value, M1Source.OIWFS.tag.toUpperCase.some)
+      assertEquals(r1.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
+      assertEquals(r1.m2GuideConfig.source.value, TipTiltSource.OIWFS.tag.toUpperCase.some)
+      assertEquals(r1.m2GuideConfig.beam.value, "A".some)
+      assertEquals(r1.m2GuideMode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.On.some
+      )
+
+      assert(r1.targetAdjust.frame.connected)
+      assert(r1.targetAdjust.size.connected)
+      assert(r1.targetAdjust.angle.connected)
+      assert(r1.targetAdjust.vt.connected)
+      assertEquals(r1.targetAdjust.frame.value.flatMap(_.toIntOption), 3.some)
+      r1.targetAdjust.size.value
+        .flatMap(_.toDoubleOption)
+        .fold(fail("No size value set"))(v => assertEqualsDouble(v, 10.0, 1e-6))
+      r1.targetAdjust.angle.value
+        .flatMap(_.toDoubleOption)
+        .fold(fail("No angle value set"))(v =>
+          assertEqualsDouble(v, Math.toDegrees(Math.atan2(6.0, -8.0)), 1e-6)
+        )
+      assertEquals(r1.targetAdjust.vt.value.flatMap(_.toIntOption), -2.some)
+      assertEquals(r2.targetAdjust.frame.value.flatMap(_.toIntOption), 2.some)
+      r2.targetAdjust.size.value
+        .flatMap(_.toDoubleOption)
+        .fold(fail("No size value set"))(v => assertEqualsDouble(v, 3.0 * Math.sqrt(2.0), 1e-6))
+      r2.targetAdjust.angle.value
+        .flatMap(_.toDoubleOption)
+        .fold(fail("No angle value set"))(v => assertEqualsDouble(v, 225.0, 1e-6))
+      assertEquals(r2.targetAdjust.vt.value.flatMap(_.toIntOption), -64.some)
+    }
+  }
+
+  test("Apply origin correction") {
+    val guideCfg = TelescopeGuideConfig(
+      mountGuide = MountGuideOption.MountGuideOn,
+      m1Guide = M1GuideConfig.M1GuideOn(M1Source.OIWFS),
+      m2Guide = M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
+      dayTimeMode = Some(false),
+      probeGuide = none
+    )
+
+    for {
+      x        <- createController()
+      (st, ctr) = x
+      _        <- setOiwfsTrackingState(st.tcs)
+      _        <- ctr.enableGuide(guideCfg)
+      _        <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
+      _        <- ctr.originAdjust(HandsetAdjustment.EquatorialAdjustment(Angle.fromDoubleArcseconds(-8.0),
+                                                                          Angle.fromDoubleArcseconds(6.0)
+                                   ),
+                                   true
+                  )(GuideConfig(guideCfg, none))
+      r1       <- st.tcs.get
+      _        <- ctr.originAdjust(HandsetAdjustment.InstrumentAdjustment(
+                                     Offset(Offset.P(Angle.fromDoubleArcseconds(-3.0)),
+                                            Offset.Q(Angle.fromDoubleArcseconds(3.0))
+                                     )
+                                   ),
+                                   true
+                  )(GuideConfig(guideCfg, none))
+      r2       <- st.tcs.get
+    } yield {
+      assert(r1.m1Guide.connected)
+      assert(r1.m1GuideConfig.source.connected)
+      assert(r1.m2Guide.connected)
+      assert(r1.m2GuideConfig.source.connected)
+      assert(r1.m2GuideConfig.beam.connected)
+      assert(r1.m2GuideMode.connected)
+
+      assertEquals(r1.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
+      assertEquals(r1.m1GuideConfig.source.value, M1Source.OIWFS.tag.toUpperCase.some)
+      assertEquals(r1.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
+      assertEquals(r1.m2GuideConfig.source.value, TipTiltSource.OIWFS.tag.toUpperCase.some)
+      assertEquals(r1.m2GuideConfig.beam.value, "A".some)
+      assertEquals(r1.m2GuideMode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.On.some
+      )
+
+      assert(r1.originAdjust.frame.connected)
+      assert(r1.originAdjust.size.connected)
+      assert(r1.originAdjust.angle.connected)
+      assert(r1.originAdjust.vt.connected)
+      assertEquals(r1.originAdjust.frame.value.flatMap(_.toIntOption), 3.some)
+      r1.originAdjust.size.value
+        .flatMap(_.toDoubleOption)
+        .fold(fail("No size value set"))(v => assertEqualsDouble(v, 10.0, 1e-6))
+      r1.originAdjust.angle.value
+        .flatMap(_.toDoubleOption)
+        .fold(fail("No angle value set"))(v =>
+          assertEqualsDouble(v, Math.toDegrees(Math.atan2(6.0, -8.0)), 1e-6)
+        )
+      assertEquals(r1.originAdjust.vt.value.flatMap(_.toIntOption), -2.some)
+      assertEquals(r2.originAdjust.frame.value.flatMap(_.toIntOption), 2.some)
+      r2.originAdjust.size.value
+        .flatMap(_.toDoubleOption)
+        .fold(fail("No size value set"))(v => assertEqualsDouble(v, 3.0 * Math.sqrt(2.0), 1e-6))
+      r2.originAdjust.angle.value
+        .flatMap(_.toDoubleOption)
+        .fold(fail("No angle value set"))(v => assertEqualsDouble(v, 225.0, 1e-6))
+      assertEquals(r2.originAdjust.vt.value.flatMap(_.toIntOption), -2.some)
+    }
+  }
+
+  test("Apply pointing correction") {
+    for {
+      x        <- createController()
+      (st, ctr) = x
+      _        <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
+      _        <- ctr.pointingAdjust(
+                    HandsetAdjustment.EquatorialAdjustment(Angle.fromDoubleArcseconds(-8.0),
+                                                           Angle.fromDoubleArcseconds(6.0)
+                    )
+                  )
+      r1       <- st.tcs.get
+      _        <- ctr.pointingAdjust(
+                    HandsetAdjustment.InstrumentAdjustment(
+                      Offset(Offset.P(Angle.fromDoubleArcseconds(-3.0)),
+                             Offset.Q(Angle.fromDoubleArcseconds(3.0))
+                      )
+                    )
+                  )
+      r2       <- st.tcs.get
+    } yield {
+      assert(r1.pointingAdjust.frame.connected)
+      assert(r1.pointingAdjust.size.connected)
+      assert(r1.pointingAdjust.angle.connected)
+      assertEquals(r1.pointingAdjust.frame.value.flatMap(_.toIntOption), 3.some)
+      r1.pointingAdjust.size.value
+        .flatMap(_.toDoubleOption)
+        .fold(fail("No size value set"))(v => assertEqualsDouble(v, 10.0, 1e-6))
+      r1.pointingAdjust.angle.value
+        .flatMap(_.toDoubleOption)
+        .fold(fail("No angle value set"))(v =>
+          assertEqualsDouble(v, Math.toDegrees(Math.atan2(6.0, -8.0)), 1e-6)
+        )
+      assertEquals(r2.pointingAdjust.frame.value.flatMap(_.toIntOption), 2.some)
+      r2.pointingAdjust.size.value
+        .flatMap(_.toDoubleOption)
+        .fold(fail("No size value set"))(v => assertEqualsDouble(v, 3.0 * Math.sqrt(2.0), 1e-6))
+      r2.pointingAdjust.angle.value
+        .flatMap(_.toDoubleOption)
+        .fold(fail("No angle value set"))(v => assertEqualsDouble(v, 225.0, 1e-6))
+    }
   }
 
   case class StateRefs[F[_]](

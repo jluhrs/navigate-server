@@ -13,8 +13,8 @@ import lucuma.core.util.Timestamp
 import lucuma.odb.json.angle.query.given
 import lucuma.odb.json.offset.query.given
 import navigate.model.AcquisitionAdjustment
+import navigate.model.FocalPlaneOffset
 import navigate.model.NavigateState
-import navigate.server.tcs.FocalPlaneOffset
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuidersQualityValues
 import navigate.server.tcs.MechSystemState

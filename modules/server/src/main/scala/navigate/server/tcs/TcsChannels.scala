@@ -21,53 +21,59 @@ case class TcsChannels[F[_]](
   /**
    * List of all TcsChannels. Channel -> Defines a raw channel Other cases -> Group of channels
    */
-  telltale:             TelltaleChannel[F],
-  telescopeParkDir:     Channel[F, CadDirective],
-  mountFollow:          Channel[F, String],
-  rotStopBrake:         Channel[F, String],
-  rotParkDir:           Channel[F, CadDirective],
-  rotFollow:            Channel[F, String],
-  rotMoveAngle:         Channel[F, String],
-  enclosure:            EnclosureChannels[F],
-  sourceA:              TargetChannels[F],
-  oiwfsTarget:          TargetChannels[F],
-  wavelSourceA:         Channel[F, String],
-  slew:                 SlewChannels[F],
-  rotator:              RotatorChannels[F],
-  origin:               OriginChannels[F],
-  focusOffset:          Channel[F, String],
-  p1ProbeTracking:      ProbeTrackingChannels[F],
-  p1Probe:              ProbeChannels[F],
-  p2ProbeTracking:      ProbeTrackingChannels[F],
-  p2Probe:              ProbeChannels[F],
-  oiProbeTracking:      ProbeTrackingChannels[F],
-  oiProbe:              ProbeChannels[F],
-  m1Guide:              Channel[F, String],
-  m1GuideConfig:        M1GuideConfigChannels[F],
-  m2Guide:              Channel[F, String],
-  m2GuideMode:          Channel[F, String],
-  m2GuideConfig:        M2GuideConfigChannels[F],
-  m2GuideReset:         Channel[F, CadDirective],
-  m2Follow:             Channel[F, String],
-  mountGuide:           MountGuideChannels[F],
-  oiwfs:                WfsChannels[F],
-  guide:                GuideConfigStatusChannels[F],
-  probeGuideMode:       ProbeGuideModeChannels[F],
-  oiwfsSelect:          OiwfsSelectChannels[F],
-  m2Baffles:            M2BafflesChannels[F],
-  hrwfsMech:            AgMechChannels[F],
-  scienceFoldMech:      AgMechChannels[F],
-  aoFoldMech:           AgMechChannels[F],
-  m1Channels:           M1Channels[F],
-  nodState:             Channel[F, String],
-  p1ProbeTrackingState: ProbeTrackingStateChannels[F],
-  p2ProbeTrackingState: ProbeTrackingStateChannels[F],
-  oiProbeTrackingState: ProbeTrackingStateChannels[F],
-  targetAdjust:         AdjustChannels[F],
-  originAdjust:         AdjustChannels[F],
-  pointingAdjust:       PointingModelAdjustChannels[F],
-  inPosition:           Channel[F, String],
-  targetFilter:         TargetFilterChannels[F]
+  telltale:                TelltaleChannel[F],
+  telescopeParkDir:        Channel[F, CadDirective],
+  mountFollow:             Channel[F, String],
+  rotStopBrake:            Channel[F, String],
+  rotParkDir:              Channel[F, CadDirective],
+  rotFollow:               Channel[F, String],
+  rotMoveAngle:            Channel[F, String],
+  enclosure:               EnclosureChannels[F],
+  sourceA:                 TargetChannels[F],
+  oiwfsTarget:             TargetChannels[F],
+  wavelSourceA:            Channel[F, String],
+  slew:                    SlewChannels[F],
+  rotator:                 RotatorChannels[F],
+  origin:                  OriginChannels[F],
+  focusOffset:             Channel[F, String],
+  p1ProbeTracking:         ProbeTrackingChannels[F],
+  p1Probe:                 ProbeChannels[F],
+  p2ProbeTracking:         ProbeTrackingChannels[F],
+  p2Probe:                 ProbeChannels[F],
+  oiProbeTracking:         ProbeTrackingChannels[F],
+  oiProbe:                 ProbeChannels[F],
+  m1Guide:                 Channel[F, String],
+  m1GuideConfig:           M1GuideConfigChannels[F],
+  m2Guide:                 Channel[F, String],
+  m2GuideMode:             Channel[F, String],
+  m2GuideConfig:           M2GuideConfigChannels[F],
+  m2GuideReset:            Channel[F, CadDirective],
+  m2Follow:                Channel[F, String],
+  mountGuide:              MountGuideChannels[F],
+  oiwfs:                   WfsChannels[F],
+  guide:                   GuideConfigStatusChannels[F],
+  probeGuideMode:          ProbeGuideModeChannels[F],
+  oiwfsSelect:             OiwfsSelectChannels[F],
+  m2Baffles:               M2BafflesChannels[F],
+  hrwfsMech:               AgMechChannels[F],
+  scienceFoldMech:         AgMechChannels[F],
+  aoFoldMech:              AgMechChannels[F],
+  m1Channels:              M1Channels[F],
+  nodState:                Channel[F, String],
+  p1ProbeTrackingState:    ProbeTrackingStateChannels[F],
+  p2ProbeTrackingState:    ProbeTrackingStateChannels[F],
+  oiProbeTrackingState:    ProbeTrackingStateChannels[F],
+  targetAdjust:            AdjustChannels[F],
+  originAdjust:            AdjustChannels[F],
+  pointingAdjust:          PointingModelAdjustChannels[F],
+  inPosition:              Channel[F, String],
+  targetFilter:            TargetFilterChannels[F],
+  sourceATargetReadout:    Channel[F, Array[Double]],
+  pwfs1TargetReadout:      Channel[F, Array[Double]],
+  pwfs2TargetReadout:      Channel[F, Array[Double]],
+  oiwfsTargetReadout:      Channel[F, Array[Double]],
+  pointingAdjustmentState: PointingCorrections[F],
+  pointingConfig:          PointingConfigChannels[F]
 )
 
 object TcsChannels {
@@ -697,6 +703,42 @@ object TcsChannels {
     )
   }
 
+  case class PointingCorrections[F[_]](
+    localCA: Channel[F, Double],
+    localCE: Channel[F, Double],
+    guideCA: Channel[F, Double],
+    guideCE: Channel[F, Double]
+  )
+
+  object PointingCorrections {
+    def build[F[_]](
+      service: EpicsService[F],
+      top:     TcsTop
+    ): Resource[F, PointingCorrections[F]] = for {
+      lca <- service.getChannel[Double](top.value, "sad:calocal.VAL")
+      lce <- service.getChannel[Double](top.value, "sad:celocal.VAL")
+      gca <- service.getChannel[Double](top.value, "sad:caguide.VAL")
+      gce <- service.getChannel[Double](top.value, "sad:ceguide.VAL")
+    } yield PointingCorrections(lca, lce, gca, gce)
+  }
+
+  case class PointingConfigChannels[F[_]](
+    name:  Channel[F, String],
+    level: Channel[F, String],
+    value: Channel[F, String]
+  )
+
+  object PointingConfigChannels {
+    def build[F[_]](
+      service: EpicsService[F],
+      top:     TcsTop
+    ): Resource[F, PointingConfigChannels[F]] = for {
+      nm <- service.getChannel[String](top.value, "pointParam.A")
+      lv <- service.getChannel[String](top.value, "pointParam.B")
+      vl <- service.getChannel[String](top.value, "pointParam.C")
+    } yield PointingConfigChannels(nm, lv, vl)
+  }
+
   /**
    * Build all TcsChannels It will construct the desired raw channel or call the build function for
    * channels group
@@ -763,6 +805,12 @@ object TcsChannels {
       oigs <- buildProbeTrackingStateChannels(service, tcsTop, "Oiwfs")
       inpo <- service.getChannel[String](tcsTop.value, "sad:inPosition.VAL")
       tf   <- TargetFilterChannels.build(service, tcsTop)
+      satr <- service.getChannel[Array[Double]](tcsTop.value, "sad:targetA.VAL")
+      p1tr <- service.getChannel[Array[Double]](tcsTop.value, "sad:targetPwfs1.VAL")
+      p2tr <- service.getChannel[Array[Double]](tcsTop.value, "sad:targetPwfs2.VAL")
+      oitr <- service.getChannel[Array[Double]](tcsTop.value, "sad:targetOiwfs.VAL")
+      padj <- PointingCorrections.build(service, tcsTop)
+      pncf <- PointingConfigChannels.build(service, tcsTop)
     } yield TcsChannels[F](
       tt,
       tpd,
@@ -810,7 +858,13 @@ object TcsChannels {
       orad,
       pmad,
       inpo,
-      tf
+      tf,
+      satr,
+      p1tr,
+      p2tr,
+      oitr,
+      padj,
+      pncf
     )
   }
 }

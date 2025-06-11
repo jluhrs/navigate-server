@@ -13,10 +13,10 @@ import ch.qos.logback.core.Appender
 import fs2.Stream
 import fs2.concurrent.Topic
 import navigate.model.AcquisitionAdjustment
+import navigate.model.FocalPlaneOffset
 import navigate.model.NavigateEvent
 import navigate.server.NavigateEngine
 import navigate.server.NavigateFailure
-import navigate.server.tcs.FocalPlaneOffset
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuidersQualityValues
 import navigate.server.tcs.TargetOffsets
@@ -45,7 +45,7 @@ class TopicManager[F[_]] private (
     topic:     Topic[F, A]
   )(using Temporal[F]): Stream[F, Unit] =
     Stream
-      .fixedRate[F](FiniteDuration(1, TimeUnit.SECONDS))
+      .fixedRate[F](FiniteDuration(1000, TimeUnit.SECONDS))
       .evalMap(_ => fetchData)
       .evalMapAccumulate(none[A]) { (acc, data) =>
         (if (acc.contains(data)) Applicative[F].unit else topic.publish1(data).void)

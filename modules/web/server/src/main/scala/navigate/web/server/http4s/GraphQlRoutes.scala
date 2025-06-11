@@ -13,8 +13,8 @@ import lucuma.graphql.routes.GraphQLService
 import lucuma.graphql.routes.Routes
 import natchez.Trace
 import navigate.model.AcquisitionAdjustment
+import navigate.model.FocalPlaneOffset
 import navigate.server.NavigateEngine
-import navigate.server.tcs.FocalPlaneOffset
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuidersQualityValues
 import navigate.server.tcs.TargetOffsets

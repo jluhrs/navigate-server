@@ -1,13 +1,13 @@
 // Copyright (c) 2016-2025 Association of Universities for Research in Astronomy, Inc. (AURA)
 // For license information see LICENSE or https://opensource.org/licenses/BSD-3-Clause
 
-package navigate.server.tcs
+package navigate.model
 
 import lucuma.core.math.Angle
 import lucuma.core.math.Offset
 import lucuma.core.util.NewType
-import navigate.server.tcs.FocalPlaneOffset.DeltaX
-import navigate.server.tcs.FocalPlaneOffset.DeltaY
+import navigate.model.FocalPlaneOffset.DeltaX
+import navigate.model.FocalPlaneOffset.DeltaY
 
 case class FocalPlaneOffset(deltaX: DeltaX, deltaY: DeltaY)
 

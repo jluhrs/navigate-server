@@ -58,22 +58,23 @@ import lucuma.core.util.TimeSpan
 import mouse.boolean.given
 import navigate.model.AcquisitionAdjustment
 import navigate.model.Distance
+import navigate.model.FocalPlaneOffset
+import navigate.model.FocalPlaneOffset.DeltaX
+import navigate.model.FocalPlaneOffset.DeltaY
+import navigate.model.HandsetAdjustment
 import navigate.model.NavigateState
 import navigate.model.enums.AcquisitionAdjustmentCommand
 import navigate.model.enums.LightSource
+import navigate.model.enums.VirtualTelescope
 import navigate.server.NavigateEngine
 import navigate.server.tcs.AutoparkAowfs
 import navigate.server.tcs.AutoparkGems
 import navigate.server.tcs.AutoparkOiwfs
 import navigate.server.tcs.AutoparkPwfs1
 import navigate.server.tcs.AutoparkPwfs2
-import navigate.server.tcs.FocalPlaneOffset
-import navigate.server.tcs.FocalPlaneOffset.DeltaX
-import navigate.server.tcs.FocalPlaneOffset.DeltaY
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuiderConfig
 import navigate.server.tcs.GuidersQualityValues
-import navigate.server.tcs.HandsetAdjustment
 import navigate.server.tcs.InstrumentSpecifics
 import navigate.server.tcs.Origin
 import navigate.server.tcs.ResetPointing
@@ -89,7 +90,6 @@ import navigate.server.tcs.TcsBaseController.SwapConfig
 import navigate.server.tcs.TcsBaseController.TcsConfig
 import navigate.server.tcs.TelescopeState
 import navigate.server.tcs.TrackingConfig
-import navigate.server.tcs.VirtualTelescope
 import navigate.server.tcs.ZeroChopThrow
 import navigate.server.tcs.ZeroGuideOffset
 import navigate.server.tcs.ZeroInstrumentOffset
@@ -130,7 +130,7 @@ class NavigateMappings[F[_]: Sync](
     server.getNavigateState.attempt.map(_.fold(Result.internalError, Result.success))
 
   def targetAdjustmentOffsets: F[Result[TargetOffsets]]     =
-    Result.success(TargetOffsets.default).pure[F]
+    server.getTargetAdjustments.attempt.map(_.fold(Result.internalError, Result.success))
   def originAdjustmentOffset: F[Result[FocalPlaneOffset]]   =
     Result.success(FocalPlaneOffset.Zero).pure[F]
   def pointingAdjustmentOffset: F[Result[FocalPlaneOffset]] =
@@ -453,14 +453,47 @@ class NavigateMappings[F[_]: Sync](
       )
     )).getOrElse(Result.failure[OperationOutcome]("Slew parameters could not be parsed.").pure[F])
 
-  def adjustTarget(p: Path, env: Env): F[Result[OperationOutcome]] =
-    Result.success(OperationOutcome.success).pure[F]
+  def adjustTarget(p: Path, env: Env): F[Result[OperationOutcome]] = (for {
+    target    <- env.get[VirtualTelescope]("target")
+    offset    <- env.get[HandsetAdjustment]("offset")
+    openLoops <- env.get[Boolean]("openLoops")
+  } yield server
+    .targetAdjust(target, offset, openLoops)
+    .attempt
+    .map(x =>
+      Result.success(
+        x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+      )
+    )).getOrElse(
+    Result.failure[OperationOutcome]("Target adjustment parameters could not be parsed.").pure[F]
+  )
 
-  def adjustOrigin(p: Path, env: Env): F[Result[OperationOutcome]] =
-    Result.success(OperationOutcome.success).pure[F]
+  def adjustOrigin(p: Path, env: Env): F[Result[OperationOutcome]] = (for {
+    offset    <- env.get[HandsetAdjustment]("offset")
+    openLoops <- env.get[Boolean]("openLoops")
+  } yield server
+    .originAdjust(offset, openLoops)
+    .attempt
+    .map(x =>
+      Result.success(
+        x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+      )
+    )).getOrElse(
+    Result.failure[OperationOutcome]("Origin adjustment parameters could not be parsed.").pure[F]
+  )
 
-  def adjustPointing(p: Path, env: Env): F[Result[OperationOutcome]] =
-    Result.success(OperationOutcome.success).pure[F]
+  def adjustPointing(p: Path, env: Env): F[Result[OperationOutcome]] = (for {
+    offset <- env.get[HandsetAdjustment]("offset")
+  } yield server
+    .pointingAdjust(offset)
+    .attempt
+    .map(x =>
+      Result.success(
+        x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+      )
+    )).getOrElse(
+    Result.failure[OperationOutcome]("Pointing adjustment parameters could not be parsed.").pure[F]
+  )
 
   def resetTargetAdjustment(p: Path, env: Env): F[Result[OperationOutcome]] =
     Result.success(OperationOutcome.success).pure[F]
@@ -685,12 +718,7 @@ class NavigateMappings[F[_]: Sync](
              )
         _ <- Elab.env("target", t)
       } yield ()
-    case (MutationType,
-          "adjustPointing",
-          List(Binding("offset", ObjectValue(offset)),
-               Binding("openLoops", BooleanValue(openLoops))
-          )
-        ) =>
+    case (MutationType, "adjustPointing", List(Binding("offset", ObjectValue(offset))))         =>
       for {
         o <- Elab.liftR(
                parseHandsetAdjustment(offset).toResult(
@@ -698,7 +726,6 @@ class NavigateMappings[F[_]: Sync](
                )
              )
         _ <- Elab.env("offset", o)
-        _ <- Elab.env("openLoops", openLoops)
       } yield ()
     case (MutationType,
           "adjustOrigin",

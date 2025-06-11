@@ -34,6 +34,8 @@ import mouse.boolean.given
 import navigate.epics.VerifiedEpics
 import navigate.epics.VerifiedEpics.*
 import navigate.model.Distance
+import navigate.model.FocalPlaneOffset
+import navigate.model.HandsetAdjustment
 import navigate.model.enums.AoFoldPosition
 import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
@@ -41,6 +43,7 @@ import navigate.model.enums.DomeMode
 import navigate.model.enums.HrwfsPickupPosition
 import navigate.model.enums.LightSource
 import navigate.model.enums.ShutterMode
+import navigate.model.enums.VirtualTelescope
 import navigate.server
 import navigate.server.ApplyCommandResult
 import navigate.server.ConnectionTimeout
@@ -1103,6 +1106,33 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     )
   ).verifiedRun(ConnectionTimeout)
 
+  override def getTargetAdjustments: F[TargetOffsets] = (
+    for {
+      satrF <- sys.tcsEpics.status.sourceATargetReadout
+      p1trF <- sys.tcsEpics.status.pwfs1TargetReadout
+      p2trF <- sys.tcsEpics.status.pwfs2TargetReadout
+      oitrF <- sys.tcsEpics.status.oiwfsTargetReadout
+    } yield for {
+      satr <- satrF
+      p1tr <- p1trF
+      p2tr <- p2trF
+      oitr <- oitrF
+    } yield TargetOffsets(satr.adjOffset, p1tr.adjOffset, p2tr.adjOffset, oitr.adjOffset)
+  ).verifiedRun(ConnectionTimeout)
+
+  override def getPointingOffset: F[FocalPlaneOffset] = (
+    for {
+      caF <- sys.tcsEpics.status.pointingCorrectionState.localCA
+      ceF <- sys.tcsEpics.status.pointingCorrectionState.localCE
+    } yield for {
+      ca <- caF
+      ce <- ceF
+    } yield FocalPlaneOffset(FocalPlaneOffset.DeltaX(ca), FocalPlaneOffset.DeltaY(ce))
+  ).verifiedRun(ConnectionTimeout)
+
+  override def getOriginOffset: F[FocalPlaneOffset] =
+    sys.tcsEpics.status.sourceATargetReadout.verifiedRun(ConnectionTimeout).map(_.originOffset)
+
   override def scsFollow(enable: Boolean): F[ApplyCommandResult] =
     sys.tcsEpics
       .startCommand(timeout)
@@ -1288,18 +1318,27 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
 
   val DegreesToArcseconds: Double = 60.0 * 60.0
 
+  private def rectToPolar(x: Angle, y: Angle): (Angle, Angle) = {
+    val size: Angle  = Angle.fromDoubleRadians(
+      Math.sqrt(
+        Math.pow(x.toSignedDoubleRadians, 2.0)
+          + Math.pow(y.toSignedDoubleRadians, 2.0)
+      )
+    )
+    val angle: Angle = Angle.fromDoubleRadians(
+      Math.atan2(y.toSignedDoubleRadians, x.toSignedDoubleRadians)
+    )
+
+    (size, angle)
+  }
+
   private def applyAcquisitionAdj(
     offset: Offset,
     ipa:    Option[Angle],
     iaa:    Option[Angle]
   ): F[ApplyCommandResult] = {
-    val size: Double = Math.sqrt(
-      Math.pow(offset.p.toAngle.toSignedDoubleDegrees * DegreesToArcseconds, 2.0)
-        + Math.pow(offset.q.toAngle.toSignedDoubleDegrees * DegreesToArcseconds, 2.0)
-    )
-    val angle: Angle = Angle.fromDoubleRadians(
-      Math.atan2(offset.p.toSignedDoubleRadians, -offset.q.toSignedDoubleRadians)
-    )
+    val (s, angle) = rectToPolar(-offset.q.toAngle, offset.p.toAngle)
+    val size       = s.toSignedDoubleDegrees * DegreesToArcseconds
 
     (ipa, iaa)
       .mapN { (ip, ia) =>
@@ -1355,6 +1394,83 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
               )
         )
     }
+
+  private def adjustParams(handsetAdjustment: HandsetAdjustment): (ReferenceFrame, Double, Angle) =
+    handsetAdjustment match {
+      case HandsetAdjustment.EquatorialAdjustment(deltaRA, deltaDec) =>
+        val pol = rectToPolar(deltaRA, deltaDec)
+        (ReferenceFrame.Tracking, pol._1.toSignedDoubleDegrees * DegreesToArcseconds, pol._2)
+      case HandsetAdjustment.FocalPlaneAdjustment(value)             =>
+        val pol = rectToPolar(value.deltaX.value, value.deltaY.value)
+        (ReferenceFrame.XY, pol._1.toSignedDoubleDegrees * DegreesToArcseconds, pol._2)
+      case HandsetAdjustment.HorizontalAdjustment(deltaAz, deltaEl)  =>
+        val pol = rectToPolar(deltaAz, deltaEl)
+        (ReferenceFrame.AzimuthElevation,
+         pol._1.toSignedDoubleDegrees * DegreesToArcseconds,
+         pol._2
+        )
+      case HandsetAdjustment.InstrumentAdjustment(value)             =>
+        val pol = rectToPolar(-value.q.toAngle, value.p.toAngle)
+        (ReferenceFrame.Instrument, pol._1.toSignedDoubleDegrees * DegreesToArcseconds, pol._2)
+    }
+
+  override def targetAdjust(
+    target:            VirtualTelescope,
+    handsetAdjustment: HandsetAdjustment,
+    openLoops:         Boolean
+  )(guide: GuideConfig): F[ApplyCommandResult] = {
+    val (frame, size, angle) = adjustParams(handsetAdjustment)
+
+    pauseGuide.whenA(openLoops) *>
+      sys.tcsEpics
+        .startCommand(timeout)
+        .targetAdjustCommand
+        .frame(frame)
+        .targetAdjustCommand
+        .size(size)
+        .targetAdjustCommand
+        .angle(angle)
+        .targetAdjustCommand
+        .vtMask(List(target))
+        .post
+        .verifiedRun(ConnectionTimeout) <*
+      resumeGuide(guide.tcsGuide).whenA(openLoops)
+  }
+
+  override def originAdjust(handsetAdjustment: HandsetAdjustment, openLoops: Boolean)(
+    guide: GuideConfig
+  ): F[ApplyCommandResult] = {
+    val (frame, size, angle) = adjustParams(handsetAdjustment)
+
+    pauseGuide.whenA(openLoops) *>
+      sys.tcsEpics
+        .startCommand(timeout)
+        .originAdjustCommand
+        .frame(frame)
+        .originAdjustCommand
+        .size(size)
+        .originAdjustCommand
+        .angle(angle)
+        .originAdjustCommand
+        .vtMask(List(VirtualTelescope.SourceA))
+        .post
+        .verifiedRun(ConnectionTimeout) <*
+      resumeGuide(guide.tcsGuide).whenA(openLoops)
+  }
+
+  override def pointingAdjust(handsetAdjustment: HandsetAdjustment): F[ApplyCommandResult] = {
+    val (frame, size, angle) = adjustParams(handsetAdjustment)
+    sys.tcsEpics
+      .startCommand(timeout)
+      .pointingAdjustCommand
+      .frame(frame)
+      .pointingAdjustCommand
+      .size(size)
+      .pointingAdjustCommand
+      .angle(angle)
+      .post
+      .verifiedRun(ConnectionTimeout)
+  }
 }
 
 object TcsBaseControllerEpics {

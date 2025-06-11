@@ -367,7 +367,7 @@ type Mutation {
     acquisitionAdjustment(adjustment: AcquisitionAdjustmentInput!): OperationOutcome!
     wfsSky(wfs: GuideProbe!, period: TimeSpanInput!): OperationOutcome!
     adjustTarget(target: AdjustTarget!, offset: HandsetAdjustmentInput!, openLoops: Boolean!): OperationOutcome!
-    adjustPointing(offset: HandsetAdjustmentInput!, openLoops: Boolean!): OperationOutcome!
+    adjustPointing(offset: HandsetAdjustmentInput!): OperationOutcome!
     adjustOrigin(offset: HandsetAdjustmentInput!, openLoops: Boolean!): OperationOutcome!
     resetTargetAdjustment(target: AdjustTarget!): OperationOutcome!
     absorbTargetAdjustment(target: AdjustTarget!): OperationOutcome!
