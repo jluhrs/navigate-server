@@ -1599,6 +1599,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
           |mutation {
           |  resetTargetAdjustment(
           |    target: SOURCE_A
+          |    openLoops: true
           |  ) {
           |    result
           |  }
@@ -1641,13 +1642,13 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     )
   }
 
-  test("Clear pointing adjustment") {
+  test("Clear local pointing adjustment") {
     for {
       mp <- buildMapping
       p  <- mp.compileAndRun(
               """
           |mutation {
-          |  resetPointingAdjustment {
+          |  resetLocalPointingAdjustment {
           |    result
           |  }
           |}
@@ -1656,7 +1657,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     } yield assertEquals(
       p.hcursor
         .downField("data")
-        .downField("resetPointingAdjustment")
+        .downField("resetLocalPointingAdjustment")
         .downField("result")
         .as[String]
         .toOption,
@@ -1664,13 +1665,13 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     )
   }
 
-  test("Absorb pointing adjustment") {
+  test("Clear guide pointing adjustment") {
     for {
       mp <- buildMapping
       p  <- mp.compileAndRun(
               """
           |mutation {
-          |  absorbPointingAdjustment {
+          |  resetGuidePointingAdjustment {
           |    result
           |  }
           |}
@@ -1679,7 +1680,30 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     } yield assertEquals(
       p.hcursor
         .downField("data")
-        .downField("absorbPointingAdjustment")
+        .downField("resetGuidePointingAdjustment")
+        .downField("result")
+        .as[String]
+        .toOption,
+      "SUCCESS".some
+    )
+  }
+
+  test("Absorb guide pointing adjustment") {
+    for {
+      mp <- buildMapping
+      p  <- mp.compileAndRun(
+              """
+          |mutation {
+          |  absorbGuidePointingAdjustment {
+          |    result
+          |  }
+          |}
+          |""".stripMargin
+            )
+    } yield assertEquals(
+      p.hcursor
+        .downField("data")
+        .downField("absorbGuidePointingAdjustment")
         .downField("result")
         .as[String]
         .toOption,
@@ -1693,7 +1717,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       p  <- mp.compileAndRun(
               """
           |mutation {
-          |  resetOriginAdjustment {
+          |  resetOriginAdjustment (
+          |    openLoops: true
+          |  ) {
           |    result
           |  }
           |}
@@ -2006,6 +2032,21 @@ object NavigateMappingsTest {
       ): IO[Unit] = IO.unit
 
       override def pointingAdjust(handsetAdjustment: HandsetAdjustment): IO[Unit] = IO.unit
+
+      override def targetOffsetAbsorb(target: VirtualTelescope): IO[Unit] = IO.unit
+
+      override def targetOffsetClear(target: VirtualTelescope, openLoops: Boolean): IO[Unit] =
+        IO.unit
+
+      override def originOffsetAbsorb: IO[Unit] = IO.unit
+
+      override def originOffsetClear(openLoops: Boolean): IO[Unit] = IO.unit
+
+      override def pointingOffsetClearLocal: IO[Unit] = IO.unit
+
+      override def pointingOffsetAbsorbGuide: IO[Unit] = IO.unit
+
+      override def pointingOffsetClearGuide: IO[Unit] = IO.unit
     }
   }
 

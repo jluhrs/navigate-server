@@ -233,4 +233,25 @@ class TcsBaseControllerSim[F[_]: Sync](
 
   override def pointingAdjust(handsetAdjustment: HandsetAdjustment): F[ApplyCommandResult] =
     ApplyCommandResult.Completed.pure[F]
+
+  override def targetOffsetAbsorb(target: VirtualTelescope): F[ApplyCommandResult] =
+    ApplyCommandResult.Completed.pure[F]
+
+  override def targetOffsetClear(target: VirtualTelescope, openLoops: Boolean)(
+    guide: GuideConfig
+  ): F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
+
+  override def originOffsetAbsorb: F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
+
+  override def originOffsetClear(openLoops: Boolean)(guide: GuideConfig): F[ApplyCommandResult] =
+    ApplyCommandResult.Completed.pure[F]
+
+  override def pointingOffsetClearLocal: F[ApplyCommandResult] =
+    ApplyCommandResult.Completed.pure[F]
+
+  override def pointingOffsetAbsorbGuide: F[ApplyCommandResult] =
+    ApplyCommandResult.Completed.pure[F]
+
+  override def pointingOffsetClearGuide: F[ApplyCommandResult] =
+    ApplyCommandResult.Completed.pure[F]
 }

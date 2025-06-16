@@ -37,6 +37,7 @@ import navigate.model.enums.HrwfsPickupPosition
 import navigate.model.enums.ShutterMode
 import navigate.model.enums.VirtualTelescope
 import navigate.server.ApplyCommandResult
+import navigate.server.acm.CadDirective
 import navigate.server.acm.Encoder
 import navigate.server.acm.Encoder.given
 import navigate.server.acm.GeminiApplyCommand
@@ -1255,6 +1256,62 @@ object TcsEpicsSystem {
           writeCadParam(channels.telltale, channels.pointingConfig.value)(v)
         )
       }
+    override val targetOffsetAbsorb: OffsetMgmCommand[F, TcsCommands[F]]         =
+      new OffsetMgmCommand[F, TcsCommands[F]] {
+
+        override def vt(v: VirtualTelescope): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.targetOffsetAbsorb.vt)(v)
+        )
+
+        override def index(v: OffsetIndexSelection): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.targetOffsetAbsorb.index)(v)
+        )
+      }
+    override val targetOffsetClear: OffsetMgmCommand[F, TcsCommands[F]]          =
+      new OffsetMgmCommand[F, TcsCommands[F]] {
+
+        override def vt(v: VirtualTelescope): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.targetOffsetClear.vt)(v)
+        )
+
+        override def index(v: OffsetIndexSelection): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.targetOffsetClear.index)(v)
+        )
+      }
+    override val originOffsetAbsorb: OffsetMgmCommand[F, TcsCommands[F]]         =
+      new OffsetMgmCommand[F, TcsCommands[F]] {
+
+        override def vt(v: VirtualTelescope): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.originOffsetAbsorb.vt)(v)
+        )
+
+        override def index(v: OffsetIndexSelection): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.originOffsetAbsorb.index)(v)
+        )
+      }
+    override val originOffsetClear: OffsetMgmCommand[F, TcsCommands[F]]          =
+      new OffsetMgmCommand[F, TcsCommands[F]] {
+
+        override def vt(v: VirtualTelescope): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.originOffsetClear.vt)(v)
+        )
+
+        override def index(v: OffsetIndexSelection): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.originOffsetClear.index)(v)
+        )
+      }
+    override val absorbGuideCommand: BaseCommand[F, TcsCommands[F]]              =
+      new BaseCommand[F, TcsCommands[F]] {
+        override def mark: TcsCommands[F] = addParam(
+          writeChannel(channels.telltale, channels.absorbGuideDir)(CadDirective.MARK.pure[F])
+        )
+      }
+    override val zeroGuideCommand: BaseCommand[F, TcsCommands[F]]                =
+      new BaseCommand[F, TcsCommands[F]] {
+        override def mark: TcsCommands[F] = addParam(
+          writeChannel(channels.telltale, channels.zeroGuideDir)(CadDirective.MARK.pure[F])
+        )
+      }
   }
 
   class TcsEpicsSystemImpl[F[_]: {Monad, Parallel}](
@@ -1300,6 +1357,16 @@ object TcsEpicsSystem {
       case ((vt, idx), acc) => x.contains(vt).fold(acc | (1 << idx), acc)
     }
     (-m).toString
+  }
+
+  given Encoder[VirtualTelescope, String] = _ match {
+    case VirtualTelescope.SourceA => "SOURCE A"
+    case VirtualTelescope.SourceB => "SOURCE B"
+    case VirtualTelescope.SourceC => "SOURCE C"
+    case VirtualTelescope.Pwfs1   => "PWFS1"
+    case VirtualTelescope.Pwfs2   => "PWFS2"
+    case VirtualTelescope.Oiwfs   => "OIWFS"
+    case a                        => a.tag
   }
 
   class TcsEpicsImpl[F[_]: Monad](
@@ -1961,6 +2028,11 @@ object TcsEpicsSystem {
     def vtMask(vts: List[VirtualTelescope]): S
   }
 
+  trait OffsetMgmCommand[F[_], +S] {
+    def vt(v:    VirtualTelescope): S
+    def index(v: OffsetIndexSelection): S
+  }
+
   trait TargetFilterCommand[F[_], +S] {
     def bandwidth(bw:    Double): S
     def maxVelocity(mv:  Double): S
@@ -2022,10 +2094,16 @@ object TcsEpicsSystem {
     val aoFoldCommands: AgMechCommands[F, AoFoldPosition, TcsCommands[F]]
     val m1Commands: M1Commands[F, TcsCommands[F]]
     val targetAdjustCommand: AdjustCommand[F, TcsCommands[F]]
+    val targetOffsetAbsorb: OffsetMgmCommand[F, TcsCommands[F]]
+    val targetOffsetClear: OffsetMgmCommand[F, TcsCommands[F]]
     val originAdjustCommand: AdjustCommand[F, TcsCommands[F]]
+    val originOffsetAbsorb: OffsetMgmCommand[F, TcsCommands[F]]
+    val originOffsetClear: OffsetMgmCommand[F, TcsCommands[F]]
     val targetFilter: TargetFilterCommand[F, TcsCommands[F]]
     val pointingAdjustCommand: PointingAdjustCommand[F, TcsCommands[F]]
     val pointingConfigCommand: PointingConfigCommand[F, TcsCommands[F]]
+    val absorbGuideCommand: BaseCommand[F, TcsCommands[F]]
+    val zeroGuideCommand: BaseCommand[F, TcsCommands[F]]
   }
   /*
 

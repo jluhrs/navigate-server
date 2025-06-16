@@ -124,14 +124,22 @@ trait NavigateEngine[F[_]] {
     handsetAdjustment: HandsetAdjustment,
     openLoops:         Boolean
   ): F[Unit]
+  def targetOffsetAbsorb(target:                     VirtualTelescope): F[Unit]
+  def targetOffsetClear(target:                      VirtualTelescope, openLoops:  Boolean): F[Unit]
   def originAdjust(handsetAdjustment:                HandsetAdjustment, openLoops: Boolean): F[Unit]
+  def originOffsetAbsorb: F[Unit]
+  def originOffsetClear(openLoops:                   Boolean): F[Unit]
   def pointingAdjust(handsetAdjustment:              HandsetAdjustment): F[Unit]
+  def pointingOffsetClearLocal: F[Unit]
+  def pointingOffsetAbsorbGuide: F[Unit]
+  def pointingOffsetClearGuide: F[Unit]
+
   def getGuideState: F[GuideState]
   def getGuidersQuality: F[GuidersQualityValues]
   def getTelescopeState: F[TelescopeState]
   def getNavigateState: F[NavigateState]
   def getNavigateStateStream: Stream[F, NavigateState]
-  def getInstrumentPort(instrument:                  Instrument): F[Option[Int]]
+  def getInstrumentPort(instrument: Instrument): F[Option[Int]]
   def getGuideDemand: F[GuideConfig]
   def getTargetAdjustments: F[TargetOffsets]
   def getPointingOffset: F[FocalPlaneOffset]
@@ -558,7 +566,7 @@ object NavigateEngine {
     ): F[Unit] =
       simpleCommand(
         engine,
-        TargetAdjust(target, handsetAdjustment),
+        TargetAdjust(target, handsetAdjustment, openLoops),
         stateRef.get.flatMap(s =>
           systems.tcsCommon.targetAdjust(target, handsetAdjustment, openLoops)(s.guideConfig)
         )
@@ -567,7 +575,7 @@ object NavigateEngine {
     override def originAdjust(handsetAdjustment: HandsetAdjustment, openLoops: Boolean): F[Unit] =
       simpleCommand(
         engine,
-        OriginAdjust(handsetAdjustment),
+        OriginAdjust(handsetAdjustment, openLoops),
         stateRef.get.flatMap(s =>
           systems.tcsCommon.originAdjust(handsetAdjustment, openLoops)(s.guideConfig)
         )
@@ -578,6 +586,57 @@ object NavigateEngine {
         engine,
         PointingAdjust(handsetAdjustment),
         systems.tcsCommon.pointingAdjust(handsetAdjustment)
+      )
+
+    override def targetOffsetAbsorb(target: VirtualTelescope): F[Unit] =
+      simpleCommand(
+        engine,
+        TargetOffsetAbsorb(target),
+        systems.tcsCommon.targetOffsetAbsorb(target)
+      )
+
+    override def targetOffsetClear(target: VirtualTelescope, openLoops: Boolean): F[Unit] =
+      simpleCommand(
+        engine,
+        TargetOffsetClear(target, openLoops),
+        stateRef.get.flatMap(s =>
+          systems.tcsCommon.targetOffsetClear(target, openLoops)(s.guideConfig)
+        )
+      )
+
+    override def originOffsetAbsorb: F[Unit] =
+      simpleCommand(
+        engine,
+        OriginOffsetAbsorb,
+        systems.tcsCommon.originOffsetAbsorb
+      )
+
+    override def originOffsetClear(openLoops: Boolean): F[Unit] =
+      simpleCommand(
+        engine,
+        OriginOffsetClear(openLoops),
+        stateRef.get.flatMap(s => systems.tcsCommon.originOffsetClear(openLoops)(s.guideConfig))
+      )
+
+    override def pointingOffsetClearLocal: F[Unit] =
+      simpleCommand(
+        engine,
+        PointingOffsetClearLocal,
+        systems.tcsCommon.pointingOffsetClearLocal
+      )
+
+    override def pointingOffsetAbsorbGuide: F[Unit] =
+      simpleCommand(
+        engine,
+        PointingOffsetAbsorbGuide,
+        systems.tcsCommon.pointingOffsetAbsorbGuide
+      )
+
+    override def pointingOffsetClearGuide: F[Unit] =
+      simpleCommand(
+        engine,
+        PointingOffsetClearGuide,
+        systems.tcsCommon.pointingOffsetClearGuide
       )
   }
 

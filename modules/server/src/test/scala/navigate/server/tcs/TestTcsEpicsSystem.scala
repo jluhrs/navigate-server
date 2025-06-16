@@ -31,6 +31,7 @@ import navigate.server.tcs.TcsChannels.M1GuideConfigChannels
 import navigate.server.tcs.TcsChannels.M2BafflesChannels
 import navigate.server.tcs.TcsChannels.M2GuideConfigChannels
 import navigate.server.tcs.TcsChannels.MountGuideChannels
+import navigate.server.tcs.TcsChannels.OffsetCommandChannels
 import navigate.server.tcs.TcsChannels.OiwfsSelectChannels
 import navigate.server.tcs.TcsChannels.OriginChannels
 import navigate.server.tcs.TcsChannels.PointingConfigChannels
@@ -263,6 +264,18 @@ object TestTcsEpicsSystem {
     )
   }
 
+  case class OffsetCommandState(
+    vt:    TestChannel.State[String],
+    index: TestChannel.State[String]
+  )
+
+  object OffsetCommandState {
+    val default: OffsetCommandState = OffsetCommandState(
+      TestChannel.State.default,
+      TestChannel.State.default
+    )
+  }
+
   case class State(
     telltale:             TestChannel.State[String],
     telescopeParkDir:     TestChannel.State[CadDirective],
@@ -307,7 +320,11 @@ object TestTcsEpicsSystem {
     pwfs2TrackingState:   ProbeTrackingStateState,
     oiwfsTrackingState:   ProbeTrackingStateState,
     targetAdjust:         AdjustCommandState,
+    targetOffsetAbsorb:   OffsetCommandState,
+    targetOffsetClear:    OffsetCommandState,
     originAdjust:         AdjustCommandState,
+    originOffsetAbsorb:   OffsetCommandState,
+    originOffsetClear:    OffsetCommandState,
     pointingAdjust:       PointingAdjustCommandState,
     inPosition:           TestChannel.State[String],
     targetFilter:         TargetFilterCommandState,
@@ -316,7 +333,9 @@ object TestTcsEpicsSystem {
     pwfs2TargetReadout:   TestChannel.State[Array[Double]],
     oiwfsTargetReadout:   TestChannel.State[Array[Double]],
     pointingOffsetState:  PointingOffsetState,
-    pointingConfig:       PointingConfigState
+    pointingConfig:       PointingConfigState,
+    absorbGuideDirState:  TestChannel.State[CadDirective],
+    zeroGuideDirState:    TestChannel.State[CadDirective]
   )
 
   val defaultState: State = State(
@@ -462,7 +481,11 @@ object TestTcsEpicsSystem {
       nodBchopB = TestChannel.State.of("Off")
     ),
     targetAdjust = AdjustCommandState.default,
+    targetOffsetAbsorb = OffsetCommandState.default,
+    targetOffsetClear = OffsetCommandState.default,
     originAdjust = AdjustCommandState.default,
+    originOffsetAbsorb = OffsetCommandState.default,
+    originOffsetClear = OffsetCommandState.default,
     pointingAdjust = PointingAdjustCommandState.default,
     inPosition = TestChannel.State.of("FALSE"),
     targetFilter = TargetFilterCommandState.default,
@@ -471,7 +494,9 @@ object TestTcsEpicsSystem {
     pwfs2TargetReadout = TestChannel.State.of[Array[Double]](Array.fill(8)(0.0)),
     oiwfsTargetReadout = TestChannel.State.of[Array[Double]](Array.fill(8)(0.0)),
     pointingOffsetState = PointingOffsetState.default,
-    pointingConfig = PointingConfigState.default
+    pointingConfig = PointingConfigState.default,
+    absorbGuideDirState = TestChannel.State.default,
+    zeroGuideDirState = TestChannel.State.default
   )
 
   def buildEnclosureChannels[F[_]: Temporal](s: Ref[F, State]): EnclosureChannels[F] =
@@ -997,6 +1022,14 @@ object TestTcsEpicsSystem {
     new TestChannel[F, State, String](s, l.andThen(Focus[PointingConfigState](_.value)))
   )
 
+  def buildOffsetCommandChannels[F[_]: Temporal](
+    s: Ref[F, State],
+    l: Lens[State, OffsetCommandState]
+  ): OffsetCommandChannels[F] = OffsetCommandChannels[F](
+    new TestChannel[F, State, String](s, l.andThen(Focus[OffsetCommandState](_.vt))),
+    new TestChannel[F, State, String](s, l.andThen(Focus[OffsetCommandState](_.index)))
+  )
+
   def buildChannels[F[_]: Temporal](s: Ref[F, State]): TcsChannels[F] =
     TcsChannels(
       telltale =
@@ -1044,7 +1077,11 @@ object TestTcsEpicsSystem {
       p2ProbeTrackingState = buildProbeTrackingStateChannels(s, Focus[State](_.pwfs2TrackingState)),
       oiProbeTrackingState = buildProbeTrackingStateChannels(s, Focus[State](_.oiwfsTrackingState)),
       targetAdjust = buildAdjustChannels(s, Focus[State](_.targetAdjust)),
+      targetOffsetAbsorb = buildOffsetCommandChannels(s, Focus[State](_.targetOffsetAbsorb)),
+      targetOffsetClear = buildOffsetCommandChannels(s, Focus[State](_.targetOffsetClear)),
       originAdjust = buildAdjustChannels(s, Focus[State](_.originAdjust)),
+      originOffsetAbsorb = buildOffsetCommandChannels(s, Focus[State](_.originOffsetAbsorb)),
+      originOffsetClear = buildOffsetCommandChannels(s, Focus[State](_.originOffsetClear)),
       pointingAdjust = buildPointingAdjustChannels(s, Focus[State](_.pointingAdjust)),
       inPosition = new TestChannel[F, State, String](s, Focus[State](_.inPosition)),
       targetFilter = buildTargetFilterChannels(s, Focus[State](_.targetFilter)),
@@ -1058,7 +1095,10 @@ object TestTcsEpicsSystem {
         new TestChannel[F, State, Array[Double]](s, Focus[State](_.oiwfsTargetReadout)),
       pointingAdjustmentState =
         buildPointingOffsetStateChannels(s, Focus[State](_.pointingOffsetState)),
-      pointingConfig = buildPointingConfigChannels(s, Focus[State](_.pointingConfig))
+      pointingConfig = buildPointingConfigChannels(s, Focus[State](_.pointingConfig)),
+      absorbGuideDir =
+        new TestChannel[F, State, CadDirective](s, Focus[State](_.absorbGuideDirState)),
+      zeroGuideDir = new TestChannel[F, State, CadDirective](s, Focus[State](_.zeroGuideDirState))
     )
 
   def build[F[_]: {Async, Parallel, Dispatcher}](s: Ref[F, State]): TcsEpicsSystem[F] =

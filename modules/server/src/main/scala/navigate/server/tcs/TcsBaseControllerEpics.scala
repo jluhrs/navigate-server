@@ -36,6 +36,7 @@ import navigate.epics.VerifiedEpics.*
 import navigate.model.Distance
 import navigate.model.FocalPlaneOffset
 import navigate.model.HandsetAdjustment
+import navigate.model.enums
 import navigate.model.enums.AoFoldPosition
 import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
@@ -1471,6 +1472,120 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       .post
       .verifiedRun(ConnectionTimeout)
   }
+
+  override def targetOffsetAbsorb(target: VirtualTelescope): F[ApplyCommandResult] = {
+    val selection: OffsetIndexSelection = target match {
+      case VirtualTelescope.Mount | VirtualTelescope.SourceA | VirtualTelescope.SourceB |
+          VirtualTelescope.SourceC =>
+        OffsetIndexSelection.All
+      case _ => OffsetIndexSelection.Index(0)
+    }
+    sys.tcsEpics
+      .startCommand(timeout)
+      .targetOffsetAbsorb
+      .vt(target)
+      .targetOffsetAbsorb
+      .index(selection)
+      .post
+      .verifiedRun(ConnectionTimeout)
+  }
+
+  override def targetOffsetClear(target: VirtualTelescope, openLoops: Boolean)(
+    guide: GuideConfig
+  ): F[ApplyCommandResult] =
+    pauseGuide.whenA(openLoops) *>
+      sys.tcsEpics
+        .startCommand(timeout)
+        .targetOffsetClear
+        .vt(target)
+        .targetOffsetClear
+        .index(OffsetIndexSelection.All)
+        .post
+        .verifiedRun(ConnectionTimeout) <*
+      resumeGuide(guide.tcsGuide).whenA(openLoops)
+
+  override def originOffsetAbsorb: F[ApplyCommandResult] =
+    sys.tcsEpics
+      .startCommand(timeout)
+      .originOffsetAbsorb
+      .vt(VirtualTelescope.SourceA)
+      .originOffsetAbsorb
+      .index(OffsetIndexSelection.All)
+      .post
+      .verifiedRun(ConnectionTimeout) *>
+      sys.tcsEpics
+        .startCommand(timeout)
+        .originOffsetAbsorb
+        .vt(VirtualTelescope.SourceB)
+        .originOffsetAbsorb
+        .index(OffsetIndexSelection.All)
+        .post
+        .verifiedRun(ConnectionTimeout) *>
+      sys.tcsEpics
+        .startCommand(timeout)
+        .originOffsetAbsorb
+        .vt(VirtualTelescope.SourceC)
+        .originOffsetAbsorb
+        .index(OffsetIndexSelection.All)
+        .post
+        .verifiedRun(ConnectionTimeout)
+
+  override def originOffsetClear(openLoops: Boolean)(guide: GuideConfig): F[ApplyCommandResult] =
+    pauseGuide.whenA(openLoops) *>
+      sys.tcsEpics
+        .startCommand(timeout)
+        .originOffsetClear
+        .vt(VirtualTelescope.SourceA)
+        .originOffsetClear
+        .index(OffsetIndexSelection.All)
+        .post
+        .verifiedRun(ConnectionTimeout) *>
+      sys.tcsEpics
+        .startCommand(timeout)
+        .originOffsetClear
+        .vt(VirtualTelescope.SourceB)
+        .originOffsetClear
+        .index(OffsetIndexSelection.All)
+        .post
+        .verifiedRun(ConnectionTimeout) *>
+      sys.tcsEpics
+        .startCommand(timeout)
+        .originOffsetClear
+        .vt(VirtualTelescope.SourceC)
+        .originOffsetClear
+        .index(OffsetIndexSelection.All)
+        .post
+        .verifiedRun(ConnectionTimeout) <*
+      resumeGuide(guide.tcsGuide).whenA(openLoops)
+
+  override def pointingOffsetClearLocal: F[ApplyCommandResult] =
+    sys.tcsEpics
+      .startCommand(timeout)
+      .pointingConfigCommand
+      .name(PointingParameter.CA)
+      .pointingConfigCommand
+      .level(PointingConfigLevel.Local)
+      .pointingConfigCommand
+      .value(0.0)
+      .post
+      .verifiedRun(ConnectionTimeout) *>
+      sys.tcsEpics
+        .startCommand(timeout)
+        .pointingConfigCommand
+        .name(PointingParameter.CE)
+        .pointingConfigCommand
+        .level(PointingConfigLevel.Local)
+        .pointingConfigCommand
+        .value(0.0)
+        .post
+        .verifiedRun(ConnectionTimeout)
+
+  override def pointingOffsetAbsorbGuide: F[ApplyCommandResult] =
+    sys.tcsEpics.startCommand(timeout).absorbGuideCommand.mark.post.verifiedRun(ConnectionTimeout)
+
+  override def pointingOffsetClearGuide: F[ApplyCommandResult] =
+    sys.tcsEpics.startCommand(timeout).zeroGuideCommand.mark.post.verifiedRun(ConnectionTimeout)
+
 }
 
 object TcsBaseControllerEpics {

@@ -64,7 +64,11 @@ case class TcsChannels[F[_]](
   p2ProbeTrackingState:    ProbeTrackingStateChannels[F],
   oiProbeTrackingState:    ProbeTrackingStateChannels[F],
   targetAdjust:            AdjustChannels[F],
+  targetOffsetAbsorb:      OffsetCommandChannels[F],
+  targetOffsetClear:       OffsetCommandChannels[F],
   originAdjust:            AdjustChannels[F],
+  originOffsetAbsorb:      OffsetCommandChannels[F],
+  originOffsetClear:       OffsetCommandChannels[F],
   pointingAdjust:          PointingModelAdjustChannels[F],
   inPosition:              Channel[F, String],
   targetFilter:            TargetFilterChannels[F],
@@ -73,7 +77,9 @@ case class TcsChannels[F[_]](
   pwfs2TargetReadout:      Channel[F, Array[Double]],
   oiwfsTargetReadout:      Channel[F, Array[Double]],
   pointingAdjustmentState: PointingCorrections[F],
-  pointingConfig:          PointingConfigChannels[F]
+  pointingConfig:          PointingConfigChannels[F],
+  absorbGuideDir:          Channel[F, CadDirective],
+  zeroGuideDir:            Channel[F, CadDirective]
 )
 
 object TcsChannels {
@@ -679,6 +685,22 @@ object TcsChannels {
     )
   }
 
+  case class OffsetCommandChannels[F[_]](
+    vt:    Channel[F, String],
+    index: Channel[F, String]
+  )
+
+  object OffsetCommandChannels {
+    def build[F[_]](
+      service:   EpicsService[F],
+      top:       TcsTop,
+      cadPrefix: String
+    ): Resource[F, OffsetCommandChannels[F]] = for {
+      vt  <- service.getChannel[String](top.value, s"${cadPrefix}Offset.A")
+      idx <- service.getChannel[String](top.value, s"${cadPrefix}Offset.B")
+    } yield OffsetCommandChannels(vt, idx)
+  }
+
   case class TargetFilterChannels[F[_]](
     bandWidth:    Channel[F, String],
     maxVelocity:  Channel[F, String],
@@ -797,7 +819,11 @@ object TcsChannels {
       aom  <- AgMechChannels.build(service, s"${tcsTop.value}aoFold")
       m1   <- M1Channels.build(service, tcsTop, m1Top)
       trad <- AdjustChannels.build(service, tcsTop, "target")
+      trab <- OffsetCommandChannels.build(service, tcsTop, "absorb")
+      trcl <- OffsetCommandChannels.build(service, tcsTop, "clear")
       orad <- AdjustChannels.build(service, tcsTop, "po")
+      orab <- OffsetCommandChannels.build(service, tcsTop, "absorbPo")
+      orcl <- OffsetCommandChannels.build(service, tcsTop, "clearPo")
       pmad <- PointingModelAdjustChannels.build(service, tcsTop, "collAdjust")
       nodS <- service.getChannel[String](tcsTop.value, "sad:nodState.VAL")
       p1gs <- buildProbeTrackingStateChannels(service, tcsTop, "Pwfs1")
@@ -811,6 +837,8 @@ object TcsChannels {
       oitr <- service.getChannel[Array[Double]](tcsTop.value, "sad:targetOiwfs.VAL")
       padj <- PointingCorrections.build(service, tcsTop)
       pncf <- PointingConfigChannels.build(service, tcsTop)
+      abgd <- service.getChannel[CadDirective](tcsTop.value, "absorbGuide.DIR")
+      zgud <- service.getChannel[CadDirective](tcsTop.value, "zeroGuide.DIR")
     } yield TcsChannels[F](
       tt,
       tpd,
@@ -855,7 +883,11 @@ object TcsChannels {
       p2gs,
       oigs,
       trad,
+      trab,
+      trcl,
       orad,
+      orab,
+      orcl,
       pmad,
       inpo,
       tf,
@@ -864,7 +896,9 @@ object TcsChannels {
       p2tr,
       oitr,
       padj,
-      pncf
+      pncf,
+      abgd,
+      zgud
     )
   }
 }

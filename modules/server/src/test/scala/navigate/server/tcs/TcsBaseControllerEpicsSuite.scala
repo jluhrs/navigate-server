@@ -1834,6 +1834,165 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     }
   }
 
+  test("Absorb target correction") {
+    for {
+      x        <- createController()
+      (st, ctr) = x
+      _        <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
+      _        <- ctr.targetOffsetAbsorb(VirtualTelescope.SourceA)
+      r1       <- st.tcs.get
+      _        <- ctr.targetOffsetAbsorb(VirtualTelescope.Oiwfs)
+      r2       <- st.tcs.get
+    } yield {
+      assert(r1.targetOffsetAbsorb.vt.connected)
+      assert(r1.targetOffsetAbsorb.index.connected)
+      assertEquals(r1.targetOffsetAbsorb.vt.value, "SOURCE A".some)
+      assertEquals(r1.targetOffsetAbsorb.index.value, "all".some)
+      assertEquals(r2.targetOffsetAbsorb.vt.value, "OIWFS".some)
+      assertEquals(r2.targetOffsetAbsorb.index.value, "0".some)
+    }
+  }
+
+  test("Clear target correction") {
+    val guideCfg = TelescopeGuideConfig(
+      mountGuide = MountGuideOption.MountGuideOn,
+      m1Guide = M1GuideConfig.M1GuideOn(M1Source.OIWFS),
+      m2Guide = M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
+      dayTimeMode = Some(false),
+      probeGuide = none
+    )
+
+    for {
+      x        <- createController()
+      (st, ctr) = x
+      _        <- setOiwfsTrackingState(st.tcs)
+      _        <- ctr.enableGuide(guideCfg)
+      _        <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
+      _        <- ctr.targetOffsetClear(VirtualTelescope.SourceA, true)(GuideConfig(guideCfg, none))
+      r1       <- st.tcs.get
+    } yield {
+      assert(r1.m1Guide.connected)
+      assert(r1.m1GuideConfig.source.connected)
+      assert(r1.m2Guide.connected)
+      assert(r1.m2GuideConfig.source.connected)
+      assert(r1.m2GuideConfig.beam.connected)
+      assert(r1.m2GuideMode.connected)
+
+      assertEquals(r1.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
+      assertEquals(r1.m1GuideConfig.source.value, M1Source.OIWFS.tag.toUpperCase.some)
+      assertEquals(r1.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
+      assertEquals(r1.m2GuideConfig.source.value, TipTiltSource.OIWFS.tag.toUpperCase.some)
+      assertEquals(r1.m2GuideConfig.beam.value, "A".some)
+      assertEquals(r1.m2GuideMode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.On.some
+      )
+
+      assert(r1.targetOffsetClear.vt.connected)
+      assert(r1.targetOffsetClear.index.connected)
+      assertEquals(r1.targetOffsetClear.vt.value, "SOURCE A".some)
+      assertEquals(r1.targetOffsetClear.index.value, "all".some)
+    }
+  }
+
+  test("Absorb origin correction") {
+    for {
+      x        <- createController()
+      (st, ctr) = x
+      _        <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
+      _        <- ctr.originOffsetAbsorb
+      r1       <- st.tcs.get
+    } yield {
+      assert(r1.originOffsetAbsorb.vt.connected)
+      assert(r1.originOffsetAbsorb.index.connected)
+      assertEquals(r1.originOffsetAbsorb.vt.value, "SOURCE C".some)
+      assertEquals(r1.originOffsetAbsorb.index.value, "all".some)
+    }
+  }
+
+  test("Clear origin correction") {
+    val guideCfg = TelescopeGuideConfig(
+      mountGuide = MountGuideOption.MountGuideOn,
+      m1Guide = M1GuideConfig.M1GuideOn(M1Source.OIWFS),
+      m2Guide = M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
+      dayTimeMode = Some(false),
+      probeGuide = none
+    )
+
+    for {
+      x        <- createController()
+      (st, ctr) = x
+      _        <- setOiwfsTrackingState(st.tcs)
+      _        <- ctr.enableGuide(guideCfg)
+      _        <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
+      _        <- ctr.originOffsetClear(true)(GuideConfig(guideCfg, none))
+      r1       <- st.tcs.get
+    } yield {
+      assert(r1.m1Guide.connected)
+      assert(r1.m1GuideConfig.source.connected)
+      assert(r1.m2Guide.connected)
+      assert(r1.m2GuideConfig.source.connected)
+      assert(r1.m2GuideConfig.beam.connected)
+      assert(r1.m2GuideMode.connected)
+
+      assertEquals(r1.m1Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
+      assertEquals(r1.m1GuideConfig.source.value, M1Source.OIWFS.tag.toUpperCase.some)
+      assertEquals(r1.m2Guide.value.flatMap(Enumerated[BinaryOnOff].fromTag), BinaryOnOff.On.some)
+      assertEquals(r1.m2GuideConfig.source.value, TipTiltSource.OIWFS.tag.toUpperCase.some)
+      assertEquals(r1.m2GuideConfig.beam.value, "A".some)
+      assertEquals(r1.m2GuideMode.value.flatMap(Enumerated[BinaryOnOff].fromTag),
+                   BinaryOnOff.On.some
+      )
+
+      assert(r1.originOffsetClear.vt.connected)
+      assert(r1.originOffsetClear.index.connected)
+      assertEquals(r1.originOffsetClear.vt.value, "SOURCE C".some)
+      assertEquals(r1.originOffsetClear.index.value, "all".some)
+    }
+  }
+
+  test("Clear local pointing correction") {
+    for {
+      x        <- createController()
+      (st, ctr) = x
+      _        <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
+      _        <- ctr.pointingOffsetClearLocal
+      r1       <- st.tcs.get
+    } yield {
+      assert(r1.pointingConfig.name.connected)
+      assert(r1.pointingConfig.level.connected)
+      assert(r1.pointingConfig.value.connected)
+      assertEquals(r1.pointingConfig.name.value, "CE".some)
+      assertEquals(r1.pointingConfig.level.value, "Local".some)
+      assertEquals(r1.pointingConfig.value.value, "0.0".some)
+    }
+  }
+
+  test("Clear guide pointing correction") {
+    for {
+      x        <- createController()
+      (st, ctr) = x
+      _        <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
+      _        <- ctr.pointingOffsetClearGuide
+      r1       <- st.tcs.get
+    } yield {
+      assert(r1.zeroGuideDirState.connected)
+      assertEquals(r1.zeroGuideDirState.value, CadDirective.MARK.some)
+    }
+  }
+
+  test("Absorb guide pointing correction") {
+    for {
+      x        <- createController()
+      (st, ctr) = x
+      _        <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
+      _        <- ctr.pointingOffsetAbsorbGuide
+      r1       <- st.tcs.get
+    } yield {
+      assert(r1.absorbGuideDirState.connected)
+      assertEquals(r1.absorbGuideDirState.value, CadDirective.MARK.some)
+    }
+  }
+
   case class StateRefs[F[_]](
     tcs:  Ref[F, TestTcsEpicsSystem.State],
     p1:   Ref[F, TestWfsEpicsSystem.State],

@@ -75,10 +75,19 @@ trait TcsBaseController[F[_]] {
     handsetAdjustment: HandsetAdjustment,
     openLoops:         Boolean
   )(guide: GuideConfig): F[ApplyCommandResult]
+  def targetOffsetAbsorb(target:        VirtualTelescope): F[ApplyCommandResult]
+  def targetOffsetClear(target: VirtualTelescope, openLoops: Boolean)(
+    guide: GuideConfig
+  ): F[ApplyCommandResult]
   def originAdjust(handsetAdjustment: HandsetAdjustment, openLoops: Boolean)(
     guide: GuideConfig
   ): F[ApplyCommandResult]
+  def originOffsetAbsorb: F[ApplyCommandResult]
+  def originOffsetClear(openLoops:      Boolean)(guide:         GuideConfig): F[ApplyCommandResult]
   def pointingAdjust(handsetAdjustment: HandsetAdjustment): F[ApplyCommandResult]
+  def pointingOffsetClearLocal: F[ApplyCommandResult]
+  def pointingOffsetAbsorbGuide: F[ApplyCommandResult]
+  def pointingOffsetClearGuide: F[ApplyCommandResult]
 
   // Queries
   def getGuideState: F[GuideState]

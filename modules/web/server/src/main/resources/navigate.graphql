@@ -369,11 +369,12 @@ type Mutation {
     adjustTarget(target: AdjustTarget!, offset: HandsetAdjustmentInput!, openLoops: Boolean!): OperationOutcome!
     adjustPointing(offset: HandsetAdjustmentInput!): OperationOutcome!
     adjustOrigin(offset: HandsetAdjustmentInput!, openLoops: Boolean!): OperationOutcome!
-    resetTargetAdjustment(target: AdjustTarget!): OperationOutcome!
+    resetTargetAdjustment(target: AdjustTarget!, openLoops: Boolean!): OperationOutcome!
     absorbTargetAdjustment(target: AdjustTarget!): OperationOutcome!
-    resetPointingAdjustment: OperationOutcome!
-    absorbPointingAdjustment: OperationOutcome!
-    resetOriginAdjustment: OperationOutcome!
+    resetLocalPointingAdjustment: OperationOutcome!
+    resetGuidePointingAdjustment: OperationOutcome!
+    absorbGuidePointingAdjustment: OperationOutcome!
+    resetOriginAdjustment(openLoops: Boolean!): OperationOutcome!
     absorbOriginAdjustment: OperationOutcome!
 }
 
