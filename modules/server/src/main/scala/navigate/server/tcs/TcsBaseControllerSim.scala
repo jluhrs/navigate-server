@@ -19,6 +19,7 @@ import monocle.Focus.focus
 import mouse.boolean.*
 import navigate.model.FocalPlaneOffset
 import navigate.model.HandsetAdjustment
+import navigate.model.PointingCorrections
 import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
@@ -217,7 +218,7 @@ class TcsBaseControllerSim[F[_]: Sync](
 
   override def getTargetAdjustments: F[TargetOffsets] = TargetOffsets.default.pure[F]
 
-  override def getPointingOffset: F[FocalPlaneOffset] = FocalPlaneOffset.Zero.pure[F]
+  override def getPointingCorrections: F[PointingCorrections] = PointingCorrections.default.pure[F]
 
   override def getOriginOffset: F[FocalPlaneOffset] = FocalPlaneOffset.Zero.pure[F]
 

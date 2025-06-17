@@ -15,6 +15,7 @@ import fs2.concurrent.Topic
 import navigate.model.AcquisitionAdjustment
 import navigate.model.FocalPlaneOffset
 import navigate.model.NavigateEvent
+import navigate.model.PointingCorrections
 import navigate.server.NavigateEngine
 import navigate.server.NavigateFailure
 import navigate.server.tcs.GuideState
@@ -36,7 +37,7 @@ class TopicManager[F[_]] private (
   val acquisitionAdjustment: Topic[F, AcquisitionAdjustment],
   val targetAdjustment:      Topic[F, TargetOffsets],
   val originAdjustment:      Topic[F, FocalPlaneOffset],
-  val pointingAdjustment:    Topic[F, FocalPlaneOffset],
+  val pointingAdjustment:    Topic[F, PointingCorrections],
   val logBuffer:             Ref[F, Seq[ILoggingEvent]]
 ) {
 
@@ -160,7 +161,7 @@ object TopicManager {
   /**
    * Create a new TopicManager with all topics initialized
    */
-  def create[F[_]: Async: Logger](dispatcher: Dispatcher[F]): Resource[F, TopicManager[F]] =
+  def create[F[_]: {Async, Logger}](dispatcher: Dispatcher[F]): Resource[F, TopicManager[F]] =
     for {
       navigateEvents        <- Resource.eval(Topic[F, NavigateEvent])
       loggingEvents         <- Resource.eval(Topic[F, ILoggingEvent])
@@ -170,7 +171,7 @@ object TopicManager {
       acquisitionAdjustment <- Resource.eval(Topic[F, AcquisitionAdjustment])
       targetAdjustment      <- Resource.eval(Topic[F, TargetOffsets])
       originAdjustment      <- Resource.eval(Topic[F, FocalPlaneOffset])
-      pointingAdjustment    <- Resource.eval(Topic[F, FocalPlaneOffset])
+      pointingAdjustment    <- Resource.eval(Topic[F, PointingCorrections])
 
       // Setup log buffer
       logBuffer <- bufferLogMessages(loggingEvents)

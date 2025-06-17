@@ -42,6 +42,7 @@ import navigate.model.NavigateEvent.CommandPaused
 import navigate.model.NavigateEvent.CommandStart
 import navigate.model.NavigateEvent.CommandSuccess
 import navigate.model.NavigateState
+import navigate.model.PointingCorrections
 import navigate.model.config.ControlStrategy
 import navigate.model.config.NavigateEngineConfiguration
 import navigate.model.enums.DomeMode
@@ -142,7 +143,7 @@ trait NavigateEngine[F[_]] {
   def getInstrumentPort(instrument: Instrument): F[Option[Int]]
   def getGuideDemand: F[GuideConfig]
   def getTargetAdjustments: F[TargetOffsets]
-  def getPointingOffset: F[FocalPlaneOffset]
+  def getPointingOffset: F[PointingCorrections]
   def getOriginOffset: F[FocalPlaneOffset]
 }
 
@@ -555,7 +556,8 @@ object NavigateEngine {
 
     override def getTargetAdjustments: F[TargetOffsets] = systems.tcsCommon.getTargetAdjustments
 
-    override def getPointingOffset: F[FocalPlaneOffset] = systems.tcsCommon.getPointingOffset
+    override def getPointingOffset: F[PointingCorrections] =
+      systems.tcsCommon.getPointingCorrections
 
     override def getOriginOffset: F[FocalPlaneOffset] = systems.tcsCommon.getOriginOffset
 

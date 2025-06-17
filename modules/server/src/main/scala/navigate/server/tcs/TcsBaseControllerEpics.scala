@@ -36,6 +36,8 @@ import navigate.epics.VerifiedEpics.*
 import navigate.model.Distance
 import navigate.model.FocalPlaneOffset
 import navigate.model.HandsetAdjustment
+import navigate.model.HandsetAdjustment.HorizontalAdjustment
+import navigate.model.PointingCorrections
 import navigate.model.enums
 import navigate.model.enums.AoFoldPosition
 import navigate.model.enums.CentralBafflePosition
@@ -1121,14 +1123,21 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     } yield TargetOffsets(satr.adjOffset, p1tr.adjOffset, p2tr.adjOffset, oitr.adjOffset)
   ).verifiedRun(ConnectionTimeout)
 
-  override def getPointingOffset: F[FocalPlaneOffset] = (
+  override def getPointingCorrections: F[PointingCorrections] = (
     for {
-      caF <- sys.tcsEpics.status.pointingCorrectionState.localCA
-      ceF <- sys.tcsEpics.status.pointingCorrectionState.localCE
+      lcaF <- sys.tcsEpics.status.pointingCorrectionState.localCA
+      lceF <- sys.tcsEpics.status.pointingCorrectionState.localCE
+      gcaF <- sys.tcsEpics.status.pointingCorrectionState.guideCA
+      gceF <- sys.tcsEpics.status.pointingCorrectionState.guideCE
     } yield for {
-      ca <- caF
-      ce <- ceF
-    } yield FocalPlaneOffset(FocalPlaneOffset.DeltaX(ca), FocalPlaneOffset.DeltaY(ce))
+      lca <- lcaF
+      lce <- lceF
+      gca <- gcaF
+      gce <- gceF
+    } yield PointingCorrections(
+      HorizontalAdjustment(lca, lce),
+      HorizontalAdjustment(gca, gce)
+    )
   ).verifiedRun(ConnectionTimeout)
 
   override def getOriginOffset: F[FocalPlaneOffset] =

@@ -62,6 +62,7 @@ import navigate.model.FocalPlaneOffset.DeltaX
 import navigate.model.FocalPlaneOffset.DeltaY
 import navigate.model.HandsetAdjustment
 import navigate.model.NavigateState
+import navigate.model.PointingCorrections
 import navigate.model.enums.AcquisitionAdjustmentCommand
 import navigate.model.enums.LightSource
 import navigate.model.enums.VirtualTelescope
@@ -112,7 +113,7 @@ class NavigateMappings[F[_]: Sync](
   val acquisitionAdjustmentTopic: Topic[F, AcquisitionAdjustment],
   val targetAdjustmentTopic:      Topic[F, TargetOffsets],
   val originAdjustmentTopic:      Topic[F, FocalPlaneOffset],
-  val pointingAdjustmentTopic:    Topic[F, FocalPlaneOffset],
+  val pointingAdjustmentTopic:    Topic[F, PointingCorrections],
   val logBuffer:                  Ref[F, Seq[ILoggingEvent]]
 )(
   override val schema:            Schema
@@ -128,12 +129,13 @@ class NavigateMappings[F[_]: Sync](
   def navigateState(p: Path, env: Env): F[Result[NavigateState]] =
     server.getNavigateState.attempt.map(_.fold(Result.internalError, Result.success))
 
-  def targetAdjustmentOffsets: F[Result[TargetOffsets]]     =
+  def targetAdjustmentOffsets: F[Result[TargetOffsets]]   =
     server.getTargetAdjustments.attempt.map(_.fold(Result.internalError, Result.success))
-  def originAdjustmentOffset: F[Result[FocalPlaneOffset]]   =
-    Result.success(FocalPlaneOffset.Zero).pure[F]
-  def pointingAdjustmentOffset: F[Result[FocalPlaneOffset]] =
-    Result.success(FocalPlaneOffset.Zero).pure[F]
+  def originAdjustmentOffset: F[Result[FocalPlaneOffset]] =
+    server.getOriginOffset.attempt.map(_.fold(Result.internalError, Result.success))
+
+  def pointingAdjustmentOffset: F[Result[PointingCorrections]] =
+    server.getPointingOffset.attempt.map(_.fold(Result.internalError, Result.success))
 
   def instrumentPort(p: Path, env: Env): F[Result[Option[Int]]] =
     env
@@ -992,7 +994,7 @@ object NavigateMappings extends GrackleParsers {
     acquisitionAdjustmentTopic: Topic[F, AcquisitionAdjustment],
     targetAdjustmentTopic:      Topic[F, TargetOffsets],
     originAdjustmentTopic:      Topic[F, FocalPlaneOffset],
-    pointingAdjustmentTopic:    Topic[F, FocalPlaneOffset],
+    pointingAdjustmentTopic:    Topic[F, PointingCorrections],
     logBuffer:                  Ref[F, Seq[ILoggingEvent]]
   ): F[NavigateMappings[F]] = loadSchema.flatMap {
     case Result.Success(schema)           =>

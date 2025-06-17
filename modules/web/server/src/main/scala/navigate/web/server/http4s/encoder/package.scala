@@ -14,7 +14,9 @@ import lucuma.odb.json.angle.query.given
 import lucuma.odb.json.offset.query.given
 import navigate.model.AcquisitionAdjustment
 import navigate.model.FocalPlaneOffset
+import navigate.model.HandsetAdjustment.HorizontalAdjustment
 import navigate.model.NavigateState
+import navigate.model.PointingCorrections
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuidersQualityValues
 import navigate.server.tcs.MechSystemState
@@ -114,6 +116,18 @@ package object encoder {
       "pwfs1"   -> s.pwfs1.asJson,
       "pwfs2"   -> s.pwfs2.asJson,
       "oiwfs"   -> s.oiwfs.asJson
+    )
+
+  given Encoder[HorizontalAdjustment] = s =>
+    Json.obj(
+      "azimuth"   -> s.deltaAz.asJson,
+      "elevation" -> s.deltaEl.asJson
+    )
+
+  given Encoder[PointingCorrections] = s =>
+    Json.obj(
+      "local" -> s.local.asJson,
+      "guide" -> s.guide.asJson
     )
 
 }

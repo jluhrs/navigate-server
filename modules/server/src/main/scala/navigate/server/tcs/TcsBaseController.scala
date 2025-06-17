@@ -12,6 +12,7 @@ import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.TimeSpan
 import navigate.model.FocalPlaneOffset
 import navigate.model.HandsetAdjustment
+import navigate.model.PointingCorrections
 import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
@@ -95,7 +96,7 @@ trait TcsBaseController[F[_]] {
   def getTelescopeState: F[TelescopeState]
   def getInstrumentPorts: F[InstrumentPorts]
   def getTargetAdjustments: F[TargetOffsets]
-  def getPointingOffset: F[FocalPlaneOffset]
+  def getPointingCorrections: F[PointingCorrections]
   def getOriginOffset: F[FocalPlaneOffset]
 }
 

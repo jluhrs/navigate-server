@@ -14,6 +14,7 @@ import lucuma.graphql.routes.Routes
 import natchez.Trace
 import navigate.model.AcquisitionAdjustment
 import navigate.model.FocalPlaneOffset
+import navigate.model.PointingCorrections
 import navigate.server.NavigateEngine
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuidersQualityValues
@@ -25,7 +26,7 @@ import org.http4s.server.middleware.GZip
 import org.http4s.server.websocket.WebSocketBuilder2
 import org.typelevel.log4cats.Logger
 
-class GraphQlRoutes[F[_]: Async: Logger: Trace: Compression](
+class GraphQlRoutes[F[_]: {Async, Logger, Trace, Compression}](
   eng:                        NavigateEngine[F],
   logTopic:                   Topic[F, ILoggingEvent],
   guideStateTopic:            Topic[F, GuideState],
@@ -34,7 +35,7 @@ class GraphQlRoutes[F[_]: Async: Logger: Trace: Compression](
   acquisitionAdjustmentTopic: Topic[F, AcquisitionAdjustment],
   targetAdjustmentTopic:      Topic[F, TargetOffsets],
   originAdjustmentTopic:      Topic[F, FocalPlaneOffset],
-  pointingAdjustmentTopic:    Topic[F, FocalPlaneOffset],
+  pointingAdjustmentTopic:    Topic[F, PointingCorrections],
   logBuffer:                  Ref[F, Seq[ILoggingEvent]]
 ) extends Http4sDsl[F] {
 

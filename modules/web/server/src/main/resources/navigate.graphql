@@ -278,6 +278,11 @@ type AcquisitionAdjustmentState {
     command: AcquistionAdjustmentCommand!
 }
 
+type HorizontalOffset {
+    azimuth: Angle!
+    elevation: Angle!
+}
+
 input HorizontalOffsetInput {
     azimuth: AngleInput!
     elevation: AngleInput!
@@ -309,6 +314,11 @@ input HandsetAdjustmentInput {
     equatorialAdjustment: EquatorialOffsetInput
 }
 
+type PointingCorrections {
+    local: HorizontalOffset!
+    guide: HorizontalOffset!
+}
+
 enum AdjustTarget {
     SOURCE_A
     PWFS1
@@ -331,7 +341,7 @@ type Query {
     serverVersion: String
     targetAdjustmentOffsets: TargetOffsets!
     originAdjustmentOffset: FocalPlaneOffset!
-    pointingAdjustmentOffset: FocalPlaneOffset!
+    pointingAdjustmentOffset: PointingCorrections!
 }
 
 type Mutation {
@@ -387,5 +397,5 @@ type Subscription {
     acquisitionAdjustmentState: AcquisitionAdjustmentState!
     targetAdjustmentOffsets: TargetOffsets!
     originAdjustmentOffset: FocalPlaneOffset!
-    pointingAdjustmentOffset: FocalPlaneOffset!
+    pointingAdjustmentOffset: PointingCorrections!
 }

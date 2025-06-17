@@ -39,8 +39,10 @@ import munit.CatsEffectSuite
 import navigate.model.AcquisitionAdjustment
 import navigate.model.FocalPlaneOffset
 import navigate.model.HandsetAdjustment
+import navigate.model.HandsetAdjustment.HorizontalAdjustment
 import navigate.model.NavigateEvent
 import navigate.model.NavigateState
+import navigate.model.PointingCorrections
 import navigate.model.enums.AcquisitionAdjustmentCommand
 import navigate.model.enums.DomeMode
 import navigate.model.enums.LightSource
@@ -1815,19 +1817,29 @@ class NavigateMappingsSuite extends CatsEffectSuite {
               """
           | query {
           |   pointingAdjustmentOffset {
-          |     deltaX {
-          |       milliarcseconds
+          |     local {
+          |       azimuth {
+          |         milliarcseconds
+          |       }
+          |       elevation {
+          |         milliarcseconds
+          |       }
           |     }
-          |     deltaY {
-          |       milliarcseconds
+          |     guide {
+          |       azimuth {
+          |         milliarcseconds
+          |       }
+          |       elevation {
+          |         milliarcseconds
+          |       }
           |     }
           |   }
           | }
           |""".stripMargin
             )
     } yield assertEquals(
-      r.hcursor.downField("data").downField("pointingAdjustmentOffset").as[FocalPlaneOffset],
-      FocalPlaneOffset.Zero.asRight[DecodingFailure]
+      r.hcursor.downField("data").downField("pointingAdjustmentOffset").as[PointingCorrections],
+      PointingCorrections.default.asRight[DecodingFailure]
     )
   }
 
@@ -2016,7 +2028,7 @@ object NavigateMappingsTest {
 
       override def wfsSky(wfs: GuideProbe, period: TimeSpan): IO[Unit] = IO.unit
 
-      override def getPointingOffset: IO[FocalPlaneOffset] = FocalPlaneOffset.Zero.pure[IO]
+      override def getPointingOffset: IO[PointingCorrections] = PointingCorrections.default.pure[IO]
 
       override def getOriginOffset: IO[FocalPlaneOffset] = FocalPlaneOffset.Zero.pure[IO]
 
@@ -2060,7 +2072,7 @@ object NavigateMappingsTest {
     lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
     tot <- Topic[IO, TargetOffsets]
     ot  <- Topic[IO, FocalPlaneOffset]
-    pt  <- Topic[IO, FocalPlaneOffset]
+    pt  <- Topic[IO, PointingCorrections]
     mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, tot, ot, pt, lb)
   } yield mp
 
@@ -2200,4 +2212,15 @@ object NavigateMappingsTest {
       oiwfs   <- h.downField("oiwfs").as[FocalPlaneOffset]
     } yield TargetOffsets(sourceA, pwfs1, pwfs2, oiwfs)
 
+  given Decoder[HorizontalAdjustment] = h =>
+    for {
+      az <- h.downField("azimuth").as[Angle]
+      el <- h.downField("elevation").as[Angle]
+    } yield HorizontalAdjustment(az, el)
+
+  given Decoder[PointingCorrections] = h =>
+    for {
+      local <- h.downField("local").as[HorizontalAdjustment]
+      guide <- h.downField("guide").as[HorizontalAdjustment]
+    } yield PointingCorrections(local, guide)
 }
