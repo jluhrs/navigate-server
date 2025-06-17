@@ -37,16 +37,20 @@ import lucuma.core.util.Timestamp
 import monocle.Focus.focus
 import munit.CatsEffectSuite
 import navigate.model.AcquisitionAdjustment
+import navigate.model.FocalPlaneOffset
+import navigate.model.HandsetAdjustment
+import navigate.model.HandsetAdjustment.HorizontalAdjustment
 import navigate.model.NavigateEvent
 import navigate.model.NavigateState
+import navigate.model.PointingCorrections
 import navigate.model.enums.AcquisitionAdjustmentCommand
 import navigate.model.enums.DomeMode
 import navigate.model.enums.LightSource
 import navigate.model.enums.ShutterMode
+import navigate.model.enums.VirtualTelescope
 import navigate.server.NavigateEngine
 import navigate.server.OdbProxy
 import navigate.server.Systems
-import navigate.server.tcs.FocalPlaneOffset
 import navigate.server.tcs.FollowStatus
 import navigate.server.tcs.FollowStatus.*
 import navigate.server.tcs.GuideState
@@ -1542,7 +1546,6 @@ class NavigateMappingsSuite extends CatsEffectSuite {
           |        }
           |      }
           |    }
-          |    openLoops: true
           |  ) {
           |    result
           |  }
@@ -1598,6 +1601,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
           |mutation {
           |  resetTargetAdjustment(
           |    target: SOURCE_A
+          |    openLoops: true
           |  ) {
           |    result
           |  }
@@ -1640,13 +1644,13 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     )
   }
 
-  test("Clear pointing adjustment") {
+  test("Clear local pointing adjustment") {
     for {
       mp <- buildMapping
       p  <- mp.compileAndRun(
               """
           |mutation {
-          |  resetPointingAdjustment {
+          |  resetLocalPointingAdjustment {
           |    result
           |  }
           |}
@@ -1655,7 +1659,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     } yield assertEquals(
       p.hcursor
         .downField("data")
-        .downField("resetPointingAdjustment")
+        .downField("resetLocalPointingAdjustment")
         .downField("result")
         .as[String]
         .toOption,
@@ -1663,13 +1667,13 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     )
   }
 
-  test("Absorb pointing adjustment") {
+  test("Clear guide pointing adjustment") {
     for {
       mp <- buildMapping
       p  <- mp.compileAndRun(
               """
           |mutation {
-          |  absorbPointingAdjustment {
+          |  resetGuidePointingAdjustment {
           |    result
           |  }
           |}
@@ -1678,7 +1682,30 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     } yield assertEquals(
       p.hcursor
         .downField("data")
-        .downField("absorbPointingAdjustment")
+        .downField("resetGuidePointingAdjustment")
+        .downField("result")
+        .as[String]
+        .toOption,
+      "SUCCESS".some
+    )
+  }
+
+  test("Absorb guide pointing adjustment") {
+    for {
+      mp <- buildMapping
+      p  <- mp.compileAndRun(
+              """
+          |mutation {
+          |  absorbGuidePointingAdjustment {
+          |    result
+          |  }
+          |}
+          |""".stripMargin
+            )
+    } yield assertEquals(
+      p.hcursor
+        .downField("data")
+        .downField("absorbGuidePointingAdjustment")
         .downField("result")
         .as[String]
         .toOption,
@@ -1692,7 +1719,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       p  <- mp.compileAndRun(
               """
           |mutation {
-          |  resetOriginAdjustment {
+          |  resetOriginAdjustment (
+          |    openLoops: true
+          |  ) {
           |    result
           |  }
           |}
@@ -1788,19 +1817,29 @@ class NavigateMappingsSuite extends CatsEffectSuite {
               """
           | query {
           |   pointingAdjustmentOffset {
-          |     deltaX {
-          |       milliarcseconds
+          |     local {
+          |       azimuth {
+          |         milliarcseconds
+          |       }
+          |       elevation {
+          |         milliarcseconds
+          |       }
           |     }
-          |     deltaY {
-          |       milliarcseconds
+          |     guide {
+          |       azimuth {
+          |         milliarcseconds
+          |       }
+          |       elevation {
+          |         milliarcseconds
+          |       }
           |     }
           |   }
           | }
           |""".stripMargin
             )
     } yield assertEquals(
-      r.hcursor.downField("data").downField("pointingAdjustmentOffset").as[FocalPlaneOffset],
-      FocalPlaneOffset.Zero.asRight[DecodingFailure]
+      r.hcursor.downField("data").downField("pointingAdjustmentOffset").as[PointingCorrections],
+      PointingCorrections.default.asRight[DecodingFailure]
     )
   }
 
@@ -1985,7 +2024,41 @@ object NavigateMappingsTest {
 
       override def getGuideDemand: IO[GuideConfig] = g.get
 
+      def getTargetAdjustments: IO[TargetOffsets] = TargetOffsets.default.pure[IO]
+
       override def wfsSky(wfs: GuideProbe, period: TimeSpan): IO[Unit] = IO.unit
+
+      override def getPointingOffset: IO[PointingCorrections] = PointingCorrections.default.pure[IO]
+
+      override def getOriginOffset: IO[FocalPlaneOffset] = FocalPlaneOffset.Zero.pure[IO]
+
+      override def targetAdjust(
+        target:            VirtualTelescope,
+        handsetAdjustment: HandsetAdjustment,
+        openLoops:         Boolean
+      ): IO[Unit] = IO.unit
+
+      override def originAdjust(
+        handsetAdjustment: HandsetAdjustment,
+        openLoops:         Boolean
+      ): IO[Unit] = IO.unit
+
+      override def pointingAdjust(handsetAdjustment: HandsetAdjustment): IO[Unit] = IO.unit
+
+      override def targetOffsetAbsorb(target: VirtualTelescope): IO[Unit] = IO.unit
+
+      override def targetOffsetClear(target: VirtualTelescope, openLoops: Boolean): IO[Unit] =
+        IO.unit
+
+      override def originOffsetAbsorb: IO[Unit] = IO.unit
+
+      override def originOffsetClear(openLoops: Boolean): IO[Unit] = IO.unit
+
+      override def pointingOffsetClearLocal: IO[Unit] = IO.unit
+
+      override def pointingOffsetAbsorbGuide: IO[Unit] = IO.unit
+
+      override def pointingOffsetClearGuide: IO[Unit] = IO.unit
     }
   }
 
@@ -1999,7 +2072,7 @@ object NavigateMappingsTest {
     lb  <- Ref.empty[IO, Seq[ILoggingEvent]]
     tot <- Topic[IO, TargetOffsets]
     ot  <- Topic[IO, FocalPlaneOffset]
-    pt  <- Topic[IO, FocalPlaneOffset]
+    pt  <- Topic[IO, PointingCorrections]
     mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, tot, ot, pt, lb)
   } yield mp
 
@@ -2139,4 +2212,15 @@ object NavigateMappingsTest {
       oiwfs   <- h.downField("oiwfs").as[FocalPlaneOffset]
     } yield TargetOffsets(sourceA, pwfs1, pwfs2, oiwfs)
 
+  given Decoder[HorizontalAdjustment] = h =>
+    for {
+      az <- h.downField("azimuth").as[Angle]
+      el <- h.downField("elevation").as[Angle]
+    } yield HorizontalAdjustment(az, el)
+
+  given Decoder[PointingCorrections] = h =>
+    for {
+      local <- h.downField("local").as[HorizontalAdjustment]
+      guide <- h.downField("guide").as[HorizontalAdjustment]
+    } yield PointingCorrections(local, guide)
 }

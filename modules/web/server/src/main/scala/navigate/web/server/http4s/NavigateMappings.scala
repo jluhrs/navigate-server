@@ -3,7 +3,6 @@
 
 package navigate.web.server.http4s
 
-import cats.Applicative
 import cats.effect.Sync
 import cats.effect.kernel.Ref
 import cats.syntax.all.*
@@ -58,22 +57,24 @@ import lucuma.core.util.TimeSpan
 import mouse.boolean.given
 import navigate.model.AcquisitionAdjustment
 import navigate.model.Distance
+import navigate.model.FocalPlaneOffset
+import navigate.model.FocalPlaneOffset.DeltaX
+import navigate.model.FocalPlaneOffset.DeltaY
+import navigate.model.HandsetAdjustment
 import navigate.model.NavigateState
+import navigate.model.PointingCorrections
 import navigate.model.enums.AcquisitionAdjustmentCommand
 import navigate.model.enums.LightSource
+import navigate.model.enums.VirtualTelescope
 import navigate.server.NavigateEngine
 import navigate.server.tcs.AutoparkAowfs
 import navigate.server.tcs.AutoparkGems
 import navigate.server.tcs.AutoparkOiwfs
 import navigate.server.tcs.AutoparkPwfs1
 import navigate.server.tcs.AutoparkPwfs2
-import navigate.server.tcs.FocalPlaneOffset
-import navigate.server.tcs.FocalPlaneOffset.DeltaX
-import navigate.server.tcs.FocalPlaneOffset.DeltaY
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuiderConfig
 import navigate.server.tcs.GuidersQualityValues
-import navigate.server.tcs.HandsetAdjustment
 import navigate.server.tcs.InstrumentSpecifics
 import navigate.server.tcs.Origin
 import navigate.server.tcs.ResetPointing
@@ -89,7 +90,6 @@ import navigate.server.tcs.TcsBaseController.SwapConfig
 import navigate.server.tcs.TcsBaseController.TcsConfig
 import navigate.server.tcs.TelescopeState
 import navigate.server.tcs.TrackingConfig
-import navigate.server.tcs.VirtualTelescope
 import navigate.server.tcs.ZeroChopThrow
 import navigate.server.tcs.ZeroGuideOffset
 import navigate.server.tcs.ZeroInstrumentOffset
@@ -113,7 +113,7 @@ class NavigateMappings[F[_]: Sync](
   val acquisitionAdjustmentTopic: Topic[F, AcquisitionAdjustment],
   val targetAdjustmentTopic:      Topic[F, TargetOffsets],
   val originAdjustmentTopic:      Topic[F, FocalPlaneOffset],
-  val pointingAdjustmentTopic:    Topic[F, FocalPlaneOffset],
+  val pointingAdjustmentTopic:    Topic[F, PointingCorrections],
   val logBuffer:                  Ref[F, Seq[ILoggingEvent]]
 )(
   override val schema:            Schema
@@ -129,12 +129,13 @@ class NavigateMappings[F[_]: Sync](
   def navigateState(p: Path, env: Env): F[Result[NavigateState]] =
     server.getNavigateState.attempt.map(_.fold(Result.internalError, Result.success))
 
-  def targetAdjustmentOffsets: F[Result[TargetOffsets]]     =
-    Result.success(TargetOffsets.default).pure[F]
-  def originAdjustmentOffset: F[Result[FocalPlaneOffset]]   =
-    Result.success(FocalPlaneOffset.Zero).pure[F]
-  def pointingAdjustmentOffset: F[Result[FocalPlaneOffset]] =
-    Result.success(FocalPlaneOffset.Zero).pure[F]
+  def targetAdjustmentOffsets: F[Result[TargetOffsets]]   =
+    server.getTargetAdjustments.attempt.map(_.fold(Result.internalError, Result.success))
+  def originAdjustmentOffset: F[Result[FocalPlaneOffset]] =
+    server.getOriginOffset.attempt.map(_.fold(Result.internalError, Result.success))
+
+  def pointingAdjustmentOffset: F[Result[PointingCorrections]] =
+    server.getPointingOffset.attempt.map(_.fold(Result.internalError, Result.success))
 
   def instrumentPort(p: Path, env: Env): F[Result[Option[Int]]] =
     env
@@ -420,7 +421,7 @@ class NavigateMappings[F[_]: Sync](
           // Run the adjustment if the user confirms, preserve the upstream error
           (adj.command === AcquisitionAdjustmentCommand.UserConfirms)
             .valueOrPure[F, Result[OperationOutcome]](
-              simpleCommand(server.acquisitionAdj(adj.offset, adj.iaa, adj.ipa))
+              parameterlessCommand(server.acquisitionAdj(adj.offset, adj.iaa, adj.ipa))
             )(Result.success(OperationOutcome.success))
       }
       .getOrElse {
@@ -453,22 +454,89 @@ class NavigateMappings[F[_]: Sync](
       )
     )).getOrElse(Result.failure[OperationOutcome]("Slew parameters could not be parsed.").pure[F])
 
-  def adjustTarget(p: Path, env: Env): F[Result[OperationOutcome]] =
-    Result.success(OperationOutcome.success).pure[F]
+  def adjustTarget(p: Path, env: Env): F[Result[OperationOutcome]] = (for {
+    target    <- env.get[VirtualTelescope]("target")
+    offset    <- env.get[HandsetAdjustment]("offset")
+    openLoops <- env.get[Boolean]("openLoops")
+  } yield server
+    .targetAdjust(target, offset, openLoops)
+    .attempt
+    .map(x =>
+      Result.success(
+        x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+      )
+    )).getOrElse(
+    Result.failure[OperationOutcome]("Target adjustment parameters could not be parsed.").pure[F]
+  )
 
-  def adjustOrigin(p: Path, env: Env): F[Result[OperationOutcome]] =
-    Result.success(OperationOutcome.success).pure[F]
+  def adjustOrigin(p: Path, env: Env): F[Result[OperationOutcome]] = (for {
+    offset    <- env.get[HandsetAdjustment]("offset")
+    openLoops <- env.get[Boolean]("openLoops")
+  } yield server
+    .originAdjust(offset, openLoops)
+    .attempt
+    .map(x =>
+      Result.success(
+        x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+      )
+    )).getOrElse(
+    Result.failure[OperationOutcome]("Origin adjustment parameters could not be parsed.").pure[F]
+  )
 
-  def adjustPointing(p: Path, env: Env): F[Result[OperationOutcome]] =
-    Result.success(OperationOutcome.success).pure[F]
+  def adjustPointing(p: Path, env: Env): F[Result[OperationOutcome]] = (for {
+    offset <- env.get[HandsetAdjustment]("offset")
+  } yield server
+    .pointingAdjust(offset)
+    .attempt
+    .map(x =>
+      Result.success(
+        x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+      )
+    )).getOrElse(
+    Result.failure[OperationOutcome]("Pointing adjustment parameters could not be parsed.").pure[F]
+  )
 
-  def resetTargetAdjustment(p: Path, env: Env): F[Result[OperationOutcome]] =
-    Result.success(OperationOutcome.success).pure[F]
+  def resetTargetAdjustment(p: Path, env: Env): F[Result[OperationOutcome]] = (for {
+    target    <- env.get[VirtualTelescope]("target")
+    openLoops <- env.get[Boolean]("openLoops")
+  } yield server
+    .targetOffsetClear(target, openLoops)
+    .attempt
+    .map(x =>
+      Result.success(
+        x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+      )
+    )).getOrElse(
+    Result.failure[OperationOutcome]("Clear target offset parameters could not be parsed.").pure[F]
+  )
 
-  def absorbTargetAdjustment(p: Path, env: Env): F[Result[OperationOutcome]] =
-    Result.success(OperationOutcome.success).pure[F]
+  def absorbTargetAdjustment(p: Path, env: Env): F[Result[OperationOutcome]] = (for {
+    target <- env.get[VirtualTelescope]("target")
+  } yield server
+    .targetOffsetAbsorb(target)
+    .attempt
+    .map(x =>
+      Result.success(
+        x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+      )
+    )).getOrElse(
+    Result.failure[OperationOutcome]("Absorb target offset parameters could not be parsed.").pure[F]
+  )
 
-  def simpleCommand(cmd: F[Unit]): F[Result[OperationOutcome]] =
+  def resetOriginAdjustment(p: Path, env: Env): F[Result[OperationOutcome]] = (for {
+    openLoops <- env.get[Boolean]("openLoops")
+  } yield server
+    .originOffsetClear(openLoops)
+    .attempt
+    .map(x =>
+      Result.success(
+        x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
+      )
+    )).getOrElse(
+    Result.failure[OperationOutcome]("Clear origin offset parameters could not be parsed.").pure[F]
+  )
+
+  def parameterlessCommand(cmd: F[Unit]): F[Result[OperationOutcome]] =
     cmd.attempt
       .map(x =>
         Result.Success(
@@ -667,7 +735,10 @@ class NavigateMappings[F[_]: Sync](
         _ <- Elab.env("offset", o)
         _ <- Elab.env("openLoops", openLoops)
       } yield ()
-    case (MutationType, "resetTargetAdjustment", List(Binding("target", EnumValue(target))))    =>
+    case (MutationType,
+          "resetTargetAdjustment",
+          List(Binding("target", EnumValue(target)), Binding("openLoops", BooleanValue(openLoops)))
+        ) =>
       for {
         t <- Elab.liftR(
                parseEnumerated[VirtualTelescope](target).toResult(
@@ -675,6 +746,7 @@ class NavigateMappings[F[_]: Sync](
                )
              )
         _ <- Elab.env("target", t)
+        _ <- Elab.env("openLoops", openLoops)
       } yield ()
     case (MutationType, "absorbTargetAdjustment", List(Binding("target", EnumValue(target))))   =>
       for {
@@ -685,12 +757,7 @@ class NavigateMappings[F[_]: Sync](
              )
         _ <- Elab.env("target", t)
       } yield ()
-    case (MutationType,
-          "adjustPointing",
-          List(Binding("offset", ObjectValue(offset)),
-               Binding("openLoops", BooleanValue(openLoops))
-          )
-        ) =>
+    case (MutationType, "adjustPointing", List(Binding("offset", ObjectValue(offset))))         =>
       for {
         o <- Elab.liftR(
                parseHandsetAdjustment(offset).toResult(
@@ -698,7 +765,6 @@ class NavigateMappings[F[_]: Sync](
                )
              )
         _ <- Elab.env("offset", o)
-        _ <- Elab.env("openLoops", openLoops)
       } yield ()
     case (MutationType,
           "adjustOrigin",
@@ -715,6 +781,11 @@ class NavigateMappings[F[_]: Sync](
         _ <- Elab.env("offset", o)
         _ <- Elab.env("openLoops", openLoops)
       } yield ()
+    case (MutationType,
+          "resetOriginAdjustment",
+          List(Binding("openLoops", BooleanValue(openLoops)))
+        ) =>
+      Elab.env("openLoops", openLoops)
     case (QueryType, "instrumentPort", List(Binding("instrument", EnumValue(ins))))             =>
       Elab
         .liftR(
@@ -744,9 +815,13 @@ class NavigateMappings[F[_]: Sync](
       ObjectMapping(
         tpe = MutationType,
         fieldMappings = List(
-          RootEffect.computeEncodable("mountPark")((p, env) => simpleCommand(server.mcsPark)),
+          RootEffect.computeEncodable("mountPark")((p, env) =>
+            parameterlessCommand(server.mcsPark)
+          ),
           RootEffect.computeEncodable("mountFollow")((p, env) => mountFollow(p, env)),
-          RootEffect.computeEncodable("rotatorPark")((p, env) => simpleCommand(server.rotPark)),
+          RootEffect.computeEncodable("rotatorPark")((p, env) =>
+            parameterlessCommand(server.rotPark)
+          ),
           RootEffect.computeEncodable("rotatorFollow")((p, env) => rotatorFollow(p, env)),
           RootEffect.computeEncodable("rotatorConfig")((p, env) => rotatorConfig(p, env)),
           RootEffect.computeEncodable("scsFollow")((p, env) => scsFollow(p, env)),
@@ -759,36 +834,40 @@ class NavigateMappings[F[_]: Sync](
           ),
           RootEffect.computeEncodable("oiwfsTarget")((p, env) => oiwfsTarget(p, env)),
           RootEffect.computeEncodable("oiwfsProbeTracking")((p, env) => oiwfsProbeTracking(p, env)),
-          RootEffect.computeEncodable("oiwfsPark")((p, env) => simpleCommand(server.oiwfsPark)),
+          RootEffect.computeEncodable("oiwfsPark")((p, env) =>
+            parameterlessCommand(server.oiwfsPark)
+          ),
           RootEffect.computeEncodable("oiwfsFollow")((p, env) => oiwfsFollow(p, env)),
           RootEffect.computeEncodable("oiwfsObserve")((_, env) => oiwfsObserve(env)),
           RootEffect.computeEncodable("oiwfsStopObserve")((_, _) =>
-            simpleCommand(server.oiwfsStopObserve)
+            parameterlessCommand(server.oiwfsStopObserve)
           ),
           RootEffect.computeEncodable("acObserve")((_, env) => acObserve(env)),
           RootEffect.computeEncodable("acStopObserve")((_, _) =>
-            simpleCommand(server.acStopObserve)
+            parameterlessCommand(server.acStopObserve)
           ),
           RootEffect.computeEncodable("guideEnable")((p, env) => guideEnable(p, env)),
           RootEffect.computeEncodable("guideDisable")((p, env) =>
-            simpleCommand(server.disableGuide)
+            parameterlessCommand(server.disableGuide)
           ),
-          RootEffect.computeEncodable("m1Park")((p, env) => simpleCommand(server.m1Park)),
-          RootEffect.computeEncodable("m1Unpark")((p, env) => simpleCommand(server.m1Unpark)),
+          RootEffect.computeEncodable("m1Park")((p, env) => parameterlessCommand(server.m1Park)),
+          RootEffect.computeEncodable("m1Unpark")((p, env) =>
+            parameterlessCommand(server.m1Unpark)
+          ),
           RootEffect.computeEncodable("m1OpenLoopOff")((p, env) =>
-            simpleCommand(server.m1OpenLoopOff)
+            parameterlessCommand(server.m1OpenLoopOff)
           ),
           RootEffect.computeEncodable("m1OpenLoopOn")((p, env) =>
-            simpleCommand(server.m1OpenLoopOn)
+            parameterlessCommand(server.m1OpenLoopOn)
           ),
           RootEffect.computeEncodable("m1ZeroFigure")((p, env) =>
-            simpleCommand(server.m1ZeroFigure)
+            parameterlessCommand(server.m1ZeroFigure)
           ),
           RootEffect.computeEncodable("m1LoadAoFigure")((p, env) =>
-            simpleCommand(server.m1LoadAoFigure)
+            parameterlessCommand(server.m1LoadAoFigure)
           ),
           RootEffect.computeEncodable("m1LoadNonAoFigure")((p, env) =>
-            simpleCommand(server.m1LoadNonAoFigure)
+            parameterlessCommand(server.m1LoadNonAoFigure)
           ),
           RootEffect.computeEncodable("lightpathConfig")((p, env) => lightpathConfig(p, env)),
           RootEffect.computeEncodable("acquisitionAdjustment") { (p, env) =>
@@ -812,17 +891,20 @@ class NavigateMappings[F[_]: Sync](
           RootEffect.computeEncodable("absorbTargetAdjustment")((p, env) =>
             absorbTargetAdjustment(p, env)
           ),
-          RootEffect.computeEncodable("resetPointingAdjustment")((p, env) =>
-            simpleCommand(Applicative[F].unit)
+          RootEffect.computeEncodable("resetLocalPointingAdjustment")((p, env) =>
+            parameterlessCommand(server.pointingOffsetClearLocal)
           ),
-          RootEffect.computeEncodable("absorbPointingAdjustment")((p, env) =>
-            simpleCommand(Applicative[F].unit)
+          RootEffect.computeEncodable("resetGuidePointingAdjustment")((p, env) =>
+            parameterlessCommand(server.pointingOffsetClearGuide)
+          ),
+          RootEffect.computeEncodable("absorbGuidePointingAdjustment")((p, env) =>
+            parameterlessCommand(server.pointingOffsetAbsorbGuide)
           ),
           RootEffect.computeEncodable("resetOriginAdjustment")((p, env) =>
-            simpleCommand(Applicative[F].unit)
+            resetOriginAdjustment(p, env)
           ),
           RootEffect.computeEncodable("absorbOriginAdjustment")((p, env) =>
-            simpleCommand(Applicative[F].unit)
+            parameterlessCommand(server.originOffsetAbsorb)
           )
         )
       ),
@@ -912,7 +994,7 @@ object NavigateMappings extends GrackleParsers {
     acquisitionAdjustmentTopic: Topic[F, AcquisitionAdjustment],
     targetAdjustmentTopic:      Topic[F, TargetOffsets],
     originAdjustmentTopic:      Topic[F, FocalPlaneOffset],
-    pointingAdjustmentTopic:    Topic[F, FocalPlaneOffset],
+    pointingAdjustmentTopic:    Topic[F, PointingCorrections],
     logBuffer:                  Ref[F, Seq[ILoggingEvent]]
   ): F[NavigateMappings[F]] = loadSchema.flatMap {
     case Result.Success(schema)           =>

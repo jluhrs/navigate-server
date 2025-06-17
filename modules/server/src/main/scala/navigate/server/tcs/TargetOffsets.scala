@@ -3,6 +3,8 @@
 
 package navigate.server.tcs
 
+import navigate.model.FocalPlaneOffset
+
 case class TargetOffsets(
   sourceA: FocalPlaneOffset,
   pwfs1:   FocalPlaneOffset,

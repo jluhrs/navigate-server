@@ -32,6 +32,8 @@ import lucuma.core.util.TimeSpan
 import monocle.Lens
 import monocle.syntax.all.focus
 import mouse.all.*
+import navigate.model.FocalPlaneOffset
+import navigate.model.HandsetAdjustment
 import navigate.model.NavigateCommand
 import navigate.model.NavigateCommand.*
 import navigate.model.NavigateEvent
@@ -40,17 +42,20 @@ import navigate.model.NavigateEvent.CommandPaused
 import navigate.model.NavigateEvent.CommandStart
 import navigate.model.NavigateEvent.CommandSuccess
 import navigate.model.NavigateState
+import navigate.model.PointingCorrections
 import navigate.model.config.ControlStrategy
 import navigate.model.config.NavigateEngineConfiguration
 import navigate.model.enums.DomeMode
 import navigate.model.enums.LightSource
 import navigate.model.enums.ShutterMode
+import navigate.model.enums.VirtualTelescope
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuidersQualityValues
 import navigate.server.tcs.InstrumentSpecifics
 import navigate.server.tcs.RotatorTrackConfig
 import navigate.server.tcs.SlewOptions
 import navigate.server.tcs.Target
+import navigate.server.tcs.TargetOffsets
 import navigate.server.tcs.TcsBaseController.SwapConfig
 import navigate.server.tcs.TcsBaseController.TcsConfig
 import navigate.server.tcs.TelescopeState
@@ -89,9 +94,9 @@ trait NavigateEngine[F[_]] {
     domeEnable:    Boolean,
     shutterEnable: Boolean
   ): F[Unit]
-  def ecsVentGatesMove(gateEast:                     Double, westGate:       Double): F[Unit]
+  def ecsVentGatesMove(gateEast:                     Double, westGate:             Double): F[Unit]
   def tcsConfig(config:                              TcsConfig): F[Unit]
-  def slew(slewOptions:                              SlewOptions, tcsConfig: TcsConfig, oid:     Option[Observation.Id]): F[Unit]
+  def slew(slewOptions:                              SlewOptions, tcsConfig:       TcsConfig, oid:     Option[Observation.Id]): F[Unit]
   def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): F[Unit]
   def oiwfsTarget(target:                            Target): F[Unit]
   def oiwfsProbeTracking(config:                     TrackingConfig): F[Unit]
@@ -112,16 +117,34 @@ trait NavigateEngine[F[_]] {
   def m1ZeroFigure: F[Unit]
   def m1LoadAoFigure: F[Unit]
   def m1LoadNonAoFigure: F[Unit]
-  def lightpathConfig(from:                          LightSource, to:        LightSinkName): F[Unit]
-  def acquisitionAdj(offset:                         Offset, iaa:            Option[Angle], ipa: Option[Angle]): F[Unit]
-  def wfsSky(wfs:                                    GuideProbe, period:     TimeSpan): F[Unit]
+  def lightpathConfig(from:                          LightSource, to:              LightSinkName): F[Unit]
+  def acquisitionAdj(offset:                         Offset, iaa:                  Option[Angle], ipa: Option[Angle]): F[Unit]
+  def wfsSky(wfs:                                    GuideProbe, period:           TimeSpan): F[Unit]
+  def targetAdjust(
+    target:            VirtualTelescope,
+    handsetAdjustment: HandsetAdjustment,
+    openLoops:         Boolean
+  ): F[Unit]
+  def targetOffsetAbsorb(target:                     VirtualTelescope): F[Unit]
+  def targetOffsetClear(target:                      VirtualTelescope, openLoops:  Boolean): F[Unit]
+  def originAdjust(handsetAdjustment:                HandsetAdjustment, openLoops: Boolean): F[Unit]
+  def originOffsetAbsorb: F[Unit]
+  def originOffsetClear(openLoops:                   Boolean): F[Unit]
+  def pointingAdjust(handsetAdjustment:              HandsetAdjustment): F[Unit]
+  def pointingOffsetClearLocal: F[Unit]
+  def pointingOffsetAbsorbGuide: F[Unit]
+  def pointingOffsetClearGuide: F[Unit]
+
   def getGuideState: F[GuideState]
   def getGuidersQuality: F[GuidersQualityValues]
   def getTelescopeState: F[TelescopeState]
   def getNavigateState: F[NavigateState]
   def getNavigateStateStream: Stream[F, NavigateState]
-  def getInstrumentPort(instrument:                  Instrument): F[Option[Int]]
+  def getInstrumentPort(instrument: Instrument): F[Option[Int]]
   def getGuideDemand: F[GuideConfig]
+  def getTargetAdjustments: F[TargetOffsets]
+  def getPointingOffset: F[PointingCorrections]
+  def getOriginOffset: F[FocalPlaneOffset]
 }
 
 object NavigateEngine {
@@ -530,6 +553,93 @@ object NavigateEngine {
     }
 
     override def getGuideDemand: F[GuideConfig] = stateRef.get.map(_.guideConfig)
+
+    override def getTargetAdjustments: F[TargetOffsets] = systems.tcsCommon.getTargetAdjustments
+
+    override def getPointingOffset: F[PointingCorrections] =
+      systems.tcsCommon.getPointingCorrections
+
+    override def getOriginOffset: F[FocalPlaneOffset] = systems.tcsCommon.getOriginOffset
+
+    override def targetAdjust(
+      target:            VirtualTelescope,
+      handsetAdjustment: HandsetAdjustment,
+      openLoops:         Boolean
+    ): F[Unit] =
+      simpleCommand(
+        engine,
+        TargetAdjust(target, handsetAdjustment, openLoops),
+        stateRef.get.flatMap(s =>
+          systems.tcsCommon.targetAdjust(target, handsetAdjustment, openLoops)(s.guideConfig)
+        )
+      )
+
+    override def originAdjust(handsetAdjustment: HandsetAdjustment, openLoops: Boolean): F[Unit] =
+      simpleCommand(
+        engine,
+        OriginAdjust(handsetAdjustment, openLoops),
+        stateRef.get.flatMap(s =>
+          systems.tcsCommon.originAdjust(handsetAdjustment, openLoops)(s.guideConfig)
+        )
+      )
+
+    override def pointingAdjust(handsetAdjustment: HandsetAdjustment): F[Unit] =
+      simpleCommand(
+        engine,
+        PointingAdjust(handsetAdjustment),
+        systems.tcsCommon.pointingAdjust(handsetAdjustment)
+      )
+
+    override def targetOffsetAbsorb(target: VirtualTelescope): F[Unit] =
+      simpleCommand(
+        engine,
+        TargetOffsetAbsorb(target),
+        systems.tcsCommon.targetOffsetAbsorb(target)
+      )
+
+    override def targetOffsetClear(target: VirtualTelescope, openLoops: Boolean): F[Unit] =
+      simpleCommand(
+        engine,
+        TargetOffsetClear(target, openLoops),
+        stateRef.get.flatMap(s =>
+          systems.tcsCommon.targetOffsetClear(target, openLoops)(s.guideConfig)
+        )
+      )
+
+    override def originOffsetAbsorb: F[Unit] =
+      simpleCommand(
+        engine,
+        OriginOffsetAbsorb,
+        systems.tcsCommon.originOffsetAbsorb
+      )
+
+    override def originOffsetClear(openLoops: Boolean): F[Unit] =
+      simpleCommand(
+        engine,
+        OriginOffsetClear(openLoops),
+        stateRef.get.flatMap(s => systems.tcsCommon.originOffsetClear(openLoops)(s.guideConfig))
+      )
+
+    override def pointingOffsetClearLocal: F[Unit] =
+      simpleCommand(
+        engine,
+        PointingOffsetClearLocal,
+        systems.tcsCommon.pointingOffsetClearLocal
+      )
+
+    override def pointingOffsetAbsorbGuide: F[Unit] =
+      simpleCommand(
+        engine,
+        PointingOffsetAbsorbGuide,
+        systems.tcsCommon.pointingOffsetAbsorbGuide
+      )
+
+    override def pointingOffsetClearGuide: F[Unit] =
+      simpleCommand(
+        engine,
+        PointingOffsetClearGuide,
+        systems.tcsCommon.pointingOffsetClearGuide
+      )
   }
 
   def build[F[_]: {Temporal, Logger}](

@@ -278,6 +278,11 @@ type AcquisitionAdjustmentState {
     command: AcquistionAdjustmentCommand!
 }
 
+type HorizontalOffset {
+    azimuth: Angle!
+    elevation: Angle!
+}
+
 input HorizontalOffsetInput {
     azimuth: AngleInput!
     elevation: AngleInput!
@@ -309,6 +314,11 @@ input HandsetAdjustmentInput {
     equatorialAdjustment: EquatorialOffsetInput
 }
 
+type PointingCorrections {
+    local: HorizontalOffset!
+    guide: HorizontalOffset!
+}
+
 enum AdjustTarget {
     SOURCE_A
     PWFS1
@@ -331,7 +341,7 @@ type Query {
     serverVersion: String
     targetAdjustmentOffsets: TargetOffsets!
     originAdjustmentOffset: FocalPlaneOffset!
-    pointingAdjustmentOffset: FocalPlaneOffset!
+    pointingAdjustmentOffset: PointingCorrections!
 }
 
 type Mutation {
@@ -367,13 +377,14 @@ type Mutation {
     acquisitionAdjustment(adjustment: AcquisitionAdjustmentInput!): OperationOutcome!
     wfsSky(wfs: GuideProbe!, period: TimeSpanInput!): OperationOutcome!
     adjustTarget(target: AdjustTarget!, offset: HandsetAdjustmentInput!, openLoops: Boolean!): OperationOutcome!
-    adjustPointing(offset: HandsetAdjustmentInput!, openLoops: Boolean!): OperationOutcome!
+    adjustPointing(offset: HandsetAdjustmentInput!): OperationOutcome!
     adjustOrigin(offset: HandsetAdjustmentInput!, openLoops: Boolean!): OperationOutcome!
-    resetTargetAdjustment(target: AdjustTarget!): OperationOutcome!
+    resetTargetAdjustment(target: AdjustTarget!, openLoops: Boolean!): OperationOutcome!
     absorbTargetAdjustment(target: AdjustTarget!): OperationOutcome!
-    resetPointingAdjustment: OperationOutcome!
-    absorbPointingAdjustment: OperationOutcome!
-    resetOriginAdjustment: OperationOutcome!
+    resetLocalPointingAdjustment: OperationOutcome!
+    resetGuidePointingAdjustment: OperationOutcome!
+    absorbGuidePointingAdjustment: OperationOutcome!
+    resetOriginAdjustment(openLoops: Boolean!): OperationOutcome!
     absorbOriginAdjustment: OperationOutcome!
 }
 
@@ -386,5 +397,5 @@ type Subscription {
     acquisitionAdjustmentState: AcquisitionAdjustmentState!
     targetAdjustmentOffsets: TargetOffsets!
     originAdjustmentOffset: FocalPlaneOffset!
-    pointingAdjustmentOffset: FocalPlaneOffset!
+    pointingAdjustmentOffset: PointingCorrections!
 }
