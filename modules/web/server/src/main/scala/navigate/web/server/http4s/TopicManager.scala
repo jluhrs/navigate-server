@@ -45,7 +45,7 @@ class TopicManager[F[_]] private (
     topic:     Topic[F, A]
   )(using Temporal[F]): Stream[F, Unit] =
     Stream
-      .fixedRate[F](FiniteDuration(1000, TimeUnit.SECONDS))
+      .fixedRate[F](FiniteDuration(1, TimeUnit.SECONDS))
       .evalMap(_ => fetchData)
       .evalMapAccumulate(none[A]) { (acc, data) =>
         (if (acc.contains(data)) Applicative[F].unit else topic.publish1(data).void)
