@@ -47,6 +47,6 @@ object ClientsSetDb {
 
   }
 
-  def create[F[_]: Sync: Logger]: F[ClientsSetDb[F]] =
+  def create[F[_]: {Sync, Logger}]: F[ClientsSetDb[F]] =
     Ref.of[F, ClientsSet](Map.empty).map(apply(_))
 }

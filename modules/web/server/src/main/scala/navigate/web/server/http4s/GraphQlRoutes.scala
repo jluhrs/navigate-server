@@ -15,6 +15,7 @@ import natchez.Trace
 import navigate.model.AcquisitionAdjustment
 import navigate.model.FocalPlaneOffset
 import navigate.model.PointingCorrections
+import navigate.model.config.NavigateConfiguration
 import navigate.server.NavigateEngine
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuidersQualityValues
@@ -27,6 +28,7 @@ import org.http4s.server.websocket.WebSocketBuilder2
 import org.typelevel.log4cats.Logger
 
 class GraphQlRoutes[F[_]: {Async, Logger, Trace, Compression}](
+  config:                     NavigateConfiguration,
   eng:                        NavigateEngine[F],
   logTopic:                   Topic[F, ILoggingEvent],
   guideStateTopic:            Topic[F, GuideState],
@@ -43,6 +45,7 @@ class GraphQlRoutes[F[_]: {Async, Logger, Trace, Compression}](
     Routes.forService(
       _ =>
         NavigateMappings(
+          config,
           eng,
           logTopic,
           guideStateTopic,

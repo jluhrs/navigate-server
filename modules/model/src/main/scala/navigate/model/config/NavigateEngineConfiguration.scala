@@ -6,7 +6,9 @@ package navigate.model.config
 import cats.Eq
 import cats.derived.*
 import org.http4s.Uri
+import org.http4s.implicits.uri
 
+import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
 
 trait GpiSettings
@@ -43,3 +45,17 @@ case class NavigateEngineConfiguration(
   readRetries:             Int,
   ioTimeout:               FiniteDuration
 ) derives Eq
+
+object NavigateEngineConfiguration {
+  val default: NavigateEngineConfiguration = NavigateEngineConfiguration(
+    uri"/odb",
+    uri"/observe",
+    SystemsControlConfiguration.default,
+    false,
+    FiniteDuration(1, TimeUnit.SECONDS),
+    "",
+    None,
+    1,
+    FiniteDuration(1, TimeUnit.SECONDS)
+  )
+}

@@ -7,6 +7,7 @@ import cats.Eq
 import com.comcast.ip4s.Host
 import com.comcast.ip4s.Port
 import org.http4s.Uri
+import org.http4s.implicits.uri
 
 import java.nio.file.Path
 
@@ -52,6 +53,15 @@ case class WebServerConfiguration(
 )
 
 object WebServerConfiguration {
+  val default: WebServerConfiguration = WebServerConfiguration(
+    Host.fromString("navigate.server").get,
+    Port.fromString("7777").get,
+    Port.fromString("7777").get,
+    "http://server/navigate",
+    uri"http://server/odb",
+    None
+  )
+
   given Eq[WebServerConfiguration] =
     Eq.by(x => (x.host, x.port, x.insecurePort, x.externalBaseUrl, x.tls))
 }

@@ -21,3 +21,15 @@ case class SystemsControlConfiguration(
   def connectEpics: Boolean =
     altair.connect || gems.connect || gcal.connect || tcs.connect
 }
+
+object SystemsControlConfiguration {
+  val default: SystemsControlConfiguration = SystemsControlConfiguration(
+    altair = ControlStrategy.Simulated,
+    gems = ControlStrategy.Simulated,
+    gcal = ControlStrategy.Simulated,
+    gpi = ControlStrategy.Simulated,
+    gsaoi = ControlStrategy.Simulated,
+    tcs = ControlStrategy.Simulated,
+    observe = ControlStrategy.Simulated
+  )
+}

@@ -17,6 +17,7 @@ import navigate.model.FocalPlaneOffset
 import navigate.model.HandsetAdjustment.HorizontalAdjustment
 import navigate.model.NavigateState
 import navigate.model.PointingCorrections
+import navigate.model.ServerConfiguration
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuidersQualityValues
 import navigate.server.tcs.MechSystemState
@@ -128,6 +129,14 @@ package object encoder {
     Json.obj(
       "local" -> s.local.asJson,
       "guide" -> s.guide.asJson
+    )
+
+  given Encoder[ServerConfiguration] = s =>
+    Json.obj(
+      "version" -> s.version.asJson,
+      "site"    -> s.site.asJson,
+      "odbUri"  -> s.odbUri.asJson,
+      "ssoUri"  -> s.ssoUri.asJson
     )
 
 }

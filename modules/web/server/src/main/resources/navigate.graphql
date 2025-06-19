@@ -1,7 +1,7 @@
 #import NonEmptyString, Offset, Angle, Sidereal, GuideProbe, TargetId, Nonsidereal from "lucuma/schemas/ObservationDB.graphql"
 #import SiderealInput, ObservationId, OffsetInput, NonsiderealInput, WavelengthInput, AngleInput from "lucuma/schemas/ObservationDB.graphql"
 #import Long, BigDecimal, Timestamp, TimeSpanInput from "lucuma/schemas/ObservationDB.graphql"
-#import Instrument from "lucuma/schemas/ObservationDB.graphql"
+#import Instrument, Site from "lucuma/schemas/ObservationDB.graphql"
 
 """Target properties input"""
 input TargetPropertiesInput {
@@ -333,6 +333,13 @@ type TargetOffsets {
     oiwfs: FocalPlaneOffset
 }
 
+type ServerConfiguration {
+    version: String!
+    site: Site!
+    odbUri: String!
+    ssoUri: String!
+}
+
 type Query {
     telescopeState: TelescopeState!
     guideState: GuideConfigurationState!
@@ -342,6 +349,7 @@ type Query {
     targetAdjustmentOffsets: TargetOffsets!
     originAdjustmentOffset: FocalPlaneOffset!
     pointingAdjustmentOffset: PointingCorrections!
+    serverConfiguration: ServerConfiguration!
 }
 
 type Mutation {

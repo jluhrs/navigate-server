@@ -23,6 +23,7 @@ import lucuma.core.enums.Instrument
 import lucuma.core.enums.LightSinkName
 import lucuma.core.enums.M1Source
 import lucuma.core.enums.MountGuideOption
+import lucuma.core.enums.Site
 import lucuma.core.enums.TipTiltSource
 import lucuma.core.math.Angle
 import lucuma.core.math.Offset
@@ -43,6 +44,8 @@ import navigate.model.HandsetAdjustment.HorizontalAdjustment
 import navigate.model.NavigateEvent
 import navigate.model.NavigateState
 import navigate.model.PointingCorrections
+import navigate.model.ServerConfiguration
+import navigate.model.config.NavigateConfiguration
 import navigate.model.enums.AcquisitionAdjustmentCommand
 import navigate.model.enums.DomeMode
 import navigate.model.enums.LightSource
@@ -71,6 +74,7 @@ import navigate.server.tcs.TelescopeState
 import navigate.server.tcs.TrackingConfig
 import navigate.web.server.OcsBuildInfo
 import org.http4s.HttpApp
+import org.http4s.Uri
 import org.http4s.client.Client
 import org.slf4j.Marker
 import org.slf4j.event.KeyValuePair
@@ -91,7 +95,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Process mount follow command") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun("mutation { mountFollow(enable: true) { result } }")
     } yield assert(
       extractResult[OperationOutcome](r, "mountFollow").exists(_ === OperationOutcome.success)
@@ -101,7 +105,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Process mount park command") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun("mutation { mountPark { result } }")
     } yield assert(
       extractResult[OperationOutcome](r, "mountPark").exists(_ === OperationOutcome.success)
@@ -111,7 +115,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Process SCS follow command") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun("mutation { scsFollow(enable: true) { result } }")
     } yield assert(
       extractResult[OperationOutcome](r, "scsFollow").exists(_ === OperationOutcome.success)
@@ -121,7 +125,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Process slew command without obs id") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun(
               """
                 |mutation { slew (
@@ -218,7 +222,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Process slew command with obs id") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun(
               """
                 |mutation { slew (
@@ -315,7 +319,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Process slew command with azimuth/elevation target") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun(
               """
           |mutation { slew (
@@ -391,7 +395,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Process TCS configure command") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun(
               """
           |mutation { tcsConfig ( config: {
@@ -467,7 +471,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Process swap target command") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun(
               """
           |mutation { swapTarget ( swapConfig: {
@@ -522,7 +526,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Process restore target  command") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun(
               """
           |mutation { restoreTarget ( config: {
@@ -598,7 +602,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Process instrumentSpecifics command") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun(
               """
                 |mutation { instrumentSpecifics (instrumentSpecificsParams: {
@@ -631,7 +635,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Process oiwfsTarget command") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun(
               """
                 |mutation { oiwfsTarget (target: {
@@ -661,7 +665,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Process oiwfsProbeTracking command") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun(
               """
           |mutation { oiwfsProbeTracking (config: {
@@ -683,7 +687,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Process oiwfs follow command") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
 
       r <- mp.compileAndRun("mutation { oiwfsFollow(enable: true) { result } }")
     } yield assert(
@@ -693,7 +697,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Process oiwfs park command") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun("mutation { oiwfsPark { result } }")
     } yield assert(
       extractResult[OperationOutcome](r, "oiwfsPark").exists(_ === OperationOutcome.success)
@@ -702,7 +706,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Process rotator follow command") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun("mutation { rotatorFollow(enable: true) { result } }")
     } yield assert(
       extractResult[OperationOutcome](r, "rotatorFollow").exists(_ === OperationOutcome.success)
@@ -711,7 +715,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Process rotator park command") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun("mutation { rotatorPark { result } }")
     } yield assert(
       extractResult[OperationOutcome](r, "rotatorPark").exists(_ === OperationOutcome.success)
@@ -720,7 +724,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Process rotator tracking configuration command") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun(
               """
           |mutation { rotatorConfig( config: {
@@ -754,7 +758,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       logEvents.map(topic.publish1).sequence.void
 
     for {
-      mp   <- buildMapping
+      mp   <- buildMapping()
       logs <- mp.compileAndRunSubscription(
                 """
           | subscription {
@@ -796,7 +800,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       logEvents.map(topic.publish1).sequence.void
 
     for {
-      mp   <- buildMapping
+      mp   <- buildMapping()
       _    <- mp.logBuffer.set(Seq(bufferedMessage))
       logs <- mp.compileAndRunSubscription(
                 """
@@ -863,7 +867,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       changes.map(topic.publish1).sequence.void
 
     val s: IO[List[Result[GuideState]]] = for {
-      mp <- buildMapping
+      mp <- buildMapping()
       up <- mp.compileAndRunSubscription(
               """
             | subscription {
@@ -894,7 +898,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Query telescope state") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun(
               """
           | query {
@@ -934,7 +938,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Query Navigate server state") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun(
               """
           | query {
@@ -982,7 +986,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       changes.map(topic.publish1).sequence.void
 
     val s: IO[List[Result[TelescopeState]]] = for {
-      mp <- buildMapping
+      mp <- buildMapping()
       up <- mp.compileAndRunSubscription(
               """
             | subscription {
@@ -1061,7 +1065,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
       changes.map(topic.publish1).sequence.void
 
     val s: IO[List[Result[AcquisitionAdjustment]]] = for {
-      mp <- buildMapping
+      mp <- buildMapping()
       up <- mp.compileAndRunSubscription(
               """
              | subscription {
@@ -1109,7 +1113,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Process guide disable command") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun("mutation { guideDisable { result } }")
     } yield assert(
       extractResult[OperationOutcome](r, "guideDisable").exists(_ === OperationOutcome.success)
@@ -1118,7 +1122,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Process guide enable command") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun(
               """
           |mutation { guideEnable( config: {
@@ -1140,7 +1144,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Process oiwfs observe command") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun(
               """
           |mutation { oiwfsObserve( period: {
@@ -1158,7 +1162,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Process oiwfs stop observe command") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun(
               """
           |mutation { oiwfsStopObserve {
@@ -1173,7 +1177,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Process ac observe command") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun(
               """
           |mutation { acObserve( period: {
@@ -1191,7 +1195,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Process ac stop observe command") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun(
               """
           |mutation { acStopObserve {
@@ -1206,7 +1210,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Process ac stop observe command") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun(
               """
           |mutation { acStopObserve {
@@ -1222,7 +1226,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
   def m1Test(name: String, mutation: String) =
     test(s"Process M1 $name command") {
       for {
-        mp <- buildMapping
+        mp <- buildMapping()
         r  <- mp.compileAndRun(
                 s"""
             |mutation { $mutation {
@@ -1251,7 +1255,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Set probeGuide OIWFS to OIWFS") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun(
               """
           |mutation { guideEnable( config: {
@@ -1277,7 +1281,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Set probeGuide PWFS1 to PWFS2") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun(
               """
           |mutation { guideEnable( config: {
@@ -1303,7 +1307,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Configure light path") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       p  <- mp.compileAndRun(
               """
           |mutation { lightpathConfig (
@@ -1362,7 +1366,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Get instrument port") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       p  <- mp.compileAndRun(
               """
           |query {
@@ -1385,7 +1389,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("request acquisition adjustment") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       p  <- mp.compileAndRun(
               """
           |mutation { acquisitionAdjustment (
@@ -1423,7 +1427,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("confirm request acquisition adjustment") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       p  <- mp.compileAndRun(
               """
           |mutation { acquisitionAdjustment (
@@ -1462,7 +1466,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Get server version") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       p  <- mp.compileAndRun(
               """
           |query {
@@ -1477,7 +1481,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Take WFS sky") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       p  <- mp.compileAndRun(
               """
           |mutation {
@@ -1500,7 +1504,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Adjust target position") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       p  <- mp.compileAndRun(
               """
           |mutation {
@@ -1531,7 +1535,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Adjust pointing") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       p  <- mp.compileAndRun(
               """
           |mutation {
@@ -1565,7 +1569,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Adjust instrument origin") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       p  <- mp.compileAndRun(
               """
           |mutation {
@@ -1595,7 +1599,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Clear target adjustment") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       p  <- mp.compileAndRun(
               """
           |mutation {
@@ -1621,7 +1625,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Absorb target adjustment") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       p  <- mp.compileAndRun(
               """
           |mutation {
@@ -1646,7 +1650,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Clear local pointing adjustment") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       p  <- mp.compileAndRun(
               """
           |mutation {
@@ -1669,7 +1673,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Clear guide pointing adjustment") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       p  <- mp.compileAndRun(
               """
           |mutation {
@@ -1692,7 +1696,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Absorb guide pointing adjustment") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       p  <- mp.compileAndRun(
               """
           |mutation {
@@ -1715,7 +1719,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Clear origin adjustment") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       p  <- mp.compileAndRun(
               """
           |mutation {
@@ -1740,7 +1744,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Absorb origin adjustment") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       p  <- mp.compileAndRun(
               """
           |mutation {
@@ -1763,7 +1767,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Query target offsets") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun(
               """
           | query {
@@ -1812,7 +1816,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Query pointing offset") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun(
               """
           | query {
@@ -1845,7 +1849,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Query instrument origin offset") {
     for {
-      mp <- buildMapping
+      mp <- buildMapping()
       r  <- mp.compileAndRun(
               """
           | query {
@@ -1863,6 +1867,36 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     } yield assertEquals(
       r.hcursor.downField("data").downField("originAdjustmentOffset").as[FocalPlaneOffset],
       FocalPlaneOffset.Zero.asRight[DecodingFailure]
+    )
+  }
+
+  test("Query server configuration") {
+    val expected = ServerConfiguration(OcsBuildInfo.version, Site.GS, "ws://odb", "https://sso")
+    val conf     = NavigateConfiguration.default
+      .focus(_.site)
+      .replace(expected.site)
+      .focus(_.navigateEngine.odb)
+      .replace(Uri.unsafeFromString(expected.odbUri))
+      .focus(_.lucumaSSO.ssoUrl)
+      .replace(Uri.unsafeFromString(expected.ssoUri))
+
+    for {
+      mp <- buildMapping(conf)
+      r  <- mp.compileAndRun(
+              """
+          | query {
+          |   serverConfiguration {
+          |     version
+          |     site
+          |     odbUri
+          |     ssoUri
+          |   }
+          | }
+          |""".stripMargin
+            )
+    } yield assertEquals(
+      r.hcursor.downField("data").downField("serverConfiguration").as[ServerConfiguration],
+      expected.asRight[DecodingFailure]
     )
   }
 
@@ -2062,7 +2096,9 @@ object NavigateMappingsTest {
     }
   }
 
-  def buildMapping: IO[NavigateMappings[IO]] = for {
+  def buildMapping(
+    config: NavigateConfiguration = NavigateConfiguration.default
+  ): IO[NavigateMappings[IO]] = for {
     eng <- buildServer
     log <- Topic[IO, ILoggingEvent]
     gd  <- Topic[IO, GuideState]
@@ -2073,7 +2109,7 @@ object NavigateMappingsTest {
     tot <- Topic[IO, TargetOffsets]
     ot  <- Topic[IO, FocalPlaneOffset]
     pt  <- Topic[IO, PointingCorrections]
-    mp  <- NavigateMappings[IO](eng, log, gd, gq, ts, aa, tot, ot, pt, lb)
+    mp  <- NavigateMappings[IO](config, eng, log, gd, gq, ts, aa, tot, ot, pt, lb)
   } yield mp
 
   given Decoder[OperationOutcome] = Decoder.instance(h =>
@@ -2223,4 +2259,12 @@ object NavigateMappingsTest {
       local <- h.downField("local").as[HorizontalAdjustment]
       guide <- h.downField("guide").as[HorizontalAdjustment]
     } yield PointingCorrections(local, guide)
+
+  given Decoder[ServerConfiguration] = h =>
+    for {
+      version <- h.downField("version").as[String]
+      site    <- h.downField("site").as[Site]
+      odbUrl  <- h.downField("odbUri").as[String]
+      ssoUrl  <- h.downField("ssoUri").as[String]
+    } yield ServerConfiguration(version, site, odbUrl, ssoUrl)
 }
