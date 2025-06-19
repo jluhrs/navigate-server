@@ -6,6 +6,7 @@ package navigate.model.config
 import cats.Eq
 import cats.derived.*
 import org.http4s.Uri
+import org.http4s.implicits.uri
 
 import java.security.PublicKey
 
@@ -21,6 +22,18 @@ case class LucumaSSOConfiguration(
 )
 
 object LucumaSSOConfiguration {
+  val default: LucumaSSOConfiguration = LucumaSSOConfiguration(
+    "",
+    new PublicKey {
+      override def getAlgorithm: String = ""
+
+      override def getFormat: String = ""
+
+      override def getEncoded: Array[Byte] = Array.empty
+    },
+    uri"/sso"
+  )
+
   private given Eq[PublicKey] = Eq.fromUniversalEquals
 
   given Eq[LucumaSSOConfiguration] = Eq.derived[LucumaSSOConfiguration]

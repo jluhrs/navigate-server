@@ -28,6 +28,15 @@ case class NavigateConfiguration(
 )
 
 object NavigateConfiguration {
+
+  val default: NavigateConfiguration = NavigateConfiguration(
+    Site.GS,
+    Mode.Development,
+    NavigateEngineConfiguration.default,
+    LucumaSSOConfiguration.default,
+    WebServerConfiguration.default
+  )
+
   given Eq[NavigateConfiguration] =
     Eq.by(x => (x.site, x.mode, x.navigateEngine, x.webServer))
 }

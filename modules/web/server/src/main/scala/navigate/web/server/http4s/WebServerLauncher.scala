@@ -77,7 +77,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
     )
 
   /** Resource that yields the running web server */
-  def webServer[F[_]: Logger: Async: Dns: Files: Compression: Network](
+  def webServer[F[_]: {Logger, Async, Dns, Files, Compression, Network}](
     conf:      NavigateConfiguration,
     topics:    TopicManager[F],
     se:        NavigateEngine[F],
@@ -88,6 +88,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
     def router(wsBuilder: WebSocketBuilder2[F], proxyService: HttpRoutes[F]) = Router[F](
       "/"                 -> new StaticRoutes().service,
       "/navigate"         -> new GraphQlRoutes(
+        conf,
         se,
         topics.loggingEvents,
         topics.guideState,
@@ -123,7 +124,9 @@ object WebServerLauncher extends IOApp with LogInitialization {
     yield server
   }
 
-  def redirectWebServer[F[_]: Async: Network](conf: WebServerConfiguration): Resource[F, Server] = {
+  def redirectWebServer[F[_]: {Async, Network}](
+    conf: WebServerConfiguration
+  ): Resource[F, Server] = {
     val router = Router[F](
       "/" -> new RedirectToHttpsRoutes[F](443, conf.externalBaseUrl).service
     )

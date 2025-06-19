@@ -63,6 +63,8 @@ import navigate.model.FocalPlaneOffset.DeltaY
 import navigate.model.HandsetAdjustment
 import navigate.model.NavigateState
 import navigate.model.PointingCorrections
+import navigate.model.ServerConfiguration
+import navigate.model.config.NavigateConfiguration
 import navigate.model.enums.AcquisitionAdjustmentCommand
 import navigate.model.enums.LightSource
 import navigate.model.enums.VirtualTelescope
@@ -105,6 +107,7 @@ import scala.reflect.classTag
 import encoder.given
 
 class NavigateMappings[F[_]: Sync](
+  config:                         NavigateConfiguration,
   val server:                     NavigateEngine[F],
   val logTopic:                   Topic[F, ILoggingEvent],
   val guideStateTopic:            Topic[F, GuideState],
@@ -148,6 +151,17 @@ class NavigateMappings[F[_]: Sync](
       )
 
   def serverVersion: F[Result[String]] = Result.success(OcsBuildInfo.version).pure[F]
+
+  def serverConfig: F[Result[ServerConfiguration]] = Result
+    .success(
+      ServerConfiguration(
+        OcsBuildInfo.version,
+        config.site,
+        config.navigateEngine.odb.toString,
+        config.lucumaSSO.ssoUrl.toString
+      )
+    )
+    .pure[F]
 
   def mountFollow(p: Path, env: Env): F[Result[OperationOutcome]] =
     env
@@ -809,7 +823,8 @@ class NavigateMappings[F[_]: Sync](
           RootEffect.computeEncodable("originAdjustmentOffset")((_, _) => originAdjustmentOffset),
           RootEffect.computeEncodable("pointingAdjustmentOffset")((_, _) =>
             pointingAdjustmentOffset
-          )
+          ),
+          RootEffect.computeEncodable("serverConfiguration")((_, _) => serverConfig)
         )
       ),
       ObjectMapping(
@@ -986,6 +1001,7 @@ object NavigateMappings extends GrackleParsers {
     .build
 
   def apply[F[_]: Sync](
+    config:                     NavigateConfiguration,
     server:                     NavigateEngine[F],
     logTopic:                   Topic[F, ILoggingEvent],
     guideStateTopic:            Topic[F, GuideState],
@@ -999,6 +1015,7 @@ object NavigateMappings extends GrackleParsers {
   ): F[NavigateMappings[F]] = loadSchema.flatMap {
     case Result.Success(schema)           =>
       new NavigateMappings[F](
+        config,
         server,
         logTopic,
         guideStateTopic,
@@ -1013,6 +1030,7 @@ object NavigateMappings extends GrackleParsers {
         .pure[F]
     case Result.Warning(problems, schema) =>
       new NavigateMappings[F](
+        config,
         server,
         logTopic,
         guideStateTopic,

@@ -19,20 +19,13 @@ import lucuma.core.model.M1GuideConfig
 import lucuma.core.model.M2GuideConfig.M2GuideOn
 import lucuma.core.model.TelescopeGuideConfig
 import munit.CatsEffectSuite
-import navigate.model.config.ControlStrategy
 import navigate.model.config.NavigateEngineConfiguration
-import navigate.model.config.SystemsControlConfiguration
 import navigate.server.tcs.TcsNorthControllerSim
 import navigate.server.tcs.TcsSouthControllerSim
 import org.http4s.Response
-import org.http4s.Uri
 import org.http4s.client.Client
-import org.http4s.implicits.uri
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
-
-import java.util.concurrent.TimeUnit
-import scala.concurrent.duration.FiniteDuration
 
 class NavigateEngineSpec extends CatsEffectSuite {
 
@@ -75,25 +68,7 @@ object NavigateEngineSpec {
                     tcsSouth,
                     tcsNorth
                   ),
-                  NavigateEngineConfiguration(
-                    uri"/odb",
-                    uri"/observe",
-                    SystemsControlConfiguration(
-                      ControlStrategy.Simulated,
-                      ControlStrategy.Simulated,
-                      ControlStrategy.Simulated,
-                      ControlStrategy.Simulated,
-                      ControlStrategy.Simulated,
-                      ControlStrategy.Simulated,
-                      ControlStrategy.Simulated
-                    ),
-                    false,
-                    FiniteDuration(1, TimeUnit.SECONDS),
-                    "",
-                    None,
-                    1,
-                    FiniteDuration(1, TimeUnit.SECONDS)
-                  )
+                  NavigateEngineConfiguration.default
                 )
   } yield ret
 
