@@ -63,7 +63,8 @@ import TcsChannels.{
   ProbeTrackingStateChannels,
   SlewChannels,
   TargetChannels,
-  WfsChannels
+  WfsChannels,
+  WfsObserveChannels
 }
 
 trait TcsEpicsSystem[F[_]] {
@@ -90,16 +91,12 @@ object TcsEpicsSystem {
     val carouselMoveCmd: Command1Channels[F, Double]
     val shuttersMoveCmd: Command2Channels[F, Double, Double]
     val ventGatesMoveCmd: Command2Channels[F, Double, Double]
-    val sourceACmd: TargetCommandChannels[F]
-    val oiwfsTargetCmd: TargetCommandChannels[F]
-    val wavelSourceA: Command1Channels[F, Double]
     val slewCmd: SlewCommandChannels[F]
     val rotatorConfigCmd: Command4Channels[F, Double, String, String, Double]
     val originCmd: Command6Channels[F, Double, Double, Double, Double, Double, Double]
     val focusOffsetCmd: Command1Channels[F, Double]
     val oiwfsProbeTrackingCmd: ProbeTrackingCommandChannels[F]
     val oiwfsProbeCmds: ProbeCommandsChannels[F]
-    val oiWfsCmds: WfsCommandsChannels[F]
     val m1GuideConfigCmd: Command4Channels[F, String, String, Int, String]
     val m1GuideCmd: Command1Channels[F, BinaryOnOff]
     val m2GuideCmd: Command1Channels[F, BinaryOnOff]
@@ -124,10 +121,6 @@ object TcsEpicsSystem {
     // val offsetBCmd: OffsetCmd[F]
     // val wavelSourceB: TargetWavelengthCmd[F]
     // val m2Beam: M2Beam[F]
-    // val pwfs1StopObserveCmd: EpicsCommand[F]
-    // val pwfs2StopObserveCmd: EpicsCommand[F]
-    // val pwfs1ObserveCmd: WfsObserveCmd[F]
-    // val pwfs2ObserveCmd: WfsObserveCmd[F]
     val hrwfsCmds: AgMechCommandsChannels[F, HrwfsPickupPosition]
     val scienceFoldCmds: AgMechCommandsChannels[F, ScienceFold.Position]
     val aoFoldCmds: AgMechCommandsChannels[F, AoFoldPosition]
@@ -194,14 +187,8 @@ object TcsEpicsSystem {
     // def sourceBWavelength: F[Double]
     // def sourceCWavelength: F[Double]
     // def chopBeam: F[String]
-    // def p1FollowS: F[String]
-    // def p2FollowS: F[String]
-    // def oiFollowS: F[String]
     // def aoFollowS: F[String]
-    // def p1Parked: F[Boolean]
-    // def p2Parked: F[Boolean]
     // def oiName: F[String]
-    // def oiParked: F[Boolean]
     def pwfs1On: VerifiedEpics[F, F, BinaryYesNo]
     def pwfs2On: VerifiedEpics[F, F, BinaryYesNo]
     def oiwfsOn: VerifiedEpics[F, F, BinaryYesNo]
@@ -219,6 +206,8 @@ object TcsEpicsSystem {
       stabilizationTime: FiniteDuration,
       timeout:           FiniteDuration
     ): VerifiedEpics[F, F, Unit]
+    def waitPwfs1Sky(timeout: FiniteDuration): VerifiedEpics[F, F, Unit]
+    def waitPwfs2Sky(timeout: FiniteDuration): VerifiedEpics[F, F, Unit]
     def waitOiwfsSky(timeout: FiniteDuration): VerifiedEpics[F, F, Unit]
     // // `waitAGInPosition` works like `waitInPosition`, but for the AG in-position flag.
     // /* TODO: AG inposition can take up to 1[s] to react to a TCS command. If the value is read before that, it may induce
@@ -258,24 +247,12 @@ object TcsEpicsSystem {
     // def carouselMode: F[String]
     // def crFollow: F[Int]
     // def crTrackingFrame: F[String]
-    // def sourceATarget: Target[F]
-    // val pwfs1Target: Target[F]
-    // val pwfs2Target: Target[F]
-    // val oiwfsTarget: Target[F]
     // def parallacticAngle: F[Angle]
     // def m2UserFocusOffset: F[Double]
     // def pwfs1IntegrationTime: F[Double]
     // def pwfs2IntegrationTime: F[Double]
     // // Attribute must be changed back to Double after EPICS channel is fixed.
     // def oiwfsIntegrationTime: F[Double]
-    // def gsaoiPort: F[Int]
-    // def gpiPort: F[Int]
-    // def f2Port: F[Int]
-    // def niriPort: F[Int]
-    // def gnirsPort: F[Int]
-    // def nifsPort: F[Int]
-    // def gmosPort: F[Int]
-    // def ghostPort: F[Int]
     // def aoGuideStarX: F[Double]
     // def aoGuideStarY: F[Double]
     // def aoPreparedCMX: F[Double]
@@ -421,16 +398,18 @@ object TcsEpicsSystem {
         val WfsMonitorDelay: FiniteDuration = FiniteDuration(500, TimeUnit.MILLISECONDS)
         val WfsSettleTime: FiniteDuration   = FiniteDuration(500, TimeUnit.MILLISECONDS)
 
-        def waitOiwfsSky(timeout: FiniteDuration): VerifiedEpics[F, F, Unit] = {
+        def waitWfsSky(integratingCh: Channel[F, BinaryYesNo], name: String)(
+          timeout: FiniteDuration
+        ): VerifiedEpics[F, F, Unit] = {
           val presV: VerifiedEpics[F,
                                    Resource[F, *],
                                    (Stream[F, StreamEvent[BinaryYesNo]], F[BinaryYesNo])
           ] =
             for {
               valStr <-
-                VerifiedEpics.eventStream(channels.telltale, channels.guide.oiwfsIntegrating)
+                VerifiedEpics.eventStream(channels.telltale, integratingCh)
               valRdr <- VerifiedEpics
-                          .readChannel(channels.telltale, channels.guide.oiwfsIntegrating)
+                          .readChannel(channels.telltale, integratingCh)
                           .map(Resource.pure[F, F[BinaryYesNo]])
             } yield for {
               x <- valStr
@@ -445,7 +424,7 @@ object TcsEpicsSystem {
                   case StreamEvent.ValueChanged(v) => Stream(v)
                   case StreamEvent.Disconnected    =>
                     Stream.raiseError[F](
-                      new Throwable(s"OIWFS integration status channel disconnected")
+                      new Throwable(s"$name integration status channel disconnected")
                     )
                   case _                           => Stream.empty
                 }
@@ -472,6 +451,15 @@ object TcsEpicsSystem {
             }
           })
         }
+
+        override def waitPwfs1Sky(timeout: FiniteDuration): VerifiedEpics[F, F, Unit] =
+          waitWfsSky(channels.guide.pwfs1Integrating, "PWFS1")(timeout)
+
+        override def waitPwfs2Sky(timeout: FiniteDuration): VerifiedEpics[F, F, Unit] =
+          waitWfsSky(channels.guide.pwfs2Integrating, "PWFS2")(timeout)
+
+        override def waitOiwfsSky(timeout: FiniteDuration): VerifiedEpics[F, F, Unit] =
+          waitWfsSky(channels.guide.oiwfsIntegrating, "OIWFS")(timeout)
 
         private def readTarget(
           name: String,
@@ -667,110 +655,96 @@ object TcsEpicsSystem {
           tcsEpics.ventGatesMoveCmd.setParam2(pos)
         )
       }
-    override val sourceACmd: TargetCommand[F, TcsCommands[F]]                =
+
+    private def buildTargetCommand(
+      targetChannels: TargetChannels[F]
+    ): TargetCommand[F, TcsCommands[F]] =
       new TargetCommand[F, TcsCommands[F]] {
         override def objectName(v: String): TcsCommands[F] = addParam(
-          tcsEpics.sourceACmd.objectName(v)
+          writeCadParam(channels.telltale, targetChannels.objectName)(v)
         )
 
         override def coordSystem(v: String): TcsCommands[F] = addParam(
-          tcsEpics.sourceACmd.coordSystem(v)
+          writeCadParam(channels.telltale, targetChannels.coordSystem)(v)
         )
 
         override def coord1(v: String): TcsCommands[F] = addParam(
-          tcsEpics.sourceACmd.coord1(v)
+          writeCadParam(channels.telltale, targetChannels.coord1)(v)
         )
 
         override def coord2(v: String): TcsCommands[F] = addParam(
-          tcsEpics.sourceACmd.coord2(v)
+          writeCadParam(channels.telltale, targetChannels.coord2)(v)
         )
 
         override def epoch(v: Double): TcsCommands[F] = addParam(
-          tcsEpics.sourceACmd.epoch(v)
+          writeCadParam(channels.telltale, targetChannels.epoch)(v)
         )
 
         override def equinox(v: String): TcsCommands[F] = addParam(
-          tcsEpics.sourceACmd.equinox(v)
+          writeCadParam(channels.telltale, targetChannels.equinox)(v)
         )
 
         override def parallax(v: Double): TcsCommands[F] = addParam(
-          tcsEpics.sourceACmd.parallax(v)
+          writeCadParam(channels.telltale, targetChannels.parallax)(v)
         )
 
         override def properMotion1(v: Double): TcsCommands[F] = addParam(
-          tcsEpics.sourceACmd.properMotion1(v)
+          writeCadParam(channels.telltale, targetChannels.properMotion1)(v)
         )
 
         override def properMotion2(v: Double): TcsCommands[F] = addParam(
-          tcsEpics.sourceACmd.properMotion2(v)
+          writeCadParam(channels.telltale, targetChannels.properMotion2)(v)
         )
 
         override def radialVelocity(v: Double): TcsCommands[F] = addParam(
-          tcsEpics.sourceACmd.radialVelocity(v)
+          writeCadParam(channels.telltale, targetChannels.radialVelocity)(v)
         )
 
         override def brightness(v: Double): TcsCommands[F] = addParam(
-          tcsEpics.sourceACmd.brightness(v)
+          writeCadParam(channels.telltale, targetChannels.brightness)(v)
         )
 
         override def ephemerisFile(v: String): TcsCommands[F] = addParam(
-          tcsEpics.sourceACmd.ephemerisFile(v)
+          writeCadParam(channels.telltale, targetChannels.ephemerisFile)(v)
         )
       }
 
-    override val oiwfsTargetCmd: TargetCommand[F, TcsCommands[F]] =
-      new TargetCommand[F, TcsCommands[F]] {
-        override def objectName(v: String): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsTargetCmd.objectName(v)
-        )
+    override val sourceACmd: TargetCommand[F, TcsCommands[F]] = buildTargetCommand(channels.sourceA)
 
-        override def coordSystem(v: String): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsTargetCmd.coordSystem(v)
-        )
+    override val pwfs1TargetCmd: TargetCommand[F, TcsCommands[F]] = buildTargetCommand(
+      channels.pwfs1Target
+    )
 
-        override def coord1(v: String): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsTargetCmd.coord1(v)
-        )
+    override val pwfs2TargetCmd: TargetCommand[F, TcsCommands[F]] = buildTargetCommand(
+      channels.pwfs2Target
+    )
 
-        override def coord2(v: String): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsTargetCmd.coord2(v)
-        )
-
-        override def epoch(v: Double): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsTargetCmd.epoch(v)
-        )
-
-        override def equinox(v: String): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsTargetCmd.equinox(v)
-        )
-
-        override def parallax(v: Double): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsTargetCmd.parallax(v)
-        )
-
-        override def properMotion1(v: Double): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsTargetCmd.properMotion1(v)
-        )
-
-        override def properMotion2(v: Double): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsTargetCmd.properMotion2(v)
-        )
-
-        override def radialVelocity(v: Double): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsTargetCmd.radialVelocity(v)
-        )
-
-        override def brightness(v: Double): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsTargetCmd.brightness(v)
-        )
-
-        override def ephemerisFile(v: String): TcsCommands[F] = addParam(
-          tcsEpics.oiwfsTargetCmd.ephemerisFile(v)
-        )
-      }
+    override val oiwfsTargetCmd: TargetCommand[F, TcsCommands[F]] = buildTargetCommand(
+      channels.oiwfsTarget
+    )
 
     override val sourceAWavel: WavelengthCommand[F, TcsCommands[F]] = { (v: Double) =>
-      addParam(tcsEpics.wavelSourceA.setParam1(v))
+      addParam(
+        writeCadParam(channels.telltale, channels.wavelSourceA)(v)
+      )
+    }
+
+    override val pwfs1Wavel: WavelengthCommand[F, TcsCommands[F]] = { (v: Double) =>
+      addParam(
+        writeCadParam(channels.telltale, channels.wavelPwfs1)(v)
+      )
+    }
+
+    override val pwfs2Wavel: WavelengthCommand[F, TcsCommands[F]] = { (v: Double) =>
+      addParam(
+        writeCadParam(channels.telltale, channels.wavelPwfs2)(v)
+      )
+    }
+
+    override val oiwfsWavel: WavelengthCommand[F, TcsCommands[F]] = { (v: Double) =>
+      addParam(
+        writeCadParam(channels.telltale, channels.wavelOiwfs)(v)
+      )
     }
 
     override val slewOptionsCommand: SlewOptionsCommand[F, TcsCommands[F]] =
@@ -1046,34 +1020,92 @@ object TcsEpicsSystem {
         )
       }
 
-    override val oiWfsCommands: OiwfsCommands[F, TcsCommands[F]] =
-      new OiwfsCommands[F, TcsCommands[F]] {
-        override val observe: WfsObserveCommand[F, TcsCommands[F]] =
-          new WfsObserveCommand[F, TcsCommands[F]] {
-            override def numberOfExposures(v: Int): TcsCommands[F] = addParam(
-              tcsEpics.oiWfsCmds.observe.setParam1(v)
-            )
-            override def interval(v: Double): TcsCommands[F]       = addParam(
-              tcsEpics.oiWfsCmds.observe.setParam2(v)
-            )
-            override def options(v: String): TcsCommands[F]        = addParam(
-              tcsEpics.oiWfsCmds.observe.setParam3(v)
-            )
-            override def label(v: String): TcsCommands[F]          = addParam(
-              tcsEpics.oiWfsCmds.observe.setParam4(v)
-            )
-            override def output(v: String): TcsCommands[F]         = addParam(
-              tcsEpics.oiWfsCmds.observe.setParam5(v)
-            )
-            override def path(v: String): TcsCommands[F]           = addParam(
-              tcsEpics.oiWfsCmds.observe.setParam6(v)
-            )
-            override def fileName(v: String): TcsCommands[F]       = addParam(
-              tcsEpics.oiWfsCmds.observe.setParam7(v)
+    private def buildWfsObserveCommand(
+      observeChannels: WfsObserveChannels[F]
+    ): WfsObserveCommand[F, TcsCommands[F]] =
+      new WfsObserveCommand[F, TcsCommands[F]] {
+        override def numberOfExposures(v: Int): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, observeChannels.numberOfExposures)(v)
+        )
+
+        override def interval(v: Double): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, observeChannels.interval)(v)
+        )
+
+        override def options(v: String): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, observeChannels.options)(v)
+        )
+
+        override def label(v: String): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, observeChannels.label)(v)
+        )
+
+        override def output(v: String): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, observeChannels.output)(v)
+        )
+
+        override def path(v: String): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, observeChannels.path)(v)
+        )
+
+        override def fileName(v: String): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, observeChannels.fileName)(v)
+        )
+      }
+
+    private def buildWfsCommands(wfsChannels: WfsChannels[F]): WfsCommands[F, TcsCommands[F]] =
+      new WfsCommands[F, TcsCommands[F]] {
+        override val observe: WfsObserveCommand[F, TcsCommands[F]]             = buildWfsObserveCommand(
+          wfsChannels.observe
+        )
+        override val stop: BaseCommand[F, TcsCommands[F]]                      = new BaseCommand[F, TcsCommands[F]] {
+          override def mark: TcsCommands[F] = addParam(
+            writeChannel(channels.telltale, wfsChannels.stop)(CadDirective.MARK.pure[F])
+          )
+        }
+        override val signalProc: WfsSignalProcConfigCommand[F, TcsCommands[F]] = (v: String) =>
+          addParam(
+            writeCadParam(channels.telltale, wfsChannels.procParams)(v)
+          )
+        override val dark: WfsDarkCommand[F, TcsCommands[F]]                   =
+          new WfsDarkCommand[F, TcsCommands[F]] {
+            override def filename(v: String): TcsCommands[F] = addParam(
+              writeCadParam(channels.telltale, wfsChannels.dark)(v)
             )
           }
+        override val closedLoop: WfsClosedLoopCommand[F, TcsCommands[F]]       =
+          new WfsClosedLoopCommand[F, TcsCommands[F]] {
+            override def global(v: Double): TcsCommands[F] = addParam(
+              writeCadParam(channels.telltale, wfsChannels.closedLoop.global)(v)
+            )
+
+            override def average(v: Int): TcsCommands[F] = addParam(
+              writeCadParam(channels.telltale, wfsChannels.closedLoop.average)(v)
+            )
+
+            override def zernikes2m2(v: Int): TcsCommands[F] = addParam(
+              writeCadParam(channels.telltale, wfsChannels.closedLoop.zernikes2m2)(v)
+            )
+
+            override def mult(v: Double): TcsCommands[F] = addParam(
+              writeCadParam(channels.telltale, wfsChannels.closedLoop.mult)(v)
+            )
+          }
+      }
+
+    override val pwfs1Commands: WfsCommands[F, TcsCommands[F]] = buildWfsCommands(channels.pwfs1)
+
+    override val pwfs2Commands: WfsCommands[F, TcsCommands[F]] = buildWfsCommands(channels.pwfs2)
+
+    override val oiwfsCommands: BaseWfsCommands[F, TcsCommands[F]] =
+      new BaseWfsCommands[F, TcsCommands[F]] {
+        override val observe: WfsObserveCommand[F, TcsCommands[F]] = buildWfsObserveCommand(
+          channels.oiwfs.observe
+        )
         override val stop: BaseCommand[F, TcsCommands[F]]          = new BaseCommand[F, TcsCommands[F]] {
-          override def mark: TcsCommands[F] = addParam(tcsEpics.oiWfsCmds.stop.mark)
+          override def mark: TcsCommands[F] = addParam(
+            writeChannel(channels.telltale, channels.oiwfs.stop)(CadDirective.MARK.pure[F])
+          )
         }
       }
 
@@ -1421,15 +1453,6 @@ object TcsEpicsSystem {
                        channels.enclosure.ecsVentGateWest
       )
 
-    override val sourceACmd: TargetCommandChannels[F] =
-      TargetCommandChannels[F](channels.telltale, channels.sourceA)
-
-    override val oiwfsTargetCmd: TargetCommandChannels[F] =
-      TargetCommandChannels[F](channels.telltale, channels.oiwfsTarget)
-
-    override val wavelSourceA: Command1Channels[F, Double] =
-      Command1Channels(channels.telltale, channels.wavelSourceA)
-
     override val slewCmd: SlewCommandChannels[F] =
       SlewCommandChannels(channels.telltale, channels.slew)
 
@@ -1517,8 +1540,6 @@ object TcsEpicsSystem {
         channels.mountGuide.p1weight,
         channels.mountGuide.p2weight
       )
-    override val oiWfsCmds: WfsCommandsChannels[F]                                       =
-      WfsCommandsChannels.build(channels.telltale, channels.oiwfs)
 
     override val probeGuideModeCmd: Command3Channels[F, BinaryOnOff, GuideProbe, GuideProbe]      =
       Command3Channels(
@@ -1993,15 +2014,13 @@ object TcsEpicsSystem {
     def mult(v:        Double): S
   }
 
-  trait WfsCommands[F[_], +S] {
-    val observe: WfsObserveCommand[F, S]
-    val stop: BaseCommand[F, S]
+  trait WfsCommands[F[_], +S] extends BaseWfsCommands[F, S] {
     val signalProc: WfsSignalProcConfigCommand[F, S]
     val dark: WfsDarkCommand[F, S]
     val closedLoop: WfsClosedLoopCommand[F, S]
   }
 
-  trait OiwfsCommands[F[_], +S] {
+  trait BaseWfsCommands[F[_], +S] {
     val observe: WfsObserveCommand[F, S]
     val stop: BaseCommand[F, S]
   }
@@ -2065,8 +2084,13 @@ object TcsEpicsSystem {
     val ecsShuttersMoveCmd: ShuttersMoveCommand[F, TcsCommands[F]]
     val ecsVenGatesMoveCmd: VentGatesMoveCommand[F, TcsCommands[F]]
     val sourceACmd: TargetCommand[F, TcsCommands[F]]
+    val pwfs1TargetCmd: TargetCommand[F, TcsCommands[F]]
+    val pwfs2TargetCmd: TargetCommand[F, TcsCommands[F]]
     val oiwfsTargetCmd: TargetCommand[F, TcsCommands[F]]
     val sourceAWavel: WavelengthCommand[F, TcsCommands[F]]
+    val pwfs1Wavel: WavelengthCommand[F, TcsCommands[F]]
+    val pwfs2Wavel: WavelengthCommand[F, TcsCommands[F]]
+    val oiwfsWavel: WavelengthCommand[F, TcsCommands[F]]
     val slewOptionsCommand: SlewOptionsCommand[F, TcsCommands[F]]
     val rotatorCommand: RotatorCommand[F, TcsCommands[F]]
     val originCommand: OriginCommand[F, TcsCommands[F]]
@@ -2085,7 +2109,9 @@ object TcsEpicsSystem {
     val m2GuideResetCommand: BaseCommand[F, TcsCommands[F]]
     val m2FollowCommand: FollowCommand[F, TcsCommands[F]]
     val mountGuideCommand: MountGuideCommand[F, TcsCommands[F]]
-    val oiWfsCommands: OiwfsCommands[F, TcsCommands[F]]
+    val pwfs1Commands: WfsCommands[F, TcsCommands[F]]
+    val pwfs2Commands: WfsCommands[F, TcsCommands[F]]
+    val oiwfsCommands: BaseWfsCommands[F, TcsCommands[F]]
     val probeGuideModeCommand: ProbeGuideModeCommand[F, TcsCommands[F]]
     val oiwfsSelectCommand: OiwfsSelectCommand[F, TcsCommands[F]]
     val bafflesCommand: BafflesCommand[F, TcsCommands[F]]

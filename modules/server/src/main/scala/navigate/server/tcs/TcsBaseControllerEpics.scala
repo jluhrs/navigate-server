@@ -27,8 +27,10 @@ import lucuma.core.model.M2GuideConfig
 import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.Enumerated
 import lucuma.core.util.TimeSpan
+import monocle.Focus
 import monocle.Focus.focus
 import monocle.Getter
+import monocle.Lens
 import mouse.boolean.given
 import navigate.epics.VerifiedEpics
 import navigate.epics.VerifiedEpics.*
@@ -57,6 +59,7 @@ import navigate.server.epicsdata.BinaryYesNo
 import navigate.server.tcs.AcquisitionCameraEpicsSystem.*
 import navigate.server.tcs.ParkStatus.NotParked
 import navigate.server.tcs.Target.*
+import navigate.server.tcs.TcsEpicsSystem.BaseWfsCommands
 import navigate.server.tcs.TcsEpicsSystem.ProbeGuideState
 import navigate.server.tcs.TcsEpicsSystem.ProbeTrackingCommand
 import navigate.server.tcs.TcsEpicsSystem.TargetCommand
@@ -282,6 +285,52 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       .compose(setRotatorTrackingConfig(config.rotatorTrackConfig))
       .compose(setInstrumentSpecifics(config.instrumentSpecifics))
       .compose(
+        config.pwfs1
+          .map(o =>
+            setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.pwfs1TargetCmd),
+                      o.target
+            )
+              .compose(
+                setProbeTracking(Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
+                                   _.pwfs1ProbeTrackingCommand
+                                 ),
+                                 o.tracking
+                )
+              )
+          )
+          .getOrElse(
+            setProbeTracking(
+              Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
+                _.pwfs1ProbeTrackingCommand
+              ),
+              TrackingConfig.noTracking
+            )
+          )
+      )
+      .compose(
+        config.pwfs2
+          .map(o =>
+            setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.pwfs2TargetCmd),
+                      o.target
+            )
+              .compose(
+                setProbeTracking(Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
+                                   _.pwfs2ProbeTrackingCommand
+                                 ),
+                                 o.tracking
+                )
+              )
+          )
+          .getOrElse(
+            setProbeTracking(
+              Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
+                _.pwfs2ProbeTrackingCommand
+              ),
+              TrackingConfig.noTracking
+            )
+          )
+      )
+      .compose(
         config.oiwfs
           .map(o =>
             setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.oiwfsTargetCmd),
@@ -379,6 +428,18 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     ).post
       .verifiedRun(ConnectionTimeout)
 
+  override def pwfs1Target(target: Target): F[ApplyCommandResult] =
+    setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.pwfs1TargetCmd), target)(
+      sys.tcsEpics.startCommand(timeout)
+    ).post
+      .verifiedRun(ConnectionTimeout)
+
+  override def pwfs2Target(target: Target): F[ApplyCommandResult] =
+    setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.pwfs2TargetCmd), target)(
+      sys.tcsEpics.startCommand(timeout)
+    ).post
+      .verifiedRun(ConnectionTimeout)
+
   override def oiwfsTarget(target: Target): F[ApplyCommandResult] =
     setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.oiwfsTargetCmd), target)(
       sys.tcsEpics.startCommand(timeout)
@@ -400,6 +461,60 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     .compose[TcsCommands[F]](l.get(_).nodAchopB(config.nodAchopB))
     .compose[TcsCommands[F]](l.get(_).nodBchopA(config.nodBchopA))
     .compose[TcsCommands[F]](l.get(_).nodBchopB(config.nodBchopB))
+
+  override def pwfs1ProbeTracking(config: TrackingConfig): F[ApplyCommandResult] =
+    setProbeTracking(
+      Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](_.pwfs1ProbeTrackingCommand),
+      config
+    )(
+      sys.tcsEpics.startCommand(timeout)
+    ).post
+      .verifiedRun(ConnectionTimeout)
+
+  override def pwfs1Park: F[ApplyCommandResult] =
+    sys.tcsEpics
+      .startCommand(timeout)
+      .pwfs1ProbeCommands
+      .park
+      .mark
+      .post
+      .verifiedRun(ConnectionTimeout)
+
+  override def pwfs1Follow(enable: Boolean): F[ApplyCommandResult] =
+    sys.tcsEpics
+      .startCommand(timeout)
+      .pwfs1ProbeCommands
+      .follow
+      .setFollow(enable)
+      .post
+      .verifiedRun(ConnectionTimeout)
+
+  override def pwfs2ProbeTracking(config: TrackingConfig): F[ApplyCommandResult] =
+    setProbeTracking(
+      Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](_.pwfs2ProbeTrackingCommand),
+      config
+    )(
+      sys.tcsEpics.startCommand(timeout)
+    ).post
+      .verifiedRun(ConnectionTimeout)
+
+  override def pwfs2Park: F[ApplyCommandResult] =
+    sys.tcsEpics
+      .startCommand(timeout)
+      .pwfs2ProbeCommands
+      .park
+      .mark
+      .post
+      .verifiedRun(ConnectionTimeout)
+
+  override def pwfs2Follow(enable: Boolean): F[ApplyCommandResult] =
+    sys.tcsEpics
+      .startCommand(timeout)
+      .pwfs2ProbeCommands
+      .follow
+      .setFollow(enable)
+      .post
+      .verifiedRun(ConnectionTimeout)
 
   override def oiwfsProbeTracking(config: TrackingConfig): F[ApplyCommandResult] =
     setProbeTracking(
@@ -605,14 +720,30 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
         .source("SCS")
         .post).verifiedRun(ConnectionTimeout) <*
       stateRef.get.flatMap { s =>
-        s.oiwfs.period
+        s.pwfs1.period
           .flatMap(p =>
-            guideUsesOiwfs(config.m1Guide, config.m2Guide)
-              .option(setupOiwfsObserve(p, false))
+            guideUsesPwfs1(config.m1Guide, config.m2Guide)
+              .option(setupPwfs1Observe(p, false))
           )
           .getOrElse(
             ApplyCommandResult.Completed.pure[F]
-          )
+          ) *>
+          s.pwfs2.period
+            .flatMap(p =>
+              guideUsesPwfs2(config.m1Guide, config.m2Guide)
+                .option(setupPwfs2Observe(p, false))
+            )
+            .getOrElse(
+              ApplyCommandResult.Completed.pure[F]
+            ) *>
+          s.oiwfs.period
+            .flatMap(p =>
+              guideUsesOiwfs(config.m1Guide, config.m2Guide)
+                .option(setupOiwfsObserve(p, false))
+            )
+            .getOrElse(
+              ApplyCommandResult.Completed.pure[F]
+            )
       }
   }
 
@@ -631,7 +762,15 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     .post
     .verifiedRun(ConnectionTimeout) <*
     stateRef.get.flatMap { s =>
-      s.oiwfs.period
+      s.pwfs1.period
+        .map(setupPwfs1Observe(_, true))
+        .getOrElse(
+          ApplyCommandResult.Completed.pure[F]
+        ) *> s.pwfs2.period
+        .map(setupPwfs2Observe(_, true))
+        .getOrElse(
+          ApplyCommandResult.Completed.pure[F]
+        ) *> s.oiwfs.period
         .map(setupOiwfsObserve(_, true))
         .getOrElse(
           ApplyCommandResult.Completed.pure[F]
@@ -683,84 +822,149 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
 
   val dataFolderName: String = "data/"
 
-  def setupOiwfsObserve(exposureTime: TimeSpan, isQL: Boolean): F[ApplyCommandResult] =
+  def setupWfsObserve(
+    state:        Lens[State, WfsConfigState],
+    active:       VerifiedEpics[F, F, BinaryYesNo],
+    darkFileProc: String => VerifiedEpics[F, F, ApplyCommandResult],
+    z2m2Proc:     Int => VerifiedEpics[F, F, ApplyCommandResult],
+    l:            Getter[TcsCommands[F], BaseWfsCommands[F, TcsCommands[F]]]
+  )(exposureTime: TimeSpan, isQL: Boolean): F[ApplyCommandResult] =
     stateRef.get.flatMap { st =>
-      val expTimeChange = st.oiwfs.period.forall(_ =!= exposureTime).option(exposureTime)
-      val qlChange      = st.oiwfs.configuredForQl.forall(_ =!= isQL).option(isQL)
+      val expTimeChange = state.get(st).period.forall(_ =!= exposureTime).option(exposureTime)
+      val qlChange      = state.get(st).configuredForQl.forall(_ =!= isQL).option(isQL)
 
       val setSigProc  = expTimeChange
-        .map(t =>
-          sys.oiwfs.startSignalProcCommand(timeout).filename(darkFileName(dataFolderName, t)).post
-        )
+        .map(t => darkFileProc(darkFileName(dataFolderName, t)))
         .getOrElse(VerifiedEpics.pureF[F, F, ApplyCommandResult](ApplyCommandResult.Completed)) *>
         qlChange
           .map(
             _.fold(
-              sys.oiwfs.startClosedLoopCommand(timeout).zernikes2m2(0),
-              sys.oiwfs.startClosedLoopCommand(timeout).zernikes2m2(1)
-            ).post
+              z2m2Proc(0),
+              z2m2Proc(1)
+            )
           )
           .getOrElse(VerifiedEpics.pureF[F, F, ApplyCommandResult](ApplyCommandResult.Completed))
       val setInterval = (c: TcsCommands[F]) =>
-        expTimeChange.fold(c)(t => c.oiWfsCommands.observe.interval(t.toSeconds.toDouble))
+        expTimeChange.fold(c)(t => l.get(c).observe.interval(t.toSeconds.toDouble))
       val setQl       = (c: TcsCommands[F]) =>
         qlChange.fold(c)(i =>
-          c.oiWfsCommands.observe
-            .output(i.fold("QL", ""))
-            .oiWfsCommands
-            .observe
-            .options(i.fold("DHS", "NONE"))
+          ({ (x: TcsCommands[F]) => l.get(x).observe.output(i.fold("QL", "")) } >>> {
+            (x: TcsCommands[F]) => l.get(x).observe.options(i.fold("DHS", "NONE"))
+          })(c)
         )
 
-      val setupAndStart = setSigProc *>
-        (setInterval >>> setQl)(sys.tcsEpics.startCommand(timeout)).oiWfsCommands.observe
-          .numberOfExposures(-1)
-          .oiWfsCommands
-          .observe
-          .path("")
-          .oiWfsCommands
-          .observe
-          .fileName("")
-          .oiWfsCommands
-          .observe
-          .label("")
-          .post
+      val setupAndStart: VerifiedEpics[F, F, ApplyCommandResult] = setSigProc *>
+        (
+          setInterval >>> setQl >>>
+            ((x: TcsCommands[F]) => l.get(x).observe.numberOfExposures(-1)) >>>
+            ((x: TcsCommands[F]) => l.get(x).observe.path("")) >>>
+            ((x: TcsCommands[F]) => l.get(x).observe.fileName("")) >>>
+            ((x: TcsCommands[F]) => l.get(x).observe.label(""))
+        )(sys.tcsEpics.startCommand(timeout)).post
 
       (for {
-        oiActive <- sys.tcsEpics.status.oiwfsOn.map(_.map(_ === BinaryYesNo.Yes))
-        ret      <- VerifiedEpics.ifF[F, F, ApplyCommandResult](
-                      oiActive.map(_ && qlChange.isEmpty && expTimeChange.isEmpty)
-                    ) {
-                      VerifiedEpics.pureF[F, F, ApplyCommandResult](ApplyCommandResult.Completed)
-                    } {
-                      VerifiedEpics.ifF(oiActive) {
-                        sys.tcsEpics
-                          .startCommand(timeout)
-                          .oiWfsCommands
-                          .stop
-                          .mark
-                          .post
-                      } {
-                        VerifiedEpics.pureF[F, F, ApplyCommandResult](ApplyCommandResult.Completed)
-                      } *>
-                        setupAndStart
-                    }
+        wfsActive <- active.map(_.map(_ === BinaryYesNo.Yes))
+        ret       <- VerifiedEpics.ifF[F, F, ApplyCommandResult](
+                       wfsActive.map(_ && qlChange.isEmpty && expTimeChange.isEmpty)
+                     ) {
+                       VerifiedEpics.pureF[F, F, ApplyCommandResult](ApplyCommandResult.Completed)
+                     } {
+                       VerifiedEpics.ifF(wfsActive) {
+                         l.get(
+                           sys.tcsEpics
+                             .startCommand(timeout)
+                         ).stop
+                           .mark
+                           .post
+                       } {
+                         VerifiedEpics.pureF[F, F, ApplyCommandResult](ApplyCommandResult.Completed)
+                       } *>
+                         setupAndStart
+                     }
       } yield ret).verifiedRun(ConnectionTimeout) <*
         stateRef.update(
-          _.focus(_.oiwfs.period)
-            .replace(exposureTime.some)
-            .focus(_.oiwfs.configuredForQl)
-            .replace(isQL.some)
+          state.andThen(Focus[WfsConfigState](_.period)).replace(exposureTime.some) >>>
+            state
+              .andThen(Focus[WfsConfigState](_.configuredForQl))
+              .replace(isQL.some)
         )
     }
 
-  def oiwfsObserve(exposureTime: TimeSpan): F[ApplyCommandResult] = getGuideState.flatMap { g =>
-    setupOiwfsObserve(exposureTime, !guideUsesOiwfs(g.m1Guide, g.m2Guide))
-  }
+  private def setupPwfs1Observe: (exposureTime: TimeSpan, isQL: Boolean) => F[ApplyCommandResult] =
+    setupWfsObserve(
+      Focus[State](_.pwfs1),
+      sys.tcsEpics.status.pwfs1On,
+      (f: String) =>
+        sys.tcsEpics.startCommand(timeout).pwfs1Commands.signalProc.darkFilename(f).post,
+      (z: Int) => sys.tcsEpics.startCommand(timeout).pwfs1Commands.closedLoop.zernikes2m2(z).post,
+      Getter.apply[TcsCommands[F], BaseWfsCommands[F, TcsCommands[F]]](_.pwfs1Commands)
+    )
+
+  override def pwfs1Observe(exposureTime: TimeSpan): F[ApplyCommandResult] =
+    getGuideState.flatMap { g =>
+      setupPwfs1Observe(exposureTime, !guideUsesPwfs1(g.m1Guide, g.m2Guide))
+    }
+
+  private def setupPwfs2Observe: (exposureTime: TimeSpan, isQL: Boolean) => F[ApplyCommandResult] =
+    setupWfsObserve(
+      Focus[State](_.pwfs2),
+      sys.tcsEpics.status.pwfs2On,
+      (f: String) =>
+        sys.tcsEpics.startCommand(timeout).pwfs2Commands.signalProc.darkFilename(f).post,
+      (z: Int) => sys.tcsEpics.startCommand(timeout).pwfs2Commands.closedLoop.zernikes2m2(z).post,
+      Getter.apply[TcsCommands[F], BaseWfsCommands[F, TcsCommands[F]]](_.pwfs2Commands)
+    )
+
+  override def pwfs2Observe(exposureTime: TimeSpan): F[ApplyCommandResult] =
+    getGuideState.flatMap { g =>
+      setupPwfs2Observe(exposureTime, !guideUsesPwfs2(g.m1Guide, g.m2Guide))
+    }
+
+  private def setupOiwfsObserve: (exposureTime: TimeSpan, isQL: Boolean) => F[ApplyCommandResult] =
+    setupWfsObserve(
+      Focus[State](_.oiwfs),
+      sys.tcsEpics.status.oiwfsOn,
+      (f: String) => sys.oiwfs.startSignalProcCommand(timeout).filename(f).post,
+      (z: Int) => sys.oiwfs.startClosedLoopCommand(timeout).zernikes2m2(z).post,
+      Getter.apply[TcsCommands[F], BaseWfsCommands[F, TcsCommands[F]]](_.oiwfsCommands)
+    )
+
+  override def oiwfsObserve(exposureTime: TimeSpan): F[ApplyCommandResult] =
+    getGuideState.flatMap { g =>
+      setupOiwfsObserve(exposureTime, !guideUsesOiwfs(g.m1Guide, g.m2Guide))
+    }
+
+  override def pwfs1StopObserve: F[ApplyCommandResult] = sys.tcsEpics
+    .startCommand(timeout)
+    .pwfs1Commands
+    .stop
+    .mark
+    .post
+    .verifiedRun(ConnectionTimeout) <*
+    stateRef.update(
+      _.focus(_.pwfs1.period)
+        .replace(None)
+        .focus(_.pwfs1.configuredForQl)
+        .replace(None)
+    )
+
+  override def pwfs2StopObserve: F[ApplyCommandResult] = sys.tcsEpics
+    .startCommand(timeout)
+    .pwfs2Commands
+    .stop
+    .mark
+    .post
+    .verifiedRun(ConnectionTimeout) <*
+    stateRef.update(
+      _.focus(_.pwfs2.period)
+        .replace(None)
+        .focus(_.pwfs2.configuredForQl)
+        .replace(None)
+    )
 
   override def oiwfsStopObserve: F[ApplyCommandResult] = sys.tcsEpics
     .startCommand(timeout)
-    .oiWfsCommands
+    .oiwfsCommands
     .stop
     .mark
     .post
@@ -798,9 +1002,24 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     oi <- oif
   } yield WfsGuideStates(p1, p2, oi)
 
-  // TODO: Add other WFSs when implemented
   def pauseWfsTracking(current: WfsGuideStates): VerifiedEpics[F, F, ApplyCommandResult] = {
     val params = List(
+      current.pwfs1.active.option(
+        setProbeTracking(
+          Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
+            _.pwfs1ProbeTrackingCommand
+          ),
+          TrackingConfig.noTracking
+        )
+      ),
+      current.pwfs2.active.option(
+        setProbeTracking(
+          Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
+            _.pwfs2ProbeTrackingCommand
+          ),
+          TrackingConfig.noTracking
+        )
+      ),
       current.oiwfs.active.option(
         setProbeTracking(
           Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
@@ -816,9 +1035,24 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       params.reduce((a, b) => a.compose(b))(sys.tcsEpics.startCommand(timeout)).post
   }
 
-  // TODO: Add other WFSs when implemented
   def resumeWfsTracking(current: WfsGuideStates): VerifiedEpics[F, F, ApplyCommandResult] = {
     val params = List(
+      current.pwfs1.active.option(
+        setProbeTracking(
+          Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
+            _.pwfs1ProbeTrackingCommand
+          ),
+          current.pwfs1
+        )
+      ),
+      current.pwfs2.active.option(
+        setProbeTracking(
+          Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
+            _.pwfs2ProbeTrackingCommand
+          ),
+          current.pwfs2
+        )
+      ),
       current.oiwfs.active.option(
         setProbeTracking(
           Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
@@ -853,7 +1087,13 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
   // Offset to take the Sky
   val SkyOffset: Angle = Angle.fromDoubleArcseconds(60.0)
 
-  def takeOiwfsSky(exposureTime: TimeSpan): F[ApplyCommandResult] = {
+  def takeWfsSky(
+    active:          VerifiedEpics[F, F, BinaryYesNo],
+    cmdsL:           Getter[TcsCommands[F], BaseWfsCommands[F, TcsCommands[F]]],
+    darkFilenameCmd: String => VerifiedEpics[F, F, ApplyCommandResult],
+    waitWfs:         FiniteDuration => VerifiedEpics[F, F, Unit],
+    observeCmd:      TimeSpan => F[ApplyCommandResult]
+  )(exposureTime: TimeSpan): F[ApplyCommandResult] = {
     val expTimeout: FiniteDuration = FiniteDuration(exposureTime.toMicroseconds,
                                                     TimeUnit.MICROSECONDS
     ) * (SkyFrames * 1.1).longValue + FiniteDuration.apply(5, TimeUnit.SECONDS)
@@ -863,33 +1103,48 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
 
     for {
       oiActive <-
-        sys.tcsEpics.status.oiwfsOn.map(_.map(_ === BinaryYesNo.Yes)).verifiedRun(ConnectionTimeout)
-      _        <- (sys.tcsEpics
-                    .startCommand(timeout)
-                    .oiWfsCommands
+        active.map(_.map(_ === BinaryYesNo.Yes)).verifiedRun(ConnectionTimeout)
+      _        <- (cmdsL
+                    .get(sys.tcsEpics.startCommand(timeout))
                     .stop
                     .mark
                     .post
                     .verifiedRun(ConnectionTimeout) *> Temporal[F].sleep(postStopDelay)).whenA(oiActive)
-      _        <- sys.oiwfs
-                    .startDarkCommand(timeout)
-                    .filename(darkFileName("", exposureTime))
-                    .post
+      _        <- darkFilenameCmd(darkFileName("", exposureTime))
                     .verifiedRun(ConnectionTimeout) *> Temporal[F].sleep(postDarkConfigDelay)
-      ret      <- sys.tcsEpics
-                    .startCommand(timeout)
-                    .oiWfsCommands
-                    .observe
-                    .numberOfExposures(SkyFrames)
-                    .oiWfsCommands
-                    .observe
-                    .interval(exposureTime.toSeconds.toDouble)
-                    .post
+      ret      <- ({ (x: TcsCommands[F]) => cmdsL.get(x).observe.numberOfExposures(SkyFrames) } >>>
+                    { (x: TcsCommands[F]) =>
+                      cmdsL.get(x).observe.interval(exposureTime.toSeconds.toDouble)
+                    })(sys.tcsEpics.startCommand(timeout)).post
                     .verifiedRun(ConnectionTimeout) <* Temporal[F].sleep(postObserveDelay)
-      _        <- sys.tcsEpics.status.waitOiwfsSky(expTimeout).verifiedRun(ConnectionTimeout)
-      _        <- oiwfsObserve(exposureTime).whenA(oiActive)
+      _        <- waitWfs(expTimeout).verifiedRun(ConnectionTimeout)
+      _        <- observeCmd(exposureTime).whenA(oiActive)
     } yield ret
   }
+
+  def takePwfs1Sky: TimeSpan => F[ApplyCommandResult] = takeWfsSky(
+    sys.tcsEpics.status.pwfs1On,
+    Getter[TcsCommands[F], BaseWfsCommands[F, TcsCommands[F]]](_.pwfs1Commands),
+    (fn: String) => sys.tcsEpics.startCommand(timeout).pwfs1Commands.dark.filename(fn).post,
+    sys.tcsEpics.status.waitPwfs1Sky,
+    pwfs1Observe
+  )
+
+  def takePwfs2Sky: TimeSpan => F[ApplyCommandResult] = takeWfsSky(
+    sys.tcsEpics.status.pwfs2On,
+    Getter[TcsCommands[F], BaseWfsCommands[F, TcsCommands[F]]](_.pwfs2Commands),
+    (fn: String) => sys.tcsEpics.startCommand(timeout).pwfs2Commands.dark.filename(fn).post,
+    sys.tcsEpics.status.waitPwfs2Sky,
+    pwfs2Observe
+  )
+
+  def takeOiwfsSky: TimeSpan => F[ApplyCommandResult] = takeWfsSky(
+    sys.tcsEpics.status.oiwfsOn,
+    Getter[TcsCommands[F], BaseWfsCommands[F, TcsCommands[F]]](_.oiwfsCommands),
+    (fn: String) => sys.oiwfs.startDarkCommand(timeout).filename(fn).post,
+    sys.tcsEpics.status.waitOiwfsSky,
+    oiwfsObserve
+  )
 
   def disableTargetFilter: F[ApplyCommandResult] =
     sys.tcsEpics
@@ -899,17 +1154,28 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       .post
       .verifiedRun(ConnectionTimeout)
 
-  override def oiwfsSky(exposureTime: TimeSpan)(guide: GuideConfig): F[ApplyCommandResult] = for {
+  private def wfsSky(
+    takeSky: TimeSpan => F[ApplyCommandResult]
+  )(exposureTime: TimeSpan)(guide: GuideConfig): F[ApplyCommandResult] = for {
     pg <- getProbesGuideState.verifiedRun(ConnectionTimeout)
     _  <- disableTargetFilter
     _  <- pauseGuide
     _  <- pauseWfsTracking(pg).verifiedRun(ConnectionTimeout)
     _  <- skyOffset(SkyOffset)
-    r  <- takeOiwfsSky(exposureTime)
+    r  <- takeSky(exposureTime)
     _  <- skyOffset(-SkyOffset)
     _  <- resumeWfsTracking(pg).verifiedRun(ConnectionTimeout)
     _  <- resumeGuide(guide.tcsGuide)
   } yield r
+
+  override def pwfs1Sky(exposureTime: TimeSpan)(guide: GuideConfig): F[ApplyCommandResult] =
+    wfsSky(takePwfs1Sky)(exposureTime)(guide)
+
+  override def pwfs2Sky(exposureTime: TimeSpan)(guide: GuideConfig): F[ApplyCommandResult] =
+    wfsSky(takePwfs2Sky)(exposureTime)(guide)
+
+  override def oiwfsSky(exposureTime: TimeSpan)(guide: GuideConfig): F[ApplyCommandResult] =
+    wfsSky(takeOiwfsSky)(exposureTime)(guide)
 
   // Time to wait after selecting the OIWFS in the AG Sequencer, to let the values propagate to TCS.
   private val OiwfsSelectionDelay: Duration = 1500.milliseconds
@@ -1038,6 +1304,12 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
         .startGainCommand(timeout)
         .resetGain
         .post
+
+  private def guideUsesPwfs1(m1Guide: M1GuideConfig, m2Guide: M2GuideConfig): Boolean =
+    m1Guide.uses(M1Source.PWFS1) || m2Guide.uses(TipTiltSource.PWFS1)
+
+  private def guideUsesPwfs2(m1Guide: M1GuideConfig, m2Guide: M2GuideConfig): Boolean =
+    m1Guide.uses(M1Source.PWFS2) || m2Guide.uses(TipTiltSource.PWFS2)
 
   private def guideUsesOiwfs(m1Guide: M1GuideConfig, m2Guide: M2GuideConfig): Boolean =
     m1Guide.uses(M1Source.OIWFS) || m2Guide.uses(TipTiltSource.OIWFS)

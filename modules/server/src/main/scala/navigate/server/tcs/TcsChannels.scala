@@ -30,8 +30,13 @@ case class TcsChannels[F[_]](
   rotMoveAngle:            Channel[F, String],
   enclosure:               EnclosureChannels[F],
   sourceA:                 TargetChannels[F],
+  pwfs1Target:             TargetChannels[F],
+  pwfs2Target:             TargetChannels[F],
   oiwfsTarget:             TargetChannels[F],
   wavelSourceA:            Channel[F, String],
+  wavelPwfs1:              Channel[F, String],
+  wavelPwfs2:              Channel[F, String],
+  wavelOiwfs:              Channel[F, String],
   slew:                    SlewChannels[F],
   rotator:                 RotatorChannels[F],
   origin:                  OriginChannels[F],
@@ -50,6 +55,8 @@ case class TcsChannels[F[_]](
   m2GuideReset:            Channel[F, CadDirective],
   m2Follow:                Channel[F, String],
   mountGuide:              MountGuideChannels[F],
+  pwfs1:                   WfsChannels[F],
+  pwfs2:                   WfsChannels[F],
   oiwfs:                   WfsChannels[F],
   guide:                   GuideConfigStatusChannels[F],
   probeGuideMode:          ProbeGuideModeChannels[F],
@@ -789,8 +796,13 @@ object TcsChannels {
       rma  <- service.getChannel[String](tcsTop.value, "rotMove.A")
       ecs  <- buildEnclosureChannels(service, tcsTop)
       sra  <- buildTargetChannels(service, s"${tcsTop.value}sourceA")
+      p1t  <- buildTargetChannels(service, s"${tcsTop.value}pwfs1")
+      p2t  <- buildTargetChannels(service, s"${tcsTop.value}pwfs2")
       oit  <- buildTargetChannels(service, s"${tcsTop.value}oiwfs")
       wva  <- service.getChannel[String](tcsTop.value, "wavelSourceA.A")
+      wvp1 <- service.getChannel[String](tcsTop.value, "wavelPwfs1.A")
+      wvp2 <- service.getChannel[String](tcsTop.value, "wavelPwfs2.A")
+      wvoi <- service.getChannel[String](tcsTop.value, "wavelOiwfs.A")
       slw  <- buildSlewChannels(service, tcsTop)
       rot  <- buildRotatorChannels(service, tcsTop)
       org  <- buildOriginChannels(service, tcsTop)
@@ -809,6 +821,8 @@ object TcsChannels {
       m2gr <- service.getChannel[CadDirective](tcsTop.value, s"m2GuideReset$DirSuffix")
       m2f  <- service.getChannel[String](tcsTop.value, "m2Follow.A")
       mng  <- MountGuideChannels.build(service, tcsTop)
+      p1   <- WfsChannels.build(service, tcsTop, "pwfs1", "p1")
+      p2   <- WfsChannels.build(service, tcsTop, "pwfs2", "p2")
       oi   <- WfsChannels.build(service, tcsTop, "oiwfs", "oi")
       gd   <- GuideConfigStatusChannels.build(service, tcsTop)
       gm   <- ProbeGuideModeChannels.build(service, tcsTop)
@@ -849,8 +863,13 @@ object TcsChannels {
       rma,
       ecs,
       sra,
+      p1t,
+      p2t,
       oit,
       wva,
+      wvp1,
+      wvp2,
+      wvoi,
       slw,
       rot,
       org,
@@ -869,6 +888,8 @@ object TcsChannels {
       m2gr,
       m2f,
       mng,
+      p1,
+      p2,
       oi,
       gd,
       gm,

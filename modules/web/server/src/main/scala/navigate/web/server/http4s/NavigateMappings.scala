@@ -1193,6 +1193,18 @@ object NavigateMappings extends GrackleParsers {
     inp <- l.collectFirst { case ("instParams", ObjectValue(v)) =>
              parseInstrumentSpecificsInput(v)
            }.flatten
+    p1  <-
+      l.collectFirst { case ("pwfs1", ObjectValue(v)) => parseGuiderConfig(v) } match {
+        case Some(None) => None
+        case None       => Some(None)
+        case x          => x
+      }
+    p2  <-
+      l.collectFirst { case ("pwfs2", ObjectValue(v)) => parseGuiderConfig(v) } match {
+        case Some(None) => None
+        case None       => Some(None)
+        case x          => x
+      }
     oi  <-
       l.collectFirst { case ("oiwfs", ObjectValue(v)) => parseGuiderConfig(v) } match {
         case Some(None) => None
@@ -1203,7 +1215,7 @@ object NavigateMappings extends GrackleParsers {
     ins <- l.collectFirst { case ("instrument", EnumValue(v)) =>
              parseEnumerated[Instrument](v)
            }.flatten
-  } yield TcsConfig(t, inp, oi, rc, ins)
+  } yield TcsConfig(t, inp, p1, p2, oi, rc, ins)
 
   def parseSwapConfigInput(l: List[(String, Value)]): Option[SwapConfig] = for {
     t   <- l.collectFirst { case ("guideTarget", ObjectValue(v)) => parseTargetInput(v) }.flatten
