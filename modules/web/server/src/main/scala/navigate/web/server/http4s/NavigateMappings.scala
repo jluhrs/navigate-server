@@ -19,13 +19,7 @@ import grackle.Result
 import grackle.Schema
 import grackle.TypeRef
 import grackle.Value
-import grackle.Value.AbsentValue
-import grackle.Value.BooleanValue
-import grackle.Value.EnumValue
-import grackle.Value.ListValue
-import grackle.Value.NullValue
-import grackle.Value.ObjectValue
-import grackle.Value.StringValue
+import grackle.Value.*
 import grackle.circe.CirceMapping
 import grackle.syntax.given
 import io.circe.syntax.*
@@ -313,13 +307,13 @@ class NavigateMappings[F[_]: Sync](
           .pure[F]
       )
 
-  def oiwfsTarget(env: Env): F[Result[OperationOutcome]] =
+  private def wfsTarget(name: String, cmd: Target => F[Unit])(
+    env: Env
+  ): F[Result[OperationOutcome]] =
     env
       .get[Target]("target")(using classTag[Target])
       .map { oi =>
-        server
-          .oiwfsTarget(oi)
-          .attempt
+        cmd(oi).attempt
           .map(x =>
             Result.success(
               x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
@@ -327,16 +321,16 @@ class NavigateMappings[F[_]: Sync](
           )
       }
       .getOrElse(
-        Result.failure[OperationOutcome]("oiwfsTarget parameters could not be parsed.").pure[F]
+        Result.failure[OperationOutcome](s"${name}Target parameters could not be parsed.").pure[F]
       )
 
-  def oiwfsProbeTracking(env: Env): F[Result[OperationOutcome]] =
+  private def wfsProbeTracking(name: String, cmd: TrackingConfig => F[Unit])(
+    env: Env
+  ): F[Result[OperationOutcome]] =
     env
       .get[TrackingConfig]("config")(using classTag[TrackingConfig])
       .map { tc =>
-        server
-          .oiwfsProbeTracking(tc)
-          .attempt
+        cmd(tc).attempt
           .map(x =>
             Result.success(
               x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
@@ -345,17 +339,15 @@ class NavigateMappings[F[_]: Sync](
       }
       .getOrElse(
         Result
-          .failure[OperationOutcome]("oiwfsProbeTracking parameters could not be parsed.")
+          .failure[OperationOutcome](s"${name}ProbeTracking parameters could not be parsed.")
           .pure[F]
       )
 
-  def oiwfsFollow(env: Env): F[Result[OperationOutcome]] =
+  def wfsFollow(name: String, cmd: Boolean => F[Unit])(env: Env): F[Result[OperationOutcome]] =
     env
       .get[Boolean]("enable")
       .map { en =>
-        server
-          .oiwfsFollow(en)
-          .attempt
+        cmd(en).attempt
           .map(x =>
             Result.success(
               x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
@@ -363,16 +355,14 @@ class NavigateMappings[F[_]: Sync](
           )
       }
       .getOrElse(
-        Result.failure[OperationOutcome]("oiwfsFollow parameter could not be parsed.").pure[F]
+        Result.failure[OperationOutcome](s"${name}Follow parameter could not be parsed.").pure[F]
       )
 
-  def oiwfsObserve(env: Env): F[Result[OperationOutcome]] =
+  def wfsObserve(name: String, cmd: TimeSpan => F[Unit])(env: Env): F[Result[OperationOutcome]] =
     env
       .get[TimeSpan]("period")
       .map { p =>
-        server
-          .oiwfsObserve(p)
-          .attempt
+        cmd(p).attempt
           .map(x =>
             Result.success(
               x.fold(e => OperationOutcome.failure(e.getMessage), _ => OperationOutcome.success)
@@ -380,7 +370,7 @@ class NavigateMappings[F[_]: Sync](
           )
       }
       .getOrElse(
-        Result.failure[OperationOutcome]("oiwfsObserve parameter could not be parsed.").pure[F]
+        Result.failure[OperationOutcome](s"${name}Observe parameter could not be parsed.").pure[F]
       )
 
   def acObserve(env: Env): F[Result[OperationOutcome]] =
@@ -553,6 +543,23 @@ class NavigateMappings[F[_]: Sync](
   val MutationType: TypeRef     = schema.ref("Mutation")
   val SubscriptionType: TypeRef = schema.ref("Subscription")
 
+  private def selectWfsTarget(name: String, fields: List[(String, Value)]): Elab[Unit] =
+    Elab
+      .liftR(parseTargetInput(fields).toResult(s"Could not parse ${name}Target parameters."))
+      .flatMap(x => Elab.env("target" -> x))
+
+  private def selectProbeTracking(name: String, fields: List[(String, Value)]): Elab[Unit] =
+    Elab
+      .liftR(
+        parseTrackingInput(fields).toResult(s"Could not parse ${name}ProbeTracking parameters.")
+      )
+      .flatMap(x => Elab.env("config" -> x))
+
+  private def selectWfsObserve(name: String, fields: List[(String, Value)]): Elab[Unit] =
+    Elab
+      .liftR(parseTimeSpan(fields).toResult(s"Could not parse ${name}Observe parameters."))
+      .flatMap(x => Elab.env("period" -> x))
+
   override val selectElaborator: SelectElaborator = SelectElaborator {
     case (MutationType, "mountFollow", List(Binding("enable", BooleanValue(en))))               =>
       Elab.env("enable" -> en)
@@ -631,30 +638,30 @@ class NavigateMappings[F[_]: Sync](
              )
         _ <- Elab.env("instrumentSpecificsParams" -> x)
       } yield ()
+    case (MutationType, "pwfs1Target", List(Binding("target", ObjectValue(fields))))            =>
+      selectWfsTarget("pwfs1", fields)
+    case (MutationType, "pwfs1ProbeTracking", List(Binding("config", ObjectValue(fields))))     =>
+      selectProbeTracking("pwfs1", fields)
+    case (MutationType, "pwfs1Follow", List(Binding("enable", BooleanValue(en))))               =>
+      Elab.env("enable" -> en)
+    case (MutationType, "pwfs1Observe", List(Binding("period", ObjectValue(fields))))           =>
+      selectWfsObserve("pwfs1", fields)
+    case (MutationType, "pwfs2Target", List(Binding("target", ObjectValue(fields))))            =>
+      selectWfsTarget("pwfs2", fields)
+    case (MutationType, "pwfs2ProbeTracking", List(Binding("config", ObjectValue(fields))))     =>
+      selectProbeTracking("pwfs2", fields)
+    case (MutationType, "pwfs2Follow", List(Binding("enable", BooleanValue(en))))               =>
+      Elab.env("enable" -> en)
+    case (MutationType, "pwfs2Observe", List(Binding("period", ObjectValue(fields))))           =>
+      selectWfsObserve("pwfs2", fields)
     case (MutationType, "oiwfsTarget", List(Binding("target", ObjectValue(fields))))            =>
-      for {
-        x <-
-          Elab.liftR(parseTargetInput(fields).toResult("Could not parse oiwfsTarget parameters."))
-        _ <- Elab.env("target" -> x)
-      } yield ()
+      selectWfsTarget("oiwfs", fields)
     case (MutationType, "oiwfsProbeTracking", List(Binding("config", ObjectValue(fields))))     =>
-      for {
-        x <- Elab.liftR(
-               parseTrackingInput(fields).toResult("Could not parse oiwfsProbeTracking parameters.")
-             )
-        _ <- Elab.env("config" -> x)
-      } yield ()
+      selectProbeTracking("oiwfs", fields)
     case (MutationType, "oiwfsFollow", List(Binding("enable", BooleanValue(en))))               =>
       Elab.env("enable" -> en)
     case (MutationType, "oiwfsObserve", List(Binding("period", ObjectValue(fields))))           =>
-      for {
-        x <- Elab.liftR(
-               parseTimeSpan(fields).toResult(
-                 "Could not parse oiwfsObserve parameters."
-               )
-             )
-        _ <- Elab.env("period" -> x)
-      } yield ()
+      selectWfsObserve("oiwfs", fields)
     case (MutationType, "acObserve", List(Binding("period", ObjectValue(fields))))              =>
       for {
         x <- Elab.liftR(
@@ -834,13 +841,57 @@ class NavigateMappings[F[_]: Sync](
           RootEffect.computeEncodable("swapTarget")((_, env) => swapTarget(env)),
           RootEffect.computeEncodable("restoreTarget")((_, env) => restoreTarget(env)),
           RootEffect.computeEncodable("instrumentSpecifics")((_, env) => instrumentSpecifics(env)),
-          RootEffect.computeEncodable("oiwfsTarget")((_, env) => oiwfsTarget(env)),
-          RootEffect.computeEncodable("oiwfsProbeTracking")((_, env) => oiwfsProbeTracking(env)),
+          RootEffect.computeEncodable("pwfs1Target")((_, env) =>
+            wfsTarget("pwfs1", server.pwfs1Target)(env)
+          ),
+          RootEffect.computeEncodable("pwfs1ProbeTracking")((_, env) =>
+            wfsProbeTracking("pwfs1", server.pwfs1ProbeTracking)(env)
+          ),
+          RootEffect.computeEncodable("pwfs1Park")((_, _) =>
+            parameterlessCommand(server.pwfs1Park)
+          ),
+          RootEffect.computeEncodable("pwfs1Follow")((_, env) =>
+            wfsFollow("pwfs1", server.pwfs1Follow)(env)
+          ),
+          RootEffect.computeEncodable("pwfs1Observe")((_, env) =>
+            wfsObserve("pwfs1", server.pwfs1Observe)(env)
+          ),
+          RootEffect.computeEncodable("pwfs1StopObserve")((_, _) =>
+            parameterlessCommand(server.pwfs1StopObserve)
+          ),
+          RootEffect.computeEncodable("pwfs2Target")((_, env) =>
+            wfsTarget("pwfs2", server.pwfs2Target)(env)
+          ),
+          RootEffect.computeEncodable("pwfs2ProbeTracking")((_, env) =>
+            wfsProbeTracking("pwfs2", server.pwfs2ProbeTracking)(env)
+          ),
+          RootEffect.computeEncodable("pwfs2Park")((_, _) =>
+            parameterlessCommand(server.pwfs2Park)
+          ),
+          RootEffect.computeEncodable("pwfs2Follow")((_, env) =>
+            wfsFollow("pwfs2", server.pwfs2Follow)(env)
+          ),
+          RootEffect.computeEncodable("pwfs2Observe")((_, env) =>
+            wfsObserve("pwfs2", server.pwfs2Observe)(env)
+          ),
+          RootEffect.computeEncodable("pwfs2StopObserve")((_, _) =>
+            parameterlessCommand(server.pwfs2StopObserve)
+          ),
+          RootEffect.computeEncodable("oiwfsTarget")((_, env) =>
+            wfsTarget("oiwfs", server.oiwfsTarget)(env)
+          ),
+          RootEffect.computeEncodable("oiwfsProbeTracking")((_, env) =>
+            wfsProbeTracking("oiwfs", server.oiwfsProbeTracking)(env)
+          ),
           RootEffect.computeEncodable("oiwfsPark")((_, _) =>
             parameterlessCommand(server.oiwfsPark)
           ),
-          RootEffect.computeEncodable("oiwfsFollow")((_, env) => oiwfsFollow(env)),
-          RootEffect.computeEncodable("oiwfsObserve")((_, env) => oiwfsObserve(env)),
+          RootEffect.computeEncodable("oiwfsFollow")((_, env) =>
+            wfsFollow("oiwfs", server.oiwfsFollow)(env)
+          ),
+          RootEffect.computeEncodable("oiwfsObserve")((_, env) =>
+            wfsObserve("oiwfs", server.oiwfsObserve)(env)
+          ),
           RootEffect.computeEncodable("oiwfsStopObserve")((_, _) =>
             parameterlessCommand(server.oiwfsStopObserve)
           ),

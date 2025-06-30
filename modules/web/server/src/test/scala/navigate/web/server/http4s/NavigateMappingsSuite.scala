@@ -633,12 +633,12 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     )
   }
 
-  test("Process oiwfsTarget command") {
+  private def testWfsTarget(name: String): IO[Unit] =
     for {
       mp <- buildMapping()
       r  <- mp.compileAndRun(
-              """
-                |mutation { oiwfsTarget (target: {
+              s"""
+                |mutation { ${name}Target (target: {
                 |  id: "T0001"
                 |  name: "Dummy"
                 |  sidereal: {
@@ -659,16 +659,21 @@ class NavigateMappingsSuite extends CatsEffectSuite {
                 |""".stripMargin
             )
     } yield assert(
-      extractResult[OperationOutcome](r, "oiwfsTarget").exists(_ === OperationOutcome.success)
+      extractResult[OperationOutcome](r, s"${name}Target").exists(_ === OperationOutcome.success)
     )
-  }
 
-  test("Process oiwfsProbeTracking command") {
+  test("Process pwfs1Target command")(testWfsTarget("pwfs1"))
+
+  test("Process pwfs2Target command")(testWfsTarget("pwfs2"))
+
+  test("Process oiwfsTarget command")(testWfsTarget("oiwfs"))
+
+  private def testWfsProbeTracking(name: String): IO[Unit] =
     for {
       mp <- buildMapping()
       r  <- mp.compileAndRun(
-              """
-          |mutation { oiwfsProbeTracking (config: {
+              s"""
+          |mutation { ${name}ProbeTracking (config: {
           |  nodAchopA: true
           |  nodAchopB: false
           |  nodBchopA: false
@@ -679,30 +684,45 @@ class NavigateMappingsSuite extends CatsEffectSuite {
           |""".stripMargin
             )
     } yield assert(
-      extractResult[OperationOutcome](r, "oiwfsProbeTracking").exists(
+      extractResult[OperationOutcome](r, s"${name}ProbeTracking").exists(
         _ === OperationOutcome.success
       )
     )
-  }
 
-  test("Process oiwfs follow command") {
+  test("Process pwfs1ProbeTracking command")(testWfsProbeTracking("pwfs1"))
+
+  test("Process pwfs2ProbeTracking command")(testWfsProbeTracking("pwfs2"))
+
+  test("Process oiwfsProbeTracking command")(testWfsProbeTracking("oiwfs"))
+
+  private def testWfsFollow(name: String): IO[Unit] =
     for {
       mp <- buildMapping()
 
-      r <- mp.compileAndRun("mutation { oiwfsFollow(enable: true) { result } }")
+      r <- mp.compileAndRun(s"mutation { ${name}Follow(enable: true) { result } }")
     } yield assert(
-      extractResult[OperationOutcome](r, "oiwfsFollow").exists(_ === OperationOutcome.success)
+      extractResult[OperationOutcome](r, s"${name}Follow").exists(_ === OperationOutcome.success)
     )
-  }
 
-  test("Process oiwfs park command") {
+  test("Process pwfs1 follow command")(testWfsFollow("pwfs1"))
+
+  test("Process pwfs2 follow command")(testWfsFollow("pwfs2"))
+
+  test("Process oiwfs follow command")(testWfsFollow("oiwfs"))
+
+  private def testWfsPark(name: String): IO[Unit] =
     for {
       mp <- buildMapping()
-      r  <- mp.compileAndRun("mutation { oiwfsPark { result } }")
+      r  <- mp.compileAndRun(s"mutation { ${name}Park { result } }")
     } yield assert(
-      extractResult[OperationOutcome](r, "oiwfsPark").exists(_ === OperationOutcome.success)
+      extractResult[OperationOutcome](r, s"${name}Park").exists(_ === OperationOutcome.success)
     )
-  }
+
+  test("Process pwfs1 park command")(testWfsPark("pwfs1"))
+
+  test("Process pwfs2 park command")(testWfsPark("pwfs2"))
+
+  test("Process oiwfs park command")(testWfsPark("oiwfs"))
 
   test("Process rotator follow command") {
     for {
@@ -832,7 +852,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
         M2GuideConfig.M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
         false,
         false,
-        false,
+        true,
         false
       ),
       GuideState(MountGuideOption.MountGuideOff,
@@ -849,7 +869,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
         M2GuideConfig.M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
         false,
         false,
-        false,
+        true,
         false
       ),
       GuideState(
@@ -858,7 +878,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
         M2GuideConfig.M2GuideOn(ComaOption.ComaOn, Set(TipTiltSource.OIWFS)),
         false,
         false,
-        false,
+        true,
         false
       )
     )
@@ -876,6 +896,10 @@ class NavigateMappingsSuite extends CatsEffectSuite {
             |     m2Coma
             |     m1Input
             |     mountOffload
+            |     p1Integrating
+            |     p2Integrating
+            |     oiIntegrating
+            |     acIntegrating
             |   }
             | }
             |""".stripMargin
@@ -1142,12 +1166,12 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     )
   }
 
-  test("Process oiwfs observe command") {
+  private def testWfsObserve(name: String): IO[Unit] =
     for {
       mp <- buildMapping()
       r  <- mp.compileAndRun(
-              """
-          |mutation { oiwfsObserve( period: {
+              s"""
+          |mutation { ${name}Observe( period: {
           |    milliseconds: 20
           |  }
           |) {
@@ -1156,72 +1180,39 @@ class NavigateMappingsSuite extends CatsEffectSuite {
           |""".stripMargin
             )
     } yield assert(
-      extractResult[OperationOutcome](r, "oiwfsObserve").exists(_ === OperationOutcome.success)
+      extractResult[OperationOutcome](r, s"${name}Observe").exists(_ === OperationOutcome.success)
     )
-  }
 
-  test("Process oiwfs stop observe command") {
+  test("Process pwfs1 observe command")(testWfsObserve("pwfs1"))
+
+  test("Process pwfs2 observe command")(testWfsObserve("pwfs2"))
+
+  test("Process oiwfs observe command")(testWfsObserve("oiwfs"))
+
+  test("Process ac observe command")(testWfsObserve("ac"))
+
+  private def testWfsStopObserve(name: String): IO[Unit] =
     for {
       mp <- buildMapping()
       r  <- mp.compileAndRun(
-              """
-          |mutation { oiwfsStopObserve {
+              s"""
+          |mutation { ${name}StopObserve {
           |  result
           |} }
           |""".stripMargin
             )
     } yield assert(
-      extractResult[OperationOutcome](r, "oiwfsStopObserve").exists(_ === OperationOutcome.success)
+      extractResult[OperationOutcome](r, s"${name}StopObserve")
+        .exists(_ === OperationOutcome.success)
     )
-  }
 
-  test("Process ac observe command") {
-    for {
-      mp <- buildMapping()
-      r  <- mp.compileAndRun(
-              """
-          |mutation { acObserve( period: {
-          |    milliseconds: 20
-          |  }
-          |) {
-          |  result
-          |} }
-          |""".stripMargin
-            )
-    } yield assert(
-      extractResult[OperationOutcome](r, "acObserve").exists(_ === OperationOutcome.success)
-    )
-  }
+  test("Process pwfs1 stop observe command")(testWfsStopObserve("pwfs1"))
 
-  test("Process ac stop observe command") {
-    for {
-      mp <- buildMapping()
-      r  <- mp.compileAndRun(
-              """
-          |mutation { acStopObserve {
-          |  result
-          |} }
-          |""".stripMargin
-            )
-    } yield assert(
-      extractResult[OperationOutcome](r, "acStopObserve").exists(_ === OperationOutcome.success)
-    )
-  }
+  test("Process pwfs2 stop observe command")(testWfsStopObserve("pwfs2"))
 
-  test("Process ac stop observe command") {
-    for {
-      mp <- buildMapping()
-      r  <- mp.compileAndRun(
-              """
-          |mutation { acStopObserve {
-          |  result
-          |} }
-          |""".stripMargin
-            )
-    } yield assert(
-      extractResult[OperationOutcome](r, "acStopObserve").exists(_ === OperationOutcome.success)
-    )
-  }
+  test("Process oiwfs stop observe command")(testWfsStopObserve("oiwfs"))
+
+  test("Process ac stop observe command")(testWfsStopObserve("ac"))
 
   def m1Test(name: String, mutation: String) =
     test(s"Process M1 $name command") {
@@ -1973,6 +1964,22 @@ object NavigateMappingsTest {
       override def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): IO[Unit] =
         IO.unit
 
+      override def pwfs1Target(target: Target): IO[Unit] = IO.unit
+
+      override def pwfs1ProbeTracking(config: TrackingConfig): IO[Unit] = IO.unit
+
+      override def pwfs1Park: IO[Unit] = IO.unit
+
+      override def pwfs1Follow(enable: Boolean): IO[Unit] = IO.unit
+
+      override def pwfs2Target(target: Target): IO[Unit] = IO.unit
+
+      override def pwfs2ProbeTracking(config: TrackingConfig): IO[Unit] = IO.unit
+
+      override def pwfs2Park: IO[Unit] = IO.unit
+
+      override def pwfs2Follow(enable: Boolean): IO[Unit] = IO.unit
+
       override def oiwfsTarget(target: Target): IO[Unit] = IO.unit
 
       override def oiwfsProbeTracking(config: TrackingConfig): IO[Unit] = IO.unit
@@ -2003,6 +2010,14 @@ object NavigateMappingsTest {
       )
 
       override def tcsConfig(config: TcsConfig): IO[Unit] = IO.unit
+
+      override def pwfs1Observe(period: TimeSpan): IO[Unit] = IO.unit
+
+      override def pwfs1StopObserve: IO[Unit] = IO.unit
+
+      override def pwfs2Observe(period: TimeSpan): IO[Unit] = IO.unit
+
+      override def pwfs2StopObserve: IO[Unit] = IO.unit
 
       override def oiwfsObserve(period: TimeSpan): IO[Unit] = IO.unit
 
@@ -2183,6 +2198,10 @@ object NavigateMappingsTest {
         .toOption
         .flatMap(x => Enumerated[M1Source].fromTag(x.toLowerCase.capitalize))
       val cm = h.downField("m2Coma").as[Boolean].toOption
+      val p1 = h.downField("p1Integrating").as[Boolean].toOption.exists(identity)
+      val p2 = h.downField("p2Integrating").as[Boolean].toOption.exists(identity)
+      val oi = h.downField("oiIntegrating").as[Boolean].toOption.exists(identity)
+      val ac = h.downField("acIntegrating").as[Boolean].toOption.exists(identity)
 
       GuideState(
         MountGuideOption(mnt),
@@ -2191,10 +2210,10 @@ object NavigateMappingsTest {
           if (l.isEmpty) M2GuideConfig.M2GuideOff
           else M2GuideConfig.M2GuideOn(ComaOption(cm.exists(identity)), l.toSet)
         ).getOrElse(M2GuideConfig.M2GuideOff),
-        false,
-        false,
-        false,
-        false
+        p1,
+        p2,
+        oi,
+        ac
       )
     }
 
