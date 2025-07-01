@@ -61,11 +61,19 @@ object NavigateCommand {
   case object Slew                                                           extends NavigateCommand
   case object SwapTarget                                                     extends NavigateCommand
   case object InstSpecifics                                                  extends NavigateCommand
+  case object Pwfs1Target                                                    extends NavigateCommand
+  case object Pwfs1ProbeTracking                                             extends NavigateCommand
+  case object Pwfs2Target                                                    extends NavigateCommand
+  case object Pwfs2ProbeTracking                                             extends NavigateCommand
   case object OiwfsTarget                                                    extends NavigateCommand
   case object OiwfsProbeTracking                                             extends NavigateCommand
   case object RotatorTrackingConfig                                          extends NavigateCommand
   case object EnableGuide                                                    extends NavigateCommand
   case object DisableGuide                                                   extends NavigateCommand
+  case object Pwfs1Observe                                                   extends NavigateCommand
+  case object Pwfs1StopObserve                                               extends NavigateCommand
+  case object Pwfs2Observe                                                   extends NavigateCommand
+  case object Pwfs2StopObserve                                               extends NavigateCommand
   case object OiwfsObserve                                                   extends NavigateCommand
   case object OiwfsStopObserve                                               extends NavigateCommand
   case object AcObserve                                                      extends NavigateCommand
@@ -137,11 +145,19 @@ object NavigateCommand {
       case Slew                       => "Slew"
       case SwapTarget                 => "Swap Target"
       case InstSpecifics              => "Instrument Specifics"
+      case Pwfs1Target                => "PWFS1"
+      case Pwfs1ProbeTracking         => "PWFS1 Probe Tracking"
+      case Pwfs2Target                => "PWFS2"
+      case Pwfs2ProbeTracking         => "PWFS2 Probe Tracking"
       case OiwfsTarget                => "OIWFS"
       case OiwfsProbeTracking         => "OIWFS Probe Tracking"
       case RotatorTrackingConfig      => "CR Tracking Configuration"
       case EnableGuide                => "Guide Enable"
       case DisableGuide               => "Guide Disable"
+      case Pwfs1Observe               => "Pwfs1 Start Exposures"
+      case Pwfs1StopObserve           => "Pwfs1 Stop Exposures"
+      case Pwfs2Observe               => "Pwfs2 Start Exposures"
+      case Pwfs2StopObserve           => "Pwfs2 Stop Exposures"
       case OiwfsObserve               => "Oiwfs Start Exposures"
       case OiwfsStopObserve           => "Oiwfs Stop Exposures"
       case AcObserve                  => "Acquisition Camera Start Exposures"

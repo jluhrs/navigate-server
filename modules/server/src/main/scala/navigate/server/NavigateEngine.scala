@@ -98,12 +98,24 @@ trait NavigateEngine[F[_]] {
   def tcsConfig(config:                              TcsConfig): F[Unit]
   def slew(slewOptions:                              SlewOptions, tcsConfig:       TcsConfig, oid:     Option[Observation.Id]): F[Unit]
   def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): F[Unit]
+  def pwfs1Target(target:                            Target): F[Unit]
+  def pwfs1ProbeTracking(config:                     TrackingConfig): F[Unit]
+  def pwfs1Park: F[Unit]
+  def pwfs1Follow(enable:                            Boolean): F[Unit]
+  def pwfs2Target(target:                            Target): F[Unit]
+  def pwfs2ProbeTracking(config:                     TrackingConfig): F[Unit]
+  def pwfs2Park: F[Unit]
+  def pwfs2Follow(enable:                            Boolean): F[Unit]
   def oiwfsTarget(target:                            Target): F[Unit]
   def oiwfsProbeTracking(config:                     TrackingConfig): F[Unit]
   def oiwfsPark: F[Unit]
   def oiwfsFollow(enable:                            Boolean): F[Unit]
   def enableGuide(config:                            TelescopeGuideConfig): F[Unit]
   def disableGuide: F[Unit]
+  def pwfs1Observe(period:                           TimeSpan): F[Unit]
+  def pwfs1StopObserve: F[Unit]
+  def pwfs2Observe(period:                           TimeSpan): F[Unit]
+  def pwfs2StopObserve: F[Unit]
   def oiwfsObserve(period:                           TimeSpan): F[Unit]
   def oiwfsStopObserve: F[Unit]
   def acObserve(period:                              TimeSpan): F[Unit]
@@ -337,6 +349,54 @@ object NavigateEngine {
         systems.tcsCommon.instrumentSpecifics(instrumentSpecificsParams)
       )
 
+    override def pwfs1Target(target: Target): F[Unit] = simpleCommand(
+      engine,
+      Pwfs1Target,
+      systems.tcsCommon.pwfs1Target(target)
+    )
+
+    override def pwfs1ProbeTracking(config: TrackingConfig): F[Unit] = simpleCommand(
+      engine,
+      Pwfs1ProbeTracking,
+      systems.tcsCommon.pwfs1ProbeTracking(config)
+    )
+
+    override def pwfs1Park: F[Unit] = simpleCommand(
+      engine,
+      Pwfs1Park,
+      systems.tcsCommon.pwfs1Park
+    )
+
+    override def pwfs1Follow(enable: Boolean): F[Unit] = simpleCommand(
+      engine,
+      Pwfs1Follow(enable),
+      systems.tcsCommon.pwfs1Follow(enable)
+    )
+
+    override def pwfs2Target(target: Target): F[Unit] = simpleCommand(
+      engine,
+      Pwfs2Target,
+      systems.tcsCommon.pwfs2Target(target)
+    )
+
+    override def pwfs2ProbeTracking(config: TrackingConfig): F[Unit] = simpleCommand(
+      engine,
+      Pwfs2ProbeTracking,
+      systems.tcsCommon.pwfs2ProbeTracking(config)
+    )
+
+    override def pwfs2Park: F[Unit] = simpleCommand(
+      engine,
+      Pwfs2Park,
+      systems.tcsCommon.pwfs2Park
+    )
+
+    override def pwfs2Follow(enable: Boolean): F[Unit] = simpleCommand(
+      engine,
+      Pwfs2Follow(enable),
+      systems.tcsCommon.pwfs2Follow(enable)
+    )
+
     override def oiwfsTarget(target: Target): F[Unit] = simpleCommand(
       engine,
       OiwfsTarget,
@@ -410,6 +470,44 @@ object NavigateEngine {
         }
       )
     ) *> postTelescopeGuideConfig(GuideConfig.defaultGuideConfig)
+
+    override def pwfs1Observe(period: TimeSpan): F[Unit] = command(
+      engine,
+      Pwfs1Observe,
+      transformCommand(
+        Pwfs1Observe,
+        Handler.fromStream(
+          Stream.eval(
+            systems.tcsCommon.pwfs1Observe(period)
+          )
+        )
+      )
+    )
+
+    override def pwfs1StopObserve: F[Unit] = simpleCommand(
+      engine,
+      Pwfs1StopObserve,
+      systems.tcsCommon.pwfs1StopObserve
+    )
+
+    override def pwfs2Observe(period: TimeSpan): F[Unit] = command(
+      engine,
+      Pwfs2Observe,
+      transformCommand(
+        Pwfs2Observe,
+        Handler.fromStream(
+          Stream.eval(
+            systems.tcsCommon.pwfs2Observe(period)
+          )
+        )
+      )
+    )
+
+    override def pwfs2StopObserve: F[Unit] = simpleCommand(
+      engine,
+      Pwfs2StopObserve,
+      systems.tcsCommon.pwfs2StopObserve
+    )
 
     override def oiwfsObserve(period: TimeSpan): F[Unit] = command(
       engine,
@@ -542,8 +640,18 @@ object NavigateEngine {
       )
 
     override def wfsSky(wfs: GuideProbe, period: TimeSpan): F[Unit] = wfs match {
-      case enums.GuideProbe.PWFS1                                        => Applicative[F].unit
-      case enums.GuideProbe.PWFS2                                        => Applicative[F].unit
+      case enums.GuideProbe.PWFS1                                        =>
+        simpleCommand(
+          engine,
+          WfsSky(wfs, period),
+          stateRef.get.flatMap(s => systems.tcsCommon.pwfs1Sky(period)(s.guideConfig))
+        )
+      case enums.GuideProbe.PWFS2                                        =>
+        simpleCommand(
+          engine,
+          WfsSky(wfs, period),
+          stateRef.get.flatMap(s => systems.tcsCommon.pwfs2Sky(period)(s.guideConfig))
+        )
       case enums.GuideProbe.GmosOIWFS | enums.GuideProbe.Flamingos2OIWFS =>
         simpleCommand(
           engine,

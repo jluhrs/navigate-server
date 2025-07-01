@@ -107,6 +107,8 @@ input GuiderConfig{
 input TcsConfigInput {
     sourceATarget: TargetPropertiesInput!
     instParams: InstrumentSpecificsInput!
+    pwfs1: GuiderConfig
+    pwfs2: GuiderConfig
     oiwfs: GuiderConfig
     rotator: RotatorTrackingInput!
     instrument: Instrument!
@@ -150,10 +152,14 @@ type Target {
 }
 
 enum TipTiltSource {
+    PWFS1
+    PWFS2
     OIWFS
 }
 
 enum M1CorrectionSource {
+    PWFS1
+    PWFS2
     OIWFS
 }
 
@@ -364,6 +370,18 @@ type Mutation {
     restoreTarget(config: TcsConfigInput!): OperationOutcome!
     instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecificsInput!): OperationOutcome!
     rotatorConfig(config: RotatorTrackingInput!): OperationOutcome!
+    pwfs1Target(target: TargetPropertiesInput!): OperationOutcome!
+    pwfs1ProbeTracking(config: ProbeTrackingInput!): OperationOutcome!
+    pwfs1Park: OperationOutcome!
+    pwfs1Follow(enable: Boolean!): OperationOutcome!
+    pwfs1Observe(period: TimeSpanInput!): OperationOutcome!
+    pwfs1StopObserve: OperationOutcome!
+    pwfs2Target(target: TargetPropertiesInput!): OperationOutcome!
+    pwfs2ProbeTracking(config: ProbeTrackingInput!): OperationOutcome!
+    pwfs2Park: OperationOutcome!
+    pwfs2Follow(enable: Boolean!): OperationOutcome!
+    pwfs2Observe(period: TimeSpanInput!): OperationOutcome!
+    pwfs2StopObserve: OperationOutcome!
     oiwfsTarget(target: TargetPropertiesInput!): OperationOutcome!
     oiwfsProbeTracking(config: ProbeTrackingInput!): OperationOutcome!
     oiwfsPark: OperationOutcome!

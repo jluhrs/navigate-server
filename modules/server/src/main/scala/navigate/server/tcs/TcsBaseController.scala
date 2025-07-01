@@ -42,14 +42,28 @@ trait TcsBaseController[F[_]] {
   def swapTarget(swapConfig:            SwapConfig): F[ApplyCommandResult]
   def restoreTarget(config:             TcsConfig): F[ApplyCommandResult]
   def instrumentSpecifics(config:       InstrumentSpecifics): F[ApplyCommandResult]
+  def pwfs1Target(target:               Target): F[ApplyCommandResult]
+  def pwfs2Target(target:               Target): F[ApplyCommandResult]
   def oiwfsTarget(target:               Target): F[ApplyCommandResult]
   def rotIaa(angle:                     Angle): F[ApplyCommandResult]
   def rotTrackingConfig(cfg:            RotatorTrackConfig): F[ApplyCommandResult]
+  def pwfs1ProbeTracking(config:        TrackingConfig): F[ApplyCommandResult]
+  def pwfs1Park: F[ApplyCommandResult]
+  def pwfs1Follow(enable:               Boolean): F[ApplyCommandResult]
+  def pwfs2ProbeTracking(config:        TrackingConfig): F[ApplyCommandResult]
+  def pwfs2Park: F[ApplyCommandResult]
+  def pwfs2Follow(enable:               Boolean): F[ApplyCommandResult]
   def oiwfsProbeTracking(config:        TrackingConfig): F[ApplyCommandResult]
   def oiwfsPark: F[ApplyCommandResult]
   def oiwfsFollow(enable:               Boolean): F[ApplyCommandResult]
   def enableGuide(config:               TelescopeGuideConfig): F[ApplyCommandResult]
   def disableGuide: F[ApplyCommandResult]
+  def pwfs1Observe(exposureTime:        TimeSpan): F[ApplyCommandResult]
+  def pwfs1StopObserve: F[ApplyCommandResult]
+  def pwfs1Sky(exposureTime:            TimeSpan)(guide:        GuideConfig): F[ApplyCommandResult]
+  def pwfs2Observe(exposureTime:        TimeSpan): F[ApplyCommandResult]
+  def pwfs2StopObserve: F[ApplyCommandResult]
+  def pwfs2Sky(exposureTime:            TimeSpan)(guide:        GuideConfig): F[ApplyCommandResult]
   def oiwfsObserve(exposureTime:        TimeSpan): F[ApplyCommandResult]
   def oiwfsStopObserve: F[ApplyCommandResult]
   def oiwfsSky(exposureTime:            TimeSpan)(guide:        GuideConfig): F[ApplyCommandResult]
@@ -105,6 +119,8 @@ object TcsBaseController {
   case class TcsConfig(
     sourceATarget:       Target,
     instrumentSpecifics: InstrumentSpecifics,
+    pwfs1:               Option[GuiderConfig],
+    pwfs2:               Option[GuiderConfig],
     oiwfs:               Option[GuiderConfig],
     rotatorTrackConfig:  RotatorTrackConfig,
     instrument:          Instrument
@@ -118,6 +134,8 @@ object TcsBaseController {
     lazy val toTcsConfig: TcsConfig = TcsConfig(
       guideTarget,
       acSpecifics,
+      None,
+      None,
       None,
       rotatorTrackConfig,
       Instrument.AcqCam

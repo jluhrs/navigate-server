@@ -255,4 +255,42 @@ class TcsBaseControllerSim[F[_]: Sync](
 
   override def pointingOffsetClearGuide: F[ApplyCommandResult] =
     ApplyCommandResult.Completed.pure[F]
+
+  override def pwfs1Target(target: Target): F[ApplyCommandResult] =
+    ApplyCommandResult.Completed.pure[F]
+
+  override def pwfs2Target(target: Target): F[ApplyCommandResult] =
+    ApplyCommandResult.Completed.pure[F]
+
+  override def pwfs1ProbeTracking(config: TrackingConfig): F[ApplyCommandResult] =
+    ApplyCommandResult.Completed.pure[F]
+
+  override def pwfs1Park: F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
+
+  override def pwfs1Follow(enable: Boolean): F[ApplyCommandResult] =
+    ApplyCommandResult.Completed.pure[F]
+
+  override def pwfs2ProbeTracking(config: TrackingConfig): F[ApplyCommandResult] =
+    ApplyCommandResult.Completed.pure[F]
+
+  override def pwfs2Park: F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
+
+  override def pwfs2Follow(enable: Boolean): F[ApplyCommandResult] =
+    ApplyCommandResult.Completed.pure[F]
+
+  override def pwfs1Observe(exposureTime: TimeSpan): F[ApplyCommandResult] =
+    ApplyCommandResult.Completed.pure[F]
+
+  override def pwfs1StopObserve: F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
+
+  override def pwfs1Sky(exposureTime: TimeSpan)(guide: GuideConfig): F[ApplyCommandResult] =
+    ApplyCommandResult.Completed.pure[F]
+
+  override def pwfs2Observe(exposureTime: TimeSpan): F[ApplyCommandResult] =
+    ApplyCommandResult.Completed.pure[F]
+
+  override def pwfs2StopObserve: F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
+
+  override def pwfs2Sky(exposureTime: TimeSpan)(guide: GuideConfig): F[ApplyCommandResult] =
+    ApplyCommandResult.Completed.pure[F]
 }
