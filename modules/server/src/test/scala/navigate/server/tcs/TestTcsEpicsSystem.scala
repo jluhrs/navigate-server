@@ -26,6 +26,7 @@ import navigate.server.tcs.TcsChannels.AdjustChannels
 import navigate.server.tcs.TcsChannels.AgMechChannels
 import navigate.server.tcs.TcsChannels.EnclosureChannels
 import navigate.server.tcs.TcsChannels.GuideConfigStatusChannels
+import navigate.server.tcs.TcsChannels.InstrumentOffsetCommandChannels
 import navigate.server.tcs.TcsChannels.M1Channels
 import navigate.server.tcs.TcsChannels.M1GuideConfigChannels
 import navigate.server.tcs.TcsChannels.M2BafflesChannels
@@ -293,6 +294,18 @@ object TestTcsEpicsSystem {
     )
   }
 
+  case class InstrumentOffsetCommandState(
+    offsetX: TestChannel.State[String],
+    offsetY: TestChannel.State[String]
+  )
+
+  object InstrumentOffsetCommandState {
+    val default: InstrumentOffsetCommandState = InstrumentOffsetCommandState(
+      TestChannel.State.default,
+      TestChannel.State.default
+    )
+  }
+
   case class State(
     telltale:             TestChannel.State[String],
     telescopeParkDir:     TestChannel.State[CadDirective],
@@ -359,7 +372,11 @@ object TestTcsEpicsSystem {
     pointingOffsetState:  PointingOffsetState,
     pointingConfig:       PointingConfigState,
     absorbGuideDirState:  TestChannel.State[CadDirective],
-    zeroGuideDirState:    TestChannel.State[CadDirective]
+    zeroGuideDirState:    TestChannel.State[CadDirective],
+    instrumentOffset:     InstrumentOffsetCommandState,
+    azimuthWrap:          TestChannel.State[String],
+    rotatorWrap:          TestChannel.State[String],
+    zeroRotatorGuide:     TestChannel.State[CadDirective]
   )
 
   val defaultState: State = State(
@@ -501,7 +518,11 @@ object TestTcsEpicsSystem {
     pointingOffsetState = PointingOffsetState.default,
     pointingConfig = PointingConfigState.default,
     absorbGuideDirState = TestChannel.State.default,
-    zeroGuideDirState = TestChannel.State.default
+    zeroGuideDirState = TestChannel.State.default,
+    instrumentOffset = InstrumentOffsetCommandState.default,
+    azimuthWrap = TestChannel.State.default,
+    rotatorWrap = TestChannel.State.default,
+    zeroRotatorGuide = TestChannel.State.default
   )
 
   def buildEnclosureChannels[F[_]: Temporal](s: Ref[F, State]): EnclosureChannels[F] =
@@ -1035,6 +1056,19 @@ object TestTcsEpicsSystem {
     new TestChannel[F, State, String](s, l.andThen(Focus[OffsetCommandState](_.index)))
   )
 
+  def buildInstrumentOffsetCommandChannels[F[_]: Temporal](
+    s: Ref[F, State],
+    l: Lens[State, InstrumentOffsetCommandState]
+  ): InstrumentOffsetCommandChannels[F] =
+    InstrumentOffsetCommandChannels[F](
+      new TestChannel[F, State, String](s,
+                                        l.andThen(Focus[InstrumentOffsetCommandState](_.offsetX))
+      ),
+      new TestChannel[F, State, String](s,
+                                        l.andThen(Focus[InstrumentOffsetCommandState](_.offsetY))
+      )
+    )
+
   def buildChannels[F[_]: Temporal](s: Ref[F, State]): TcsChannels[F] =
     TcsChannels(
       telltale =
@@ -1110,7 +1144,12 @@ object TestTcsEpicsSystem {
       pointingConfig = buildPointingConfigChannels(s, Focus[State](_.pointingConfig)),
       absorbGuideDir =
         new TestChannel[F, State, CadDirective](s, Focus[State](_.absorbGuideDirState)),
-      zeroGuideDir = new TestChannel[F, State, CadDirective](s, Focus[State](_.zeroGuideDirState))
+      zeroGuideDir = new TestChannel[F, State, CadDirective](s, Focus[State](_.zeroGuideDirState)),
+      instrumentOffset = buildInstrumentOffsetCommandChannels(s, Focus[State](_.instrumentOffset)),
+      azimuthWrap = new TestChannel[F, State, String](s, Focus[State](_.azimuthWrap)),
+      rotatorWrap = new TestChannel[F, State, String](s, Focus[State](_.rotatorWrap)),
+      zeroRotatorGuideDir =
+        new TestChannel[F, State, CadDirective](s, Focus[State](_.zeroRotatorGuide))
     )
 
   def build[F[_]: {Async, Parallel, Dispatcher}](s: Ref[F, State]): TcsEpicsSystem[F] =

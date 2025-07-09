@@ -86,7 +86,11 @@ case class TcsChannels[F[_]](
   pointingAdjustmentState: PointingCorrections[F],
   pointingConfig:          PointingConfigChannels[F],
   absorbGuideDir:          Channel[F, CadDirective],
-  zeroGuideDir:            Channel[F, CadDirective]
+  zeroGuideDir:            Channel[F, CadDirective],
+  instrumentOffset:        InstrumentOffsetCommandChannels[F],
+  azimuthWrap:             Channel[F, String],
+  rotatorWrap:             Channel[F, String],
+  zeroRotatorGuideDir:     Channel[F, CadDirective]
 )
 
 object TcsChannels {
@@ -708,6 +712,21 @@ object TcsChannels {
     } yield OffsetCommandChannels(vt, idx)
   }
 
+  case class InstrumentOffsetCommandChannels[F[_]](
+    x: Channel[F, String],
+    y: Channel[F, String]
+  )
+
+  object InstrumentOffsetCommandChannels {
+    def build[F[_]](
+      service: EpicsService[F],
+      top:     TcsTop
+    ): Resource[F, InstrumentOffsetCommandChannels[F]] = for {
+      x <- service.getChannel[String](top.value, "offsetPoA1.A")
+      y <- service.getChannel[String](top.value, "offsetPoA1.B")
+    } yield InstrumentOffsetCommandChannels(x, y)
+  }
+
   case class TargetFilterChannels[F[_]](
     bandWidth:    Channel[F, String],
     maxVelocity:  Channel[F, String],
@@ -853,6 +872,10 @@ object TcsChannels {
       pncf <- PointingConfigChannels.build(service, tcsTop)
       abgd <- service.getChannel[CadDirective](tcsTop.value, "absorbGuide.DIR")
       zgud <- service.getChannel[CadDirective](tcsTop.value, "zeroGuide.DIR")
+      ioff <- InstrumentOffsetCommandChannels.build(service, tcsTop)
+      azwr <- service.getChannel[String](tcsTop.value, "azwrap.A")
+      rtwr <- service.getChannel[String](tcsTop.value, "rotwrap.A")
+      zrg  <- service.getChannel[CadDirective](tcsTop.value, "zeroRotGuide.DIR")
     } yield TcsChannels[F](
       tt,
       tpd,
@@ -919,7 +942,11 @@ object TcsChannels {
       padj,
       pncf,
       abgd,
-      zgud
+      zgud,
+      ioff,
+      azwr,
+      rtwr,
+      zrg
     )
   }
 }
