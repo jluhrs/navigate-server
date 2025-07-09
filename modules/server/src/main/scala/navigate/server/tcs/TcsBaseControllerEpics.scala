@@ -276,6 +276,43 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
   protected def setOrigin(origin: Origin): TcsCommands[F] => TcsCommands[F] =
     (x: TcsCommands[F]) => x.originCommand.originX(origin.x).originCommand.originY(origin.y)
 
+  protected def resetAllTracking: VerifiedEpics[F, F, ApplyCommandResult] =
+    setProbeTracking(
+      Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
+        _.pwfs1ProbeTrackingCommand
+      ),
+      TrackingConfig.noTracking
+    ).compose(
+      setProbeTracking(
+        Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
+          _.pwfs2ProbeTrackingCommand
+        ),
+        TrackingConfig.noTracking
+      )
+    ).compose(
+      setProbeTracking(
+        Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
+          _.oiwfsProbeTrackingCommand
+        ),
+        TrackingConfig.noTracking
+      )
+    )(sys.tcsEpics.startCommand(timeout))
+      .post
+
+  protected def stopAllWfs: VerifiedEpics[F, F, ApplyCommandResult] =
+    sys.tcsEpics
+      .startCommand(timeout)
+      .pwfs1Commands
+      .stop
+      .mark
+      .pwfs2Commands
+      .stop
+      .mark
+      .oiwfsCommands
+      .stop
+      .mark
+      .post
+
   protected def applyTcsConfig(
     config: TcsBaseController.TcsConfig
   ): TcsCommands[F] => TcsCommands[F] =
@@ -402,12 +439,26 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     slewOptions: SlewOptions,
     tcsConfig:   TcsBaseController.TcsConfig
   ): F[ApplyCommandResult] =
+    stopAllWfs.verifiedRun(ConnectionTimeout)
     disableGuide *>
+      disableTargetFilter *>
       (
-        selectOiwfs(tcsConfig) *>
+        resetAllTracking *>
+          selectOiwfsT(tcsConfig)
+            .andThen(
+              _.wrapsCommand.azimuth(0).wrapsCommand.rotator(0).zeroRotatorGuide.mark
+            )(sys.tcsEpics.startCommand(timeout))
+            .post *>
           VerifiedEpics.liftF(Temporal[F].sleep(OiwfsSelectionDelay)) *>
-          setSlewOptions(slewOptions)
-            .compose(applyTcsConfig(tcsConfig))(
+          applyTcsConfig(tcsConfig)
+            .andThen(c => c.targetFilter.shortcircuit(ShortcircuitTargetFilter(true)))
+            .andThen { c =>
+              c.instrumentOffsetCommand
+                .offsetX(Distance.Zero)
+                .instrumentOffsetCommand
+                .offsetY(Distance.Zero)
+            }
+            .andThen(setSlewOptions(slewOptions))(
               sys.tcsEpics.startCommand(timeout)
             )
             .post
@@ -1180,14 +1231,14 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
   // Time to wait after selecting the OIWFS in the AG Sequencer, to let the values propagate to TCS.
   private val OiwfsSelectionDelay: Duration = 1500.milliseconds
 
-  private def selectOiwfs(tcsConfig: TcsConfig): VerifiedEpics[F, F, ApplyCommandResult] =
-    sys.tcsEpics
-      .startCommand(timeout)
-      .oiwfsSelectCommand
+  private def selectOiwfsT(tcsConfig: TcsConfig)(c: TcsCommands[F]): TcsCommands[F] =
+    c.oiwfsSelectCommand
       .oiwfsName(TcsBaseControllerEpics.encodeOiwfsSelect(tcsConfig.oiwfs, tcsConfig.instrument))
       .oiwfsSelectCommand
       .output("WFS")
-      .post
+
+  private def selectOiwfs(tcsConfig: TcsConfig): VerifiedEpics[F, F, ApplyCommandResult] =
+    selectOiwfsT(tcsConfig)(sys.tcsEpics.startCommand(timeout)).post
 
   private def calcM1Guide(m1: BinaryOnOff, m1src: String): M1GuideConfig =
     if (m1 === BinaryOnOff.Off) M1GuideConfig.M1GuideOff

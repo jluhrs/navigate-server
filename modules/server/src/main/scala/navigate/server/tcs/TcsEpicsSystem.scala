@@ -1240,7 +1240,7 @@ object TcsEpicsSystem {
         )
       }
 
-    override val targetFilter: TargetFilterCommand[F, TcsCommands[F]]            =
+    override val targetFilter: TargetFilterCommand[F, TcsCommands[F]]                =
       new TargetFilterCommand[F, TcsCommands[F]] {
         override def bandwidth(bw: Double): TcsCommands[F] = addParam(
           writeCadParam(channels.telltale, channels.targetFilter.bandWidth)(bw)
@@ -1260,7 +1260,7 @@ object TcsEpicsSystem {
           )
         )
       }
-    override val pointingAdjustCommand: PointingAdjustCommand[F, TcsCommands[F]] =
+    override val pointingAdjustCommand: PointingAdjustCommand[F, TcsCommands[F]]     =
       new PointingAdjustCommand[F, TcsCommands[F]] {
         override def frame(frm: ReferenceFrame): TcsCommands[F] = addParam(
           writeCadParam(channels.telltale, channels.pointingAdjust.frame)(frm)
@@ -1274,7 +1274,7 @@ object TcsEpicsSystem {
           writeCadParam(channels.telltale, channels.pointingAdjust.angle)(a.toDoubleDegrees)
         )
       }
-    override val pointingConfigCommand: PointingConfigCommand[F, TcsCommands[F]] =
+    override val pointingConfigCommand: PointingConfigCommand[F, TcsCommands[F]]     =
       new PointingConfigCommand[F, TcsCommands[F]] {
         override def name(nm: PointingParameter): TcsCommands[F] = addParam(
           writeCadParam(channels.telltale, channels.pointingConfig.name)(nm)
@@ -1288,7 +1288,7 @@ object TcsEpicsSystem {
           writeCadParam(channels.telltale, channels.pointingConfig.value)(v)
         )
       }
-    override val targetOffsetAbsorb: OffsetMgmCommand[F, TcsCommands[F]]         =
+    override val targetOffsetAbsorb: OffsetMgmCommand[F, TcsCommands[F]]             =
       new OffsetMgmCommand[F, TcsCommands[F]] {
 
         override def vt(v: VirtualTelescope): TcsCommands[F] = addParam(
@@ -1299,7 +1299,7 @@ object TcsEpicsSystem {
           writeCadParam(channels.telltale, channels.targetOffsetAbsorb.index)(v)
         )
       }
-    override val targetOffsetClear: OffsetMgmCommand[F, TcsCommands[F]]          =
+    override val targetOffsetClear: OffsetMgmCommand[F, TcsCommands[F]]              =
       new OffsetMgmCommand[F, TcsCommands[F]] {
 
         override def vt(v: VirtualTelescope): TcsCommands[F] = addParam(
@@ -1310,7 +1310,7 @@ object TcsEpicsSystem {
           writeCadParam(channels.telltale, channels.targetOffsetClear.index)(v)
         )
       }
-    override val originOffsetAbsorb: OffsetMgmCommand[F, TcsCommands[F]]         =
+    override val originOffsetAbsorb: OffsetMgmCommand[F, TcsCommands[F]]             =
       new OffsetMgmCommand[F, TcsCommands[F]] {
 
         override def vt(v: VirtualTelescope): TcsCommands[F] = addParam(
@@ -1321,7 +1321,7 @@ object TcsEpicsSystem {
           writeCadParam(channels.telltale, channels.originOffsetAbsorb.index)(v)
         )
       }
-    override val originOffsetClear: OffsetMgmCommand[F, TcsCommands[F]]          =
+    override val originOffsetClear: OffsetMgmCommand[F, TcsCommands[F]]              =
       new OffsetMgmCommand[F, TcsCommands[F]] {
 
         override def vt(v: VirtualTelescope): TcsCommands[F] = addParam(
@@ -1332,16 +1332,46 @@ object TcsEpicsSystem {
           writeCadParam(channels.telltale, channels.originOffsetClear.index)(v)
         )
       }
-    override val absorbGuideCommand: BaseCommand[F, TcsCommands[F]]              =
+    override val absorbGuideCommand: BaseCommand[F, TcsCommands[F]]                  =
       new BaseCommand[F, TcsCommands[F]] {
         override def mark: TcsCommands[F] = addParam(
           writeChannel(channels.telltale, channels.absorbGuideDir)(CadDirective.MARK.pure[F])
         )
       }
-    override val zeroGuideCommand: BaseCommand[F, TcsCommands[F]]                =
+    override val zeroGuideCommand: BaseCommand[F, TcsCommands[F]]                    =
       new BaseCommand[F, TcsCommands[F]] {
         override def mark: TcsCommands[F] = addParam(
           writeChannel(channels.telltale, channels.zeroGuideDir)(CadDirective.MARK.pure[F])
+        )
+      }
+    override val instrumentOffsetCommand: InstrumentOffsetCommand[F, TcsCommands[F]] =
+      new InstrumentOffsetCommand[F, TcsCommands[F]] {
+        override def offsetX(v: Distance): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.instrumentOffset.x)(
+            v.toMillimeters.value.toDouble
+          )
+        )
+
+        override def offsetY(v: Distance): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.instrumentOffset.y)(
+            v.toMillimeters.value.toDouble
+          )
+        )
+      }
+    override val wrapsCommand: WrapsCommand[F, TcsCommands[F]]                       =
+      new WrapsCommand[F, TcsCommands[F]] {
+        override def azimuth(v: Int): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.azimuthWrap)(v)
+        )
+
+        override def rotator(v: Int): TcsCommands[F] = addParam(
+          writeCadParam(channels.telltale, channels.rotatorWrap)(v)
+        )
+      }
+    override val zeroRotatorGuide: BaseCommand[F, TcsCommands[F]]                    =
+      new BaseCommand[F, TcsCommands[F]] {
+        override def mark: TcsCommands[F] = addParam(
+          writeChannel(channels.telltale, channels.zeroRotatorGuideDir)(CadDirective.MARK.pure[F])
         )
       }
   }
@@ -1927,6 +1957,16 @@ object TcsEpicsSystem {
     def focusOffset(v: Distance): S
   }
 
+  trait InstrumentOffsetCommand[F[_], +S] {
+    def offsetX(v: Distance): S
+    def offsetY(v: Distance): S
+  }
+
+  trait WrapsCommand[F[_], +S] {
+    def azimuth(v: Int): S
+    def rotator(v: Int): S
+  }
+
   trait ProbeTrackingCommand[F[_], +S] {
     def nodAchopA(v: Boolean): S
     def nodAchopB(v: Boolean): S
@@ -2130,6 +2170,9 @@ object TcsEpicsSystem {
     val pointingConfigCommand: PointingConfigCommand[F, TcsCommands[F]]
     val absorbGuideCommand: BaseCommand[F, TcsCommands[F]]
     val zeroGuideCommand: BaseCommand[F, TcsCommands[F]]
+    val instrumentOffsetCommand: InstrumentOffsetCommand[F, TcsCommands[F]]
+    val wrapsCommand: WrapsCommand[F, TcsCommands[F]]
+    val zeroRotatorGuide: BaseCommand[F, TcsCommands[F]]
   }
   /*
 

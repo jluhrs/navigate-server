@@ -15,6 +15,8 @@ object Distance {
 
   lazy val Min: Distance = fromLongMicrometers(Int.MinValue)
 
+  lazy val Zero: Distance = fromLongMicrometers(0)
+
   def fromLongMicrometers(i: Long): Distance = i.withUnit[Micrometer]
 
   def fromBigDecimalMillimeter(bigDecimal: BigDecimal): Distance = fromLongMicrometers(
@@ -31,6 +33,7 @@ object Distance {
 
     def toMillimeters: Quantity[BigDecimal, Millimeter] = to[Millimeter](3)
     def toMeter: Quantity[BigDecimal, Meter]            = to[Meter](6)
+
   }
 
 }
