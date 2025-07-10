@@ -16,4 +16,10 @@ object GuidersQualityValues {
     centroidDetected: Boolean
   )
 
+  lazy val default: GuidersQualityValues = GuidersQualityValues(
+    GuiderQuality(0, false),
+    GuiderQuality(0, false),
+    GuiderQuality(0, false)
+  )
+
 }

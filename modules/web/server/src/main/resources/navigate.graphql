@@ -349,6 +349,7 @@ type ServerConfiguration {
 type Query {
     telescopeState: TelescopeState!
     guideState: GuideConfigurationState!
+    guidersQualityValues: GuidersQualityValues!
     navigateState: NavigateState!
     instrumentPort(instrument: Instrument!): Int
     serverVersion: String

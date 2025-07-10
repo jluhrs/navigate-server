@@ -18,3 +18,15 @@ case class GuideState(
   oiIntegrating: Boolean,
   acIntegrating: Boolean
 ) derives Eq
+
+object GuideState {
+  lazy val default: GuideState = GuideState(
+    MountGuideOption.MountGuideOff,
+    M1GuideConfig.M1GuideOff,
+    M2GuideConfig.M2GuideOff,
+    false,
+    false,
+    false,
+    false
+  )
+}

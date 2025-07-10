@@ -108,11 +108,14 @@ class NavigateMappings[F[_]: Sync](
 ) extends CirceMapping[F] {
   import NavigateMappings._
 
+  def telescopeState: F[Result[TelescopeState]] =
+    server.getTelescopeState.attempt.map(_.fold(Result.internalError, Result.success))
+
   def guideState: F[Result[GuideState]] =
     server.getGuideState.attempt.map(_.fold(Result.internalError, Result.success))
 
-  def telescopeState: F[Result[TelescopeState]] =
-    server.getTelescopeState.attempt.map(_.fold(Result.internalError, Result.success))
+  def guidersQualityValues: F[Result[GuidersQualityValues]] =
+    server.getGuidersQuality.attempt.map(_.fold(Result.internalError, Result.success))
 
   def navigateState: F[Result[NavigateState]] =
     server.getNavigateState.attempt.map(_.fold(Result.internalError, Result.success))
@@ -812,8 +815,9 @@ class NavigateMappings[F[_]: Sync](
       ObjectMapping(
         tpe = QueryType,
         fieldMappings = List(
-          RootEffect.computeEncodable("guideState")((_, _) => guideState),
           RootEffect.computeEncodable("telescopeState")((_, _) => telescopeState),
+          RootEffect.computeEncodable("guideState")((_, _) => guideState),
+          RootEffect.computeEncodable("guidersQualityValues")((_, _) => guidersQualityValues),
           RootEffect.computeEncodable("navigateState")((_, _) => navigateState),
           RootEffect.computeEncodable("instrumentPort")((_, env) => instrumentPort(env)),
           RootEffect.computeEncodable("serverVersion")((_, _) => serverVersion),
