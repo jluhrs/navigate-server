@@ -960,6 +960,59 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     )
   }
 
+  test("Query guide state") {
+    for {
+      mp <- buildMapping()
+      r  <- mp.compileAndRun(
+              """
+          | query {
+          |   guideState {
+          |     m2Inputs
+          |     m2Coma
+          |     m1Input
+          |     mountOffload
+          |     p1Integrating
+          |     p2Integrating
+          |     oiIntegrating
+          |     acIntegrating
+          |   }
+          | }
+          |""".stripMargin
+            )
+    } yield assertEquals(r.hcursor.downField("data").downField("guideState").as[GuideState],
+                         GuideState.default.asRight[DecodingFailure]
+    )
+  }
+
+  test("Query WFS guide quality") {
+    for {
+      mp <- buildMapping()
+      r  <- mp.compileAndRun(
+              """
+          | query {
+          |   guidersQualityValues {
+          |     pwfs1 {
+          |       flux
+          |       centroidDetected
+          |     }
+          |     pwfs2 {
+          |       flux
+          |       centroidDetected
+          |     }
+          |     oiwfs {
+          |       flux
+          |       centroidDetected
+          |     }
+          |   }
+          | }
+          |""".stripMargin
+            )
+    } yield assertEquals(
+      r.hcursor.downField("data").downField("guidersQualityValues").as[GuidersQualityValues],
+      GuidersQualityValues.default.asRight[DecodingFailure]
+    )
+  }
+
   test("Query Navigate server state") {
     for {
       mp <- buildMapping()
@@ -1900,24 +1953,9 @@ object NavigateMappingsTest {
   val dummyClient = Client.fromHttpApp(HttpApp.notFound[IO])
 
   def buildServer: IO[NavigateEngine[IO]] = for {
-    r <- Ref.of[IO, GuideState](
-           GuideState(MountGuideOption.MountGuideOff,
-                      M1GuideConfig.M1GuideOff,
-                      M2GuideConfig.M2GuideOff,
-                      false,
-                      false,
-                      false,
-                      false
-           )
-         )
+    r <- Ref.of[IO, GuideState](GuideState.default)
     p <- Ref.of[IO, TelescopeState](TelescopeState.default)
-    q <- Ref.of[IO, GuidersQualityValues](
-           GuidersQualityValues(
-             GuidersQualityValues.GuiderQuality(0, false),
-             GuidersQualityValues.GuiderQuality(0, false),
-             GuidersQualityValues.GuiderQuality(0, false)
-           )
-         )
+    q <- Ref.of[IO, GuidersQualityValues](GuidersQualityValues.default)
     g <- Ref.of[IO, GuideConfig](GuideConfig.defaultGuideConfig)
   } yield {
     val tcsSouth = new TcsSouthControllerSim[IO](r, p)
@@ -2286,4 +2324,18 @@ object NavigateMappingsTest {
       odbUrl  <- h.downField("odbUri").as[String]
       ssoUrl  <- h.downField("ssoUri").as[String]
     } yield ServerConfiguration(version, site, odbUrl, ssoUrl)
+
+  given Decoder[GuidersQualityValues.GuiderQuality] = h =>
+    for {
+      flux             <- h.downField("flux").as[Int]
+      centroidDetected <- h.downField("centroidDetected").as[Boolean]
+    } yield GuidersQualityValues.GuiderQuality(flux, centroidDetected)
+
+  given Decoder[GuidersQualityValues] = h =>
+    for {
+      pwfs1 <- h.downField("pwfs1").as[GuidersQualityValues.GuiderQuality]
+      pwfs2 <- h.downField("pwfs2").as[GuidersQualityValues.GuiderQuality]
+      oiwfs <- h.downField("oiwfs").as[GuidersQualityValues.GuiderQuality]
+    } yield GuidersQualityValues(pwfs1, pwfs2, oiwfs)
+
 }
