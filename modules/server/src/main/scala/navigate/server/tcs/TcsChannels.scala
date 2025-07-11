@@ -835,7 +835,7 @@ object TcsChannels {
       m1g  <- service.getChannel[String](tcsTop.value, "m1GuideMode.A")
       m1gc <- M1GuideConfigChannels.build(service, tcsTop)
       m2g  <- service.getChannel[String](tcsTop.value, "m2GuideControl.A")
-      m2gm <- service.getChannel[String](tcsTop.value, "m2GuideMode.A")
+      m2gm <- service.getChannel[String](tcsTop.value, "m2GuideMode.B")
       m2gc <- M2GuideConfigChannels.build(service, tcsTop)
       m2gr <- service.getChannel[CadDirective](tcsTop.value, s"m2GuideReset$DirSuffix")
       m2f  <- service.getChannel[String](tcsTop.value, "m2Follow.A")
