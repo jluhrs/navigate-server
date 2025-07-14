@@ -52,7 +52,7 @@ object Settings {
     val jca = "2.4.10"
 
     // Lucuma
-    val lucumaCore    = "0.136.3"
+    val lucumaCore    = "0.137.0"
     val lucumaSchemas = "0.144.0"
     val lucumaSSO     = "0.8.22"
 
