@@ -687,8 +687,8 @@ object TcsChannels {
       cadName: String
     ): Resource[F, PointingModelAdjustChannels[F]] = for {
       frm <- service.getChannel[String](top.value, s"$cadName.A")
-      sze <- service.getChannel[String](top.value, s"$cadName.A")
-      ang <- service.getChannel[String](top.value, s"$cadName.A")
+      sze <- service.getChannel[String](top.value, s"$cadName.B")
+      ang <- service.getChannel[String](top.value, s"$cadName.C")
     } yield PointingModelAdjustChannels[F](
       frm,
       sze,
