@@ -1578,6 +1578,14 @@ class NavigateMappingsSuite extends CatsEffectSuite {
   }
 
   test("Adjust pointing") {
+    def checkResult(j: Json): Option[String] =
+      j.hcursor
+        .downField("data")
+        .downField("adjustPointing")
+        .downField("result")
+        .as[String]
+        .toOption
+
     for {
       mp <- buildMapping()
       p  <- mp.compileAndRun(
@@ -1600,15 +1608,72 @@ class NavigateMappingsSuite extends CatsEffectSuite {
           |}
           |""".stripMargin
             )
-    } yield assertEquals(
-      p.hcursor
-        .downField("data")
-        .downField("adjustPointing")
-        .downField("result")
-        .as[String]
-        .toOption,
-      "SUCCESS".some
-    )
+      q  <- mp.compileAndRun(
+              """
+          |mutation {
+          |  adjustPointing(
+          |    offset: {
+          |      equatorialAdjustment: {
+          |        deltaRA: {
+          |          arcseconds: 0.1
+          |        }
+          |        deltaDec: {
+          |          arcseconds: 0.0
+          |        }
+          |      }
+          |    }
+          |  ) {
+          |    result
+          |  }
+          |}
+          |""".stripMargin
+            )
+      r  <- mp.compileAndRun(
+              """
+          |mutation {
+          |  adjustPointing(
+          |    offset: {
+          |      instrumentAdjustment: {
+          |        p: {
+          |          arcseconds: 0.1
+          |        }
+          |        q: {
+          |          arcseconds: 0.1
+          |        },
+          |      }
+          |    }
+          |  ) {
+          |    result
+          |  }
+          |}
+          |""".stripMargin
+            )
+      s  <- mp.compileAndRun(
+              """
+          |mutation {
+          |  adjustPointing(
+          |    offset: {
+          |      horizontalAdjustment: {
+          |        azimuth: {
+          |          arcseconds: 0.1
+          |        }
+          |        elevation: {
+          |          arcseconds: 0.0
+          |        }
+          |      }
+          |    }
+          |  ) {
+          |    result
+          |  }
+          |}
+          |""".stripMargin
+            )
+    } yield {
+      assertEquals(checkResult(p), "SUCCESS".some)
+      assertEquals(checkResult(q), "SUCCESS".some)
+      assertEquals(checkResult(r), "SUCCESS".some)
+      assertEquals(checkResult(s), "SUCCESS".some)
+    }
   }
 
   test("Adjust instrument origin") {
