@@ -1335,24 +1335,24 @@ object NavigateMappings extends GrackleParsers {
 
   def parseHandsetAdjustment(l: List[(String, Value)]): Option[HandsetAdjustment] =
     l.find(_._2 != Value.AbsentValue) match {
-      case Some(("horizontalAdjustment", ObjectValue(n)))  =>
+      case Some(("horizontalAdjustment", ObjectValue(n))) =>
         for {
           daz <- n.collectFirst { case ("azimuth", ObjectValue(m)) => parseAngle(m) }.flatten
           del <- n.collectFirst { case ("elevation", ObjectValue(m)) => parseAngle(m) }.flatten
         } yield HandsetAdjustment.HorizontalAdjustment(daz, del)
-      case Some(("focalPlaneAdjustment", ObjectValue(n)))  =>
+      case Some(("focalPlaneAdjustment", ObjectValue(n))) =>
         for {
           dx <- n.collectFirst { case ("deltaX", ObjectValue(m)) => parseAngle(m) }.flatten
           dy <- n.collectFirst { case ("deltaY", ObjectValue(m)) => parseAngle(m) }.flatten
         } yield HandsetAdjustment.FocalPlaneAdjustment(FocalPlaneOffset(DeltaX(dx), DeltaY(dy)))
-      case Some(("instrumentAdjustment", ObjectValue(n)))  =>
+      case Some(("instrumentAdjustment", ObjectValue(n))) =>
         parseOffset(n).map(HandsetAdjustment.InstrumentAdjustment.apply)
-      case Some(("equatorialAdjustement", ObjectValue(n))) =>
+      case Some(("equatorialAdjustment", ObjectValue(n))) =>
         for {
           dra  <- n.collectFirst { case ("deltaRA", ObjectValue(m)) => parseAngle(m) }.flatten
           ddec <- n.collectFirst { case ("deltaDec", ObjectValue(m)) => parseAngle(m) }.flatten
         } yield HandsetAdjustment.EquatorialAdjustment(dra, ddec)
-      case _                                               => none
+      case _                                              => none
     }
 
 }
