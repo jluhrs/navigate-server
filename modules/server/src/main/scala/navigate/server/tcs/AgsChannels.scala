@@ -25,7 +25,9 @@ case class AgsChannels[F[_]](
   instrumentPorts: AgsChannels.InstrumentPortChannels[F],
   aoName:          Channel[F, String],
   hwName:          Channel[F, String],
-  sfName:          Channel[F, String]
+  sfName:          Channel[F, String],
+  p1Angles:        AgsChannels.PwfsAnglesChannels[F],
+  p2Angles:        AgsChannels.PwfsAnglesChannels[F]
 )
 
 object AgsChannels {
@@ -74,6 +76,22 @@ object AgsChannels {
 
   }
 
+  case class PwfsAnglesChannels[F[_]](
+    tableAngle: Channel[F, Double],
+    armAngle:   Channel[F, Double]
+  )
+
+  object PwfsAnglesChannels {
+    def build[F[_]](
+      service: EpicsService[F],
+      top:     NonEmptyString,
+      name:    String
+    ): Resource[F, PwfsAnglesChannels[F]] = for {
+      ta <- service.getChannel[Double](top, s"${name}:RT34Pos.VAL")
+      aa <- service.getChannel[Double](top, s"${name}:PA34Pos.VAL")
+    } yield PwfsAnglesChannels(ta, aa)
+  }
+
   def build[F[_]](
     service: EpicsService[F],
     top:     NonEmptyString
@@ -93,6 +111,8 @@ object AgsChannels {
     aoName   <- service.getChannel[String](top, "aoName")
     hwName   <- service.getChannel[String](top, "hwName")
     sfName   <- service.getChannel[String](top, "sfName")
+    p1Angles <- PwfsAnglesChannels.build(service, top, "p1")
+    p2Angles <- PwfsAnglesChannels.build(service, top, "p2")
   } yield AgsChannels(
     t,
     inPos,
@@ -108,6 +128,8 @@ object AgsChannels {
     ports,
     aoName,
     hwName,
-    sfName
+    sfName,
+    p1Angles,
+    p2Angles
   )
 }

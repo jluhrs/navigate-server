@@ -8,9 +8,11 @@ import cats.effect.Resource
 import cats.effect.Temporal
 import cats.syntax.all.*
 import eu.timepit.refined.types.string.NonEmptyString
+import lucuma.core.math.Angle
 import lucuma.core.util.Enumerated
 import mouse.boolean.*
 import navigate.epics.*
+import navigate.epics.EpicsSystem.TelltaleChannel
 import navigate.epics.VerifiedEpics.*
 import navigate.server.acm.Decoder.*
 import navigate.server.epicsdata.AgMechPosition
@@ -48,6 +50,8 @@ object AgsEpicsSystem {
     def aoName: VerifiedEpics[F, F, AgMechPosition]
     def hwName: VerifiedEpics[F, F, AgMechPosition]
     def sfName: VerifiedEpics[F, F, ScienceFold]
+    def pwfs1Angles: PwfsAngles[F]
+    def pwfs2Angles: PwfsAngles[F]
   }
 
   private[tcs] def buildSystem[F[_]: Applicative](
@@ -139,8 +143,30 @@ object AgsEpicsSystem {
 
         override def sfName: VerifiedEpics[F, F, ScienceFold] =
           VerifiedEpics.readChannel(channels.telltale, channels.sfName).map(_.map(_.decode))
+
+        override def pwfs1Angles: PwfsAngles[F] =
+          PwfsAngles.build(channels.telltale, channels.p1Angles)
+
+        override def pwfs2Angles: PwfsAngles[F] =
+          PwfsAngles.build(channels.telltale, channels.p2Angles)
       }
     }
+
+  trait PwfsAngles[F[_]] {
+    val tableAngle: VerifiedEpics[F, F, Angle]
+    val armAngle: VerifiedEpics[F, F, Angle]
+  }
+
+  object PwfsAngles {
+    def build[F[_]: Applicative](tt: TelltaleChannel[F], chs: AgsChannels.PwfsAnglesChannels[F]) =
+      new PwfsAngles[F] {
+        override val tableAngle: VerifiedEpics[F, F, Angle] = VerifiedEpics
+          .readChannel[F, Double](tt, chs.tableAngle)
+          .map(_.map(Angle.fromDoubleDegrees))
+        override val armAngle: VerifiedEpics[F, F, Angle]   =
+          VerifiedEpics.readChannel[F, Double](tt, chs.armAngle).map(_.map(Angle.fromDoubleDegrees))
+      }
+  }
 
   def build[F[_]: Temporal](
     service: EpicsService[F],

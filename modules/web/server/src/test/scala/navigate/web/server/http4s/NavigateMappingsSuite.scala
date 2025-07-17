@@ -1668,11 +1668,33 @@ class NavigateMappingsSuite extends CatsEffectSuite {
           |}
           |""".stripMargin
             )
+      t  <- mp.compileAndRun(
+              """
+          |mutation {
+          |  adjustPointing(
+          |    offset: {
+          |      probeFrameAdjustment: {
+          |        probeFrame: GMOS_OIWFS
+          |        deltaX: {
+          |          arcseconds: 0.1
+          |        }
+          |        deltaY: {
+          |          arcseconds: 0.0
+          |        }
+          |      }
+          |    }
+          |  ) {
+          |    result
+          |  }
+          |}
+          |""".stripMargin
+            )
     } yield {
       assertEquals(checkResult(p), "SUCCESS".some)
       assertEquals(checkResult(q), "SUCCESS".some)
       assertEquals(checkResult(r), "SUCCESS".some)
       assertEquals(checkResult(s), "SUCCESS".some)
+      assertEquals(checkResult(t), "SUCCESS".some)
     }
   }
 

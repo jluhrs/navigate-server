@@ -13,28 +13,32 @@ import navigate.server.tcs.AgsChannels.InstrumentPortChannels
 object TestAgsEpicsSystem {
 
   case class State(
-    telltale:   TestChannel.State[String],
-    inPosition: TestChannel.State[Int],
-    sfParked:   TestChannel.State[Int],
-    aoParked:   TestChannel.State[Int],
-    hwParked:   TestChannel.State[Int],
-    p1Parked:   TestChannel.State[Int],
-    p1Follow:   TestChannel.State[String],
-    p2Parked:   TestChannel.State[Int],
-    p2Follow:   TestChannel.State[String],
-    oiParked:   TestChannel.State[Int],
-    oiFollow:   TestChannel.State[String],
-    f2Port:     TestChannel.State[Int],
-    ghostPort:  TestChannel.State[Int],
-    gmosPort:   TestChannel.State[Int],
-    gnirsPort:  TestChannel.State[Int],
-    gpiPort:    TestChannel.State[Int],
-    gsaoiPort:  TestChannel.State[Int],
-    nifsPort:   TestChannel.State[Int],
-    niriPort:   TestChannel.State[Int],
-    aoName:     TestChannel.State[String],
-    hwName:     TestChannel.State[String],
-    sfName:     TestChannel.State[String]
+    telltale:     TestChannel.State[String],
+    inPosition:   TestChannel.State[Int],
+    sfParked:     TestChannel.State[Int],
+    aoParked:     TestChannel.State[Int],
+    hwParked:     TestChannel.State[Int],
+    p1Parked:     TestChannel.State[Int],
+    p1Follow:     TestChannel.State[String],
+    p2Parked:     TestChannel.State[Int],
+    p2Follow:     TestChannel.State[String],
+    oiParked:     TestChannel.State[Int],
+    oiFollow:     TestChannel.State[String],
+    f2Port:       TestChannel.State[Int],
+    ghostPort:    TestChannel.State[Int],
+    gmosPort:     TestChannel.State[Int],
+    gnirsPort:    TestChannel.State[Int],
+    gpiPort:      TestChannel.State[Int],
+    gsaoiPort:    TestChannel.State[Int],
+    nifsPort:     TestChannel.State[Int],
+    niriPort:     TestChannel.State[Int],
+    aoName:       TestChannel.State[String],
+    hwName:       TestChannel.State[String],
+    sfName:       TestChannel.State[String],
+    p1TableAngle: TestChannel.State[Double],
+    p1ArmAngle:   TestChannel.State[Double],
+    p2TableAngle: TestChannel.State[Double],
+    p2ArmAngle:   TestChannel.State[Double]
   )
 
   val defaultState: State = State(
@@ -59,7 +63,11 @@ object TestAgsEpicsSystem {
     TestChannel.State.of(0),
     TestChannel.State.of(""),
     TestChannel.State.of(""),
-    TestChannel.State.of("")
+    TestChannel.State.of(""),
+    TestChannel.State.of(0.0),
+    TestChannel.State.of(0.0),
+    TestChannel.State.of(0.0),
+    TestChannel.State.of(0.0)
   )
 
   def buildChannels[F[_]: Temporal](
@@ -89,7 +97,15 @@ object TestAgsEpicsSystem {
     ),
     aoName = new TestChannel[F, State, String](s, Focus[State](_.aoName)),
     hwName = new TestChannel[F, State, String](s, Focus[State](_.hwName)),
-    sfName = new TestChannel[F, State, String](s, Focus[State](_.sfName))
+    sfName = new TestChannel[F, State, String](s, Focus[State](_.sfName)),
+    p1Angles = AgsChannels.PwfsAnglesChannels[F](
+      tableAngle = new TestChannel[F, State, Double](s, Focus[State](_.p1TableAngle)),
+      armAngle = new TestChannel[F, State, Double](s, Focus[State](_.p1ArmAngle))
+    ),
+    p2Angles = AgsChannels.PwfsAnglesChannels[F](
+      tableAngle = new TestChannel[F, State, Double](s, Focus[State](_.p2TableAngle)),
+      armAngle = new TestChannel[F, State, Double](s, Focus[State](_.p2ArmAngle))
+    )
   )
 
   def build[F[_]: Temporal](
