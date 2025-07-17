@@ -3,6 +3,7 @@
 
 package navigate.model
 
+import lucuma.core.enums.GuideProbe
 import lucuma.core.math.Angle
 import lucuma.core.math.Offset
 
@@ -13,4 +14,6 @@ object HandsetAdjustment {
   case class FocalPlaneAdjustment(value: FocalPlaneOffset)         extends HandsetAdjustment
   case class InstrumentAdjustment(value: Offset)                   extends HandsetAdjustment
   case class EquatorialAdjustment(deltaRA: Angle, deltaDec: Angle) extends HandsetAdjustment
+  case class ProbeFrameAdjustment(probeRefFrame: GuideProbe, deltaX: Angle, deltaY: Angle)
+      extends HandsetAdjustment
 }

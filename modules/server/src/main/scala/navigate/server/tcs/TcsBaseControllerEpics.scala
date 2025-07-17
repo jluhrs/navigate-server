@@ -9,6 +9,7 @@ import cats.effect.Ref
 import cats.effect.Temporal
 import cats.syntax.all.*
 import lucuma.core.enums.ComaOption
+import lucuma.core.enums.GuideProbe
 import lucuma.core.enums.Instrument
 import lucuma.core.enums.LightSinkName
 import lucuma.core.enums.M1Source
@@ -57,6 +58,7 @@ import navigate.server.epicsdata.AgMechPosition
 import navigate.server.epicsdata.BinaryOnOff
 import navigate.server.epicsdata.BinaryYesNo
 import navigate.server.tcs.AcquisitionCameraEpicsSystem.*
+import navigate.server.tcs.AgsEpicsSystem.PwfsAngles
 import navigate.server.tcs.ParkStatus.NotParked
 import navigate.server.tcs.Target.*
 import navigate.server.tcs.TcsEpicsSystem.BaseWfsCommands
@@ -1127,7 +1129,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       .targetAdjustCommand
       .angle(Angle.Angle0)
       .targetAdjustCommand
-      .size(size.toSignedDoubleDegrees * DegreesToArcseconds)
+      .size(Angle.decimalArcseconds.get(size).doubleValue)
       .targetAdjustCommand
       .vtMask(List(VirtualTelescope.SourceA))
       .post
@@ -1648,8 +1650,6 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
   val SettleTime: FiniteDuration    = FiniteDuration.apply(1, TimeUnit.SECONDS)
   val AcqAdjTimeout: FiniteDuration = FiniteDuration.apply(10, TimeUnit.SECONDS)
 
-  val DegreesToArcseconds: Double = 60.0 * 60.0
-
   private def rectToPolar(x: Angle, y: Angle): (Angle, Angle) = {
     val size: Angle  = Angle.fromDoubleRadians(
       Math.sqrt(
@@ -1670,7 +1670,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     iaa:    Option[Angle]
   ): F[ApplyCommandResult] = {
     val (s, angle) = rectToPolar(-offset.q.toAngle, offset.p.toAngle)
-    val size       = s.toSignedDoubleDegrees * DegreesToArcseconds
+    val size       = Angle.decimalArcseconds.get(s).doubleValue
 
     (ipa, iaa)
       .mapN { (ip, ia) =>
@@ -1727,82 +1727,116 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
         )
     }
 
-  private def adjustParams(handsetAdjustment: HandsetAdjustment): (ReferenceFrame, Double, Angle) =
+  private def wfsRefAdjustParams(
+    st:  PwfsAngles[F],
+    pol: (Angle, Angle)
+  ): F[(ReferenceFrame, Double, Angle)] = (
+    for {
+      tableAngleF <- st.tableAngle
+      armAngleF   <- st.armAngle
+    } yield for {
+      tableAngle <- tableAngleF
+      armAngle   <- armAngleF
+    } yield (ReferenceFrame.XY,
+             Angle.decimalArcseconds.get(pol._1).doubleValue,
+             pol._2 + tableAngle + armAngle
+    )
+  ).verifiedRun(ConnectionTimeout)
+
+  private val OiwfsAngle: Angle = Angle.fromDoubleDegrees(138.94)
+
+  private def adjustParams(
+    handsetAdjustment: HandsetAdjustment
+  ): F[(ReferenceFrame, Double, Angle)] =
     handsetAdjustment match {
-      case HandsetAdjustment.EquatorialAdjustment(deltaRA, deltaDec) =>
+      case HandsetAdjustment.EquatorialAdjustment(deltaRA, deltaDec)             =>
         val pol = rectToPolar(deltaRA, deltaDec)
-        (ReferenceFrame.Tracking, pol._1.toSignedDoubleDegrees * DegreesToArcseconds, pol._2)
-      case HandsetAdjustment.FocalPlaneAdjustment(value)             =>
+        (ReferenceFrame.Tracking, Angle.decimalArcseconds.get(pol._1).doubleValue, pol._2)
+          .pure[F]
+      case HandsetAdjustment.FocalPlaneAdjustment(value)                         =>
         val pol = rectToPolar(value.deltaX.value, value.deltaY.value)
-        (ReferenceFrame.XY, pol._1.toSignedDoubleDegrees * DegreesToArcseconds, pol._2)
-      case HandsetAdjustment.HorizontalAdjustment(deltaAz, deltaEl)  =>
+        (ReferenceFrame.XY, Angle.decimalArcseconds.get(pol._1).doubleValue, pol._2).pure[F]
+      case HandsetAdjustment.HorizontalAdjustment(deltaAz, deltaEl)              =>
         val pol = rectToPolar(deltaAz, deltaEl)
-        (ReferenceFrame.AzimuthElevation,
-         pol._1.toSignedDoubleDegrees * DegreesToArcseconds,
-         pol._2
-        )
-      case HandsetAdjustment.InstrumentAdjustment(value)             =>
+        (ReferenceFrame.AzimuthElevation, Angle.decimalArcseconds.get(pol._1).doubleValue, pol._2)
+          .pure[F]
+      case HandsetAdjustment.InstrumentAdjustment(value)                         =>
         val pol = rectToPolar(-value.q.toAngle, value.p.toAngle)
-        (ReferenceFrame.Instrument, pol._1.toSignedDoubleDegrees * DegreesToArcseconds, pol._2)
+        (ReferenceFrame.Instrument, Angle.decimalArcseconds.get(pol._1).doubleValue, pol._2)
+          .pure[F]
+      case HandsetAdjustment.ProbeFrameAdjustment(probeRefFrame, deltaX, deltaY) =>
+        val pol = rectToPolar(deltaX, deltaY)
+        probeRefFrame match {
+          case GuideProbe.PWFS1           => wfsRefAdjustParams(sys.ags.status.pwfs1Angles, pol)
+          case GuideProbe.PWFS2           => wfsRefAdjustParams(sys.ags.status.pwfs2Angles, pol)
+          case GuideProbe.GmosOIWFS       =>
+            (ReferenceFrame.XY,
+             Angle.decimalArcseconds.get(pol._1).doubleValue,
+             pol._2 + OiwfsAngle
+            ).pure[F]
+          case GuideProbe.Flamingos2OIWFS =>
+            (ReferenceFrame.XY,
+             Angle.decimalArcseconds.get(pol._1).doubleValue,
+             pol._2 + OiwfsAngle
+            ).pure[F]
+        }
     }
 
   override def targetAdjust(
     target:            VirtualTelescope,
     handsetAdjustment: HandsetAdjustment,
     openLoops:         Boolean
-  )(guide: GuideConfig): F[ApplyCommandResult] = {
-    val (frame, size, angle) = adjustParams(handsetAdjustment)
-
+  )(guide: GuideConfig): F[ApplyCommandResult] =
     pauseGuide.whenA(openLoops) *>
-      sys.tcsEpics
-        .startCommand(timeout)
-        .targetAdjustCommand
-        .frame(frame)
-        .targetAdjustCommand
-        .size(size)
-        .targetAdjustCommand
-        .angle(angle)
-        .targetAdjustCommand
-        .vtMask(List(target))
-        .post
-        .verifiedRun(ConnectionTimeout) <*
+      adjustParams(handsetAdjustment).flatMap { case (frame, size, angle) =>
+        sys.tcsEpics
+          .startCommand(timeout)
+          .targetAdjustCommand
+          .frame(frame)
+          .targetAdjustCommand
+          .size(size)
+          .targetAdjustCommand
+          .angle(angle)
+          .targetAdjustCommand
+          .vtMask(List(target))
+          .post
+          .verifiedRun(ConnectionTimeout)
+      } <*
       resumeGuide(guide.tcsGuide).whenA(openLoops)
-  }
 
   override def originAdjust(handsetAdjustment: HandsetAdjustment, openLoops: Boolean)(
     guide: GuideConfig
-  ): F[ApplyCommandResult] = {
-    val (frame, size, angle) = adjustParams(handsetAdjustment)
-
+  ): F[ApplyCommandResult] =
     pauseGuide.whenA(openLoops) *>
+      adjustParams(handsetAdjustment).flatMap { case (frame, size, angle) =>
+        sys.tcsEpics
+          .startCommand(timeout)
+          .originAdjustCommand
+          .frame(frame)
+          .originAdjustCommand
+          .size(size)
+          .originAdjustCommand
+          .angle(angle)
+          .originAdjustCommand
+          .vtMask(List(VirtualTelescope.SourceA))
+          .post
+          .verifiedRun(ConnectionTimeout)
+      } <*
+      resumeGuide(guide.tcsGuide).whenA(openLoops)
+
+  override def pointingAdjust(handsetAdjustment: HandsetAdjustment): F[ApplyCommandResult] =
+    adjustParams(handsetAdjustment).flatMap { case (frame, size, angle) =>
       sys.tcsEpics
         .startCommand(timeout)
-        .originAdjustCommand
+        .pointingAdjustCommand
         .frame(frame)
-        .originAdjustCommand
+        .pointingAdjustCommand
         .size(size)
-        .originAdjustCommand
+        .pointingAdjustCommand
         .angle(angle)
-        .originAdjustCommand
-        .vtMask(List(VirtualTelescope.SourceA))
         .post
-        .verifiedRun(ConnectionTimeout) <*
-      resumeGuide(guide.tcsGuide).whenA(openLoops)
-  }
-
-  override def pointingAdjust(handsetAdjustment: HandsetAdjustment): F[ApplyCommandResult] = {
-    val (frame, size, angle) = adjustParams(handsetAdjustment)
-    sys.tcsEpics
-      .startCommand(timeout)
-      .pointingAdjustCommand
-      .frame(frame)
-      .pointingAdjustCommand
-      .size(size)
-      .pointingAdjustCommand
-      .angle(angle)
-      .post
-      .verifiedRun(ConnectionTimeout)
-  }
+        .verifiedRun(ConnectionTimeout)
+    }
 
   override def targetOffsetAbsorb(target: VirtualTelescope): F[ApplyCommandResult] = {
     val selection: OffsetIndexSelection = target match {

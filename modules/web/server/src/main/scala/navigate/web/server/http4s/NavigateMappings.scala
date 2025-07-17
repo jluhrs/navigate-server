@@ -1352,6 +1352,14 @@ object NavigateMappings extends GrackleParsers {
           dra  <- n.collectFirst { case ("deltaRA", ObjectValue(m)) => parseAngle(m) }.flatten
           ddec <- n.collectFirst { case ("deltaDec", ObjectValue(m)) => parseAngle(m) }.flatten
         } yield HandsetAdjustment.EquatorialAdjustment(dra, ddec)
+      case Some(("probeFrameAdjustment", ObjectValue(n))) =>
+        for {
+          probe <- n.collectFirst { case ("probeFrame", EnumValue(name)) =>
+                     parseEnumerated[GuideProbe](name)
+                   }.flatten
+          dx    <- n.collectFirst { case ("deltaX", ObjectValue(m)) => parseAngle(m) }.flatten
+          dy    <- n.collectFirst { case ("deltaY", ObjectValue(m)) => parseAngle(m) }.flatten
+        } yield HandsetAdjustment.ProbeFrameAdjustment(probe, dx, dy)
       case _                                              => none
     }
 
