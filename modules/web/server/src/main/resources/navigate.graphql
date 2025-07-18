@@ -311,8 +311,8 @@ input EquatorialOffsetInput {
 
 input ProbeFrameOffsetInput {
     probeFrame: GuideProbe!
-    deltaX: AngleInput!
-    deltaY: AngleInput!
+    deltaU: AngleInput!
+    deltaV: AngleInput!
 }
 
 input HandsetAdjustmentInput {

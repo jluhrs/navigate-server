@@ -1750,14 +1750,14 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
   ): F[(ReferenceFrame, Double, Angle)] =
     handsetAdjustment match {
       case HandsetAdjustment.EquatorialAdjustment(deltaRA, deltaDec)             =>
-        val pol = rectToPolar(deltaRA, deltaDec)
+        val pol = rectToPolar(deltaDec, deltaRA)
         (ReferenceFrame.Tracking, Angle.decimalArcseconds.get(pol._1).doubleValue, pol._2)
           .pure[F]
       case HandsetAdjustment.FocalPlaneAdjustment(value)                         =>
-        val pol = rectToPolar(value.deltaX.value, value.deltaY.value)
+        val pol = rectToPolar(-value.deltaY.value, -value.deltaX.value)
         (ReferenceFrame.XY, Angle.decimalArcseconds.get(pol._1).doubleValue, pol._2).pure[F]
       case HandsetAdjustment.HorizontalAdjustment(deltaAz, deltaEl)              =>
-        val pol = rectToPolar(deltaAz, deltaEl)
+        val pol = rectToPolar(deltaEl, deltaAz)
         (ReferenceFrame.AzimuthElevation, Angle.decimalArcseconds.get(pol._1).doubleValue, pol._2)
           .pure[F]
       case HandsetAdjustment.InstrumentAdjustment(value)                         =>
@@ -1765,16 +1765,19 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
         (ReferenceFrame.Instrument, Angle.decimalArcseconds.get(pol._1).doubleValue, pol._2)
           .pure[F]
       case HandsetAdjustment.ProbeFrameAdjustment(probeRefFrame, deltaX, deltaY) =>
-        val pol = rectToPolar(deltaX, deltaY)
         probeRefFrame match {
-          case GuideProbe.PWFS1           => wfsRefAdjustParams(sys.ags.status.pwfs1Angles, pol)
-          case GuideProbe.PWFS2           => wfsRefAdjustParams(sys.ags.status.pwfs2Angles, pol)
+          case GuideProbe.PWFS1           =>
+            wfsRefAdjustParams(sys.ags.status.pwfs1Angles, rectToPolar(-deltaX, -deltaY))
+          case GuideProbe.PWFS2           =>
+            wfsRefAdjustParams(sys.ags.status.pwfs2Angles, rectToPolar(deltaX, deltaY))
           case GuideProbe.GmosOIWFS       =>
+            val pol = rectToPolar(deltaY, deltaX)
             (ReferenceFrame.XY,
              Angle.decimalArcseconds.get(pol._1).doubleValue,
              pol._2 + OiwfsAngle
             ).pure[F]
           case GuideProbe.Flamingos2OIWFS =>
+            val pol = rectToPolar(deltaY, deltaX)
             (ReferenceFrame.XY,
              Angle.decimalArcseconds.get(pol._1).doubleValue,
              pol._2 + OiwfsAngle

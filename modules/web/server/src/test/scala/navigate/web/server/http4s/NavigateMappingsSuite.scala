@@ -1675,10 +1675,10 @@ class NavigateMappingsSuite extends CatsEffectSuite {
           |    offset: {
           |      probeFrameAdjustment: {
           |        probeFrame: GMOS_OIWFS
-          |        deltaX: {
+          |        deltaU: {
           |          arcseconds: 0.1
           |        }
-          |        deltaY: {
+          |        deltaV: {
           |          arcseconds: 0.0
           |        }
           |      }
