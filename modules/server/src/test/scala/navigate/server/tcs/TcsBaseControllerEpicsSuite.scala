@@ -1783,7 +1783,10 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       r1.targetAdjust.angle.value
         .flatMap(_.toDoubleOption)
         .fold(fail("No angle value set"))(v =>
-          assertEqualsDouble(v, Math.toDegrees(Math.atan2(6.0, -8.0)), 1e-6)
+          assertEqualsDouble(normalizeAnglePosDegree(v),
+                             normalizeAnglePosDegree(Math.toDegrees(Math.atan2(-8.0, 6.0))),
+                             1e-6
+          )
         )
       assertEquals(r1.targetAdjust.vt.value.flatMap(_.toIntOption), -2.some)
       assertEquals(r2.targetAdjust.frame.value.flatMap(_.toIntOption), 2.some)
@@ -1854,7 +1857,10 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       r1.originAdjust.angle.value
         .flatMap(_.toDoubleOption)
         .fold(fail("No angle value set"))(v =>
-          assertEqualsDouble(v, Math.toDegrees(Math.atan2(6.0, -8.0)), 1e-6)
+          assertEqualsDouble(normalizeAnglePosDegree(v),
+                             normalizeAnglePosDegree(Math.toDegrees(Math.atan2(-8.0, 6.0))),
+                             1e-6
+          )
         )
       assertEquals(r1.originAdjust.vt.value.flatMap(_.toIntOption), -2.some)
       assertEquals(r2.originAdjust.frame.value.flatMap(_.toIntOption), 2.some)
@@ -1898,7 +1904,10 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       r1.pointingAdjust.angle.value
         .flatMap(_.toDoubleOption)
         .fold(fail("No angle value set"))(v =>
-          assertEqualsDouble(v, Math.toDegrees(Math.atan2(6.0, -8.0)), 1e-6)
+          assertEqualsDouble(normalizeAnglePosDegree(v),
+                             normalizeAnglePosDegree(Math.toDegrees(Math.atan2(-8.0, 6.0))),
+                             1e-6
+          )
         )
       assertEquals(r2.pointingAdjust.frame.value.flatMap(_.toIntOption), 2.some)
       r2.pointingAdjust.size.value
@@ -2135,5 +2144,10 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
         )
       )
     }
+
+  def normalizeAnglePosDegree(a: Double): Double =
+    if (a < 0.0) a + 360.0
+    else if (a >= 360.0) a - 360.0
+    else a
 
 }

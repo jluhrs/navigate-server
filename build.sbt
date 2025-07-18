@@ -18,7 +18,7 @@ ThisBuild / resolvers ++= Seq(
   "JCenter".at("https://jcenter.bintray.com/")
 )
 
-Global / resolvers ++= Resolver.sonatypeOssRepos("public")
+Global / resolvers += Resolver.sonatypeCentralSnapshots
 
 // Uncomment for local testing
 // ThisBuild / resolvers += "Local Repository" at "file://"+Path.userHome.absolutePath+"/.ivy2/local"
