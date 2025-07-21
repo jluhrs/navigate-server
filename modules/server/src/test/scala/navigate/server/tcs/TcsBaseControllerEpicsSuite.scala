@@ -38,6 +38,9 @@ import mouse.boolean.given
 import munit.CatsEffectSuite
 import navigate.epics.TestChannel
 import navigate.model.Distance
+import navigate.model.FocalPlaneOffset
+import navigate.model.FocalPlaneOffset.DeltaX
+import navigate.model.FocalPlaneOffset.DeltaY
 import navigate.model.HandsetAdjustment
 import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
@@ -1893,10 +1896,25 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
                     )
                   )
       r2       <- st.tcs.get
+      _        <- ctr.pointingAdjust(
+                    HandsetAdjustment.HorizontalAdjustment(Angle.fromDoubleArcseconds(-3.0),
+                                                           Angle.fromDoubleArcseconds(4.0)
+                    )
+                  )
+      r3       <- st.tcs.get
+      _        <- ctr.pointingAdjust(
+                    HandsetAdjustment.FocalPlaneAdjustment(
+                      FocalPlaneOffset(DeltaX(Angle.fromDoubleArcseconds(3.0)),
+                                       DeltaY(Angle.fromDoubleArcseconds(4.0))
+                      )
+                    )
+                  )
+      r4       <- st.tcs.get
     } yield {
       assert(r1.pointingAdjust.frame.connected)
       assert(r1.pointingAdjust.size.connected)
       assert(r1.pointingAdjust.angle.connected)
+      // Equatorial coordinates (RA, Dec)
       assertEquals(r1.pointingAdjust.frame.value.flatMap(_.toIntOption), 3.some)
       r1.pointingAdjust.size.value
         .flatMap(_.toDoubleOption)
@@ -1909,6 +1927,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
                              1e-6
           )
         )
+      // Instrument coordinates (P, Q)
       assertEquals(r2.pointingAdjust.frame.value.flatMap(_.toIntOption), 2.some)
       r2.pointingAdjust.size.value
         .flatMap(_.toDoubleOption)
@@ -1916,6 +1935,32 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       r2.pointingAdjust.angle.value
         .flatMap(_.toDoubleOption)
         .fold(fail("No angle value set"))(v => assertEqualsDouble(v, 225.0, 1e-6))
+      // Horizontal Coordinates (Az, El)
+      assertEquals(r3.pointingAdjust.frame.value.flatMap(_.toIntOption), 0.some)
+      r3.pointingAdjust.size.value
+        .flatMap(_.toDoubleOption)
+        .fold(fail("No size value set"))(v => assertEqualsDouble(v, 5.0, 1e-6))
+      r3.pointingAdjust.angle.value
+        .flatMap(_.toDoubleOption)
+        .fold(fail("No angle value set"))(v =>
+          assertEqualsDouble(v,
+                             normalizeAnglePosDegree(Math.toDegrees(Math.atan2(-3.0, 4.0))),
+                             1e-6
+          )
+        )
+      // Focal Plane coordinates (x, y)
+      assertEquals(r4.pointingAdjust.frame.value.flatMap(_.toIntOption), 1.some)
+      r4.pointingAdjust.size.value
+        .flatMap(_.toDoubleOption)
+        .fold(fail("No size value set"))(v => assertEqualsDouble(v, 5.0, 1e-6))
+      r4.pointingAdjust.angle.value
+        .flatMap(_.toDoubleOption)
+        .fold(fail("No angle value set"))(v =>
+          assertEqualsDouble(v,
+                             normalizeAnglePosDegree(Math.toDegrees(Math.atan2(-3.0, 4.0))),
+                             1e-6
+          )
+        )
     }
   }
 
