@@ -1754,7 +1754,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
         (ReferenceFrame.Tracking, Angle.decimalArcseconds.get(pol._1).doubleValue, pol._2)
           .pure[F]
       case HandsetAdjustment.FocalPlaneAdjustment(value)                         =>
-        val pol = rectToPolar(-value.deltaY.value, -value.deltaX.value)
+        val pol = rectToPolar(value.deltaY.value, -value.deltaX.value)
         (ReferenceFrame.XY, Angle.decimalArcseconds.get(pol._1).doubleValue, pol._2).pure[F]
       case HandsetAdjustment.HorizontalAdjustment(deltaAz, deltaEl)              =>
         val pol = rectToPolar(deltaEl, deltaAz)
