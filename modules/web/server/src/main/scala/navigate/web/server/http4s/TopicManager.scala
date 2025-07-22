@@ -72,6 +72,24 @@ class TopicManager[F[_]] private (
   )(using Temporal[F]): Stream[F, Unit] =
     genericPoll(eng.getTelescopeState, topic)
 
+  private def targetAdjStatePoll(
+    eng:   NavigateEngine[F],
+    topic: Topic[F, TargetOffsets]
+  )(using Temporal[F]): Stream[F, Unit] =
+    genericPoll(eng.getTargetAdjustments, topic)
+
+  private def originAdjStatePoll(
+    eng:   NavigateEngine[F],
+    topic: Topic[F, FocalPlaneOffset]
+  )(using Temporal[F]): Stream[F, Unit] =
+    genericPoll(eng.getOriginOffset, topic)
+
+  private def pointingAdjStatePoll(
+    eng:   NavigateEngine[F],
+    topic: Topic[F, PointingCorrections]
+  )(using Temporal[F]): Stream[F, Unit] =
+    genericPoll(eng.getPointingOffset, topic)
+
   // Logger of error of last resort.
   private def logError[F[_]: Logger]: PartialFunction[Throwable, F[Unit]] = {
     case e: NavigateFailure =>
@@ -97,6 +115,9 @@ class TopicManager[F[_]] private (
       _ <- guideStatePoll(engine, guideState).compile.drain.start
       _ <- guiderQualityPoll(engine, guidersQuality).compile.drain.start
       _ <- telescopeStatePoll(engine, telescopeState).compile.drain.start
+      _ <- targetAdjStatePoll(engine, targetAdjustment).compile.drain.start
+      _ <- originAdjStatePoll(engine, originAdjustment).compile.drain.start
+      _ <- pointingAdjStatePoll(engine, pointingAdjustment).compile.drain.start
 
       // Start engine event stream
       fiber <-
