@@ -14,7 +14,21 @@ class TcsNorthControllerSim[F[_]: Sync](
   guideRef:    Ref[F, GuideState],
   telStateRef: Ref[F, TelescopeState]
 ) extends TcsBaseControllerSim[F](guideRef, telStateRef)
-    with TcsNorthController[F] {}
+    with TcsNorthController[F] {
+
+  override def getInstrumentPorts: F[InstrumentPorts] =
+    InstrumentPorts(
+      flamingos2Port = 0,
+      ghostPort = 0,
+      gmosPort = 5,
+      gnirsPort = 3,
+      gpiPort = 0,
+      gsaoiPort = 0,
+      nifsPort = 1,
+      niriPort = 0
+    ).pure[F]
+
+}
 
 object TcsNorthControllerSim {
   def build[F[_]: Sync]: F[TcsNorthControllerSim[F]] = for {
