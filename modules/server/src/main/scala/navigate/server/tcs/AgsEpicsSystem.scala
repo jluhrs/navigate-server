@@ -45,6 +45,7 @@ object AgsEpicsSystem {
     def gnirsPort: VerifiedEpics[F, F, Int]
     def gpiPort: VerifiedEpics[F, F, Int]
     def gsaoiPort: VerifiedEpics[F, F, Int]
+    def igrins2Port: VerifiedEpics[F, F, Int]
     def nifsPort: VerifiedEpics[F, F, Int]
     def niriPort: VerifiedEpics[F, F, Int]
     def aoName: VerifiedEpics[F, F, AgMechPosition]
@@ -125,6 +126,9 @@ object AgsEpicsSystem {
         override def gsaoiPort: VerifiedEpics[F, F, Int] =
           VerifiedEpics.readChannel(channels.telltale, channels.instrumentPorts.gsaoi)
 
+        override def igrins2Port: VerifiedEpics[F, F, Int] =
+          VerifiedEpics.readChannel(channels.telltale, channels.instrumentPorts.igrins2)
+
         override def nifsPort: VerifiedEpics[F, F, Int] =
           VerifiedEpics.readChannel(channels.telltale, channels.instrumentPorts.nifs)
 
@@ -158,7 +162,10 @@ object AgsEpicsSystem {
   }
 
   object PwfsAngles {
-    def build[F[_]: Applicative](tt: TelltaleChannel[F], chs: AgsChannels.PwfsAnglesChannels[F]) =
+    def build[F[_]: Applicative](
+      tt:  TelltaleChannel[F],
+      chs: AgsChannels.PwfsAnglesChannels[F]
+    ): PwfsAngles[F] =
       new PwfsAngles[F] {
         override val tableAngle: VerifiedEpics[F, F, Angle] = VerifiedEpics
           .readChannel[F, Double](tt, chs.tableAngle)

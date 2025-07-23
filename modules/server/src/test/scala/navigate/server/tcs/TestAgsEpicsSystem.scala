@@ -30,6 +30,7 @@ object TestAgsEpicsSystem {
     gnirsPort:    TestChannel.State[Int],
     gpiPort:      TestChannel.State[Int],
     gsaoiPort:    TestChannel.State[Int],
+    igrins2Port:  TestChannel.State[Int],
     nifsPort:     TestChannel.State[Int],
     niriPort:     TestChannel.State[Int],
     aoName:       TestChannel.State[String],
@@ -55,6 +56,7 @@ object TestAgsEpicsSystem {
     TestChannel.State.of(""),
     TestChannel.State.of(1),
     TestChannel.State.of(3),
+    TestChannel.State.of(0),
     TestChannel.State.of(0),
     TestChannel.State.of(0),
     TestChannel.State.of(5),
@@ -93,7 +95,8 @@ object TestAgsEpicsSystem {
       niri = new TestChannel[F, State, Int](s, Focus[State](_.niriPort)),
       gnirs = new TestChannel[F, State, Int](s, Focus[State](_.gnirsPort)),
       nifs = new TestChannel[F, State, Int](s, Focus[State](_.nifsPort)),
-      ghost = new TestChannel[F, State, Int](s, Focus[State](_.ghostPort))
+      ghost = new TestChannel[F, State, Int](s, Focus[State](_.ghostPort)),
+      igrins2 = new TestChannel[F, State, Int](s, Focus[State](_.igrins2Port))
     ),
     aoName = new TestChannel[F, State, String](s, Focus[State](_.aoName)),
     hwName = new TestChannel[F, State, String](s, Focus[State](_.hwName)),

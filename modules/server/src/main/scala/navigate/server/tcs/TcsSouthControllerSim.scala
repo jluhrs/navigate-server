@@ -14,7 +14,20 @@ class TcsSouthControllerSim[F[_]: Sync](
   guideRef:    Ref[F, GuideState],
   telStateRef: Ref[F, TelescopeState]
 ) extends TcsBaseControllerSim[F](guideRef, telStateRef)
-    with TcsSouthController[F] {}
+    with TcsSouthController[F] {
+  override def getInstrumentPorts: F[InstrumentPorts] =
+    InstrumentPorts(
+      flamingos2Port = 1,
+      ghostPort = 0,
+      gmosPort = 3,
+      gnirsPort = 0,
+      gpiPort = 0,
+      gsaoiPort = 5,
+      igrins2Port = 0,
+      nifsPort = 0,
+      niriPort = 0
+    ).pure[F]
+}
 
 object TcsSouthControllerSim {
   def build[F[_]: Sync]: F[TcsSouthControllerSim[F]] = for {

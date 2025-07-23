@@ -34,14 +34,15 @@ object AgsChannels {
   val sysName: String = "AGS"
 
   case class InstrumentPortChannels[F[_]](
-    gmos:  Channel[F, Int],
-    gsaoi: Channel[F, Int],
-    gpi:   Channel[F, Int],
-    f2:    Channel[F, Int],
-    niri:  Channel[F, Int],
-    gnirs: Channel[F, Int],
-    nifs:  Channel[F, Int],
-    ghost: Channel[F, Int]
+    gmos:    Channel[F, Int],
+    gsaoi:   Channel[F, Int],
+    gpi:     Channel[F, Int],
+    f2:      Channel[F, Int],
+    niri:    Channel[F, Int],
+    gnirs:   Channel[F, Int],
+    nifs:    Channel[F, Int],
+    ghost:   Channel[F, Int],
+    igrins2: Channel[F, Int]
   )
 
   object InstrumentPortChannels {
@@ -62,6 +63,7 @@ object AgsChannels {
         gn <- buildPortCh("nirs")
         nf <- buildPortCh("nifs")
         gh <- buildPortCh("ghost")
+        ig <- buildPortCh("igrins2")
       } yield InstrumentPortChannels(
         gm,
         gs,
@@ -70,7 +72,8 @@ object AgsChannels {
         nr,
         gn,
         nf,
-        gh
+        gh,
+        ig
       )
     }
 
