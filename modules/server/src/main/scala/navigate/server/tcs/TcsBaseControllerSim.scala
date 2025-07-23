@@ -183,6 +183,7 @@ class TcsBaseControllerSim[F[_]: Sync](
       gnirsPort = 0,
       gpiPort = 0,
       gsaoiPort = 5,
+      igrins2Port = 0,
       nifsPort = 0,
       niriPort = 0
     ).pure[F]

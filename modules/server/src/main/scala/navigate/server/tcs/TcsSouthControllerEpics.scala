@@ -40,6 +40,7 @@ class TcsSouthControllerEpics[F[_]: {Async, Parallel, Logger}](
     gnirsPort = 0,
     gpiPort = 0,
     gsaoiPort = gs,
+    igrins2Port = 0,
     nifsPort = 0,
     niriPort = 0
   )).verifiedRun(ConnectionTimeout)

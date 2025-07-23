@@ -10,6 +10,7 @@ case class InstrumentPorts(
   gnirsPort:      Int,
   gpiPort:        Int,
   gsaoiPort:      Int,
+  igrins2Port:    Int,
   nifsPort:       Int,
   niriPort:       Int
 )

@@ -27,12 +27,14 @@ class TcsNorthControllerEpics[F[_]: {Async, Parallel, Logger}](
     gmF <- sys.ags.status.gmosPort
     gnF <- sys.ags.status.gnirsPort
     gpF <- sys.ags.status.gpiPort
+    igF <- sys.ags.status.igrins2Port
     nfF <- sys.ags.status.nifsPort
     nrF <- sys.ags.status.niriPort
   } yield for {
     gm <- gmF
     gn <- gnF
     gp <- gpF
+    ig <- igF
     nf <- nfF
     nr <- nrF
   } yield InstrumentPorts(
@@ -42,6 +44,7 @@ class TcsNorthControllerEpics[F[_]: {Async, Parallel, Logger}](
     gnirsPort = gn,
     gpiPort = gp,
     gsaoiPort = 0,
+    igrins2Port = ig,
     nifsPort = nf,
     niriPort = nr
   )).verifiedRun(ConnectionTimeout)
