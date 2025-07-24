@@ -1129,7 +1129,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       .targetAdjustCommand
       .angle(Angle.Angle0)
       .targetAdjustCommand
-      .size(Angle.decimalArcseconds.get(size).doubleValue)
+      .size(Angle.signedDecimalArcseconds.get(size).doubleValue)
       .targetAdjustCommand
       .vtMask(List(VirtualTelescope.SourceA))
       .post
@@ -1670,7 +1670,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     iaa:    Option[Angle]
   ): F[ApplyCommandResult] = {
     val (s, angle) = rectToPolar(-offset.q.toAngle, offset.p.toAngle)
-    val size       = Angle.decimalArcseconds.get(s).doubleValue
+    val size       = Angle.signedDecimalArcseconds.get(s).doubleValue
 
     (ipa, iaa)
       .mapN { (ip, ia) =>
@@ -1738,7 +1738,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       tableAngle <- tableAngleF
       armAngle   <- armAngleF
     } yield (ReferenceFrame.XY,
-             Angle.decimalArcseconds.get(pol._1).doubleValue,
+             Angle.signedDecimalArcseconds.get(pol._1).doubleValue,
              pol._2 + tableAngle + armAngle
     )
   ).verifiedRun(ConnectionTimeout)
@@ -1751,18 +1751,21 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     handsetAdjustment match {
       case HandsetAdjustment.EquatorialAdjustment(deltaRA, deltaDec)             =>
         val pol = rectToPolar(deltaDec, deltaRA)
-        (ReferenceFrame.Tracking, Angle.decimalArcseconds.get(pol._1).doubleValue, pol._2)
+        (ReferenceFrame.Tracking, Angle.signedDecimalArcseconds.get(pol._1).doubleValue, pol._2)
           .pure[F]
       case HandsetAdjustment.FocalPlaneAdjustment(value)                         =>
         val pol = rectToPolar(value.deltaY.value, -value.deltaX.value)
-        (ReferenceFrame.XY, Angle.decimalArcseconds.get(pol._1).doubleValue, pol._2).pure[F]
+        (ReferenceFrame.XY, Angle.signedDecimalArcseconds.get(pol._1).doubleValue, pol._2).pure[F]
       case HandsetAdjustment.HorizontalAdjustment(deltaAz, deltaEl)              =>
         val pol = rectToPolar(deltaEl, deltaAz)
-        (ReferenceFrame.AzimuthElevation, Angle.decimalArcseconds.get(pol._1).doubleValue, pol._2)
+        (ReferenceFrame.AzimuthElevation,
+         Angle.signedDecimalArcseconds.get(pol._1).doubleValue,
+         pol._2
+        )
           .pure[F]
       case HandsetAdjustment.InstrumentAdjustment(value)                         =>
         val pol = rectToPolar(-value.q.toAngle, value.p.toAngle)
-        (ReferenceFrame.Instrument, Angle.decimalArcseconds.get(pol._1).doubleValue, pol._2)
+        (ReferenceFrame.Instrument, Angle.signedDecimalArcseconds.get(pol._1).doubleValue, pol._2)
           .pure[F]
       case HandsetAdjustment.ProbeFrameAdjustment(probeRefFrame, deltaX, deltaY) =>
         probeRefFrame match {
@@ -1773,13 +1776,13 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
           case GuideProbe.GmosOIWFS       =>
             val pol = rectToPolar(deltaY, deltaX)
             (ReferenceFrame.XY,
-             Angle.decimalArcseconds.get(pol._1).doubleValue,
+             Angle.signedDecimalArcseconds.get(pol._1).doubleValue,
              pol._2 + OiwfsAngle
             ).pure[F]
           case GuideProbe.Flamingos2OIWFS =>
             val pol = rectToPolar(deltaY, deltaX)
             (ReferenceFrame.XY,
-             Angle.decimalArcseconds.get(pol._1).doubleValue,
+             Angle.signedDecimalArcseconds.get(pol._1).doubleValue,
              pol._2 + OiwfsAngle
             ).pure[F]
         }
