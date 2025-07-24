@@ -1716,8 +1716,15 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       checkGuide(r1, guideCfg)
 
       assert(r1.targetFilter.shortcircuit.connected)
-
       assertEquals(r1.targetFilter.shortcircuit.value, "Closed".some)
+      assert(r1.targetAdjust.size.connected)
+      r1.targetAdjust.size.value
+        .flatMap(_.toDoubleOption)
+        .fold(fail("No size value set"))(v => assertEqualsDouble(v, -60.0, 1e-6))
+      assert(r1.targetAdjust.angle.connected)
+      r1.targetAdjust.angle.value
+        .flatMap(_.toDoubleOption)
+        .fold(fail("No angle value set"))(v => assertEqualsDouble(v, 0.0, 1e-6))
     }
   }
 
