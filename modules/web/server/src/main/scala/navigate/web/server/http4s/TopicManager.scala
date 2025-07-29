@@ -3,13 +3,14 @@
 
 package navigate.web.server.http4s
 
-import cats.Applicative
+import cats.Eq
 import cats.effect.*
 import cats.effect.std.Dispatcher
 import cats.effect.syntax.all.*
 import cats.syntax.all.*
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.Appender
+import fs2.Pipe
 import fs2.Stream
 import fs2.concurrent.Topic
 import navigate.model.AcquisitionAdjustment
@@ -22,6 +23,7 @@ import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuidersQualityValues
 import navigate.server.tcs.TargetOffsets
 import navigate.server.tcs.TelescopeState
+import navigate.web.server.http4s.TopicManager.PollState
 import navigate.web.server.logging.SubscriptionAppender
 import org.typelevel.log4cats.Logger
 
@@ -41,57 +43,91 @@ class TopicManager[F[_]] private (
   val logBuffer:             Ref[F, Seq[ILoggingEvent]]
 ) {
 
+  val ReconnectCycles = 30
+  val RepeatCycles    = 10
+
+  private def calcReconnect(v: Int) = Math.max(0, (v * 3 / 2 + (Math.random * v).toInt) / 2)
+
   private def genericPoll[A](
     fetchData: => F[A],
-    topic:     Topic[F, A]
-  )(using Temporal[F]): Stream[F, Unit] =
-    Stream
-      .fixedRate[F](FiniteDuration(1, TimeUnit.SECONDS))
-      .evalMap(_ => fetchData)
-      .evalMapAccumulate(none[A]) { (acc, data) =>
-        (if (acc.contains(data)) Applicative[F].unit else topic.publish1(data).void)
-          .as(data.some, ())
-      }
-      .void
+    topic:     Topic[F, A],
+    start:     Int,
+    reconnect: Int = ReconnectCycles,
+    force:     Int = RepeatCycles
+  )(using Temporal[F], Logger[F], Eq[A]): Pipe[F, Unit, Unit] =
+    _.evalMapAccumulate[F, PollState[A], Unit](PollState.Retry(Math.max(0, start))) {
+      case (acc, _) =>
+        (acc match {
+          case PollState.Started(last, n) =>
+            fetchData.attempt.flatMap(
+              _.fold[F[PollState[A]]](
+                e =>
+                  Logger[F]
+                    .warn(s"Error on state poll: ${e.getMessage}")
+                    .as(PollState.Retry(calcReconnect(reconnect))),
+                a =>
+                  if (n === 0 || (last: A) =!= a) topic.publish1(a).as(PollState.Started(a, force))
+                  else PollState.Started(last, n - 1).pure[F]
+              )
+            )
+          case PollState.Retry(0)         =>
+            fetchData.attempt.flatMap(
+              _.fold[F[PollState[A]]](
+                e =>
+                  Logger[F]
+                    .warn(s"Error on state poll: ${e.getMessage}")
+                    .as(PollState.Retry(calcReconnect(reconnect))),
+                a => topic.publish1(a).as(PollState.Started(a, force))
+              )
+            )
+          case PollState.Retry(countdown) => PollState.Retry(countdown - 1).pure[F]
+        }).map((_, ()))
+    }.void
 
   private def guideStatePoll(
     eng:   NavigateEngine[F],
-    topic: Topic[F, GuideState]
-  )(using Temporal[F]): Stream[F, Unit] =
-    genericPoll(eng.getGuideState, topic)
+    topic: Topic[F, GuideState],
+    start: Int
+  )(using Temporal[F], Logger[F]): Pipe[F, Unit, Unit] =
+    genericPoll(eng.getGuideState, topic, start)
 
   private def guiderQualityPoll(
     eng:   NavigateEngine[F],
-    topic: Topic[F, GuidersQualityValues]
-  )(using Temporal[F]): Stream[F, Unit] =
-    genericPoll(eng.getGuidersQuality, topic)
+    topic: Topic[F, GuidersQualityValues],
+    start: Int
+  )(using Temporal[F], Logger[F]): Pipe[F, Unit, Unit] =
+    genericPoll(eng.getGuidersQuality, topic, start)
 
   private def telescopeStatePoll(
     eng:   NavigateEngine[F],
-    topic: Topic[F, TelescopeState]
-  )(using Temporal[F]): Stream[F, Unit] =
-    genericPoll(eng.getTelescopeState, topic)
+    topic: Topic[F, TelescopeState],
+    start: Int
+  )(using Temporal[F], Logger[F]): Pipe[F, Unit, Unit] =
+    genericPoll(eng.getTelescopeState, topic, start)
 
   private def targetAdjStatePoll(
     eng:   NavigateEngine[F],
-    topic: Topic[F, TargetOffsets]
-  )(using Temporal[F]): Stream[F, Unit] =
-    genericPoll(eng.getTargetAdjustments, topic)
+    topic: Topic[F, TargetOffsets],
+    start: Int
+  )(using Temporal[F], Logger[F]): Pipe[F, Unit, Unit] =
+    genericPoll(eng.getTargetAdjustments, topic, start)
 
   private def originAdjStatePoll(
     eng:   NavigateEngine[F],
-    topic: Topic[F, FocalPlaneOffset]
-  )(using Temporal[F]): Stream[F, Unit] =
-    genericPoll(eng.getOriginOffset, topic)
+    topic: Topic[F, FocalPlaneOffset],
+    start: Int
+  )(using Temporal[F], Logger[F]): Pipe[F, Unit, Unit] =
+    genericPoll(eng.getOriginOffset, topic, start)
 
   private def pointingAdjStatePoll(
     eng:   NavigateEngine[F],
-    topic: Topic[F, PointingCorrections]
-  )(using Temporal[F]): Stream[F, Unit] =
-    genericPoll(eng.getPointingOffset, topic)
+    topic: Topic[F, PointingCorrections],
+    start: Int
+  )(using Temporal[F], Logger[F]): Pipe[F, Unit, Unit] =
+    genericPoll(eng.getPointingOffset, topic, start)
 
   // Logger of error of last resort.
-  private def logError[F[_]: Logger]: PartialFunction[Throwable, F[Unit]] = {
+  private def logError(using Logger[F]): PartialFunction[Throwable, F[Unit]] = {
     case e: NavigateFailure =>
       Logger[F].error(e)(s"Navigate global error handler ${NavigateFailure.explain(e)}")
     case e: Exception       => Logger[F].error(e)("Navigate global error handler")
@@ -103,26 +139,30 @@ class TopicManager[F[_]] private (
   def startAll(
     engine: NavigateEngine[F]
   )(using Temporal[F], Logger[F]): F[Fiber[F, Throwable, Unit]] =
-    for {
-      // Start monitoring subscribers
-      _ <- navigateEvents.subscribers
-             .evalMap(l => Logger[F].debug(s"Subscribers amount: $l").whenA(l > 1))
-             .compile
-             .drain
-             .start
+    Stream
+      .emits(
+        List(
+          navigateEvents.subscribers
+            .evalMap(l => Logger[F].debug(s"Subscribers amount: $l").whenA(l > 1)),
+          Stream
+            .fixedDelay[F](FiniteDuration(1, TimeUnit.SECONDS))
+            .broadcastThrough(
+              guideStatePoll(engine, guideState, 1),
+              guiderQualityPoll(engine, guidersQuality, 2),
+              telescopeStatePoll(engine, telescopeState, 3),
+              targetAdjStatePoll(engine, targetAdjustment, 4),
+              originAdjStatePoll(engine, originAdjustment, 5),
+              pointingAdjStatePoll(engine, pointingAdjustment, 6)
+            ),
+          engine.eventStream.through(navigateEvents.publish)
+        )
+      )
+      .parJoinUnbounded
+      .compile
+      .drain
+      .onError(logError)
+      .start
 
-      // Start all polling streams
-      _ <- guideStatePoll(engine, guideState).compile.drain.start
-      _ <- guiderQualityPoll(engine, guidersQuality).compile.drain.start
-      _ <- telescopeStatePoll(engine, telescopeState).compile.drain.start
-      _ <- targetAdjStatePoll(engine, targetAdjustment).compile.drain.start
-      _ <- originAdjStatePoll(engine, originAdjustment).compile.drain.start
-      _ <- pointingAdjStatePoll(engine, pointingAdjustment).compile.drain.start
-
-      // Start engine event stream
-      fiber <-
-        engine.eventStream.through(navigateEvents.publish).compile.drain.onError(logError).start
-    } yield fiber
 }
 
 object TopicManager {
@@ -210,4 +250,12 @@ object TopicManager {
       pointingAdjustment,
       logBuffer
     )
+
+  sealed trait PollState[+T]
+
+  object PollState {
+    case class Started[T](last: T, countdown: Int) extends PollState[T]
+    case class Retry(countdown: Int)               extends PollState[Nothing]
+  }
+
 }

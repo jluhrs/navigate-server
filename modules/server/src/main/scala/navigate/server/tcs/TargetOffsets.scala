@@ -3,6 +3,8 @@
 
 package navigate.server.tcs
 
+import cats.Eq
+import cats.derived.*
 import navigate.model.FocalPlaneOffset
 
 case class TargetOffsets(
@@ -10,7 +12,7 @@ case class TargetOffsets(
   pwfs1:   FocalPlaneOffset,
   pwfs2:   FocalPlaneOffset,
   oiwfs:   FocalPlaneOffset
-)
+) derives Eq
 
 object TargetOffsets {
   val default: TargetOffsets = TargetOffsets(
