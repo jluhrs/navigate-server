@@ -37,10 +37,7 @@ import navigate.model.HandsetAdjustment
 import navigate.model.NavigateCommand
 import navigate.model.NavigateCommand.*
 import navigate.model.NavigateEvent
-import navigate.model.NavigateEvent.CommandFailure
-import navigate.model.NavigateEvent.CommandPaused
-import navigate.model.NavigateEvent.CommandStart
-import navigate.model.NavigateEvent.CommandSuccess
+import navigate.model.NavigateEvent.*
 import navigate.model.NavigateState
 import navigate.model.PointingCorrections
 import navigate.model.config.ControlStrategy
@@ -231,7 +228,7 @@ object NavigateEngine {
 
     override def eventStream: Stream[F, NavigateEvent] =
       engine.process(startState).evalMap { case (s, o) =>
-        stateRef.set(s) *> topic.publish1(navigateState(s)).as(o)
+        logEvent(o) *> stateRef.set(s) *> topic.publish1(navigateState(s)).as(o)
       }
 
     override def mcsPark: F[Unit] =
@@ -788,14 +785,14 @@ object NavigateEngine {
    *
    * @param engine
    *   The state machine.
-   * @param cmdType:
-   *   The command type, used for logs.
-   * @param cmd:
-   *   The actual command, wrapped in effect F.
-   * @param f:
-   *   Lens to the command guard flag in the global state.
-   * @tparam F:
-   *   Type of effect that wraps the command execution.
+   * @param cmdType
+   *   : The command type, used for logs.
+   * @param cmd
+   *   : The actual command, wrapped in effect F.
+   * @param f
+   *   : Lens to the command guard flag in the global state.
+   * @tparam F
+   *   : Type of effect that wraps the command execution.
    * @return
    *   Effect that, when evaluated, will schedule the execution of the command in the state machine.
    */
@@ -805,24 +802,23 @@ object NavigateEngine {
     cmd:     F[ApplyCommandResult]
   ): F[Unit] = engine.offer(
     engine.getState.flatMap { st =>
+      val cmdEvent = CommandStart(cmdType)
       if (!st.tcsActionInProgress) {
         engine
           .modifyState(_.focus(_.commandInProgress).replace(cmdType.some))
-          .as(CommandStart(cmdType).some) <*
+          .as(cmdEvent.some) <*
           Handler
             .fromStream[F, State, Event[F, State, NavigateEvent]](
               Stream.eval[F, Event[F, State, NavigateEvent]](
-                Logger[F].info(s"Start command ${cmdType.name}") *>
-                  cmd.attempt
-                    .map(cmdResultToNavigateEvent(cmdType, _))
-                    .flatTap(logEvent(_, cmdType))
-                    .map(x =>
-                      Event(
-                        engine
-                          .modifyState(_.focus(_.commandInProgress).replace(None))
-                          .as(x.some)
-                      )
+                cmd.attempt
+                  .map(cmdResultToNavigateEvent(cmdType, _))
+                  .map(x =>
+                    Event(
+                      engine
+                        .modifyState(_.focus(_.commandInProgress).replace(None))
+                        .as(x.some)
                     )
+                  )
               )
             )
       } else {
@@ -838,17 +834,18 @@ object NavigateEngine {
   /**
    * Similar to simple command, but here the command is a Handler, executed in the state machine.
    * This gives the command access to the global state, and allows it to have several stages.
+   *
    * @param engine
    *   The state machine.
-   * @param cmdType:
-   *   The command type, used for logs.
-   * @param cmd:
-   *   The actual command, wrapped in a Handle. The command is responsible for generating the Stream
-   *   for later scheduling, although there is a helper method for that: transformCommand
-   * @param f:
-   *   Lens to the command guard flag in the global state.
-   * @tparam F:
-   *   Type of effect that wraps the command execution.
+   * @param cmdType
+   *   : The command type, used for logs.
+   * @param cmd
+   *   : The actual command, wrapped in a Handle. The command is responsible for generating the
+   *   Stream for later scheduling, although there is a helper method for that: transformCommand
+   * @param f
+   *   : Lens to the command guard flag in the global state.
+   * @tparam F
+   *   : Type of effect that wraps the command execution.
    * @return
    *   Effect that, when evaluated, will schedule the execution of the command in the state machine.
    */
@@ -883,7 +880,7 @@ object NavigateEngine {
         CommandFailure(cmdType, s"${cmdType.name} command failed with error: ${e.getMessage}")
     }
 
-  private def transformCommand[F[_]: {MonadThrow, Logger}](
+  private def transformCommand[F[_]](
     cmdType: NavigateCommand,
     cmd:     Handler[F, State, ApplyCommandResult, Unit]
   ): Handler[F, State, Event[F, State, NavigateEvent], Unit] =
@@ -891,29 +888,30 @@ object NavigateEngine {
       Handler.RetVal(
         ret.v,
         ret.s.map { ss =>
-          Stream.eval(
-            Logger[F].info(s"Start command ${cmdType.name}")
-          ) *>
-            ss.attempt
-              .map(cmdResultToNavigateEvent(cmdType, _))
-              .evalTap(logEvent(_, cmdType))
-              .map { x =>
-                Event(
-                  Handler
-                    .modify[F, State, Event[F, State, NavigateEvent]](
-                      _.focus(_.commandInProgress).replace(None)
-                    )
-                    .as(x.some)
-                )
-              }
+          ss.attempt
+            .map(cmdResultToNavigateEvent(cmdType, _))
+            .map { x =>
+              Event(
+                Handler
+                  .modify[F, State, Event[F, State, NavigateEvent]](
+                    _.focus(_.commandInProgress).replace(None)
+                  )
+                  .as(x.some)
+              )
+            }
         }
       )
     })
 
-  private def logEvent[F[_]: Logger](x: NavigateEvent, cmdType: NavigateCommand): F[Unit] =
-    val logMessage = s"Command ${cmdType.name} ended with result $x"
-    x match
-      case _: CommandFailure => Logger[F].error(logMessage)
-      case _                 => Logger[F].info(logMessage)
+  private def logEvent[F[_]: {Logger, Applicative}](x: NavigateEvent): F[Unit] =
+    x match {
+      case ConnectionOpenEvent(userDetails, clientId, serverVersion) =>
+        Logger[F].info(s"ConnectionOpenEvent($userDetails, $clientId, $serverVersion)")
+      case CommandStart(cmd)                                         => Logger[F].info(s"CommandStart(${cmd.show})")
+      case CommandSuccess(cmd)                                       => Logger[F].info(s"CommandSuccess(${cmd.name})")
+      case CommandPaused(cmd)                                        => Logger[F].info(s"CommandPaused(${cmd.name})")
+      case CommandFailure(cmd, msg)                                  => Logger[F].error(s"CommandFailure(${cmd.name})")
+      case _                                                         => Applicative[F].unit
+    }
 
 }
