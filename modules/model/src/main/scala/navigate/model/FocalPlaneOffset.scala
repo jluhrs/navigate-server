@@ -3,13 +3,15 @@
 
 package navigate.model
 
+import cats.Eq
+import cats.derived.*
 import lucuma.core.math.Angle
 import lucuma.core.math.Offset
 import lucuma.core.util.NewType
 import navigate.model.FocalPlaneOffset.DeltaX
 import navigate.model.FocalPlaneOffset.DeltaY
 
-case class FocalPlaneOffset(deltaX: DeltaX, deltaY: DeltaY)
+case class FocalPlaneOffset(deltaX: DeltaX, deltaY: DeltaY) derives Eq
 
 object FocalPlaneOffset {
   object DeltaX extends NewType[Angle]
