@@ -1,23 +1,28 @@
 // Copyright (c) 2016-2025 Association of Universities for Research in Astronomy, Inc. (AURA)
 // For license information see LICENSE or https://opensource.org/licenses/BSD-3-Clause
 
-package navigate.server.tcs
+package navigate.model
 
-import lucuma.core.math.Angle
-import lucuma.core.math.Coordinates
-import lucuma.core.math.Epoch
-import lucuma.core.math.Parallax
-import lucuma.core.math.ProperMotion
-import lucuma.core.math.RadialVelocity
-import lucuma.core.math.Wavelength
+import cats.Show
+import cats.derived.*
+import lucuma.core.math.*
+import lucuma.core.math.Coordinates.given
+import lucuma.core.math.Epoch.given
+import lucuma.core.math.RadialVelocity.given
+import lucuma.core.math.Wavelength.given
 import monocle.Lens
 
-sealed trait Target extends Product with Serializable {
+sealed trait Target extends Product with Serializable derives Show {
   val objectName: String
   val wavelength: Option[Wavelength]
 }
 
 object Target {
+
+  given Show[ProperMotion] = Show.fromToString
+
+  given Show[Parallax] = Show.fromToString
+
   case class SiderealTarget(
     override val objectName: String,
     override val wavelength: Option[Wavelength],
@@ -26,25 +31,29 @@ object Target {
     properMotion:            Option[ProperMotion],
     radialVelocity:          Option[RadialVelocity],
     parallax:                Option[Parallax]
-  ) extends Target
+  ) extends Target derives Show
 
   case class Azimuth(toAngle: Angle)
 
+  given Show[Azimuth] = Show.show(a => f"Azimuth(${a.toAngle.toDoubleDegrees}%.2f)")
+
   case class Elevation(toAngle: Angle)
 
-  case class AzElCoordinates(azimuth: Azimuth, elevation: Elevation)
+  given Show[Elevation] = Show.show(a => f"Elevation(${a.toAngle.toDoubleDegrees}%.2f)")
+
+  case class AzElCoordinates(azimuth: Azimuth, elevation: Elevation) derives Show
 
   case class AzElTarget(
     override val objectName: String,
     override val wavelength: Option[Wavelength],
     coordinates:             AzElCoordinates
-  ) extends Target
+  ) extends Target derives Show
 
   case class EphemerisTarget(
     override val objectName: String,
     override val wavelength: Option[Wavelength],
     ephemerisFile:           String
-  ) extends Target
+  ) extends Target derives Show
 
   val objectName: Lens[Target, String] = Lens.apply[Target, String](_.objectName) { s =>
     {

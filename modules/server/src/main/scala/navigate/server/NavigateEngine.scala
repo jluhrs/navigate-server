@@ -34,12 +34,19 @@ import monocle.syntax.all.focus
 import mouse.all.*
 import navigate.model.FocalPlaneOffset
 import navigate.model.HandsetAdjustment
+import navigate.model.InstrumentSpecifics
 import navigate.model.NavigateCommand
 import navigate.model.NavigateCommand.*
 import navigate.model.NavigateEvent
 import navigate.model.NavigateEvent.*
 import navigate.model.NavigateState
 import navigate.model.PointingCorrections
+import navigate.model.RotatorTrackConfig
+import navigate.model.SlewOptions
+import navigate.model.SwapConfig
+import navigate.model.Target
+import navigate.model.TcsConfig
+import navigate.model.TrackingConfig
 import navigate.model.config.ControlStrategy
 import navigate.model.config.NavigateEngineConfiguration
 import navigate.model.enums.DomeMode
@@ -48,15 +55,8 @@ import navigate.model.enums.ShutterMode
 import navigate.model.enums.VirtualTelescope
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuidersQualityValues
-import navigate.server.tcs.InstrumentSpecifics
-import navigate.server.tcs.RotatorTrackConfig
-import navigate.server.tcs.SlewOptions
-import navigate.server.tcs.Target
 import navigate.server.tcs.TargetOffsets
-import navigate.server.tcs.TcsBaseController.SwapConfig
-import navigate.server.tcs.TcsBaseController.TcsConfig
 import navigate.server.tcs.TelescopeState
-import navigate.server.tcs.TrackingConfig
 import navigate.stateengine.Handler
 import navigate.stateengine.StateEngine
 import navigate.stateengine.StateEngine.Event
@@ -274,9 +274,9 @@ object NavigateEngine {
 
     override def tcsConfig(config: TcsConfig): F[Unit] = command(
       engine,
-      TcsConfigure,
+      TcsConfigure(config),
       transformCommand(
-        TcsConfigure,
+        TcsConfigure(config),
         Handler.modify[F, State, ApplyCommandResult](_.focus(_.onSwappedTarget).replace(false)) *>
           Handler.fromStream(
             Stream.eval(
@@ -294,9 +294,9 @@ object NavigateEngine {
       Logger[F].info(s"Starting slew to ${oid}") *>
         command(
           engine,
-          Slew,
+          Slew(slewOptions, tcsConfig, oid),
           transformCommand(
-            Slew,
+            Slew(slewOptions, tcsConfig, oid),
             Handler.modify[F, State, ApplyCommandResult](
               _.focus(_.onSwappedTarget).replace(false)
             ) *>
@@ -313,9 +313,9 @@ object NavigateEngine {
 
     override def swapTarget(swapConfig: SwapConfig): F[Unit] = command(
       engine,
-      SwapTarget,
+      SwapTarget(swapConfig),
       transformCommand(
-        SwapTarget,
+        SwapTarget(swapConfig),
         Handler.modify[F, State, ApplyCommandResult](_.focus(_.onSwappedTarget).replace(true)) *>
           Handler.fromStream(
             Stream.eval(
@@ -327,9 +327,9 @@ object NavigateEngine {
 
     override def restoreTarget(config: TcsConfig): F[Unit] = command(
       engine,
-      TcsConfigure,
+      RestoreTarget(config),
       transformCommand(
-        TcsConfigure,
+        RestoreTarget(config),
         Handler.modify[F, State, ApplyCommandResult](_.focus(_.onSwappedTarget).replace(false)) *>
           Handler.fromStream(
             Stream.eval(
@@ -342,19 +342,19 @@ object NavigateEngine {
     override def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): F[Unit] =
       simpleCommand(
         engine,
-        InstSpecifics,
+        InstSpecifics(instrumentSpecificsParams),
         systems.tcsCommon.instrumentSpecifics(instrumentSpecificsParams)
       )
 
     override def pwfs1Target(target: Target): F[Unit] = simpleCommand(
       engine,
-      Pwfs1Target,
+      Pwfs1Target(target),
       systems.tcsCommon.pwfs1Target(target)
     )
 
     override def pwfs1ProbeTracking(config: TrackingConfig): F[Unit] = simpleCommand(
       engine,
-      Pwfs1ProbeTracking,
+      Pwfs1ProbeTracking(config),
       systems.tcsCommon.pwfs1ProbeTracking(config)
     )
 
@@ -372,13 +372,13 @@ object NavigateEngine {
 
     override def pwfs2Target(target: Target): F[Unit] = simpleCommand(
       engine,
-      Pwfs2Target,
+      Pwfs2Target(target),
       systems.tcsCommon.pwfs2Target(target)
     )
 
     override def pwfs2ProbeTracking(config: TrackingConfig): F[Unit] = simpleCommand(
       engine,
-      Pwfs2ProbeTracking,
+      Pwfs2ProbeTracking(config),
       systems.tcsCommon.pwfs2ProbeTracking(config)
     )
 
@@ -396,13 +396,13 @@ object NavigateEngine {
 
     override def oiwfsTarget(target: Target): F[Unit] = simpleCommand(
       engine,
-      OiwfsTarget,
+      OiwfsTarget(target),
       systems.tcsCommon.oiwfsTarget(target)
     )
 
     override def oiwfsProbeTracking(config: TrackingConfig): F[Unit] = simpleCommand(
       engine,
-      OiwfsProbeTracking,
+      OiwfsProbeTracking(config),
       systems.tcsCommon.oiwfsProbeTracking(config)
     )
 
@@ -418,19 +418,19 @@ object NavigateEngine {
       systems.tcsCommon.oiwfsFollow(enable)
     )
 
-    override def rotTrackingConfig(cfg: navigate.server.tcs.RotatorTrackConfig): F[Unit] =
+    override def rotTrackingConfig(config: RotatorTrackConfig): F[Unit] =
       simpleCommand(
         engine,
-        RotatorTrackingConfig,
-        systems.tcsCommon.rotTrackingConfig(cfg)
+        RotatorTrackingConfig(config),
+        systems.tcsCommon.rotTrackingConfig(config)
       )
 
     override def enableGuide(config: TelescopeGuideConfig): F[Unit] =
       command(
         engine,
-        EnableGuide,
+        EnableGuide(config),
         transformCommand(
-          EnableGuide,
+          EnableGuide(config),
           Handler.get[F, State, ApplyCommandResult].flatMap { st =>
             Handler.replace(st.focus(_.guideConfig.tcsGuide).replace(config)) *>
               Handler.fromStream(
@@ -470,9 +470,9 @@ object NavigateEngine {
 
     override def pwfs1Observe(period: TimeSpan): F[Unit] = command(
       engine,
-      Pwfs1Observe,
+      Pwfs1Observe(period),
       transformCommand(
-        Pwfs1Observe,
+        Pwfs1Observe(period),
         Handler.fromStream(
           Stream.eval(
             systems.tcsCommon.pwfs1Observe(period)
@@ -489,9 +489,9 @@ object NavigateEngine {
 
     override def pwfs2Observe(period: TimeSpan): F[Unit] = command(
       engine,
-      Pwfs2Observe,
+      Pwfs2Observe(period),
       transformCommand(
-        Pwfs2Observe,
+        Pwfs2Observe(period),
         Handler.fromStream(
           Stream.eval(
             systems.tcsCommon.pwfs2Observe(period)
@@ -508,9 +508,9 @@ object NavigateEngine {
 
     override def oiwfsObserve(period: TimeSpan): F[Unit] = command(
       engine,
-      OiwfsObserve,
+      OiwfsObserve(period),
       transformCommand(
-        OiwfsObserve,
+        OiwfsObserve(period),
         Handler.fromStream(
           Stream.eval(
             systems.tcsCommon.oiwfsObserve(period)
@@ -527,9 +527,9 @@ object NavigateEngine {
 
     override def acObserve(period: TimeSpan): F[Unit] = command(
       engine,
-      AcObserve,
+      AcObserve(period),
       transformCommand(
-        AcObserve,
+        AcObserve(period),
         Handler.fromStream(
           Stream.eval(
             systems.tcsCommon.hrwfsObserve(period)
@@ -606,7 +606,7 @@ object NavigateEngine {
 
     override def lightpathConfig(from: LightSource, to: LightSinkName): F[Unit] = simpleCommand(
       engine,
-      LightPathConfig,
+      LightPathConfig(from, to),
       systems.tcsCommon.lightPath(from, to)
     )
 
