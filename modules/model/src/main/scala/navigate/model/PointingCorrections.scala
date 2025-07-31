@@ -3,13 +3,15 @@
 
 package navigate.model
 
+import cats.Eq
+import cats.derived.*
 import lucuma.core.math.Angle
 import navigate.model.HandsetAdjustment.HorizontalAdjustment
 
 case class PointingCorrections(
   local: HorizontalAdjustment,
   guide: HorizontalAdjustment
-)
+) derives Eq
 
 object PointingCorrections {
   val default: PointingCorrections = PointingCorrections(

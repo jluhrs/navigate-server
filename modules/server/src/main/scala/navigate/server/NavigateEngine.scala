@@ -34,15 +34,19 @@ import monocle.syntax.all.focus
 import mouse.all.*
 import navigate.model.FocalPlaneOffset
 import navigate.model.HandsetAdjustment
+import navigate.model.InstrumentSpecifics
 import navigate.model.NavigateCommand
 import navigate.model.NavigateCommand.*
 import navigate.model.NavigateEvent
-import navigate.model.NavigateEvent.CommandFailure
-import navigate.model.NavigateEvent.CommandPaused
-import navigate.model.NavigateEvent.CommandStart
-import navigate.model.NavigateEvent.CommandSuccess
+import navigate.model.NavigateEvent.*
 import navigate.model.NavigateState
 import navigate.model.PointingCorrections
+import navigate.model.RotatorTrackConfig
+import navigate.model.SlewOptions
+import navigate.model.SwapConfig
+import navigate.model.Target
+import navigate.model.TcsConfig
+import navigate.model.TrackingConfig
 import navigate.model.config.ControlStrategy
 import navigate.model.config.NavigateEngineConfiguration
 import navigate.model.enums.DomeMode
@@ -51,15 +55,8 @@ import navigate.model.enums.ShutterMode
 import navigate.model.enums.VirtualTelescope
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuidersQualityValues
-import navigate.server.tcs.InstrumentSpecifics
-import navigate.server.tcs.RotatorTrackConfig
-import navigate.server.tcs.SlewOptions
-import navigate.server.tcs.Target
 import navigate.server.tcs.TargetOffsets
-import navigate.server.tcs.TcsBaseController.SwapConfig
-import navigate.server.tcs.TcsBaseController.TcsConfig
 import navigate.server.tcs.TelescopeState
-import navigate.server.tcs.TrackingConfig
 import navigate.stateengine.Handler
 import navigate.stateengine.StateEngine
 import navigate.stateengine.StateEngine.Event
@@ -231,7 +228,7 @@ object NavigateEngine {
 
     override def eventStream: Stream[F, NavigateEvent] =
       engine.process(startState).evalMap { case (s, o) =>
-        stateRef.set(s) *> topic.publish1(navigateState(s)).as(o)
+        logEvent(o) *> stateRef.set(s) *> topic.publish1(navigateState(s)).as(o)
       }
 
     override def mcsPark: F[Unit] =
@@ -277,9 +274,9 @@ object NavigateEngine {
 
     override def tcsConfig(config: TcsConfig): F[Unit] = command(
       engine,
-      TcsConfigure,
+      TcsConfigure(config),
       transformCommand(
-        TcsConfigure,
+        TcsConfigure(config),
         Handler.modify[F, State, ApplyCommandResult](_.focus(_.onSwappedTarget).replace(false)) *>
           Handler.fromStream(
             Stream.eval(
@@ -297,9 +294,9 @@ object NavigateEngine {
       Logger[F].info(s"Starting slew to ${oid}") *>
         command(
           engine,
-          Slew,
+          Slew(slewOptions, tcsConfig, oid),
           transformCommand(
-            Slew,
+            Slew(slewOptions, tcsConfig, oid),
             Handler.modify[F, State, ApplyCommandResult](
               _.focus(_.onSwappedTarget).replace(false)
             ) *>
@@ -316,9 +313,9 @@ object NavigateEngine {
 
     override def swapTarget(swapConfig: SwapConfig): F[Unit] = command(
       engine,
-      SwapTarget,
+      SwapTarget(swapConfig),
       transformCommand(
-        SwapTarget,
+        SwapTarget(swapConfig),
         Handler.modify[F, State, ApplyCommandResult](_.focus(_.onSwappedTarget).replace(true)) *>
           Handler.fromStream(
             Stream.eval(
@@ -330,9 +327,9 @@ object NavigateEngine {
 
     override def restoreTarget(config: TcsConfig): F[Unit] = command(
       engine,
-      TcsConfigure,
+      RestoreTarget(config),
       transformCommand(
-        TcsConfigure,
+        RestoreTarget(config),
         Handler.modify[F, State, ApplyCommandResult](_.focus(_.onSwappedTarget).replace(false)) *>
           Handler.fromStream(
             Stream.eval(
@@ -345,19 +342,19 @@ object NavigateEngine {
     override def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): F[Unit] =
       simpleCommand(
         engine,
-        InstSpecifics,
+        InstSpecifics(instrumentSpecificsParams),
         systems.tcsCommon.instrumentSpecifics(instrumentSpecificsParams)
       )
 
     override def pwfs1Target(target: Target): F[Unit] = simpleCommand(
       engine,
-      Pwfs1Target,
+      Pwfs1Target(target),
       systems.tcsCommon.pwfs1Target(target)
     )
 
     override def pwfs1ProbeTracking(config: TrackingConfig): F[Unit] = simpleCommand(
       engine,
-      Pwfs1ProbeTracking,
+      Pwfs1ProbeTracking(config),
       systems.tcsCommon.pwfs1ProbeTracking(config)
     )
 
@@ -375,13 +372,13 @@ object NavigateEngine {
 
     override def pwfs2Target(target: Target): F[Unit] = simpleCommand(
       engine,
-      Pwfs2Target,
+      Pwfs2Target(target),
       systems.tcsCommon.pwfs2Target(target)
     )
 
     override def pwfs2ProbeTracking(config: TrackingConfig): F[Unit] = simpleCommand(
       engine,
-      Pwfs2ProbeTracking,
+      Pwfs2ProbeTracking(config),
       systems.tcsCommon.pwfs2ProbeTracking(config)
     )
 
@@ -399,13 +396,13 @@ object NavigateEngine {
 
     override def oiwfsTarget(target: Target): F[Unit] = simpleCommand(
       engine,
-      OiwfsTarget,
+      OiwfsTarget(target),
       systems.tcsCommon.oiwfsTarget(target)
     )
 
     override def oiwfsProbeTracking(config: TrackingConfig): F[Unit] = simpleCommand(
       engine,
-      OiwfsProbeTracking,
+      OiwfsProbeTracking(config),
       systems.tcsCommon.oiwfsProbeTracking(config)
     )
 
@@ -421,19 +418,19 @@ object NavigateEngine {
       systems.tcsCommon.oiwfsFollow(enable)
     )
 
-    override def rotTrackingConfig(cfg: navigate.server.tcs.RotatorTrackConfig): F[Unit] =
+    override def rotTrackingConfig(config: RotatorTrackConfig): F[Unit] =
       simpleCommand(
         engine,
-        RotatorTrackingConfig,
-        systems.tcsCommon.rotTrackingConfig(cfg)
+        RotatorTrackingConfig(config),
+        systems.tcsCommon.rotTrackingConfig(config)
       )
 
     override def enableGuide(config: TelescopeGuideConfig): F[Unit] =
       command(
         engine,
-        EnableGuide,
+        EnableGuide(config),
         transformCommand(
-          EnableGuide,
+          EnableGuide(config),
           Handler.get[F, State, ApplyCommandResult].flatMap { st =>
             Handler.replace(st.focus(_.guideConfig.tcsGuide).replace(config)) *>
               Handler.fromStream(
@@ -473,9 +470,9 @@ object NavigateEngine {
 
     override def pwfs1Observe(period: TimeSpan): F[Unit] = command(
       engine,
-      Pwfs1Observe,
+      Pwfs1Observe(period),
       transformCommand(
-        Pwfs1Observe,
+        Pwfs1Observe(period),
         Handler.fromStream(
           Stream.eval(
             systems.tcsCommon.pwfs1Observe(period)
@@ -492,9 +489,9 @@ object NavigateEngine {
 
     override def pwfs2Observe(period: TimeSpan): F[Unit] = command(
       engine,
-      Pwfs2Observe,
+      Pwfs2Observe(period),
       transformCommand(
-        Pwfs2Observe,
+        Pwfs2Observe(period),
         Handler.fromStream(
           Stream.eval(
             systems.tcsCommon.pwfs2Observe(period)
@@ -511,9 +508,9 @@ object NavigateEngine {
 
     override def oiwfsObserve(period: TimeSpan): F[Unit] = command(
       engine,
-      OiwfsObserve,
+      OiwfsObserve(period),
       transformCommand(
-        OiwfsObserve,
+        OiwfsObserve(period),
         Handler.fromStream(
           Stream.eval(
             systems.tcsCommon.oiwfsObserve(period)
@@ -530,9 +527,9 @@ object NavigateEngine {
 
     override def acObserve(period: TimeSpan): F[Unit] = command(
       engine,
-      AcObserve,
+      AcObserve(period),
       transformCommand(
-        AcObserve,
+        AcObserve(period),
         Handler.fromStream(
           Stream.eval(
             systems.tcsCommon.hrwfsObserve(period)
@@ -609,7 +606,7 @@ object NavigateEngine {
 
     override def lightpathConfig(from: LightSource, to: LightSinkName): F[Unit] = simpleCommand(
       engine,
-      LightPathConfig,
+      LightPathConfig(from, to),
       systems.tcsCommon.lightPath(from, to)
     )
 
@@ -788,14 +785,14 @@ object NavigateEngine {
    *
    * @param engine
    *   The state machine.
-   * @param cmdType:
-   *   The command type, used for logs.
-   * @param cmd:
-   *   The actual command, wrapped in effect F.
-   * @param f:
-   *   Lens to the command guard flag in the global state.
-   * @tparam F:
-   *   Type of effect that wraps the command execution.
+   * @param cmdType
+   *   : The command type, used for logs.
+   * @param cmd
+   *   : The actual command, wrapped in effect F.
+   * @param f
+   *   : Lens to the command guard flag in the global state.
+   * @tparam F
+   *   : Type of effect that wraps the command execution.
    * @return
    *   Effect that, when evaluated, will schedule the execution of the command in the state machine.
    */
@@ -805,24 +802,23 @@ object NavigateEngine {
     cmd:     F[ApplyCommandResult]
   ): F[Unit] = engine.offer(
     engine.getState.flatMap { st =>
+      val cmdEvent = CommandStart(cmdType)
       if (!st.tcsActionInProgress) {
         engine
           .modifyState(_.focus(_.commandInProgress).replace(cmdType.some))
-          .as(CommandStart(cmdType).some) <*
+          .as(cmdEvent.some) <*
           Handler
             .fromStream[F, State, Event[F, State, NavigateEvent]](
               Stream.eval[F, Event[F, State, NavigateEvent]](
-                Logger[F].info(s"Start command ${cmdType.name}") *>
-                  cmd.attempt
-                    .map(cmdResultToNavigateEvent(cmdType, _))
-                    .flatTap(logEvent(_, cmdType))
-                    .map(x =>
-                      Event(
-                        engine
-                          .modifyState(_.focus(_.commandInProgress).replace(None))
-                          .as(x.some)
-                      )
+                cmd.attempt
+                  .map(cmdResultToNavigateEvent(cmdType, _))
+                  .map(x =>
+                    Event(
+                      engine
+                        .modifyState(_.focus(_.commandInProgress).replace(None))
+                        .as(x.some)
                     )
+                  )
               )
             )
       } else {
@@ -838,17 +834,18 @@ object NavigateEngine {
   /**
    * Similar to simple command, but here the command is a Handler, executed in the state machine.
    * This gives the command access to the global state, and allows it to have several stages.
+   *
    * @param engine
    *   The state machine.
-   * @param cmdType:
-   *   The command type, used for logs.
-   * @param cmd:
-   *   The actual command, wrapped in a Handle. The command is responsible for generating the Stream
-   *   for later scheduling, although there is a helper method for that: transformCommand
-   * @param f:
-   *   Lens to the command guard flag in the global state.
-   * @tparam F:
-   *   Type of effect that wraps the command execution.
+   * @param cmdType
+   *   : The command type, used for logs.
+   * @param cmd
+   *   : The actual command, wrapped in a Handle. The command is responsible for generating the
+   *   Stream for later scheduling, although there is a helper method for that: transformCommand
+   * @param f
+   *   : Lens to the command guard flag in the global state.
+   * @tparam F
+   *   : Type of effect that wraps the command execution.
    * @return
    *   Effect that, when evaluated, will schedule the execution of the command in the state machine.
    */
@@ -883,7 +880,7 @@ object NavigateEngine {
         CommandFailure(cmdType, s"${cmdType.name} command failed with error: ${e.getMessage}")
     }
 
-  private def transformCommand[F[_]: {MonadThrow, Logger}](
+  private def transformCommand[F[_]](
     cmdType: NavigateCommand,
     cmd:     Handler[F, State, ApplyCommandResult, Unit]
   ): Handler[F, State, Event[F, State, NavigateEvent], Unit] =
@@ -891,29 +888,30 @@ object NavigateEngine {
       Handler.RetVal(
         ret.v,
         ret.s.map { ss =>
-          Stream.eval(
-            Logger[F].info(s"Start command ${cmdType.name}")
-          ) *>
-            ss.attempt
-              .map(cmdResultToNavigateEvent(cmdType, _))
-              .evalTap(logEvent(_, cmdType))
-              .map { x =>
-                Event(
-                  Handler
-                    .modify[F, State, Event[F, State, NavigateEvent]](
-                      _.focus(_.commandInProgress).replace(None)
-                    )
-                    .as(x.some)
-                )
-              }
+          ss.attempt
+            .map(cmdResultToNavigateEvent(cmdType, _))
+            .map { x =>
+              Event(
+                Handler
+                  .modify[F, State, Event[F, State, NavigateEvent]](
+                    _.focus(_.commandInProgress).replace(None)
+                  )
+                  .as(x.some)
+              )
+            }
         }
       )
     })
 
-  private def logEvent[F[_]: Logger](x: NavigateEvent, cmdType: NavigateCommand): F[Unit] =
-    val logMessage = s"Command ${cmdType.name} ended with result $x"
-    x match
-      case _: CommandFailure => Logger[F].error(logMessage)
-      case _                 => Logger[F].info(logMessage)
+  private def logEvent[F[_]: {Logger, Applicative}](x: NavigateEvent): F[Unit] =
+    x match {
+      case ConnectionOpenEvent(userDetails, clientId, serverVersion) =>
+        Logger[F].info(s"ConnectionOpenEvent($userDetails, $clientId, $serverVersion)")
+      case CommandStart(cmd)                                         => Logger[F].info(s"CommandStart(${cmd.show})")
+      case CommandSuccess(cmd)                                       => Logger[F].info(s"CommandSuccess(${cmd.name})")
+      case CommandPaused(cmd)                                        => Logger[F].info(s"CommandPaused(${cmd.name})")
+      case CommandFailure(cmd, msg)                                  => Logger[F].error(s"CommandFailure(${cmd.name})")
+      case _                                                         => Applicative[F].unit
+    }
 
 }

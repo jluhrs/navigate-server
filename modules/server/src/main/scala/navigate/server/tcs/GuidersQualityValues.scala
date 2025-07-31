@@ -3,11 +3,14 @@
 
 package navigate.server.tcs
 
+import cats.Eq
+import cats.derived.*
+
 case class GuidersQualityValues(
   pwfs1: GuidersQualityValues.GuiderQuality,
   pwfs2: GuidersQualityValues.GuiderQuality,
   oiwfs: GuidersQualityValues.GuiderQuality
-)
+) derives Eq
 
 object GuidersQualityValues {
 
