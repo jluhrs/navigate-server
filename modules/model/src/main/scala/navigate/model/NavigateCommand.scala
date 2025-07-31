@@ -3,49 +3,35 @@
 
 package navigate.model
 
+import cats.Show
 import cats.kernel.Eq
+import cats.syntax.all.*
 import lucuma.core.enums.GuideProbe
+import lucuma.core.enums.LightSinkName
 import lucuma.core.math.Angle
 import lucuma.core.math.Offset
+import lucuma.core.model.Observation
+import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.TimeSpan
+import navigate.model.HandsetAdjustment.given
 import navigate.model.enums.DomeMode
+import navigate.model.enums.LightSource
 import navigate.model.enums.ShutterMode
 import navigate.model.enums.VirtualTelescope
 
 sealed trait NavigateCommand extends Product with Serializable
 
 object NavigateCommand {
-
-  case class McsFollow(enable: Boolean)                                      extends NavigateCommand
-  case class ScsFollow(enable: Boolean)                                      extends NavigateCommand
-  case class CrcsFollow(enable: Boolean)                                     extends NavigateCommand
-  case class Pwfs1Follow(enable: Boolean)                                    extends NavigateCommand
-  case class Pwfs2Follow(enable: Boolean)                                    extends NavigateCommand
-  case class OiwfsFollow(enable: Boolean)                                    extends NavigateCommand
+  case class AcObserve(period: TimeSpan)                                     extends NavigateCommand
+  case class AcquisitionAdjust(offset: Offset, ipa: Option[Angle], iaa: Option[Angle])
+      extends NavigateCommand
   case class AowfsFollow(enable: Boolean)                                    extends NavigateCommand
+  case class CrcsFollow(enable: Boolean)                                     extends NavigateCommand
+  case class CrcsMove(angle: Angle)                                          extends NavigateCommand
+  case class CrcsStop(brakes: Boolean)                                       extends NavigateCommand
   case class Cwfs1Follow(enable: Boolean)                                    extends NavigateCommand
   case class Cwfs2Follow(enable: Boolean)                                    extends NavigateCommand
   case class Cwfs3Follow(enable: Boolean)                                    extends NavigateCommand
-  case class Odgw1Follow(enable: Boolean)                                    extends NavigateCommand
-  case class Odgw2Follow(enable: Boolean)                                    extends NavigateCommand
-  case class Odgw3Follow(enable: Boolean)                                    extends NavigateCommand
-  case class Odgw4Follow(enable: Boolean)                                    extends NavigateCommand
-  case object McsPark                                                        extends NavigateCommand
-  case object ScsPark                                                        extends NavigateCommand
-  case object CrcsPark                                                       extends NavigateCommand
-  case object Pwfs1Park                                                      extends NavigateCommand
-  case object Pwfs2Park                                                      extends NavigateCommand
-  case object OiwfsPark                                                      extends NavigateCommand
-  case object AowfsPark                                                      extends NavigateCommand
-  case object Cwfs1Park                                                      extends NavigateCommand
-  case object Cwfs2Park                                                      extends NavigateCommand
-  case object Cwfs3Park                                                      extends NavigateCommand
-  case object Odgw1Park                                                      extends NavigateCommand
-  case object Odgw2Park                                                      extends NavigateCommand
-  case object Odgw3Park                                                      extends NavigateCommand
-  case object Odgw4Park                                                      extends NavigateCommand
-  case class CrcsStop(brakes: Boolean)                                       extends NavigateCommand
-  case class CrcsMove(angle: Angle)                                          extends NavigateCommand
   case class EcsCarouselMode(
     domeMode:      DomeMode,
     shutterMode:   ShutterMode,
@@ -53,42 +39,37 @@ object NavigateCommand {
     domeEnable:    Boolean,
     shutterEnable: Boolean
   ) extends NavigateCommand
-  case class EcsVentGatesMove(
-    gateEast: Double,
-    gateWest: Double
-  ) extends NavigateCommand
-  case object TcsConfigure                                                   extends NavigateCommand
-  case object Slew                                                           extends NavigateCommand
-  case object SwapTarget                                                     extends NavigateCommand
-  case object InstSpecifics                                                  extends NavigateCommand
-  case object Pwfs1Target                                                    extends NavigateCommand
-  case object Pwfs1ProbeTracking                                             extends NavigateCommand
-  case object Pwfs2Target                                                    extends NavigateCommand
-  case object Pwfs2ProbeTracking                                             extends NavigateCommand
-  case object OiwfsTarget                                                    extends NavigateCommand
-  case object OiwfsProbeTracking                                             extends NavigateCommand
-  case object RotatorTrackingConfig                                          extends NavigateCommand
-  case object EnableGuide                                                    extends NavigateCommand
-  case object DisableGuide                                                   extends NavigateCommand
-  case object Pwfs1Observe                                                   extends NavigateCommand
-  case object Pwfs1StopObserve                                               extends NavigateCommand
-  case object Pwfs2Observe                                                   extends NavigateCommand
-  case object Pwfs2StopObserve                                               extends NavigateCommand
-  case object OiwfsObserve                                                   extends NavigateCommand
-  case object OiwfsStopObserve                                               extends NavigateCommand
-  case object AcObserve                                                      extends NavigateCommand
-  case object AcStopObserve                                                  extends NavigateCommand
-  case object M1Park                                                         extends NavigateCommand
-  case object M1Unpark                                                       extends NavigateCommand
-  case object M1OpenLoopOff                                                  extends NavigateCommand
-  case object M1OpenLoopOn                                                   extends NavigateCommand
-  case object M1ZeroFigure                                                   extends NavigateCommand
-  case object M1LoadAoFigure                                                 extends NavigateCommand
-  case object M1LoadNonAoFigure                                              extends NavigateCommand
-  case object LightPathConfig                                                extends NavigateCommand
-  case class AcquisitionAdjust(offset: Offset, ipa: Option[Angle], iaa: Option[Angle])
+  case class EcsVentGatesMove(gateEast: Double, gateWest: Double)            extends NavigateCommand
+  case class EnableGuide(config: TelescopeGuideConfig)                       extends NavigateCommand
+  case class InstSpecifics(instrumentSpecificsParams: InstrumentSpecifics)   extends NavigateCommand
+  case class LightPathConfig(from: LightSource, to: LightSinkName)           extends NavigateCommand
+  case class McsFollow(enable: Boolean)                                      extends NavigateCommand
+  case class Odgw1Follow(enable: Boolean)                                    extends NavigateCommand
+  case class Odgw2Follow(enable: Boolean)                                    extends NavigateCommand
+  case class Odgw3Follow(enable: Boolean)                                    extends NavigateCommand
+  case class Odgw4Follow(enable: Boolean)                                    extends NavigateCommand
+  case class OiwfsFollow(enable: Boolean)                                    extends NavigateCommand
+  case class OiwfsObserve(period: TimeSpan)                                  extends NavigateCommand
+  case class OiwfsProbeTracking(config: TrackingConfig)                      extends NavigateCommand
+  case class OiwfsTarget(target: Target)                                     extends NavigateCommand
+  case class OriginAdjust(handsetAdjustment: HandsetAdjustment, openLoops: Boolean)
       extends NavigateCommand
-  case class WfsSky(wfs: GuideProbe, period: TimeSpan)                       extends NavigateCommand
+  case class OriginOffsetClear(openLoops: Boolean)                           extends NavigateCommand
+  case class PointingAdjust(handsetAdjustment: HandsetAdjustment)            extends NavigateCommand
+  case class Pwfs1Follow(enable: Boolean)                                    extends NavigateCommand
+  case class Pwfs1Observe(period: TimeSpan)                                  extends NavigateCommand
+  case class Pwfs1ProbeTracking(config: TrackingConfig)                      extends NavigateCommand
+  case class Pwfs1Target(target: Target)                                     extends NavigateCommand
+  case class Pwfs2Follow(enable: Boolean)                                    extends NavigateCommand
+  case class Pwfs2Observe(period: TimeSpan)                                  extends NavigateCommand
+  case class Pwfs2ProbeTracking(config: TrackingConfig)                      extends NavigateCommand
+  case class Pwfs2Target(target: Target)                                     extends NavigateCommand
+  case class RestoreTarget(config: TcsConfig)                                extends NavigateCommand
+  case class RotatorTrackingConfig(config: RotatorTrackConfig)               extends NavigateCommand
+  case class ScsFollow(enable: Boolean)                                      extends NavigateCommand
+  case class Slew(slewOptions: SlewOptions, tcsConfig: TcsConfig, oid: Option[Observation.Id])
+      extends NavigateCommand
+  case class SwapTarget(swapConfig: SwapConfig)                              extends NavigateCommand
   case class TargetAdjust(
     target:            VirtualTelescope,
     handsetAdjustment: HandsetAdjustment,
@@ -96,92 +77,102 @@ object NavigateCommand {
   ) extends NavigateCommand
   case class TargetOffsetAbsorb(target: VirtualTelescope)                    extends NavigateCommand
   case class TargetOffsetClear(target: VirtualTelescope, openLoops: Boolean) extends NavigateCommand
-  case class OriginAdjust(handsetAdjustment: HandsetAdjustment, openLoops: Boolean)
-      extends NavigateCommand
+  case class TcsConfigure(config: TcsConfig)                                 extends NavigateCommand
+  case class WfsSky(wfs: GuideProbe, period: TimeSpan)                       extends NavigateCommand
+  case object AcStopObserve                                                  extends NavigateCommand
+  case object AowfsPark                                                      extends NavigateCommand
+  case object CrcsPark                                                       extends NavigateCommand
+  case object Cwfs1Park                                                      extends NavigateCommand
+  case object Cwfs2Park                                                      extends NavigateCommand
+  case object Cwfs3Park                                                      extends NavigateCommand
+  case object DisableGuide                                                   extends NavigateCommand
+  case object M1LoadAoFigure                                                 extends NavigateCommand
+  case object M1LoadNonAoFigure                                              extends NavigateCommand
+  case object M1OpenLoopOff                                                  extends NavigateCommand
+  case object M1OpenLoopOn                                                   extends NavigateCommand
+  case object M1Park                                                         extends NavigateCommand
+  case object M1Unpark                                                       extends NavigateCommand
+  case object M1ZeroFigure                                                   extends NavigateCommand
+  case object McsPark                                                        extends NavigateCommand
+  case object Odgw1Park                                                      extends NavigateCommand
+  case object Odgw2Park                                                      extends NavigateCommand
+  case object Odgw3Park                                                      extends NavigateCommand
+  case object Odgw4Park                                                      extends NavigateCommand
+  case object OiwfsPark                                                      extends NavigateCommand
+  case object OiwfsStopObserve                                               extends NavigateCommand
   case object OriginOffsetAbsorb                                             extends NavigateCommand
-  case class OriginOffsetClear(openLoops: Boolean)                           extends NavigateCommand
-  case class PointingAdjust(handsetAdjustment: HandsetAdjustment)            extends NavigateCommand
-  case object PointingOffsetClearLocal                                       extends NavigateCommand
   case object PointingOffsetAbsorbGuide                                      extends NavigateCommand
   case object PointingOffsetClearGuide                                       extends NavigateCommand
+  case object PointingOffsetClearLocal                                       extends NavigateCommand
+  case object Pwfs1Park                                                      extends NavigateCommand
+  case object Pwfs1StopObserve                                               extends NavigateCommand
+  case object Pwfs2Park                                                      extends NavigateCommand
+  case object Pwfs2StopObserve                                               extends NavigateCommand
+  case object ScsPark                                                        extends NavigateCommand
 
   given Eq[NavigateCommand] = Eq.fromUniversalEquals
 
   extension (self: NavigateCommand) {
-    def name: String = self match {
-      case McsFollow(_)               => "Mcs Follow"
-      case ScsFollow(_)               => "Scs Follow"
-      case CrcsFollow(_)              => "Crcs Follow"
-      case Pwfs1Follow(_)             => "Pwfs1 Follow"
-      case Pwfs2Follow(_)             => "Pwfs2 Follow"
-      case OiwfsFollow(_)             => "Oiwfs Follow"
-      case AowfsFollow(_)             => "Aowfs Follow"
-      case Cwfs1Follow(_)             => "Cwfs1 Follow"
-      case Cwfs2Follow(_)             => "Cwfs2 Follow"
-      case Cwfs3Follow(_)             => "Cwfs3 Follow"
-      case Odgw1Follow(_)             => "Odgw1 Follow"
-      case Odgw2Follow(_)             => "Odgw2 Follow"
-      case Odgw3Follow(_)             => "Odgw3 Follow"
-      case Odgw4Follow(_)             => "Odgw4 Follow"
-      case McsPark                    => "Mcs Park"
-      case ScsPark                    => "Scs Park"
-      case CrcsPark                   => "Crcs Park"
-      case Pwfs1Park                  => "Pwfs1 Park"
-      case Pwfs2Park                  => "Pwfs2 Park"
-      case OiwfsPark                  => "Oiwfs Park"
-      case AowfsPark                  => "Aowfs Park"
-      case Cwfs1Park                  => "Cwfs1 Park"
-      case Cwfs2Park                  => "Cwfs2 Park"
-      case Cwfs3Park                  => "Cwfs3 Park"
-      case Odgw1Park                  => "Odgw1 Park"
-      case Odgw2Park                  => "Odgw2 Park"
-      case Odgw3Park                  => "Odgw3 Park"
-      case Odgw4Park                  => "Odgw4 Park"
-      case CrcsStop(_)                => "Crcs Stop"
-      case CrcsMove(_)                => "Crcs Move"
-      case _: EcsCarouselMode         => "Ecs Carousel Mode"
-      case _: EcsVentGatesMove        => "Ecs Vent Gates Move"
-      case TcsConfigure               => "TCS Configuration"
-      case Slew                       => "Slew"
-      case SwapTarget                 => "Swap Target"
-      case InstSpecifics              => "Instrument Specifics"
-      case Pwfs1Target                => "PWFS1"
-      case Pwfs1ProbeTracking         => "PWFS1 Probe Tracking"
-      case Pwfs2Target                => "PWFS2"
-      case Pwfs2ProbeTracking         => "PWFS2 Probe Tracking"
-      case OiwfsTarget                => "OIWFS"
-      case OiwfsProbeTracking         => "OIWFS Probe Tracking"
-      case RotatorTrackingConfig      => "CR Tracking Configuration"
-      case EnableGuide                => "Guide Enable"
-      case DisableGuide               => "Guide Disable"
-      case Pwfs1Observe               => "Pwfs1 Start Exposures"
-      case Pwfs1StopObserve           => "Pwfs1 Stop Exposures"
-      case Pwfs2Observe               => "Pwfs2 Start Exposures"
-      case Pwfs2StopObserve           => "Pwfs2 Stop Exposures"
-      case OiwfsObserve               => "Oiwfs Start Exposures"
-      case OiwfsStopObserve           => "Oiwfs Stop Exposures"
-      case AcObserve                  => "Acquisition Camera Start Exposures"
-      case AcStopObserve              => "Acquisition Camera Stop Exposures"
-      case M1Park                     => "M1 Park"
-      case M1Unpark                   => "M1 Unpark"
-      case M1OpenLoopOff              => "M1 Open Loop Off"
-      case M1OpenLoopOn               => "M1 Open Loop On"
-      case M1ZeroFigure               => "M1 Zero Figure"
-      case M1LoadAoFigure             => "M1 Load Ao Figure"
-      case M1LoadNonAoFigure          => "M1 Load Non Ao Figure"
-      case LightPathConfig            => "Light Path Configuration"
-      case AcquisitionAdjust(_, _, _) => "Acquisition Adjustment Offset"
-      case WfsSky(wfs, _)             => s"$wfs Sky"
-      case TargetAdjust(_, _, _)      => "Target Adjustment"
-      case TargetOffsetAbsorb(_)      => "Target Offset Absorb"
-      case TargetOffsetClear(_, _)    => "Target Offset Clear"
-      case OriginAdjust(_, _)         => "Origin Adjustment"
-      case OriginOffsetAbsorb         => "Origin Offset Absorb"
-      case OriginOffsetClear(_)       => "Origin Offset Clear"
-      case PointingAdjust(_)          => "Pointing Adjustment"
-      case PointingOffsetClearLocal   => "Pointing Local Offset Clear"
-      case PointingOffsetAbsorbGuide  => "Pointing Absorb Guide Offset"
-      case PointingOffsetClearGuide   => "Pointing Clear Guide Offset"
+    def name: String = self.getClass.getSimpleName.takeWhile(_ =!= '$')
+  }
+
+  given Show[NavigateCommand] = Show.show { self =>
+    self match {
+      case AcObserve(period)                                                             => f"${self.name}(period = ${period.toSeconds.toDouble}%.3f)"
+      case AcquisitionAdjust(offset, ipa, iaa)                                           =>
+        s"${self.name}(offset = $offset, ipa = $ipa, iaa = $iaa)"
+      case AowfsFollow(enable)                                                           => s"${self.name}(enable = $enable)"
+      case CrcsFollow(enable)                                                            => s"${self.name}(enable = $enable)"
+      case CrcsMove(angle)                                                               => f"${self.name}(angle = ${angle.toSignedDoubleDegrees}%.2f)"
+      case CrcsStop(brakes)                                                              => s"${self.name}(brakes = $brakes)"
+      case Cwfs1Follow(enable)                                                           => s"${self.name}(enable = $enable)"
+      case Cwfs2Follow(enable)                                                           => s"${self.name}(enable = $enable)"
+      case Cwfs3Follow(enable)                                                           => s"${self.name}(enable = $enable)"
+      case EcsCarouselMode(domeMode, shutterMode, slitHeight, domeEnable, shutterEnable) =>
+        s"${self.name}(domeMode = $domeMode, shutterMode = $shutterMode, slitHeight = $slitHeight, domeEnable = $domeEnable, shutterEnable = $shutterEnable)"
+      case EcsVentGatesMove(gateEast, gateWest)                                          =>
+        s"${self.name}(gateEast = $gateEast, gateWest = $gateWest)"
+      case EnableGuide(config)                                                           => s"${self.name}(config = $config)"
+      case InstSpecifics(instrumentSpecificsParams)                                      =>
+        s"${self.name}(instrumentSpecificsParams = ${instrumentSpecificsParams.show})"
+      case LightPathConfig(from, to)                                                     => s"${self.name}(from = $from, to = $to)"
+      case McsFollow(enable)                                                             => s"${self.name}(enable = $enable)"
+      case Odgw1Follow(enable)                                                           => s"${self.name}(enable = $enable)"
+      case Odgw2Follow(enable)                                                           => s"${self.name}(enable = $enable)"
+      case Odgw3Follow(enable)                                                           => s"${self.name}(enable = $enable)"
+      case Odgw4Follow(enable)                                                           => s"${self.name}(enable = $enable)"
+      case OiwfsFollow(enable)                                                           => s"${self.name}(enable = $enable)"
+      case OiwfsObserve(period)                                                          => f"${self.name}(period = ${period.toSeconds.toDouble}%.3f)"
+      case OiwfsProbeTracking(config)                                                    => s"${self.name}(config = $config)"
+      case OiwfsTarget(target)                                                           => s"${self.name}(target = $target.show)"
+      case OriginAdjust(handsetAdjustment, openLoops)                                    =>
+        s"${self.name}(handsetAdjustment = ${handsetAdjustment.show}, openLoops = $openLoops)"
+      case OriginOffsetClear(openLoops)                                                  => s"${self.name}(openLoops = $openLoops)"
+      case PointingAdjust(handsetAdjustment)                                             =>
+        s"${self.name}(handsetAdjustment = ${handsetAdjustment.show})"
+      case Pwfs1Follow(enable)                                                           => s"${self.name}(enable = $enable)"
+      case Pwfs1Observe(period)                                                          => f"${self.name}(period = ${period.toSeconds.toDouble}%.3f)"
+      case Pwfs1ProbeTracking(config)                                                    => s"${self.name}(config = $config)"
+      case Pwfs1Target(target: Target)                                                   => s"${self.name}(target = $target.show)"
+      case Pwfs2Follow(enable)                                                           => s"${self.name}(enable = $enable)"
+      case Pwfs2Observe(period)                                                          => f"${self.name}(period = ${period.toSeconds.toDouble}%.3f)"
+      case Pwfs2ProbeTracking(config)                                                    => s"${self.name}(config = $config)"
+      case Pwfs2Target(target)                                                           => s"${self.name}(target = $target.show)"
+      case RestoreTarget(config)                                                         => s"${self.name}(config = $config)"
+      case RotatorTrackingConfig(config)                                                 => s"${self.name}(config = $config)"
+      case ScsFollow(enable)                                                             => s"${self.name}(enable = $enable)"
+      case Slew(slewOptions, tcsConfig, oid)                                             =>
+        s"${self.name}(slewOptions = $slewOptions, tcsConfig = ${tcsConfig.show}, oid = $oid)"
+      case SwapTarget(swapConfig)                                                        => s"${self.name}(swapConfig = ${swapConfig.show})"
+      case TargetAdjust(target, handsetAdjustment, openLoops)                            =>
+        s"${self.name}(target = $target, handsetAdjustment = ${handsetAdjustment.show}, openLoops = $openLoops)"
+      case TargetOffsetAbsorb(target)                                                    => s"${self.name}(target = $target)"
+      case TargetOffsetClear(target, openLoops)                                          =>
+        s"${self.name}(target = $target, openLoops = $openLoops)"
+      case TcsConfigure(config)                                                          => s"${self.name}(config = ${config.show})"
+      case WfsSky(wfs, period)                                                           =>
+        f"${self.name}(wfs = $wfs, period = ${period.toSeconds.toDouble}%.3f)"
+      case _                                                                             => self.name
     }
   }
 

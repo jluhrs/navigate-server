@@ -29,6 +29,7 @@ import navigate.epics.VerifiedEpics
 import navigate.epics.VerifiedEpics.*
 import navigate.model.Distance
 import navigate.model.FocalPlaneOffset
+import navigate.model.ShortcircuitTargetFilter
 import navigate.model.enums.AoFoldPosition
 import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
