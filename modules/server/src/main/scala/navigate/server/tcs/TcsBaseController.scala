@@ -3,7 +3,6 @@
 
 package navigate.server.tcs
 
-import lucuma.core.enums.Instrument
 import lucuma.core.enums.LightSinkName
 import lucuma.core.math.Angle
 import lucuma.core.math.Offset
@@ -12,7 +11,14 @@ import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.TimeSpan
 import navigate.model.FocalPlaneOffset
 import navigate.model.HandsetAdjustment
+import navigate.model.InstrumentSpecifics
 import navigate.model.PointingCorrections
+import navigate.model.RotatorTrackConfig
+import navigate.model.SlewOptions
+import navigate.model.SwapConfig
+import navigate.model.Target
+import navigate.model.TcsConfig
+import navigate.model.TrackingConfig
 import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
@@ -22,7 +28,6 @@ import navigate.model.enums.VirtualTelescope
 import navigate.server.ApplyCommandResult
 
 trait TcsBaseController[F[_]] {
-  import TcsBaseController.*
   def mcsPark: F[ApplyCommandResult]
   def mcsFollow(enable:                 Boolean): F[ApplyCommandResult]
   def rotStop(useBrakes:                Boolean): F[ApplyCommandResult]
@@ -115,32 +120,6 @@ trait TcsBaseController[F[_]] {
 }
 
 object TcsBaseController {
-
-  case class TcsConfig(
-    sourceATarget:       Target,
-    instrumentSpecifics: InstrumentSpecifics,
-    pwfs1:               Option[GuiderConfig],
-    pwfs2:               Option[GuiderConfig],
-    oiwfs:               Option[GuiderConfig],
-    rotatorTrackConfig:  RotatorTrackConfig,
-    instrument:          Instrument
-  )
-
-  case class SwapConfig(
-    guideTarget:        Target,
-    acSpecifics:        InstrumentSpecifics,
-    rotatorTrackConfig: RotatorTrackConfig
-  ) {
-    lazy val toTcsConfig: TcsConfig = TcsConfig(
-      guideTarget,
-      acSpecifics,
-      None,
-      None,
-      None,
-      rotatorTrackConfig,
-      Instrument.AcqCam
-    )
-  }
 
   val SystemDefault: String  = "FK5"
   val EquinoxDefault: String = "J2000"

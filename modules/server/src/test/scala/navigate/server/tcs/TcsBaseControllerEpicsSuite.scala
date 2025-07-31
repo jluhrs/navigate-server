@@ -37,11 +37,37 @@ import monocle.syntax.all.*
 import mouse.boolean.given
 import munit.CatsEffectSuite
 import navigate.epics.TestChannel
+import navigate.model.AutoparkAowfs
+import navigate.model.AutoparkGems
+import navigate.model.AutoparkOiwfs
+import navigate.model.AutoparkPwfs1
+import navigate.model.AutoparkPwfs2
 import navigate.model.Distance
 import navigate.model.FocalPlaneOffset
 import navigate.model.FocalPlaneOffset.DeltaX
 import navigate.model.FocalPlaneOffset.DeltaY
+import navigate.model.GuiderConfig
 import navigate.model.HandsetAdjustment
+import navigate.model.InstrumentSpecifics
+import navigate.model.Origin
+import navigate.model.ResetPointing
+import navigate.model.RotatorTrackConfig
+import navigate.model.RotatorTrackingMode
+import navigate.model.ShortcircuitMountFilter
+import navigate.model.ShortcircuitTargetFilter
+import navigate.model.SlewOptions
+import navigate.model.StopGuide
+import navigate.model.Target
+import navigate.model.Target.SiderealTarget
+import navigate.model.TcsConfig
+import navigate.model.TrackingConfig
+import navigate.model.ZeroChopThrow
+import navigate.model.ZeroGuideOffset
+import navigate.model.ZeroInstrumentOffset
+import navigate.model.ZeroMountDiffTrack
+import navigate.model.ZeroMountOffset
+import navigate.model.ZeroSourceDiffTrack
+import navigate.model.ZeroSourceOffset
 import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
@@ -64,7 +90,6 @@ import org.typelevel.log4cats.slf4j.Slf4jLogger
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
 
-import Target.SiderealTarget
 import TcsBaseController.*
 import TestTcsEpicsSystem.{
   GuideConfigState,

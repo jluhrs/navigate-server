@@ -35,11 +35,38 @@ import monocle.Lens
 import mouse.boolean.given
 import navigate.epics.VerifiedEpics
 import navigate.epics.VerifiedEpics.*
+import navigate.model.AutoparkAowfs
+import navigate.model.AutoparkGems
+import navigate.model.AutoparkOiwfs
+import navigate.model.AutoparkPwfs1
+import navigate.model.AutoparkPwfs2
 import navigate.model.Distance
 import navigate.model.FocalPlaneOffset
+import navigate.model.GuiderConfig
 import navigate.model.HandsetAdjustment
 import navigate.model.HandsetAdjustment.HorizontalAdjustment
+import navigate.model.InstrumentSpecifics
+import navigate.model.Origin
 import navigate.model.PointingCorrections
+import navigate.model.ResetPointing
+import navigate.model.RotatorTrackConfig
+import navigate.model.RotatorTrackingMode
+import navigate.model.ShortcircuitMountFilter
+import navigate.model.ShortcircuitTargetFilter
+import navigate.model.SlewOptions
+import navigate.model.StopGuide
+import navigate.model.SwapConfig
+import navigate.model.Target
+import navigate.model.Target.*
+import navigate.model.TcsConfig
+import navigate.model.TrackingConfig
+import navigate.model.ZeroChopThrow
+import navigate.model.ZeroGuideOffset
+import navigate.model.ZeroInstrumentOffset
+import navigate.model.ZeroMountDiffTrack
+import navigate.model.ZeroMountOffset
+import navigate.model.ZeroSourceDiffTrack
+import navigate.model.ZeroSourceOffset
 import navigate.model.enums
 import navigate.model.enums.AoFoldPosition
 import navigate.model.enums.CentralBafflePosition
@@ -60,7 +87,6 @@ import navigate.server.epicsdata.BinaryYesNo
 import navigate.server.tcs.AcquisitionCameraEpicsSystem.*
 import navigate.server.tcs.AgsEpicsSystem.PwfsAngles
 import navigate.server.tcs.ParkStatus.NotParked
-import navigate.server.tcs.Target.*
 import navigate.server.tcs.TcsEpicsSystem.BaseWfsCommands
 import navigate.server.tcs.TcsEpicsSystem.ProbeGuideState
 import navigate.server.tcs.TcsEpicsSystem.ProbeTrackingCommand
@@ -71,7 +97,7 @@ import org.typelevel.log4cats.Logger
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.*
 
-import TcsBaseController.{EquinoxDefault, FixedSystem, SwapConfig, SystemDefault, TcsConfig}
+import TcsBaseController.{EquinoxDefault, FixedSystem, SystemDefault}
 
 /* This class implements the common TCS commands */
 abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
@@ -316,7 +342,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       .post
 
   protected def applyTcsConfig(
-    config: TcsBaseController.TcsConfig
+    config: TcsConfig
   ): TcsCommands[F] => TcsCommands[F] =
     setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.sourceACmd),
               config.sourceATarget
@@ -396,7 +422,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
   // The difference between this and the full applyTcsConfig is that here we keep the instrument parameters, but set
   // the origin for the AC.
   protected def applyPointToGuideConfig(
-    config: TcsBaseController.TcsConfig
+    config: TcsConfig
   ): TcsCommands[F] => TcsCommands[F] =
     setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.sourceACmd),
               config.sourceATarget
@@ -427,7 +453,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
           )
       )
   // Added a 1.5 s wait between selecting the OIWFS and setting targets, to copy TCC
-  override def tcsConfig(config: TcsBaseController.TcsConfig): F[ApplyCommandResult] =
+  override def tcsConfig(config: TcsConfig): F[ApplyCommandResult] =
     disableGuide *>
       (
         selectOiwfs(config) *>
@@ -439,7 +465,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
 
   override def slew(
     slewOptions: SlewOptions,
-    tcsConfig:   TcsBaseController.TcsConfig
+    tcsConfig:   TcsConfig
   ): F[ApplyCommandResult] =
     stopAllWfs.verifiedRun(ConnectionTimeout)
     disableGuide *>

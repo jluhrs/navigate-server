@@ -3,6 +3,8 @@
 
 package navigate.server.tcs
 
+import navigate.model.SlewOptions
+
 case class SlewConfig(
   slewOptions: SlewOptions
 )

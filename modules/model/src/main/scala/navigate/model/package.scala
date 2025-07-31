@@ -4,6 +4,8 @@
 package navigate
 
 import cats.Eq
+import cats.Show
+import lucuma.core.enums.Instrument
 
 import java.util.UUID
 
@@ -13,5 +15,7 @@ package model {
 package object model {
 
   given Eq[ClientId] = Eq.by(x => x.self)
+
+  given Show[Instrument] = Show.fromToString
 
 }
