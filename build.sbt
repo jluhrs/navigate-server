@@ -76,7 +76,7 @@ ThisBuild / scalafixDependencies += "edu.gemini" % "lucuma-schemas_3" % LibraryV
 // Projects
 //////////////
 
-ThisBuild / crossScalaVersions := Seq("3.7.1")
+ThisBuild / crossScalaVersions := Seq("3.7.2")
 ThisBuild / evictionErrorLevel := Level.Warn
 
 lazy val root = tlCrossRootProject.aggregate(
