@@ -304,7 +304,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       iaa = Angle.fromDoubleDegrees(123.45),
       focusOffset = Distance.fromLongMicrometers(2344),
       agName = "gmos",
-      origin = Origin(Distance.fromLongMicrometers(4567), Distance.fromLongMicrometers(-8901))
+      origin = Origin(Angle.fromMicroarcseconds(4567), Angle.fromMicroarcseconds(-8901))
     )
 
     for {
@@ -415,32 +415,50 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       )
       assert(
         rs.origin.xa.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMillimeters.value.toDouble)
+          compareDouble(
+            x.toDouble,
+            instrumentSpecifics.origin.x.toLengthInFocalPlane.toMillimeters.value.toDouble
+          )
         )
       )
       assert(
         rs.origin.xb.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMillimeters.value.toDouble)
+          compareDouble(
+            x.toDouble,
+            instrumentSpecifics.origin.x.toLengthInFocalPlane.toMillimeters.value.toDouble
+          )
         )
       )
       assert(
         rs.origin.xc.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMillimeters.value.toDouble)
+          compareDouble(
+            x.toDouble,
+            instrumentSpecifics.origin.x.toLengthInFocalPlane.toMillimeters.value.toDouble
+          )
         )
       )
       assert(
         rs.origin.ya.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMillimeters.value.toDouble)
+          compareDouble(
+            x.toDouble,
+            instrumentSpecifics.origin.y.toLengthInFocalPlane.toMillimeters.value.toDouble
+          )
         )
       )
       assert(
         rs.origin.yb.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMillimeters.value.toDouble)
+          compareDouble(
+            x.toDouble,
+            instrumentSpecifics.origin.y.toLengthInFocalPlane.toMillimeters.value.toDouble
+          )
         )
       )
       assert(
         rs.origin.yc.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMillimeters.value.toDouble)
+          compareDouble(
+            x.toDouble,
+            instrumentSpecifics.origin.y.toLengthInFocalPlane.toMillimeters.value.toDouble
+          )
         )
       )
 
@@ -467,7 +485,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       iaa = Angle.fromDoubleDegrees(123.45),
       focusOffset = Distance.fromLongMicrometers(2344),
       agName = "gmos",
-      origin = Origin(Distance.fromLongMicrometers(4567), Distance.fromLongMicrometers(-8901))
+      origin = Origin(Angle.fromMicroarcseconds(4567), Angle.fromMicroarcseconds(-8901))
     )
 
     for {
@@ -488,32 +506,50 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       )
       assert(
         rs.origin.xa.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMillimeters.value.toDouble)
+          compareDouble(
+            x.toDouble,
+            instrumentSpecifics.origin.x.toLengthInFocalPlane.toMillimeters.value.toDouble
+          )
         )
       )
       assert(
         rs.origin.xb.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMillimeters.value.toDouble)
+          compareDouble(
+            x.toDouble,
+            instrumentSpecifics.origin.x.toLengthInFocalPlane.toMillimeters.value.toDouble
+          )
         )
       )
       assert(
         rs.origin.xc.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.origin.x.toMillimeters.value.toDouble)
+          compareDouble(
+            x.toDouble,
+            instrumentSpecifics.origin.x.toLengthInFocalPlane.toMillimeters.value.toDouble
+          )
         )
       )
       assert(
         rs.origin.ya.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMillimeters.value.toDouble)
+          compareDouble(
+            x.toDouble,
+            instrumentSpecifics.origin.y.toLengthInFocalPlane.toMillimeters.value.toDouble
+          )
         )
       )
       assert(
         rs.origin.yb.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMillimeters.value.toDouble)
+          compareDouble(
+            x.toDouble,
+            instrumentSpecifics.origin.y.toLengthInFocalPlane.toMillimeters.value.toDouble
+          )
         )
       )
       assert(
         rs.origin.yc.value.exists(x =>
-          compareDouble(x.toDouble, instrumentSpecifics.origin.y.toMillimeters.value.toDouble)
+          compareDouble(
+            x.toDouble,
+            instrumentSpecifics.origin.y.toLengthInFocalPlane.toMillimeters.value.toDouble
+          )
         )
       )
     }

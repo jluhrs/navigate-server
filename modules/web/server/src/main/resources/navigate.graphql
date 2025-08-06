@@ -35,13 +35,13 @@ input AzElTargetInput {
 }
 
 type PointOrigin {
-    x: Distance!
-    y: Distance!
+    x: Angle!
+    y: Angle!
 }
 
 input PointOriginInput {
-    x: DistanceInput!
-    y: DistanceInput!
+    x: AngleInput!
+    y: AngleInput!
 }
 
 input InstrumentSpecificsInput {

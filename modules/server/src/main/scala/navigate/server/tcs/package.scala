@@ -8,11 +8,13 @@ import cats.Monad
 import eu.timepit.refined.types.string.NonEmptyString
 import lucuma.core.enums.Instrument
 import lucuma.core.enums.LightSinkName
+import lucuma.core.math.Angle
 import lucuma.core.util.NewType
 import navigate.epics.Channel
 import navigate.epics.EpicsSystem.TelltaleChannel
 import navigate.epics.VerifiedEpics.VerifiedEpics
 import navigate.epics.VerifiedEpics.writeChannel
+import navigate.model.Distance
 import navigate.server.acm.CadDirective
 import navigate.server.acm.Encoder
 import navigate.server.acm.writeCadParam
@@ -215,4 +217,14 @@ extension (i: Instrument) {
     case _                     => LightSinkName.Ac
 }
 
-val FocalPlaneScale: Double = 1.61144 // arcsec/mm
+private val FocalPlaneScale: Double = 1.61144 // arcsec/mm
+
+extension (a: Angle) {
+  def toLengthInFocalPlane: Distance =
+    Distance.fromBigDecimalMillimeter(Angle.signedDecimalArcseconds.get(a) / FocalPlaneScale)
+}
+
+extension (d: Distance) {
+  def toAngleInFocalPlane: Angle =
+    Angle.fromBigDecimalArcseconds(d.toMillimeters.value * FocalPlaneScale)
+}

@@ -4,15 +4,15 @@
 package navigate.model
 
 import cats.Show
-import navigate.model.Distance
+import lucuma.core.math.Angle
 
 case class Origin(
-  x: Distance,
-  y: Distance
+  x: Angle,
+  y: Angle
 )
 
 object Origin {
   given Show[Origin] = Show.show { o =>
-    f"Origin(x: ${o.x.toMillimeters.value.toDouble}%.2f, y: ${o.y.toMillimeters.value.toDouble}%.2f)"
+    f"Origin(x: ${Angle.signedDecimalArcseconds.get(o.x).toDouble}%.2f, y: ${Angle.signedDecimalArcseconds.get(o.y).toDouble}%.2f)"
   }
 }

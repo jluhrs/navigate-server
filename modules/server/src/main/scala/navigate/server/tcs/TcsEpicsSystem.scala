@@ -483,12 +483,16 @@ object TcsEpicsSystem {
                         FocalPlaneOffset.DeltaY(Angle.fromDoubleRadians(v(3)))
                       ),
                       FocalPlaneOffset(
-                        FocalPlaneOffset.DeltaX(Angle.fromDoubleRadians(v(4)) * FocalPlaneScale),
-                        FocalPlaneOffset.DeltaY(Angle.fromDoubleRadians(v(5)) * FocalPlaneScale)
+                        FocalPlaneOffset
+                          .DeltaX(Distance.fromBigDecimalMillimeter(v(4)).toAngleInFocalPlane),
+                        FocalPlaneOffset
+                          .DeltaY(Distance.fromBigDecimalMillimeter(v(5)).toAngleInFocalPlane)
                       ),
                       FocalPlaneOffset(
-                        FocalPlaneOffset.DeltaX(Angle.fromDoubleRadians(v(6)) * FocalPlaneScale),
-                        FocalPlaneOffset.DeltaY(Angle.fromDoubleRadians(v(7)) * FocalPlaneScale)
+                        FocalPlaneOffset
+                          .DeltaX(Distance.fromBigDecimalMillimeter(v(6)).toAngleInFocalPlane),
+                        FocalPlaneOffset
+                          .DeltaY(Distance.fromBigDecimalMillimeter(v(7)).toAngleInFocalPlane)
                       )
                     ).pure[F]
                   }
@@ -835,21 +839,21 @@ object TcsEpicsSystem {
 
     override val originCommand: OriginCommand[F, TcsCommands[F]] =
       new OriginCommand[F, TcsCommands[F]] {
-        override def originX(v: Distance): TcsCommands[F] =
+        override def originX(v: Angle): TcsCommands[F] =
           addMultipleParams(
             List(
-              tcsEpics.originCmd.setParam1(v.toMillimeters.value.toDouble),
-              tcsEpics.originCmd.setParam3(v.toMillimeters.value.toDouble),
-              tcsEpics.originCmd.setParam5(v.toMillimeters.value.toDouble)
+              tcsEpics.originCmd.setParam1(v.toLengthInFocalPlane.toMillimeters.value.toDouble),
+              tcsEpics.originCmd.setParam3(v.toLengthInFocalPlane.toMillimeters.value.toDouble),
+              tcsEpics.originCmd.setParam5(v.toLengthInFocalPlane.toMillimeters.value.toDouble)
             )
           )
 
-        override def originY(v: Distance): TcsCommands[F] =
+        override def originY(v: Angle): TcsCommands[F] =
           addMultipleParams(
             List(
-              tcsEpics.originCmd.setParam2(v.toMillimeters.value.toDouble),
-              tcsEpics.originCmd.setParam4(v.toMillimeters.value.toDouble),
-              tcsEpics.originCmd.setParam6(v.toMillimeters.value.toDouble)
+              tcsEpics.originCmd.setParam2(v.toLengthInFocalPlane.toMillimeters.value.toDouble),
+              tcsEpics.originCmd.setParam4(v.toLengthInFocalPlane.toMillimeters.value.toDouble),
+              tcsEpics.originCmd.setParam6(v.toLengthInFocalPlane.toMillimeters.value.toDouble)
             )
           )
       }
@@ -1950,8 +1954,8 @@ object TcsEpicsSystem {
   }
 
   trait OriginCommand[F[_], +S] {
-    def originX(v: Distance): S
-    def originY(v: Distance): S
+    def originX(v: Angle): S
+    def originY(v: Angle): S
   }
 
   trait FocusOffsetCommand[F[_], +S] {
