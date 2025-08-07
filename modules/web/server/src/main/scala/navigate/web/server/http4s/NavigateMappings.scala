@@ -1218,8 +1218,8 @@ object NavigateMappings extends GrackleParsers {
   } yield TrackingConfig(aa, ab, ba, bb)
 
   def parseOrigin(l: List[(String, Value)]): Option[Origin] = for {
-    x <- l.collectFirst { case ("x", ObjectValue(v)) => parseDistance(v) }.flatten
-    y <- l.collectFirst { case ("y", ObjectValue(v)) => parseDistance(v) }.flatten
+    x <- l.collectFirst { case ("x", ObjectValue(v)) => parseAngle(v) }.flatten
+    y <- l.collectFirst { case ("y", ObjectValue(v)) => parseAngle(v) }.flatten
   } yield Origin(x, y)
 
   def parseInstrumentSpecificsInput(l: List[(String, Value)]): Option[InstrumentSpecifics] = for {

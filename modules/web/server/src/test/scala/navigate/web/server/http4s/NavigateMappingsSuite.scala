@@ -174,10 +174,10 @@ class NavigateMappingsSuite extends CatsEffectSuite {
                 |      agName: "gmos"
                 |      origin: {
                 |        x: {
-                |          micrometers: 3012
+                |          milliarcseconds: 3012
                 |        }
                 |        y: {
-                |          micrometers: -1234
+                |          milliarcseconds: -1234
                 |        }
                 |      }
                 |    }
@@ -271,10 +271,10 @@ class NavigateMappingsSuite extends CatsEffectSuite {
                 |      agName: "gmos"
                 |      origin: {
                 |        x: {
-                |          micrometers: 3012
+                |          milliarcseconds: 3012
                 |        }
                 |        y: {
-                |          micrometers: -1234
+                |          milliarcseconds: -1234
                 |        }
                 |      }
                 |    }
@@ -367,10 +367,10 @@ class NavigateMappingsSuite extends CatsEffectSuite {
           |      agName: "gmos"
           |      origin: {
           |        x: {
-          |          micrometers: 3012
+          |          milliarcseconds: 3012
           |        }
           |        y: {
-          |          micrometers: -1234
+          |          milliarcseconds: -1234
           |        }
           |      }
           |    }
@@ -425,10 +425,10 @@ class NavigateMappingsSuite extends CatsEffectSuite {
           |    agName: "gmos"
           |    origin: {
           |      x: {
-          |        micrometers: 3012
+          |        milliarcseconds: 3012
           |      }
           |      y: {
-          |        micrometers: -1234
+          |        milliarcseconds: -1234
           |      }
           |    }
           |  }
@@ -501,10 +501,10 @@ class NavigateMappingsSuite extends CatsEffectSuite {
           |    agName: "ac"
           |    origin: {
           |      x: {
-          |        micrometers: 3012
+          |        milliarcseconds: 3012
           |      }
           |      y: {
-          |        micrometers: -1234
+          |        milliarcseconds: -1234
           |      }
           |    }
           |  }
@@ -556,10 +556,10 @@ class NavigateMappingsSuite extends CatsEffectSuite {
           |    agName: "gmos"
           |    origin: {
           |      x: {
-          |        micrometers: 3012
+          |        milliarcseconds: 3012
           |      }
           |      y: {
-          |        micrometers: -1234
+          |        milliarcseconds: -1234
           |      }
           |    }
           |  }
@@ -615,10 +615,10 @@ class NavigateMappingsSuite extends CatsEffectSuite {
                 |    agName: "Test"
                 |    origin: {
                 |      x: {
-                |        millimeters: 12.43
+                |        arcseconds: 12.43
                 |      }
                 |      y: {
-                |        millimeters: 54.54
+                |        arcseconds: 54.54
                 |      }
                 |    }
                 |}) {
