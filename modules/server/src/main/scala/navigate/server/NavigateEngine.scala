@@ -910,7 +910,7 @@ object NavigateEngine {
       case CommandStart(cmd)                                         => Logger[F].info(s"CommandStart(${cmd.show})")
       case CommandSuccess(cmd)                                       => Logger[F].info(s"CommandSuccess(${cmd.name})")
       case CommandPaused(cmd)                                        => Logger[F].info(s"CommandPaused(${cmd.name})")
-      case CommandFailure(cmd, msg)                                  => Logger[F].error(s"CommandFailure(${cmd.name})")
+      case CommandFailure(cmd, msg)                                  => Logger[F].error(s"CommandFailure(${cmd.name}, ${msg})")
       case _                                                         => Applicative[F].unit
     }
 
