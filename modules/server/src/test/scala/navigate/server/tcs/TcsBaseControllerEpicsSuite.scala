@@ -21,6 +21,9 @@ import lucuma.core.math.Coordinates
 import lucuma.core.math.Epoch
 import lucuma.core.math.HourAngle
 import lucuma.core.math.Offset
+import lucuma.core.math.Parallax
+import lucuma.core.math.ProperMotion
+import lucuma.core.math.RadialVelocity
 import lucuma.core.math.Wavelength
 import lucuma.core.model.GuideConfig
 import lucuma.core.model.M1GuideConfig
@@ -221,9 +224,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       coordinates =
         Coordinates.fromHmsDms.getOption(s"$targetRa $targetDec").getOrElse(Coordinates.Zero),
       epoch = Epoch.J2000,
-      properMotion = none,
-      radialVelocity = none,
-      parallax = none
+      properMotion = ProperMotion(ProperMotion.μasyRA(1000), ProperMotion.μasyDec(2000)).some,
+      radialVelocity = RadialVelocity.fromMetersPerSecond.getOption(BigDecimal.decimal(3000)),
+      parallax = Parallax.fromMicroarcseconds(4000).some
     )
 
     val pwfs1Target = SiderealTarget(
@@ -541,15 +544,39 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       obtained.coord2.value,
       Some(Angle.fromStringSignedDMS.reverseGet(expected.coordinates.dec.toAngle))
     )
-    assert(obtained.properMotion1.value.exists(x => compareDouble(x.toDouble, 0.0)))
-    assert(obtained.properMotion2.value.exists(x => compareDouble(x.toDouble, 0.0)))
     assert(
       obtained.epoch.value.exists(x => compareDouble(x.toDouble, expected.epoch.epochYear))
     )
-    assert(obtained.parallax.value.exists(x => compareDouble(x.toDouble, 0.0)))
-    assert(obtained.radialVelocity.value.exists(x => compareDouble(x.toDouble, 0.0)))
     assertEquals(obtained.coordSystem.value, SystemDefault.some)
     assertEquals(obtained.ephemerisFile.value, "".some)
+
+    // Proper motion
+    assert(
+      obtained.properMotion1.value.exists(x =>
+        compareDouble(x.toDouble * 1000.0,
+                      expected.properMotion.map(_.ra.masy.value.toDouble).orEmpty
+        )
+      )
+    )
+    assert(
+      obtained.properMotion2.value.exists(x =>
+        compareDouble(x.toDouble * 1000.0,
+                      expected.properMotion.map(_.dec.masy.value.toDouble).orEmpty
+        )
+      )
+    )
+    assert(
+      obtained.parallax.value.exists(x =>
+        compareDouble(x.toDouble * 1000.0, expected.parallax.map(_.mas.value.toDouble).orEmpty)
+      )
+    )
+    assert(
+      obtained.radialVelocity.value.exists(x =>
+        compareDouble(x.toDouble,
+                      expected.radialVelocity.map(_.toDoubleKilometersPerSecond).orEmpty
+        )
+      )
+    )
   }
 
   private def testTarget(

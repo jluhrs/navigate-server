@@ -8,6 +8,9 @@ import cats.effect.Async
 import cats.effect.Ref
 import cats.effect.Temporal
 import cats.syntax.all.*
+import coulomb.*
+import coulomb.policy.spire.standard.given
+import coulomb.units.accepted.ArcSecond
 import lucuma.core.enums.ComaOption
 import lucuma.core.enums.GuideProbe
 import lucuma.core.enums.Instrument
@@ -22,6 +25,7 @@ import lucuma.core.math.Parallax
 import lucuma.core.math.ProperMotion
 import lucuma.core.math.RadialVelocity
 import lucuma.core.math.Wavelength
+import lucuma.core.math.units.Year
 import lucuma.core.model.GuideConfig
 import lucuma.core.model.M1GuideConfig
 import lucuma.core.model.M2GuideConfig
@@ -224,7 +228,8 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
         .compose[TcsCommands[F]](l.get(_).epoch(t.epoch.epochYear))
         .compose[TcsCommands[F]](l.get(_).equinox(EquinoxDefault))
         .compose[TcsCommands[F]](
-          l.get(_).parallax(t.parallax.getOrElse(Parallax.Zero).mas.value.toDouble)
+          l.get(_)
+            .parallax(t.parallax.getOrElse(Parallax.Zero).mas.toUnit[ArcSecond].value.toDouble)
         )
         .compose[TcsCommands[F]](
           l.get(_)
@@ -234,11 +239,27 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
         )
         .compose[TcsCommands[F]](
           l.get(_)
-            .properMotion1(t.properMotion.getOrElse(ProperMotion.Zero).ra.masy.value.toDouble)
+            .properMotion1(
+              t.properMotion
+                .getOrElse(ProperMotion.Zero)
+                .ra
+                .masy
+                .toUnit[ArcSecond / Year]
+                .value
+                .toDouble
+            )
         )
         .compose[TcsCommands[F]](
           l.get(_)
-            .properMotion2(t.properMotion.getOrElse(ProperMotion.Zero).dec.masy.value.toDouble)
+            .properMotion2(
+              t.properMotion
+                .getOrElse(ProperMotion.Zero)
+                .dec
+                .masy
+                .toUnit[ArcSecond / Year]
+                .value
+                .toDouble
+            )
         )
         .compose[TcsCommands[F]](l.get(_).ephemerisFile(""))
     case t: EphemerisTarget =>
