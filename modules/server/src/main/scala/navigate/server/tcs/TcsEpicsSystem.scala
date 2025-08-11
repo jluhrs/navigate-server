@@ -479,7 +479,7 @@ object TcsEpicsSystem {
                         dec
                       ),
                       FocalPlaneOffset(
-                        FocalPlaneOffset.DeltaX(Angle.fromDoubleRadians(v(2))),
+                        FocalPlaneOffset.DeltaX(Angle.fromDoubleRadians(v(2) * Math.cos(v(1)))),
                         FocalPlaneOffset.DeltaY(Angle.fromDoubleRadians(v(3)))
                       ),
                       FocalPlaneOffset(
