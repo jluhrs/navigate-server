@@ -72,7 +72,7 @@ class TestChannel[F[_]: Temporal, S, A: Eq](s: Ref[F, S], l: Lens[S, State[A]])
 
   override def disconnect: F[Unit] = s.update(l.modify(_.copy(connected = true)))
 
-  override def getName: F[String] = "".pure[F]
+  override def getName: String = ""
 
   override def getConnectionState: F[ConnectionState] =
     s.get.map(l.get(_).connected.fold(ConnectionState.CONNECTED, ConnectionState.DISCONNECTED))

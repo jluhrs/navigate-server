@@ -10,8 +10,11 @@ import cats.effect.Async
 import cats.effect.Ref
 import cats.effect.Temporal
 import cats.effect.std.Dispatcher
+import cats.syntax.all.*
 import monocle.Focus
 import monocle.Lens
+import mouse.all.booleanSyntaxMouse
+import navigate.epics.Channel
 import navigate.epics.EpicsSystem.TelltaleChannel
 import navigate.epics.TestChannel
 import navigate.epics.VerifiedEpics
@@ -19,6 +22,7 @@ import navigate.epics.VerifiedEpics.VerifiedEpics
 import navigate.server.ApplyCommandResult
 import navigate.server.acm.CadDirective
 import navigate.server.acm.GeminiApplyCommand
+import navigate.server.acm.ObserveCommand
 import navigate.server.epicsdata.BinaryOnOff
 import navigate.server.epicsdata.BinaryOnOffCapitalized
 import navigate.server.epicsdata.BinaryYesNo
@@ -57,6 +61,18 @@ object TestTcsEpicsSystem {
   class TestApplyCommand[F[_]: Applicative] extends GeminiApplyCommand[F] {
     override def post(timeout: FiniteDuration): VerifiedEpics[F, F, ApplyCommandResult] =
       VerifiedEpics.pureF[F, F, ApplyCommandResult](ApplyCommandResult.Completed)
+  }
+
+  class TestObserveCommand[F[_]: Applicative](integrating: Channel[F, BinaryYesNo])
+      extends ObserveCommand[F] {
+    override def post(
+      typ:     ObserveCommand.CommandType,
+      timeout: FiniteDuration
+    ): VerifiedEpics[F, F, ApplyCommandResult] = VerifiedEpics.liftF {
+      integrating
+        .put((typ === ObserveCommand.CommandType.PermanentOn).fold(BinaryYesNo.Yes, BinaryYesNo.No))
+        .as(ApplyCommandResult.Completed)
+    }
   }
 
   case class EnclosureChannelsState(
@@ -1152,7 +1168,15 @@ object TestTcsEpicsSystem {
         new TestChannel[F, State, CadDirective](s, Focus[State](_.zeroRotatorGuide))
     )
 
-  def build[F[_]: {Async, Parallel, Dispatcher}](s: Ref[F, State]): TcsEpicsSystem[F] =
-    TcsEpicsSystem.buildSystem(new TestApplyCommand[F], buildChannels(s))
+  def build[F[_]: {Async, Parallel, Dispatcher}](s: Ref[F, State]): TcsEpicsSystem[F] = {
+    val channels = buildChannels(s)
+    TcsEpicsSystem.buildSystem(
+      new TestApplyCommand[F],
+      new TestObserveCommand[F](channels.guide.pwfs1Integrating),
+      new TestObserveCommand[F](channels.guide.pwfs2Integrating),
+      new TestObserveCommand[F](channels.guide.oiwfsIntegrating),
+      channels
+    )
+  }
 
 }
