@@ -217,6 +217,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
         .compose[TcsCommands[F]](l.get(_).properMotion2(0.0))
         .compose[TcsCommands[F]](l.get(_).ephemerisFile(""))
     case t: SiderealTarget  =>
+      val properMotionRaScale = 1.0 / 15.0 / Math.cos(t.coordinates.dec.toRadians)
       { (x: TcsCommands[F]) => l.get(x).objectName(t.objectName) }
         .compose[TcsCommands[F]](l.get(_).coordSystem(SystemDefault))
         .compose[TcsCommands[F]](
@@ -247,7 +248,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
                 .masy
                 .toUnit[ArcSecond / Year]
                 .value
-                .toDouble
+                .toDouble * properMotionRaScale
             )
         )
         .compose[TcsCommands[F]](
