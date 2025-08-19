@@ -81,7 +81,7 @@ case class EpicsSystem[F[_]: {Async, Parallel}](
                   true.pure[F],
                   ch.connect(connectionTimeout).attempt.map(_.isRight)
                 )
-                .flatMap(t => ch.getName.map((_, t)))
+                .map(t => (ch.getName, t))
             )
           )
           .toList

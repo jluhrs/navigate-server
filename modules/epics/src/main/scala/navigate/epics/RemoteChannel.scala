@@ -16,7 +16,7 @@ trait RemoteChannel[F[_]] {
   def connect: F[Unit]
   def connect(timeout: FiniteDuration): F[Unit]
   def disconnect: F[Unit]
-  def getName: F[String]
+  def getName: String
   def getConnectionState: F[ConnectionState]
   def getAccessRights: F[AccessRights]
 }
@@ -30,7 +30,7 @@ object RemoteChannel {
       Async[F].fromCompletableFuture(Async[F].delay(caChannel.connectAsync())).void
     override def connect(timeout: FiniteDuration): F[Unit] = connect.timeout(timeout)
     override def disconnect: F[Unit]                       = Async[F].delay(caChannel.close())
-    override def getName: F[String]                        = Async[F].delay(caChannel.getName)
+    override def getName: String                           = caChannel.getName
     override def getConnectionState: F[ConnectionState]    =
       Async[F].delay(caChannel.getConnectionState)
     override def getAccessRights: F[AccessRights]          = Async[F].delay(caChannel.getAccessRights)
