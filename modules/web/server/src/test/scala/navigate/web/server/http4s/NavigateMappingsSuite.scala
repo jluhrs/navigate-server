@@ -36,6 +36,7 @@ import lucuma.core.util.Enumerated
 import lucuma.core.util.TimeSpan
 import lucuma.core.util.Timestamp
 import monocle.Focus.focus
+import mouse.boolean.*
 import munit.CatsEffectSuite
 import navigate.model.AcquisitionAdjustment
 import navigate.model.CommandResult
@@ -70,7 +71,9 @@ import navigate.server.tcs.MechSystemState
 import navigate.server.tcs.ParkStatus
 import navigate.server.tcs.ParkStatus.*
 import navigate.server.tcs.TargetOffsets
+import navigate.server.tcs.TcsNorthController
 import navigate.server.tcs.TcsNorthControllerSim
+import navigate.server.tcs.TcsSouthController
 import navigate.server.tcs.TcsSouthControllerSim
 import navigate.server.tcs.TelescopeState
 import navigate.web.server.OcsBuildInfo
@@ -124,7 +127,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   }
 
-  test("Process slew command without obs id") {
+  test("Process command without obs id") {
     for {
       mp <- buildMapping()
       r  <- mp.compileAndRun(
@@ -2032,6 +2035,16 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     )
   }
 
+  test("Notify server errors") {
+    for {
+      mp <- buildMapping(NavigateConfiguration.default, true)
+      r  <- mp.compileAndRun("mutation { oiwfsPark { result } }")
+    } yield assertEquals(
+      r.hcursor.downField("errors").downArray.downField("message").as[String],
+      "Error".asRight[DecodingFailure]
+    )
+  }
+
 }
 
 object NavigateMappingsTest {
@@ -2040,243 +2053,249 @@ object NavigateMappingsTest {
 
   val dummyClient = Client.fromHttpApp(HttpApp.notFound[IO])
 
+  class NavigateEngineTest(
+    tcsSouth: TcsSouthController[IO],
+    tcsNorth: TcsNorthController[IO],
+    guideRef: Ref[IO, GuideConfig]
+  ) extends NavigateEngine[IO] {
+
+    override val systems: Systems[IO] = Systems(
+      OdbProxy.dummy[IO],
+      dummyClient,
+      tcsSouth,
+      tcsSouth,
+      tcsNorth
+    )
+
+    override def eventStream: Stream[IO, NavigateEvent] = Stream.empty
+
+    override def mcsPark: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
+
+    override def mcsFollow(enable: Boolean): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def rotStop(useBrakes: Boolean): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def rotPark: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
+
+    override def rotFollow(enable: Boolean): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def rotMove(angle: Angle): IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
+
+    override def ecsCarouselMode(
+      domeMode:      DomeMode,
+      shutterMode:   ShutterMode,
+      slitHeight:    Double,
+      domeEnable:    Boolean,
+      shutterEnable: Boolean
+    ): IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
+
+    override def ecsVentGatesMove(gateEast: Double, westGate: Double): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def slew(
+      slewOptions: SlewOptions,
+      config:      TcsConfig,
+      oid:         Option[Observation.Id]
+    ): IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
+
+    override def instrumentSpecifics(
+      instrumentSpecificsParams: InstrumentSpecifics
+    ): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def pwfs1Target(target: Target): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def pwfs1ProbeTracking(config: TrackingConfig): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def pwfs1Park: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
+
+    override def pwfs1Follow(enable: Boolean): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def pwfs2Target(target: Target): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def pwfs2ProbeTracking(config: TrackingConfig): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def pwfs2Park: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
+
+    override def pwfs2Follow(enable: Boolean): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def oiwfsTarget(target: Target): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def oiwfsProbeTracking(config: TrackingConfig): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def oiwfsPark: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
+
+    override def oiwfsFollow(enable: Boolean): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def rotTrackingConfig(cfg: RotatorTrackConfig): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def enableGuide(config: TelescopeGuideConfig): IO[CommandResult] =
+      tcsSouth.enableGuide(config).as(CommandResult.CommandSuccess)
+
+    override def disableGuide: IO[CommandResult] =
+      tcsSouth.disableGuide.as(CommandResult.CommandSuccess)
+
+    override def tcsConfig(config: TcsConfig): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def pwfs1Observe(period: TimeSpan): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def pwfs1StopObserve: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
+
+    override def pwfs2Observe(period: TimeSpan): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def pwfs2StopObserve: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
+
+    override def oiwfsObserve(period: TimeSpan): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def oiwfsStopObserve: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
+
+    override def acObserve(period: TimeSpan): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def acStopObserve: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
+
+    override def getGuideState: IO[GuideState] = tcsSouth.getGuideState
+
+    override def getGuidersQuality: IO[GuidersQualityValues] = GuidersQualityValues.default.pure[IO]
+
+    override def getTelescopeState: IO[TelescopeState] = tcsSouth.getTelescopeState
+
+    override def scsFollow(enable: Boolean): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def swapTarget(swapConfig: SwapConfig): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def restoreTarget(config: TcsConfig): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def getNavigateState: IO[NavigateState] = NavigateState.default.pure[IO]
+
+    override def getNavigateStateStream: Stream[IO, NavigateState] =
+      Stream.eval(NavigateState.default.pure[IO])
+
+    override def m1Park: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
+
+    override def m1Unpark: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
+
+    override def m1OpenLoopOff: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
+
+    override def m1OpenLoopOn: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
+
+    override def m1ZeroFigure: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
+
+    override def m1LoadAoFigure: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
+
+    override def m1LoadNonAoFigure: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
+
+    override def lightpathConfig(from: LightSource, to: LightSinkName): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def getInstrumentPort(instrument: Instrument): IO[Option[Int]] = (instrument match
+      case Instrument.GmosNorth => 5.some
+      case _                    => none
+    ).pure[IO]
+
+    override def acquisitionAdj(
+      offset: Offset,
+      iaa:    Option[Angle],
+      ipa:    Option[Angle]
+    ): IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
+
+    override def getGuideDemand: IO[GuideConfig] = guideRef.get
+
+    def getTargetAdjustments: IO[TargetOffsets] = TargetOffsets.default.pure[IO]
+
+    override def wfsSky(wfs: GuideProbe, period: TimeSpan): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def getPointingOffset: IO[PointingCorrections] = PointingCorrections.default.pure[IO]
+
+    override def getOriginOffset: IO[FocalPlaneOffset] = FocalPlaneOffset.Zero.pure[IO]
+
+    override def targetAdjust(
+      target:            VirtualTelescope,
+      handsetAdjustment: HandsetAdjustment,
+      openLoops:         Boolean
+    ): IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
+
+    override def originAdjust(
+      handsetAdjustment: HandsetAdjustment,
+      openLoops:         Boolean
+    ): IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
+
+    override def pointingAdjust(handsetAdjustment: HandsetAdjustment): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def targetOffsetAbsorb(target: VirtualTelescope): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def targetOffsetClear(
+      target:    VirtualTelescope,
+      openLoops: Boolean
+    ): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def originOffsetAbsorb: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
+
+    override def originOffsetClear(openLoops: Boolean): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def pointingOffsetClearLocal: IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def pointingOffsetAbsorbGuide: IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def pointingOffsetClearGuide: IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+  }
+
   def buildServer: IO[NavigateEngine[IO]] = for {
     r <- Ref.of[IO, GuideState](GuideState.default)
     p <- Ref.of[IO, TelescopeState](TelescopeState.default)
     q <- Ref.of[IO, GuidersQualityValues](GuidersQualityValues.default)
     g <- Ref.of[IO, GuideConfig](GuideConfig.defaultGuideConfig)
-  } yield {
-    val tcsSouth = new TcsSouthControllerSim[IO](r, p)
-    new NavigateEngine[IO] {
-
-      override val systems: Systems[IO] = Systems(
-        OdbProxy.dummy[IO],
-        dummyClient,
-        tcsSouth,
-        tcsSouth,
-        new TcsNorthControllerSim[IO](r, p)
-      )
-
-      override def eventStream: Stream[IO, NavigateEvent] = Stream.empty
-
-      override def mcsPark: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
-
-      override def mcsFollow(enable: Boolean): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def rotStop(useBrakes: Boolean): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def rotPark: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
-
-      override def rotFollow(enable: Boolean): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def rotMove(angle: Angle): IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
-
-      override def ecsCarouselMode(
-        domeMode:      DomeMode,
-        shutterMode:   ShutterMode,
-        slitHeight:    Double,
-        domeEnable:    Boolean,
-        shutterEnable: Boolean
-      ): IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
-
-      override def ecsVentGatesMove(gateEast: Double, westGate: Double): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def slew(
-        slewOptions: SlewOptions,
-        config:      TcsConfig,
-        oid:         Option[Observation.Id]
-      ): IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
-
-      override def instrumentSpecifics(
-        instrumentSpecificsParams: InstrumentSpecifics
-      ): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def pwfs1Target(target: Target): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def pwfs1ProbeTracking(config: TrackingConfig): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def pwfs1Park: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
-
-      override def pwfs1Follow(enable: Boolean): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def pwfs2Target(target: Target): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def pwfs2ProbeTracking(config: TrackingConfig): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def pwfs2Park: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
-
-      override def pwfs2Follow(enable: Boolean): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def oiwfsTarget(target: Target): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def oiwfsProbeTracking(config: TrackingConfig): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def oiwfsPark: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
-
-      override def oiwfsFollow(enable: Boolean): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def rotTrackingConfig(cfg: RotatorTrackConfig): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def enableGuide(config: TelescopeGuideConfig): IO[CommandResult] =
-        g.update(_.focus(_.tcsGuide).replace(config)) *>
-          r.update(
-            _.copy(
-              mountOffload = config.mountGuide,
-              m1Guide = config.m1Guide,
-              m2Guide = config.m2Guide
-            )
-          ).as(CommandResult.CommandSuccess)
-
-      override def disableGuide: IO[CommandResult] = r
-        .update(
-          _.copy(
-            mountOffload = MountGuideOption.MountGuideOff,
-            m1Guide = M1GuideConfig.M1GuideOff,
-            m2Guide = M2GuideConfig.M2GuideOff
-          )
-        )
-        .as(CommandResult.CommandSuccess)
-
-      override def tcsConfig(config: TcsConfig): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def pwfs1Observe(period: TimeSpan): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def pwfs1StopObserve: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
-
-      override def pwfs2Observe(period: TimeSpan): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def pwfs2StopObserve: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
-
-      override def oiwfsObserve(period: TimeSpan): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def oiwfsStopObserve: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
-
-      override def acObserve(period: TimeSpan): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def acStopObserve: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
-
-      override def getGuideState: IO[GuideState] = r.get
-
-      override def getGuidersQuality: IO[GuidersQualityValues] = q.get
-
-      override def getTelescopeState: IO[TelescopeState] = p.get
-
-      override def scsFollow(enable: Boolean): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def swapTarget(swapConfig: SwapConfig): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def restoreTarget(config: TcsConfig): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def getNavigateState: IO[NavigateState] = NavigateState.default.pure[IO]
-
-      override def getNavigateStateStream: Stream[IO, NavigateState] =
-        Stream.eval(NavigateState.default.pure[IO])
-
-      override def m1Park: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
-
-      override def m1Unpark: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
-
-      override def m1OpenLoopOff: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
-
-      override def m1OpenLoopOn: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
-
-      override def m1ZeroFigure: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
-
-      override def m1LoadAoFigure: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
-
-      override def m1LoadNonAoFigure: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
-
-      override def lightpathConfig(from: LightSource, to: LightSinkName): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def getInstrumentPort(instrument: Instrument): IO[Option[Int]] = (instrument match
-        case Instrument.GmosNorth => 5.some
-        case _                    => none
-      ).pure[IO]
-
-      override def acquisitionAdj(
-        offset: Offset,
-        iaa:    Option[Angle],
-        ipa:    Option[Angle]
-      ): IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
-
-      override def getGuideDemand: IO[GuideConfig] = g.get
-
-      def getTargetAdjustments: IO[TargetOffsets] = TargetOffsets.default.pure[IO]
-
-      override def wfsSky(wfs: GuideProbe, period: TimeSpan): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def getPointingOffset: IO[PointingCorrections] = PointingCorrections.default.pure[IO]
-
-      override def getOriginOffset: IO[FocalPlaneOffset] = FocalPlaneOffset.Zero.pure[IO]
-
-      override def targetAdjust(
-        target:            VirtualTelescope,
-        handsetAdjustment: HandsetAdjustment,
-        openLoops:         Boolean
-      ): IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
-
-      override def originAdjust(
-        handsetAdjustment: HandsetAdjustment,
-        openLoops:         Boolean
-      ): IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
-
-      override def pointingAdjust(handsetAdjustment: HandsetAdjustment): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def targetOffsetAbsorb(target: VirtualTelescope): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def targetOffsetClear(
-        target:    VirtualTelescope,
-        openLoops: Boolean
-      ): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def originOffsetAbsorb: IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
-
-      override def originOffsetClear(openLoops: Boolean): IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def pointingOffsetClearLocal: IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def pointingOffsetAbsorbGuide: IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-
-      override def pointingOffsetClearGuide: IO[CommandResult] =
-        CommandResult.CommandSuccess.pure[IO]
-    }
+  } yield new NavigateEngineTest(
+    new TcsSouthControllerSim[IO](r, p),
+    new TcsNorthControllerSim[IO](r, p),
+    g
+  )
+
+  def buildBadServer: IO[NavigateEngine[IO]] = for {
+    r <- Ref.of[IO, GuideState](GuideState.default)
+    p <- Ref.of[IO, TelescopeState](TelescopeState.default)
+    g <- Ref.of[IO, GuideConfig](GuideConfig.defaultGuideConfig)
+  } yield new NavigateEngineTest(
+    new TcsSouthControllerSim[IO](r, p),
+    new TcsNorthControllerSim[IO](r, p),
+    g
+  ) {
+    override def oiwfsPark: IO[CommandResult] = CommandResult.CommandFailure("Error").pure[IO]
   }
 
   def buildMapping(
-    config: NavigateConfiguration = NavigateConfiguration.default
+    config: NavigateConfiguration = NavigateConfiguration.default,
+    useBad: Boolean = false
   ): IO[NavigateMappings[IO]] = for {
-    eng <- buildServer
+    eng <- useBad.fold(buildBadServer, buildServer)
     log <- Topic[IO, ILoggingEvent]
     gd  <- Topic[IO, GuideState]
     gq  <- Topic[IO, GuidersQualityValues]

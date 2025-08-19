@@ -110,30 +110,35 @@ class NavigateMappings[F[_]: Sync](
   import NavigateMappings._
 
   def telescopeState: F[Result[TelescopeState]] =
-    server.getTelescopeState.attempt.map(_.fold(Result.internalError, Result.success))
+    server.getTelescopeState.attempt.map(_.fold(e => Result.failure(e.getMessage), Result.success))
 
   def guideState: F[Result[GuideState]] =
-    server.getGuideState.attempt.map(_.fold(Result.internalError, Result.success))
+    server.getGuideState.attempt.map(_.fold(e => Result.failure(e.getMessage), Result.success))
 
   def guidersQualityValues: F[Result[GuidersQualityValues]] =
-    server.getGuidersQuality.attempt.map(_.fold(Result.internalError, Result.success))
+    server.getGuidersQuality.attempt.map(_.fold(e => Result.failure(e.getMessage), Result.success))
 
   def navigateState: F[Result[NavigateState]] =
-    server.getNavigateState.attempt.map(_.fold(Result.internalError, Result.success))
+    server.getNavigateState.attempt.map(_.fold(e => Result.failure(e.getMessage), Result.success))
 
   def targetAdjustmentOffsets: F[Result[TargetOffsets]]   =
-    server.getTargetAdjustments.attempt.map(_.fold(Result.internalError, Result.success))
+    server.getTargetAdjustments.attempt.map(
+      _.fold(e => Result.failure(e.getMessage), Result.success)
+    )
   def originAdjustmentOffset: F[Result[FocalPlaneOffset]] =
-    server.getOriginOffset.attempt.map(_.fold(Result.internalError, Result.success))
+    server.getOriginOffset.attempt.map(_.fold(e => Result.failure(e.getMessage), Result.success))
 
   def pointingAdjustmentOffset: F[Result[PointingCorrections]] =
-    server.getPointingOffset.attempt.map(_.fold(Result.internalError, Result.success))
+    server.getPointingOffset.attempt.map(_.fold(e => Result.failure(e.getMessage), Result.success))
 
   def instrumentPort(env: Env): F[Result[Option[Int]]] =
     env
       .get[Instrument]("instrument")
       .map(ins =>
-        server.getInstrumentPort(ins).attempt.map(_.fold(Result.internalError, Result.success))
+        server
+          .getInstrumentPort(ins)
+          .attempt
+          .map(_.fold(e => Result.failure(e.getMessage), Result.success))
       )
       .getOrElse(
         Result.failure[Option[Int]]("instrumentPort parameter could not be parsed.").pure[F]
@@ -159,7 +164,7 @@ class NavigateMappings[F[_]: Sync](
         server
           .mcsFollow(en)
           .attempt
-          .map(x => Result.Success(convertResult(x)))
+          .map(convertResult)
       }
       .getOrElse(
         Result.failure[OperationOutcome]("mountFollow parameter could not be parsed.").pure[F]
@@ -172,7 +177,7 @@ class NavigateMappings[F[_]: Sync](
         server
           .rotFollow(en)
           .attempt
-          .map(x => Result.Success(convertResult(x)))
+          .map(convertResult)
       }
       .getOrElse(
         Result.failure("rotatorFollow parameter could not be parsed.").pure[F]
@@ -185,7 +190,7 @@ class NavigateMappings[F[_]: Sync](
         server
           .rotTrackingConfig(cfg)
           .attempt
-          .map(x => Result.Success(convertResult(x)))
+          .map(convertResult)
       }
       .getOrElse(
         Result.failure("rotatorConfig parameter could not be parsed.").pure[F]
@@ -198,7 +203,7 @@ class NavigateMappings[F[_]: Sync](
         server
           .scsFollow(en)
           .attempt
-          .map(x => Result.Success(convertResult(x)))
+          .map(convertResult)
       }
       .getOrElse(
         Result.failure[OperationOutcome]("scsFollow parameter could not be parsed.").pure[F]
@@ -211,7 +216,7 @@ class NavigateMappings[F[_]: Sync](
         server
           .instrumentSpecifics(isp)
           .attempt
-          .map(x => Result.Success(convertResult(x)))
+          .map(convertResult)
       }
       .getOrElse(
         Result
@@ -226,7 +231,7 @@ class NavigateMappings[F[_]: Sync](
   } yield server
     .slew(so, tc, oid)
     .attempt
-    .map(x => Result.Success(convertResult(x)))).getOrElse(
+    .map(convertResult)).getOrElse(
     Result.failure[OperationOutcome](s"Slew parameters $env oid could not be parsed.").pure[F]
   )
 
@@ -237,7 +242,7 @@ class NavigateMappings[F[_]: Sync](
         server
           .tcsConfig(tc)
           .attempt
-          .map(x => Result.Success(convertResult(x)))
+          .map(convertResult)
       }
       .getOrElse(
         Result
@@ -252,7 +257,7 @@ class NavigateMappings[F[_]: Sync](
         server
           .swapTarget(t)
           .attempt
-          .map(x => Result.Success(convertResult(x)))
+          .map(convertResult)
       }
       .getOrElse(
         Result
@@ -267,7 +272,7 @@ class NavigateMappings[F[_]: Sync](
         server
           .restoreTarget(tc)
           .attempt
-          .map(x => Result.Success(convertResult(x)))
+          .map(convertResult)
       }
       .getOrElse(
         Result
@@ -282,7 +287,7 @@ class NavigateMappings[F[_]: Sync](
       .get[Target]("target")(using classTag[Target])
       .map { oi =>
         cmd(oi).attempt
-          .map(x => Result.Success(convertResult(x)))
+          .map(convertResult)
       }
       .getOrElse(
         Result.failure[OperationOutcome](s"${name}Target parameters could not be parsed.").pure[F]
@@ -295,7 +300,7 @@ class NavigateMappings[F[_]: Sync](
       .get[TrackingConfig]("config")(using classTag[TrackingConfig])
       .map { tc =>
         cmd(tc).attempt
-          .map(x => Result.Success(convertResult(x)))
+          .map(convertResult)
       }
       .getOrElse(
         Result
@@ -310,7 +315,7 @@ class NavigateMappings[F[_]: Sync](
       .get[Boolean]("enable")
       .map { en =>
         cmd(en).attempt
-          .map(x => Result.Success(convertResult(x)))
+          .map(convertResult)
       }
       .getOrElse(
         Result.failure[OperationOutcome](s"${name}Follow parameter could not be parsed.").pure[F]
@@ -323,7 +328,7 @@ class NavigateMappings[F[_]: Sync](
       .get[TimeSpan]("period")
       .map { p =>
         cmd(p).attempt
-          .map(x => Result.Success(convertResult(x)))
+          .map(convertResult)
       }
       .getOrElse(
         Result.failure[OperationOutcome](s"${name}Observe parameter could not be parsed.").pure[F]
@@ -336,7 +341,7 @@ class NavigateMappings[F[_]: Sync](
         server
           .acObserve(p)
           .attempt
-          .map(x => Result.Success(convertResult(x)))
+          .map(convertResult)
       }
       .getOrElse(
         Result.failure[OperationOutcome]("acObserve parameter could not be parsed.").pure[F]
@@ -349,7 +354,7 @@ class NavigateMappings[F[_]: Sync](
         server
           .enableGuide(cfg)
           .attempt
-          .map(x => Result.Success(convertResult(x)))
+          .map(convertResult)
       }
       .getOrElse(
         Result.failure[OperationOutcome]("guideEnable parameters could not be parsed.").pure[F]
@@ -378,7 +383,7 @@ class NavigateMappings[F[_]: Sync](
   } yield server
     .wfsSky(wfs, exp)
     .attempt
-    .map(x => Result.Success(convertResult(x))))
+    .map(convertResult))
     .getOrElse(Result.failure[OperationOutcome]("WFS Sky parameters could not be parsed.").pure[F])
 
   def lightpathConfig(env: Env): F[Result[OperationOutcome]] = (for {
@@ -387,7 +392,7 @@ class NavigateMappings[F[_]: Sync](
   } yield server
     .lightpathConfig(from, to)
     .attempt
-    .map(x => Result.Success(convertResult(x))))
+    .map(convertResult))
     .getOrElse(Result.failure[OperationOutcome]("Slew parameters could not be parsed.").pure[F])
 
   def adjustTarget(env: Env): F[Result[OperationOutcome]] = (for {
@@ -397,7 +402,7 @@ class NavigateMappings[F[_]: Sync](
   } yield server
     .targetAdjust(target, offset, openLoops)
     .attempt
-    .map(x => Result.Success(convertResult(x)))).getOrElse(
+    .map(convertResult)).getOrElse(
     Result.failure[OperationOutcome]("Target adjustment parameters could not be parsed.").pure[F]
   )
 
@@ -407,7 +412,7 @@ class NavigateMappings[F[_]: Sync](
   } yield server
     .originAdjust(offset, openLoops)
     .attempt
-    .map(x => Result.Success(convertResult(x)))).getOrElse(
+    .map(convertResult)).getOrElse(
     Result.failure[OperationOutcome]("Origin adjustment parameters could not be parsed.").pure[F]
   )
 
@@ -416,7 +421,7 @@ class NavigateMappings[F[_]: Sync](
   } yield server
     .pointingAdjust(offset)
     .attempt
-    .map(x => Result.Success(convertResult(x)))).getOrElse(
+    .map(convertResult)).getOrElse(
     Result.failure[OperationOutcome]("Pointing adjustment parameters could not be parsed.").pure[F]
   )
 
@@ -426,7 +431,7 @@ class NavigateMappings[F[_]: Sync](
   } yield server
     .targetOffsetClear(target, openLoops)
     .attempt
-    .map(x => Result.Success(convertResult(x)))).getOrElse(
+    .map(convertResult)).getOrElse(
     Result.failure[OperationOutcome]("Clear target offset parameters could not be parsed.").pure[F]
   )
 
@@ -435,7 +440,7 @@ class NavigateMappings[F[_]: Sync](
   } yield server
     .targetOffsetAbsorb(target)
     .attempt
-    .map(x => Result.Success(convertResult(x)))).getOrElse(
+    .map(convertResult)).getOrElse(
     Result.failure[OperationOutcome]("Absorb target offset parameters could not be parsed.").pure[F]
   )
 
@@ -444,19 +449,19 @@ class NavigateMappings[F[_]: Sync](
   } yield server
     .originOffsetClear(openLoops)
     .attempt
-    .map(x => Result.Success(convertResult(x)))).getOrElse(
+    .map(convertResult)).getOrElse(
     Result.failure[OperationOutcome]("Clear origin offset parameters could not be parsed.").pure[F]
   )
 
   def parameterlessCommand(cmd: F[CommandResult]): F[Result[OperationOutcome]] =
     cmd.attempt
-      .map(x => Result.Success(convertResult(x)))
+      .map(convertResult)
 
-  def convertResult(r: Either[Throwable, CommandResult]): OperationOutcome = r match {
-    case Right(CommandResult.CommandSuccess)      => OperationOutcome.success
-    case Right(CommandResult.CommandPaused)       => OperationOutcome.success
-    case Right(CommandResult.CommandFailure(msg)) => OperationOutcome.failure(msg)
-    case Left(e)                                  => OperationOutcome.failure(e.getMessage)
+  def convertResult(r: Either[Throwable, CommandResult]): Result[OperationOutcome] = r match {
+    case Right(CommandResult.CommandSuccess)      => Result.success(OperationOutcome.success)
+    case Right(CommandResult.CommandPaused)       => Result.success(OperationOutcome.success)
+    case Right(CommandResult.CommandFailure(msg)) => Result.failure(msg)
+    case Left(e)                                  => Result.internalError(e)
   }
 
   val QueryType: TypeRef        = schema.ref("Query")
