@@ -589,7 +589,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     // Proper motion
     assert(
       obtained.properMotion1.value.exists(x =>
-        compareDouble(x.toDouble * 1000.0,
+        compareDouble(x.toDouble * 1000.0 * 15.0 * Math.cos(expected.coordinates.dec.toRadians),
                       expected.properMotion.map(_.ra.masy.value.toDouble).orEmpty
         )
       )
