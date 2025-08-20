@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
- Configuration of logging for seqexec for test and production.
+ Configuration of logging for navigate for test and production.
 
  File based logs are rotated daily up to 90 days.
 
@@ -8,6 +8,7 @@
 -->
 <configuration scan="true" scanPeriod="60 seconds" debug="true">
     <logger name="org.http4s" level="INFO" />
+    <logger name="navigate.web.server.http4s.GraphQlRoutes" level="INFO" />
 
     <!-- Files are rotated daily for up to 90 days -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
