@@ -41,19 +41,9 @@ object NavigateEvent {
     given Eq[CommandStart] = Eq.by(_.cmd)
   }
 
-  case class CommandSuccess(cmd: NavigateCommand) extends NavigateEvent
-  object CommandSuccess {
-    given Eq[CommandSuccess] = Eq.by(_.cmd)
-  }
-
-  case class CommandPaused(cmd: NavigateCommand) extends NavigateEvent
-  object CommandPaused {
-    given Eq[CommandPaused] = Eq.by(_.cmd)
-  }
-
-  case class CommandFailure(cmd: NavigateCommand, msg: String) extends NavigateEvent
-  object CommandFailure {
-    given Eq[CommandFailure] = Eq.by(x => (x.cmd, x.msg))
+  case class CommandEnd(cmd: NavigateCommand, result: CommandResult) extends NavigateEvent
+  object CommandEnd {
+    given Eq[CommandEnd] = Eq.by(x => (x.cmd, x.result))
   }
 
   given Eq[NavigateEvent] =
@@ -62,9 +52,7 @@ object NavigateEvent {
       case (a: ConnectionOpenEvent, b: ConnectionOpenEvent) => a === b
       case (NullEvent, NullEvent)                           => true
       case (a: CommandStart, b: CommandStart)               => a === b
-      case (a: CommandFailure, b: CommandFailure)           => a === b
-      case (a: CommandSuccess, b: CommandSuccess)           => a === b
-      case (a: CommandPaused, b: CommandPaused)             => a === b
+      case (a: CommandEnd, b: CommandEnd)                   => a === b
       case _                                                => false
     }
 

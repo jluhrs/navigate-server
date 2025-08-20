@@ -4,7 +4,6 @@
 package navigate.server
 
 import cats.Applicative
-import cats.MonadThrow
 import cats.effect.Async
 import cats.effect.Ref
 import cats.effect.Temporal
@@ -32,6 +31,7 @@ import lucuma.core.util.TimeSpan
 import monocle.Lens
 import monocle.syntax.all.focus
 import mouse.all.*
+import navigate.model.CommandResult
 import navigate.model.FocalPlaneOffset
 import navigate.model.HandsetAdjustment
 import navigate.model.InstrumentSpecifics
@@ -76,73 +76,77 @@ import NavigateEvent.NullEvent
 trait NavigateEngine[F[_]] {
   val systems: Systems[F]
   def eventStream: Stream[F, NavigateEvent]
-  def mcsPark: F[Unit]
-  def mcsFollow(enable:                              Boolean): F[Unit]
-  def scsFollow(enable:                              Boolean): F[Unit]
-  def rotStop(useBrakes:                             Boolean): F[Unit]
-  def rotPark: F[Unit]
-  def rotFollow(enable:                              Boolean): F[Unit]
-  def rotMove(angle:                                 Angle): F[Unit]
-  def rotTrackingConfig(cfg:                         RotatorTrackConfig): F[Unit]
+  def mcsPark: F[CommandResult]
+  def mcsFollow(enable:                              Boolean): F[CommandResult]
+  def scsFollow(enable:                              Boolean): F[CommandResult]
+  def rotStop(useBrakes:                             Boolean): F[CommandResult]
+  def rotPark: F[CommandResult]
+  def rotFollow(enable:                              Boolean): F[CommandResult]
+  def rotMove(angle:                                 Angle): F[CommandResult]
+  def rotTrackingConfig(cfg:                         RotatorTrackConfig): F[CommandResult]
   def ecsCarouselMode(
     domeMode:      DomeMode,
     shutterMode:   ShutterMode,
     slitHeight:    Double,
     domeEnable:    Boolean,
     shutterEnable: Boolean
-  ): F[Unit]
-  def ecsVentGatesMove(gateEast:                     Double, westGate:             Double): F[Unit]
-  def tcsConfig(config:                              TcsConfig): F[Unit]
-  def slew(slewOptions:                              SlewOptions, tcsConfig:       TcsConfig, oid:     Option[Observation.Id]): F[Unit]
-  def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): F[Unit]
-  def pwfs1Target(target:                            Target): F[Unit]
-  def pwfs1ProbeTracking(config:                     TrackingConfig): F[Unit]
-  def pwfs1Park: F[Unit]
-  def pwfs1Follow(enable:                            Boolean): F[Unit]
-  def pwfs2Target(target:                            Target): F[Unit]
-  def pwfs2ProbeTracking(config:                     TrackingConfig): F[Unit]
-  def pwfs2Park: F[Unit]
-  def pwfs2Follow(enable:                            Boolean): F[Unit]
-  def oiwfsTarget(target:                            Target): F[Unit]
-  def oiwfsProbeTracking(config:                     TrackingConfig): F[Unit]
-  def oiwfsPark: F[Unit]
-  def oiwfsFollow(enable:                            Boolean): F[Unit]
-  def enableGuide(config:                            TelescopeGuideConfig): F[Unit]
-  def disableGuide: F[Unit]
-  def pwfs1Observe(period:                           TimeSpan): F[Unit]
-  def pwfs1StopObserve: F[Unit]
-  def pwfs2Observe(period:                           TimeSpan): F[Unit]
-  def pwfs2StopObserve: F[Unit]
-  def oiwfsObserve(period:                           TimeSpan): F[Unit]
-  def oiwfsStopObserve: F[Unit]
-  def acObserve(period:                              TimeSpan): F[Unit]
-  def acStopObserve: F[Unit]
-  def swapTarget(swapConfig:                         SwapConfig): F[Unit]
-  def restoreTarget(config:                          TcsConfig): F[Unit]
-  def m1Park: F[Unit]
-  def m1Unpark: F[Unit]
-  def m1OpenLoopOff: F[Unit]
-  def m1OpenLoopOn: F[Unit]
-  def m1ZeroFigure: F[Unit]
-  def m1LoadAoFigure: F[Unit]
-  def m1LoadNonAoFigure: F[Unit]
-  def lightpathConfig(from:                          LightSource, to:              LightSinkName): F[Unit]
-  def acquisitionAdj(offset:                         Offset, iaa:                  Option[Angle], ipa: Option[Angle]): F[Unit]
-  def wfsSky(wfs:                                    GuideProbe, period:           TimeSpan): F[Unit]
+  ): F[CommandResult]
+  def ecsVentGatesMove(gateEast:                     Double, westGate:             Double): F[CommandResult]
+  def tcsConfig(config:                              TcsConfig): F[CommandResult]
+  def slew(
+    slewOptions: SlewOptions,
+    tcsConfig:   TcsConfig,
+    oid:         Option[Observation.Id]
+  ): F[CommandResult]
+  def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): F[CommandResult]
+  def pwfs1Target(target:                            Target): F[CommandResult]
+  def pwfs1ProbeTracking(config:                     TrackingConfig): F[CommandResult]
+  def pwfs1Park: F[CommandResult]
+  def pwfs1Follow(enable:                            Boolean): F[CommandResult]
+  def pwfs2Target(target:                            Target): F[CommandResult]
+  def pwfs2ProbeTracking(config:                     TrackingConfig): F[CommandResult]
+  def pwfs2Park: F[CommandResult]
+  def pwfs2Follow(enable:                            Boolean): F[CommandResult]
+  def oiwfsTarget(target:                            Target): F[CommandResult]
+  def oiwfsProbeTracking(config:                     TrackingConfig): F[CommandResult]
+  def oiwfsPark: F[CommandResult]
+  def oiwfsFollow(enable:                            Boolean): F[CommandResult]
+  def enableGuide(config:                            TelescopeGuideConfig): F[CommandResult]
+  def disableGuide: F[CommandResult]
+  def pwfs1Observe(period:                           TimeSpan): F[CommandResult]
+  def pwfs1StopObserve: F[CommandResult]
+  def pwfs2Observe(period:                           TimeSpan): F[CommandResult]
+  def pwfs2StopObserve: F[CommandResult]
+  def oiwfsObserve(period:                           TimeSpan): F[CommandResult]
+  def oiwfsStopObserve: F[CommandResult]
+  def acObserve(period:                              TimeSpan): F[CommandResult]
+  def acStopObserve: F[CommandResult]
+  def swapTarget(swapConfig:                         SwapConfig): F[CommandResult]
+  def restoreTarget(config:                          TcsConfig): F[CommandResult]
+  def m1Park: F[CommandResult]
+  def m1Unpark: F[CommandResult]
+  def m1OpenLoopOff: F[CommandResult]
+  def m1OpenLoopOn: F[CommandResult]
+  def m1ZeroFigure: F[CommandResult]
+  def m1LoadAoFigure: F[CommandResult]
+  def m1LoadNonAoFigure: F[CommandResult]
+  def lightpathConfig(from:                          LightSource, to:              LightSinkName): F[CommandResult]
+  def acquisitionAdj(offset:                         Offset, iaa:                  Option[Angle], ipa: Option[Angle]): F[CommandResult]
+  def wfsSky(wfs:                                    GuideProbe, period:           TimeSpan): F[CommandResult]
   def targetAdjust(
     target:            VirtualTelescope,
     handsetAdjustment: HandsetAdjustment,
     openLoops:         Boolean
-  ): F[Unit]
-  def targetOffsetAbsorb(target:                     VirtualTelescope): F[Unit]
-  def targetOffsetClear(target:                      VirtualTelescope, openLoops:  Boolean): F[Unit]
-  def originAdjust(handsetAdjustment:                HandsetAdjustment, openLoops: Boolean): F[Unit]
-  def originOffsetAbsorb: F[Unit]
-  def originOffsetClear(openLoops:                   Boolean): F[Unit]
-  def pointingAdjust(handsetAdjustment:              HandsetAdjustment): F[Unit]
-  def pointingOffsetClearLocal: F[Unit]
-  def pointingOffsetAbsorbGuide: F[Unit]
-  def pointingOffsetClearGuide: F[Unit]
+  ): F[CommandResult]
+  def targetOffsetAbsorb(target:                     VirtualTelescope): F[CommandResult]
+  def targetOffsetClear(target:                      VirtualTelescope, openLoops:  Boolean): F[CommandResult]
+  def originAdjust(handsetAdjustment:                HandsetAdjustment, openLoops: Boolean): F[CommandResult]
+  def originOffsetAbsorb: F[CommandResult]
+  def originOffsetClear(openLoops:                   Boolean): F[CommandResult]
+  def pointingAdjust(handsetAdjustment:              HandsetAdjustment): F[CommandResult]
+  def pointingOffsetClearLocal: F[CommandResult]
+  def pointingOffsetAbsorbGuide: F[CommandResult]
+  def pointingOffsetClearGuide: F[CommandResult]
 
   def getGuideState: F[GuideState]
   def getGuidersQuality: F[GuidersQualityValues]
@@ -183,7 +187,7 @@ object NavigateEngine {
     }
   }
 
-  private case class NavigateEngineImpl[F[_]: {Temporal, Logger}](
+  private case class NavigateEngineImpl[F[_]: {Temporal, Logger, Async}](
     site:     Site,
     systems:  Systems[F],
     conf:     NavigateEngineConfiguration,
@@ -231,25 +235,25 @@ object NavigateEngine {
         logEvent(o) *> stateRef.set(s) *> topic.publish1(navigateState(s)).as(o)
       }
 
-    override def mcsPark: F[Unit] =
+    override def mcsPark: F[CommandResult] =
       simpleCommand(engine, McsPark, systems.tcsCommon.mcsPark)
 
-    override def mcsFollow(enable: Boolean): F[Unit] =
+    override def mcsFollow(enable: Boolean): F[CommandResult] =
       simpleCommand(engine, McsFollow(enable), systems.tcsCommon.mcsFollow(enable))
 
-    override def scsFollow(enable: Boolean): F[Unit] =
+    override def scsFollow(enable: Boolean): F[CommandResult] =
       simpleCommand(engine, ScsFollow(enable), systems.tcsCommon.scsFollow(enable))
 
-    override def rotStop(useBrakes: Boolean): F[Unit] =
+    override def rotStop(useBrakes: Boolean): F[CommandResult] =
       simpleCommand(engine, CrcsStop(useBrakes), systems.tcsCommon.rotStop(useBrakes))
 
-    override def rotPark: F[Unit] =
+    override def rotPark: F[CommandResult] =
       simpleCommand(engine, CrcsPark, systems.tcsCommon.rotPark)
 
-    override def rotFollow(enable: Boolean): F[Unit] =
+    override def rotFollow(enable: Boolean): F[CommandResult] =
       simpleCommand(engine, CrcsFollow(enable), systems.tcsCommon.rotFollow(enable))
 
-    override def rotMove(angle: Angle): F[Unit] =
+    override def rotMove(angle: Angle): F[CommandResult] =
       simpleCommand(engine, CrcsMove(angle), systems.tcsCommon.rotMove(angle))
 
     override def ecsCarouselMode(
@@ -258,7 +262,7 @@ object NavigateEngine {
       slitHeight:    Double,
       domeEnable:    Boolean,
       shutterEnable: Boolean
-    ): F[Unit] = simpleCommand(
+    ): F[CommandResult] = simpleCommand(
       engine,
       EcsCarouselMode(domeMode, shutterMode, slitHeight, domeEnable, shutterEnable),
       systems.tcsCommon.ecsCarouselMode(domeMode,
@@ -270,275 +274,220 @@ object NavigateEngine {
     )
 
     // TODO
-    override def ecsVentGatesMove(gateEast: Double, westGate: Double): F[Unit] = Applicative[F].unit
+    override def ecsVentGatesMove(gateEast: Double, westGate: Double): F[CommandResult] =
+      CommandResult.CommandFailure("Command ecsVentGatesMove not yet implemented.").pure[F]
 
-    override def tcsConfig(config: TcsConfig): F[Unit] = command(
+    override def tcsConfig(config: TcsConfig): F[CommandResult] = command(
       engine,
       TcsConfigure(config),
-      transformCommand(
-        TcsConfigure(config),
-        Handler.modify[F, State, ApplyCommandResult](_.focus(_.onSwappedTarget).replace(false)) *>
-          Handler.fromStream(
-            Stream.eval(
-              systems.tcsCommon.tcsConfig(config)
-            )
-          )
-      )
+      cats.data.State
+        .modify[State](_.focus(_.onSwappedTarget).replace(false))
+        .as(systems.tcsCommon.tcsConfig(config))
     )
 
     override def slew(
       slewOptions: SlewOptions,
       tcsConfig:   TcsConfig,
       oid:         Option[Observation.Id]
-    ): F[Unit] =
+    ): F[CommandResult] =
       Logger[F].info(s"Starting slew to ${oid}") *>
         command(
           engine,
           Slew(slewOptions, tcsConfig, oid),
-          transformCommand(
-            Slew(slewOptions, tcsConfig, oid),
-            Handler.modify[F, State, ApplyCommandResult](
+          cats.data.State
+            .modify[State](
               _.focus(_.onSwappedTarget).replace(false)
-            ) *>
-              Handler.fromStream(
-                Stream.eval(
-                  systems.tcsCommon
-                    .slew(slewOptions, tcsConfig)
-                    // if succesful send an event to the odb
-                    .flatTap(_ => oid.traverse_(systems.odb.addSlewEvent(_, SlewStage.StartSlew)))
-                )
-              )
-          )
+            )
+            .as(
+              systems.tcsCommon
+                .slew(slewOptions, tcsConfig)
+                // if succesful send an event to the odb
+                .flatTap(_ => oid.traverse_(systems.odb.addSlewEvent(_, SlewStage.StartSlew)))
+            )
         )
 
-    override def swapTarget(swapConfig: SwapConfig): F[Unit] = command(
+    override def swapTarget(swapConfig: SwapConfig): F[CommandResult] = command(
       engine,
       SwapTarget(swapConfig),
-      transformCommand(
-        SwapTarget(swapConfig),
-        Handler.modify[F, State, ApplyCommandResult](_.focus(_.onSwappedTarget).replace(true)) *>
-          Handler.fromStream(
-            Stream.eval(
-              systems.tcsCommon.swapTarget(swapConfig)
-            )
-          )
-      )
+      cats.data.State
+        .modify[State](_.focus(_.onSwappedTarget).replace(true))
+        .as(
+          systems.tcsCommon.swapTarget(swapConfig)
+        )
     )
 
-    override def restoreTarget(config: TcsConfig): F[Unit] = command(
+    override def restoreTarget(config: TcsConfig): F[CommandResult] = command(
       engine,
       RestoreTarget(config),
-      transformCommand(
-        RestoreTarget(config),
-        Handler.modify[F, State, ApplyCommandResult](_.focus(_.onSwappedTarget).replace(false)) *>
-          Handler.fromStream(
-            Stream.eval(
-              systems.tcsCommon.restoreTarget(config)
-            )
-          )
-      )
+      cats.data.State
+        .modify[State](_.focus(_.onSwappedTarget).replace(false))
+        .as(
+          systems.tcsCommon.restoreTarget(config)
+        )
     )
 
-    override def instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecifics): F[Unit] =
+    override def instrumentSpecifics(
+      instrumentSpecificsParams: InstrumentSpecifics
+    ): F[CommandResult] =
       simpleCommand(
         engine,
         InstSpecifics(instrumentSpecificsParams),
         systems.tcsCommon.instrumentSpecifics(instrumentSpecificsParams)
       )
 
-    override def pwfs1Target(target: Target): F[Unit] = simpleCommand(
+    override def pwfs1Target(target: Target): F[CommandResult] = simpleCommand(
       engine,
       Pwfs1Target(target),
       systems.tcsCommon.pwfs1Target(target)
     )
 
-    override def pwfs1ProbeTracking(config: TrackingConfig): F[Unit] = simpleCommand(
+    override def pwfs1ProbeTracking(config: TrackingConfig): F[CommandResult] = simpleCommand(
       engine,
       Pwfs1ProbeTracking(config),
       systems.tcsCommon.pwfs1ProbeTracking(config)
     )
 
-    override def pwfs1Park: F[Unit] = simpleCommand(
+    override def pwfs1Park: F[CommandResult] = simpleCommand(
       engine,
       Pwfs1Park,
       systems.tcsCommon.pwfs1Park
     )
 
-    override def pwfs1Follow(enable: Boolean): F[Unit] = simpleCommand(
+    override def pwfs1Follow(enable: Boolean): F[CommandResult] = simpleCommand(
       engine,
       Pwfs1Follow(enable),
       systems.tcsCommon.pwfs1Follow(enable)
     )
 
-    override def pwfs2Target(target: Target): F[Unit] = simpleCommand(
+    override def pwfs2Target(target: Target): F[CommandResult] = simpleCommand(
       engine,
       Pwfs2Target(target),
       systems.tcsCommon.pwfs2Target(target)
     )
 
-    override def pwfs2ProbeTracking(config: TrackingConfig): F[Unit] = simpleCommand(
+    override def pwfs2ProbeTracking(config: TrackingConfig): F[CommandResult] = simpleCommand(
       engine,
       Pwfs2ProbeTracking(config),
       systems.tcsCommon.pwfs2ProbeTracking(config)
     )
 
-    override def pwfs2Park: F[Unit] = simpleCommand(
+    override def pwfs2Park: F[CommandResult] = simpleCommand(
       engine,
       Pwfs2Park,
       systems.tcsCommon.pwfs2Park
     )
 
-    override def pwfs2Follow(enable: Boolean): F[Unit] = simpleCommand(
+    override def pwfs2Follow(enable: Boolean): F[CommandResult] = simpleCommand(
       engine,
       Pwfs2Follow(enable),
       systems.tcsCommon.pwfs2Follow(enable)
     )
 
-    override def oiwfsTarget(target: Target): F[Unit] = simpleCommand(
+    override def oiwfsTarget(target: Target): F[CommandResult] = simpleCommand(
       engine,
       OiwfsTarget(target),
       systems.tcsCommon.oiwfsTarget(target)
     )
 
-    override def oiwfsProbeTracking(config: TrackingConfig): F[Unit] = simpleCommand(
+    override def oiwfsProbeTracking(config: TrackingConfig): F[CommandResult] = simpleCommand(
       engine,
       OiwfsProbeTracking(config),
       systems.tcsCommon.oiwfsProbeTracking(config)
     )
 
-    override def oiwfsPark: F[Unit] = simpleCommand(
+    override def oiwfsPark: F[CommandResult] = simpleCommand(
       engine,
       OiwfsPark,
       systems.tcsCommon.oiwfsPark
     )
 
-    override def oiwfsFollow(enable: Boolean): F[Unit] = simpleCommand(
+    override def oiwfsFollow(enable: Boolean): F[CommandResult] = simpleCommand(
       engine,
       OiwfsFollow(enable),
       systems.tcsCommon.oiwfsFollow(enable)
     )
 
-    override def rotTrackingConfig(config: RotatorTrackConfig): F[Unit] =
+    override def rotTrackingConfig(config: RotatorTrackConfig): F[CommandResult] =
       simpleCommand(
         engine,
         RotatorTrackingConfig(config),
         systems.tcsCommon.rotTrackingConfig(config)
       )
 
-    override def enableGuide(config: TelescopeGuideConfig): F[Unit] =
+    override def enableGuide(config: TelescopeGuideConfig): F[CommandResult] =
       command(
         engine,
         EnableGuide(config),
-        transformCommand(
-          EnableGuide(config),
-          Handler.get[F, State, ApplyCommandResult].flatMap { st =>
-            Handler.replace(st.focus(_.guideConfig.tcsGuide).replace(config)) *>
-              Handler.fromStream(
-                Stream.eval(
-                  systems.tcsCommon.enableGuide(config)
-                )
-              )
-          }
-        )
-      ) *> postTelescopeGuideConfig(GuideConfig(config, None))
+        cats.data.State
+          .modify[State](_.focus(_.guideConfig.tcsGuide).replace(config))
+          .as(
+            systems.tcsCommon.enableGuide(config)
+          )
+      ) <* postTelescopeGuideConfig(GuideConfig(config, None))
 
-    override def disableGuide: F[Unit] = command(
+    override def disableGuide: F[CommandResult] = command(
       engine,
       DisableGuide,
-      transformCommand(
-        DisableGuide,
-        Handler.get[F, State, ApplyCommandResult].flatMap { st =>
-          Handler.replace[F, State, ApplyCommandResult](
-            st.focus(_.guideConfig.tcsGuide)
-              .replace(
-                TelescopeGuideConfig(MountGuideOption.MountGuideOff,
-                                     M1GuideConfig.M1GuideOff,
-                                     M2GuideConfig.M2GuideOff,
-                                     None,
-                                     None
-                )
-              )
-          ) *>
-            Handler.fromStream(
-              Stream.eval(
-                systems.tcsCommon.disableGuide
+      cats.data.State
+        .modify[State](
+          _.focus(_.guideConfig.tcsGuide)
+            .replace(
+              TelescopeGuideConfig(MountGuideOption.MountGuideOff,
+                                   M1GuideConfig.M1GuideOff,
+                                   M2GuideConfig.M2GuideOff,
+                                   None,
+                                   None
               )
             )
-        }
-      )
-    ) *> postTelescopeGuideConfig(GuideConfig.defaultGuideConfig)
+        )
+        .as(
+          systems.tcsCommon.disableGuide
+        )
+    ) <* postTelescopeGuideConfig(GuideConfig.defaultGuideConfig)
 
-    override def pwfs1Observe(period: TimeSpan): F[Unit] = command(
+    override def pwfs1Observe(period: TimeSpan): F[CommandResult] = simpleCommand(
       engine,
       Pwfs1Observe(period),
-      transformCommand(
-        Pwfs1Observe(period),
-        Handler.fromStream(
-          Stream.eval(
-            systems.tcsCommon.pwfs1Observe(period)
-          )
-        )
-      )
+      systems.tcsCommon.pwfs1Observe(period)
     )
 
-    override def pwfs1StopObserve: F[Unit] = simpleCommand(
+    override def pwfs1StopObserve: F[CommandResult] = simpleCommand(
       engine,
       Pwfs1StopObserve,
       systems.tcsCommon.pwfs1StopObserve
     )
 
-    override def pwfs2Observe(period: TimeSpan): F[Unit] = command(
+    override def pwfs2Observe(period: TimeSpan): F[CommandResult] = simpleCommand(
       engine,
       Pwfs2Observe(period),
-      transformCommand(
-        Pwfs2Observe(period),
-        Handler.fromStream(
-          Stream.eval(
-            systems.tcsCommon.pwfs2Observe(period)
-          )
-        )
-      )
+      systems.tcsCommon.pwfs2Observe(period)
     )
 
-    override def pwfs2StopObserve: F[Unit] = simpleCommand(
+    override def pwfs2StopObserve: F[CommandResult] = simpleCommand(
       engine,
       Pwfs2StopObserve,
       systems.tcsCommon.pwfs2StopObserve
     )
 
-    override def oiwfsObserve(period: TimeSpan): F[Unit] = command(
+    override def oiwfsObserve(period: TimeSpan): F[CommandResult] = simpleCommand(
       engine,
       OiwfsObserve(period),
-      transformCommand(
-        OiwfsObserve(period),
-        Handler.fromStream(
-          Stream.eval(
-            systems.tcsCommon.oiwfsObserve(period)
-          )
-        )
-      )
+      systems.tcsCommon.oiwfsObserve(period)
     )
 
-    override def oiwfsStopObserve: F[Unit] = simpleCommand(
+    override def oiwfsStopObserve: F[CommandResult] = simpleCommand(
       engine,
       OiwfsStopObserve,
       systems.tcsCommon.oiwfsStopObserve
     )
 
-    override def acObserve(period: TimeSpan): F[Unit] = command(
+    override def acObserve(period: TimeSpan): F[CommandResult] = simpleCommand(
       engine,
       AcObserve(period),
-      transformCommand(
-        AcObserve(period),
-        Handler.fromStream(
-          Stream.eval(
-            systems.tcsCommon.hrwfsObserve(period)
-          )
-        )
-      )
+      systems.tcsCommon.hrwfsObserve(period)
     )
 
-    override def acStopObserve: F[Unit] = simpleCommand(
+    override def acStopObserve: F[CommandResult] = simpleCommand(
       engine,
       AcStopObserve,
       systems.tcsCommon.hrwfsStopObserve
@@ -562,53 +511,54 @@ object NavigateEngine {
         .map(_._2)
         .unNone
 
-    override def m1Park: F[Unit] = simpleCommand(
+    override def m1Park: F[CommandResult] = simpleCommand(
       engine,
       M1Park,
       systems.tcsCommon.m1Park
     )
 
-    override def m1Unpark: F[Unit] = simpleCommand(
+    override def m1Unpark: F[CommandResult] = simpleCommand(
       engine,
       M1Unpark,
       systems.tcsCommon.m1Unpark
     )
 
-    override def m1OpenLoopOff: F[Unit] = simpleCommand(
+    override def m1OpenLoopOff: F[CommandResult] = simpleCommand(
       engine,
       M1OpenLoopOff,
       systems.tcsCommon.m1UpdateOff
     )
 
-    override def m1OpenLoopOn: F[Unit] = simpleCommand(
+    override def m1OpenLoopOn: F[CommandResult] = simpleCommand(
       engine,
       M1OpenLoopOn,
       systems.tcsCommon.m1UpdateOn
     )
 
-    override def m1ZeroFigure: F[Unit] = simpleCommand(
+    override def m1ZeroFigure: F[CommandResult] = simpleCommand(
       engine,
       M1ZeroFigure,
       systems.tcsCommon.m1ZeroFigure
     )
 
-    override def m1LoadAoFigure: F[Unit] = simpleCommand(
+    override def m1LoadAoFigure: F[CommandResult] = simpleCommand(
       engine,
       M1LoadAoFigure,
       systems.tcsCommon.m1LoadAoFigure
     )
 
-    override def m1LoadNonAoFigure: F[Unit] = simpleCommand(
+    override def m1LoadNonAoFigure: F[CommandResult] = simpleCommand(
       engine,
       M1LoadNonAoFigure,
       systems.tcsCommon.m1LoadNonAoFigure
     )
 
-    override def lightpathConfig(from: LightSource, to: LightSinkName): F[Unit] = simpleCommand(
-      engine,
-      LightPathConfig(from, to),
-      systems.tcsCommon.lightPath(from, to)
-    )
+    override def lightpathConfig(from: LightSource, to: LightSinkName): F[CommandResult] =
+      simpleCommand(
+        engine,
+        LightPathConfig(from, to),
+        systems.tcsCommon.lightPath(from, to)
+      )
 
     override def getInstrumentPort(instrument: Instrument): F[Option[Int]] =
       systems.tcsCommon.getInstrumentPorts.map { x =>
@@ -630,14 +580,18 @@ object NavigateEngine {
         (a =!= 0).option(a)
       }
 
-    override def acquisitionAdj(offset: Offset, iaa: Option[Angle], ipa: Option[Angle]): F[Unit] =
+    override def acquisitionAdj(
+      offset: Offset,
+      iaa:    Option[Angle],
+      ipa:    Option[Angle]
+    ): F[CommandResult] =
       simpleCommand(
         engine,
         AcquisitionAdjust(offset, ipa, iaa),
         stateRef.get.flatMap(s => systems.tcsCommon.acquisitionAdj(offset, ipa, iaa)(s.guideConfig))
       )
 
-    override def wfsSky(wfs: GuideProbe, period: TimeSpan): F[Unit] = wfs match {
+    override def wfsSky(wfs: GuideProbe, period: TimeSpan): F[CommandResult] = wfs match {
       case enums.GuideProbe.PWFS1                                        =>
         simpleCommand(
           engine,
@@ -671,7 +625,7 @@ object NavigateEngine {
       target:            VirtualTelescope,
       handsetAdjustment: HandsetAdjustment,
       openLoops:         Boolean
-    ): F[Unit] =
+    ): F[CommandResult] =
       simpleCommand(
         engine,
         TargetAdjust(target, handsetAdjustment, openLoops),
@@ -680,7 +634,10 @@ object NavigateEngine {
         )
       )
 
-    override def originAdjust(handsetAdjustment: HandsetAdjustment, openLoops: Boolean): F[Unit] =
+    override def originAdjust(
+      handsetAdjustment: HandsetAdjustment,
+      openLoops:         Boolean
+    ): F[CommandResult] =
       simpleCommand(
         engine,
         OriginAdjust(handsetAdjustment, openLoops),
@@ -689,21 +646,21 @@ object NavigateEngine {
         )
       )
 
-    override def pointingAdjust(handsetAdjustment: HandsetAdjustment): F[Unit] =
+    override def pointingAdjust(handsetAdjustment: HandsetAdjustment): F[CommandResult] =
       simpleCommand(
         engine,
         PointingAdjust(handsetAdjustment),
         systems.tcsCommon.pointingAdjust(handsetAdjustment)
       )
 
-    override def targetOffsetAbsorb(target: VirtualTelescope): F[Unit] =
+    override def targetOffsetAbsorb(target: VirtualTelescope): F[CommandResult] =
       simpleCommand(
         engine,
         TargetOffsetAbsorb(target),
         systems.tcsCommon.targetOffsetAbsorb(target)
       )
 
-    override def targetOffsetClear(target: VirtualTelescope, openLoops: Boolean): F[Unit] =
+    override def targetOffsetClear(target: VirtualTelescope, openLoops: Boolean): F[CommandResult] =
       simpleCommand(
         engine,
         TargetOffsetClear(target, openLoops),
@@ -712,35 +669,35 @@ object NavigateEngine {
         )
       )
 
-    override def originOffsetAbsorb: F[Unit] =
+    override def originOffsetAbsorb: F[CommandResult] =
       simpleCommand(
         engine,
         OriginOffsetAbsorb,
         systems.tcsCommon.originOffsetAbsorb
       )
 
-    override def originOffsetClear(openLoops: Boolean): F[Unit] =
+    override def originOffsetClear(openLoops: Boolean): F[CommandResult] =
       simpleCommand(
         engine,
         OriginOffsetClear(openLoops),
         stateRef.get.flatMap(s => systems.tcsCommon.originOffsetClear(openLoops)(s.guideConfig))
       )
 
-    override def pointingOffsetClearLocal: F[Unit] =
+    override def pointingOffsetClearLocal: F[CommandResult] =
       simpleCommand(
         engine,
         PointingOffsetClearLocal,
         systems.tcsCommon.pointingOffsetClearLocal
       )
 
-    override def pointingOffsetAbsorbGuide: F[Unit] =
+    override def pointingOffsetAbsorbGuide: F[CommandResult] =
       simpleCommand(
         engine,
         PointingOffsetAbsorbGuide,
         systems.tcsCommon.pointingOffsetAbsorbGuide
       )
 
-    override def pointingOffsetClearGuide: F[Unit] =
+    override def pointingOffsetClearGuide: F[CommandResult] =
       simpleCommand(
         engine,
         PointingOffsetClearGuide,
@@ -748,7 +705,7 @@ object NavigateEngine {
       )
   }
 
-  def build[F[_]: {Temporal, Logger}](
+  def build[F[_]: {Temporal, Logger, Async}](
     site:    Site,
     systems: Systems[F],
     conf:    NavigateEngineConfiguration
@@ -779,9 +736,7 @@ object NavigateEngine {
 
   /**
    * This is used for simple commands, just an F that executes the command when evaluated, producing
-   * a result. The method takes care of setting/releasing guard flags in the global state and
-   * surrounding the evaluation with log messages. An important distinction with the new command
-   * method is that here, the command code does not have access to the global state.
+   * a result. It relies in command().
    *
    * @param engine
    *   The state machine.
@@ -796,121 +751,108 @@ object NavigateEngine {
    * @return
    *   Effect that, when evaluated, will schedule the execution of the command in the state machine.
    */
-  private def simpleCommand[F[_]: {MonadThrow, Logger}](
+  private def simpleCommand[F[_]: Async](
     engine:  StateEngine[F, State, NavigateEvent],
     cmdType: NavigateCommand,
     cmd:     F[ApplyCommandResult]
-  ): F[Unit] = engine.offer(
-    engine.getState.flatMap { st =>
-      val cmdEvent = CommandStart(cmdType)
-      if (!st.tcsActionInProgress) {
-        engine
-          .modifyState(_.focus(_.commandInProgress).replace(cmdType.some))
-          .as(cmdEvent.some) <*
-          Handler
-            .fromStream[F, State, Event[F, State, NavigateEvent]](
-              Stream.eval[F, Event[F, State, NavigateEvent]](
-                cmd.attempt
-                  .map(cmdResultToNavigateEvent(cmdType, _))
-                  .map(x =>
-                    Event(
-                      engine
-                        .modifyState(_.focus(_.commandInProgress).replace(None))
-                        .as(x.some)
-                    )
-                  )
-              )
-            )
-      } else {
-        engine.lift(
-          Logger[F]
-            .warn(s"Cannot execute command ${cmdType.name} because a TCS command is in progress.")
-            .as(NullEvent)
-        ) *> engine.void
-      }
-    }
+  ): F[CommandResult] = command(
+    engine,
+    cmdType,
+    cats.data.State.pure[State, F[ApplyCommandResult]](cmd)
   )
 
   /**
-   * Similar to simple command, but here the command is a Handler, executed in the state machine.
-   * This gives the command access to the global state, and allows it to have several stages.
+   * Similar to simple command, but here the command as access to the global state.
    *
    * @param engine
    *   The state machine.
    * @param cmdType
    *   : The command type, used for logs.
    * @param cmd
-   *   : The actual command, wrapped in a Handle. The command is responsible for generating the
-   *   Stream for later scheduling, although there is a helper method for that: transformCommand
-   * @param f
-   *   : Lens to the command guard flag in the global state.
+   *   : The actual command, wrapped in a State.
    * @tparam F
    *   : Type of effect that wraps the command execution.
    * @return
    *   Effect that, when evaluated, will schedule the execution of the command in the state machine.
    */
-  private def command[F[_]: {MonadThrow, Logger}](
+  private def command[F[_]: Async](
     engine:  StateEngine[F, State, NavigateEvent],
     cmdType: NavigateCommand,
-    cmd:     Handler[F, State, Event[F, State, NavigateEvent], Unit]
-  ): F[Unit] = engine.offer(
-    engine.getState.flatMap { st =>
-      if (!st.tcsActionInProgress) {
-        engine
-          .modifyState(_.focus(_.commandInProgress).replace(cmdType.some))
-          .as(CommandStart(cmdType).some) <* cmd
-      } else {
-        engine.lift(
-          Logger[F]
-            .warn(s"Cannot execute command ${cmdType.name} because a TCS command is in progress.")
-            .as(NullEvent)
-        ) *> engine.void
-      }
-    }
-  )
-
-  private def cmdResultToNavigateEvent(
-    cmdType: NavigateCommand,
-    result:  Either[Throwable, ApplyCommandResult]
-  ): NavigateEvent =
-    result match {
-      case Right(ApplyCommandResult.Paused)    => CommandPaused(cmdType)
-      case Right(ApplyCommandResult.Completed) => CommandSuccess(cmdType)
-      case Left(e)                             =>
-        CommandFailure(cmdType, s"${cmdType.name} command failed with error: ${e.getMessage}")
-    }
-
-  private def transformCommand[F[_]](
-    cmdType: NavigateCommand,
-    cmd:     Handler[F, State, ApplyCommandResult, Unit]
-  ): Handler[F, State, Event[F, State, NavigateEvent], Unit] =
-    Handler(cmd.run.map { ret =>
-      Handler.RetVal(
-        ret.v,
-        ret.s.map { ss =>
-          ss.attempt
-            .map(cmdResultToNavigateEvent(cmdType, _))
-            .map { x =>
-              Event(
-                Handler
-                  .modify[F, State, Event[F, State, NavigateEvent]](
-                    _.focus(_.commandInProgress).replace(None)
+    cmd:     cats.data.State[State, F[ApplyCommandResult]]
+  ): F[CommandResult] = Async[F].async { (f: Either[Throwable, CommandResult] => Unit) =>
+    // Start the async calculation by putting a message in the input queue
+    engine
+      .offer(
+        // State processing. Get the current state to verify that there is no other command in progress
+        engine.getState.flatMap { st =>
+          if (!st.tcsActionInProgress) {
+            // All clear, let's build the message that will execute the command
+            engine
+              // First, mark that there is a command in progress
+              .modifyState(_.focus(_.commandInProgress).replace(cmdType.some))
+              // And produce the start command event
+              .as(CommandStart(cmdType).some) <*
+              // Flatmap with another Handler. The output is ignored, we only care about the stream that will execute the command later
+              Handler(
+                // Still in State world, cmd checks the current state and produces an F that will execute the command
+                cmd.map(x =>
+                  Handler.RetVal(
+                    NullEvent,
+                    Stream
+                      .eval(
+                        // x is the F that executes the command. It will be evaluated in the main Stream join and produce a result.
+                        // The result is then passed to the Async callback.
+                        x.attempt
+                          .map(cmdResultToNavigateEvent)
+                          .flatTap(y => Async[F].delay(f(y.asRight)))
+                          .map(z =>
+                            // Here we build the State that will be evaluated at the end
+                            Event(
+                              engine
+                                // Unmark the command in progress flag
+                                .modifyState(_.focus(_.commandInProgress).replace(none))
+                                // And create an output event with the command result
+                                .as(CommandEnd(cmdType, z).some)
+                            )
+                          )
+                      )
+                      .some
                   )
-                  .as(x.some)
+                )
               )
-            }
+          } else {
+            // Another command was in progress. We schedule the call to the Async callback and produce the output event.
+            val r = CommandResult.CommandFailure(
+              s"Cannot execute command because another TCS command is in progress."
+            )
+            engine.lift(Async[F].delay(f(r.asRight)).as(CommandEnd(cmdType, r)))
+          }
         }
       )
-    })
+      .as(none)
+  }
+
+  private def cmdResultToNavigateEvent(
+    result: Either[Throwable, ApplyCommandResult]
+  ): CommandResult =
+    result match {
+      case Right(ApplyCommandResult.Paused)    => CommandResult.CommandPaused
+      case Right(ApplyCommandResult.Completed) => CommandResult.CommandSuccess
+      case Left(e)                             =>
+        CommandResult.CommandFailure(s"Command failed with error: ${e.getMessage}")
+    }
 
   private def logEvent[F[_]: {Logger, Applicative}](x: NavigateEvent): F[Unit] =
     x match {
       case ConnectionOpenEvent(userDetails, clientId, serverVersion) =>
         Logger[F].info(s"ConnectionOpenEvent($userDetails, $clientId, $serverVersion)")
       case CommandStart(cmd)                                         => Logger[F].info(s"CommandStart(${cmd.show})")
-      case CommandSuccess(cmd)                                       => Logger[F].info(s"CommandSuccess(${cmd.name})")
-      case CommandPaused(cmd)                                        => Logger[F].info(s"CommandPaused(${cmd.name})")
-      case CommandFailure(cmd, msg)                                  => Logger[F].error(s"CommandFailure(${cmd.name}, ${msg})")
+      case CommandEnd(cmd, CommandResult.CommandSuccess)             =>
+        Logger[F].info(s"CommandSuccess(${cmd.name})")
+      case CommandEnd(cmd, CommandResult.CommandPaused)              =>
+        Logger[F].info(s"CommandPaused(${cmd.name})")
+      case CommandEnd(cmd, CommandResult.CommandFailure(msg))        =>
+        Logger[F].error(s"CommandFailure(${cmd.name}, $msg)")
       case _                                                         => Applicative[F].unit
     }
 

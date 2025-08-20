@@ -43,8 +43,7 @@ class NavigateEngineSpec extends CatsEffectSuite {
 
     for {
       eng <- NavigateEngineSpec.buildEngine[IO]
-      _   <- eng.enableGuide(guideCfg)
-      _   <- eng.eventStream.take(2).compile.drain
+      _   <- Stream.eval(eng.enableGuide(guideCfg)).merge(eng.eventStream.take(1)).compile.drain
       r   <- eng.getGuideDemand
     } yield assertEquals(r.tcsGuide, guideCfg)
   }
