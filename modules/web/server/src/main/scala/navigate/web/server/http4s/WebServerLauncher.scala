@@ -82,7 +82,7 @@ object WebServerLauncher extends IOApp with LogInitialization {
     )
 
   /** Resource that yields the running web server */
-  def webServer[F[_]: {Logger, Async, Files, Compression, Network}](
+  def webServer[F[_]: {Async, Files, Compression, Network}](
     conf:   NavigateConfiguration,
     topics: TopicManager[F],
     se:     NavigateEngine[F]

@@ -8,6 +8,7 @@
 -->
 <configuration scan="true" scanPeriod="60 seconds" debug="true">
     <logger name="org.http4s" level="INFO" />
+    <logger name="navigate.web.server.http4s.GraphQlRoutes" level="INFO" />
 
     <!-- Configuration for development and local deployment -->
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">

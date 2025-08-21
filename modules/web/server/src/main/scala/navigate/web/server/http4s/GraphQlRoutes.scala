@@ -26,8 +26,9 @@ import org.http4s.dsl.Http4sDsl
 import org.http4s.server.middleware.GZip
 import org.http4s.server.websocket.WebSocketBuilder2
 import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats.slf4j.Slf4jLogger
 
-class GraphQlRoutes[F[_]: {Async, Logger, Trace, Compression}](
+class GraphQlRoutes[F[_]: {Async, Trace, Compression}](
   config:                     NavigateConfiguration,
   eng:                        NavigateEngine[F],
   logTopic:                   Topic[F, ILoggingEvent],
@@ -40,6 +41,9 @@ class GraphQlRoutes[F[_]: {Async, Logger, Trace, Compression}](
   pointingAdjustmentTopic:    Topic[F, PointingCorrections],
   logBuffer:                  Ref[F, Seq[ILoggingEvent]]
 ) extends Http4sDsl[F] {
+
+  private given Logger[F] =
+    Slf4jLogger.getLoggerFromName[F]("navigate.web.server.http4s.GraphQlRoutes")
 
   private def commandServices(wsb: WebSocketBuilder2[F]): HttpRoutes[F] = GZip(
     Routes.forService(
