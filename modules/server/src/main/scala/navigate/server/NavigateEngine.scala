@@ -68,6 +68,7 @@ import org.http4s.client.middleware.RetryPolicy
 import org.http4s.dsl.io.*
 import org.typelevel.log4cats.Logger
 
+import java.util.concurrent.TimeoutException
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
 
@@ -838,8 +839,12 @@ object NavigateEngine {
     result match {
       case Right(ApplyCommandResult.Paused)    => CommandResult.CommandPaused
       case Right(ApplyCommandResult.Completed) => CommandResult.CommandSuccess
+      case Left(e: TimeoutException)           =>
+        CommandResult.CommandFailure(s"Command timed out after ${e.getLocalizedMessage}")
       case Left(e)                             =>
-        CommandResult.CommandFailure(s"Command failed with error: ${e.getMessage}")
+        CommandResult.CommandFailure(
+          s"Command failed with error type ${e.getClass.getName}, message: ${e.getLocalizedMessage}"
+        )
     }
 
   private def logEvent[F[_]: {Logger, Applicative}](x: NavigateEvent): F[Unit] =

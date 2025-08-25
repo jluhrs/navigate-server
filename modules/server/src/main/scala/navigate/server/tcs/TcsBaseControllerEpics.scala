@@ -113,9 +113,10 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
 
   import TcsBaseControllerEpics.*
 
+  private val mcsParkTimeout                  = FiniteDuration(60, SECONDS)
   override def mcsPark: F[ApplyCommandResult] =
     sys.tcsEpics
-      .startCommand(timeout)
+      .startCommand(mcsParkTimeout)
       .mcsParkCommand
       .mark
       .post
@@ -137,9 +138,10 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       .post
       .verifiedRun(ConnectionTimeout)
 
+  private val rotParkTimeout                  = FiniteDuration(60, SECONDS)
   override def rotPark: F[ApplyCommandResult] =
     sys.tcsEpics
-      .startCommand(timeout)
+      .startCommand(rotParkTimeout)
       .rotParkCommand
       .mark
       .post
@@ -183,9 +185,10 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       .post
       .verifiedRun(ConnectionTimeout)
 
+  private val ecsVentGatesMoveTimeout                                                      = FiniteDuration(60, SECONDS)
   override def ecsVentGatesMove(gateEast: Double, gateWest: Double): F[ApplyCommandResult] =
     sys.tcsEpics
-      .startCommand(timeout)
+      .startCommand(ecsVentGatesMoveTimeout)
       .ecsVenGatesMoveCmd
       .setVentGateEast(gateEast)
       .ecsVenGatesMoveCmd
@@ -469,6 +472,8 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
             )
           )
       )
+
+  private val tcsConfigTimeout                                     = FiniteDuration(60, SECONDS)
   // Added a 1.5 s wait between selecting the OIWFS and setting targets, to copy TCC
   override def tcsConfig(config: TcsConfig): F[ApplyCommandResult] =
     disableGuide *>
@@ -476,7 +481,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
         selectOiwfs(config) *>
           VerifiedEpics.liftF(Temporal[F].sleep(OiwfsSelectionDelay)) *>
           applyTcsConfig(config)(
-            sys.tcsEpics.startCommand(timeout)
+            sys.tcsEpics.startCommand(tcsConfigTimeout)
           ).post
       ).verifiedRun(ConnectionTimeout)
 
@@ -504,7 +509,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
                 .offsetY(Distance.Zero)
             }
             .andThen(setSlewOptions(slewOptions))(
-              sys.tcsEpics.startCommand(timeout)
+              sys.tcsEpics.startCommand(tcsConfigTimeout)
             )
             .post
       ).verifiedRun(ConnectionTimeout) *>
@@ -518,9 +523,10 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       .compose(setFocusOffset(config.focusOffset))
       .compose(setOrigin(config.origin))
 
+  private val rotMoveTimeout                                                           = FiniteDuration(60, SECONDS)
   override def instrumentSpecifics(config: InstrumentSpecifics): F[ApplyCommandResult] =
     setInstrumentSpecifics(config)(
-      sys.tcsEpics.startCommand(timeout)
+      sys.tcsEpics.startCommand(rotMoveTimeout)
     ).post
       .verifiedRun(ConnectionTimeout)
 
@@ -544,7 +550,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
 
   override def rotIaa(angle: Angle): F[ApplyCommandResult] =
     setRotatorIaa(angle)(
-      sys.tcsEpics.startCommand(timeout)
+      sys.tcsEpics.startCommand(rotMoveTimeout)
     ).post
       .verifiedRun(ConnectionTimeout)
 
@@ -567,9 +573,10 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     ).post
       .verifiedRun(ConnectionTimeout)
 
+  private val pwfs1ParkTimeout                  = FiniteDuration(60, SECONDS)
   override def pwfs1Park: F[ApplyCommandResult] =
     sys.tcsEpics
-      .startCommand(timeout)
+      .startCommand(pwfs1ParkTimeout)
       .pwfs1ProbeCommands
       .park
       .mark
@@ -594,9 +601,10 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     ).post
       .verifiedRun(ConnectionTimeout)
 
+  private val pwfs2ParkTimeout                  = FiniteDuration(60, SECONDS)
   override def pwfs2Park: F[ApplyCommandResult] =
     sys.tcsEpics
-      .startCommand(timeout)
+      .startCommand(pwfs2ParkTimeout)
       .pwfs2ProbeCommands
       .park
       .mark
@@ -621,9 +629,10 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     ).post
       .verifiedRun(ConnectionTimeout)
 
+  private val oiwfsParkTimeout                  = FiniteDuration(60, SECONDS)
   override def oiwfsPark: F[ApplyCommandResult] =
     sys.tcsEpics
-      .startCommand(timeout)
+      .startCommand(oiwfsParkTimeout)
       .oiwfsProbeCommands
       .park
       .mark
@@ -982,6 +991,8 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
         )
     }
 
+  private val wfsObserveTimeout = FiniteDuration(10, SECONDS)
+
   private def setupPwfs1Observe: (exposureTime: TimeSpan, isQL: Boolean) => F[ApplyCommandResult] =
     setupWfsObserve(
       Focus[State](_.pwfs1),
@@ -989,7 +1000,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       (f: String) =>
         sys.tcsEpics.startCommand(timeout).pwfs1Commands.signalProc.darkFilename(f).post,
       (z: Int) => sys.tcsEpics.startCommand(timeout).pwfs1Commands.closedLoop.zernikes2m2(z).post,
-      sys.tcsEpics.startPwfs1Command(timeout)
+      sys.tcsEpics.startPwfs1Command(wfsObserveTimeout)
     )
 
   override def pwfs1Observe(exposureTime: TimeSpan): F[ApplyCommandResult] =
@@ -1004,7 +1015,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       (f: String) =>
         sys.tcsEpics.startCommand(timeout).pwfs2Commands.signalProc.darkFilename(f).post,
       (z: Int) => sys.tcsEpics.startCommand(timeout).pwfs2Commands.closedLoop.zernikes2m2(z).post,
-      sys.tcsEpics.startPwfs2Command(timeout)
+      sys.tcsEpics.startPwfs2Command(wfsObserveTimeout)
     )
 
   override def pwfs2Observe(exposureTime: TimeSpan): F[ApplyCommandResult] =
@@ -1018,7 +1029,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       sys.tcsEpics.status.oiwfsOn,
       (f: String) => sys.oiwfs.startSignalProcCommand(timeout).filename(f).post,
       (z: Int) => sys.oiwfs.startClosedLoopCommand(timeout).zernikes2m2(z).post,
-      sys.tcsEpics.startOiwfsCommand(timeout)
+      sys.tcsEpics.startOiwfsCommand(wfsObserveTimeout)
     )
 
   override def oiwfsObserve(exposureTime: TimeSpan): F[ApplyCommandResult] =
@@ -1026,8 +1037,10 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       setupOiwfsObserve(exposureTime, !guideUsesOiwfs(g.m1Guide, g.m2Guide))
     }
 
+  private val wfsStopObserveTimeout = FiniteDuration(8, SECONDS)
+
   override def pwfs1StopObserve: F[ApplyCommandResult] = sys.tcsEpics
-    .startPwfs1Command(timeout)
+    .startPwfs1Command(wfsStopObserveTimeout)
     .stop
     .mark
     .post(ObserveCommand.CommandType.PermanentOff)
@@ -1040,7 +1053,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     )
 
   override def pwfs2StopObserve: F[ApplyCommandResult] = sys.tcsEpics
-    .startPwfs2Command(timeout)
+    .startPwfs2Command(wfsStopObserveTimeout)
     .stop
     .mark
     .post(ObserveCommand.CommandType.PermanentOff)
@@ -1053,7 +1066,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     )
 
   override def oiwfsStopObserve: F[ApplyCommandResult] = sys.tcsEpics
-    .startOiwfsCommand(timeout)
+    .startOiwfsCommand(wfsStopObserveTimeout)
     .stop
     .mark
     .post(ObserveCommand.CommandType.PermanentOff)
@@ -1184,7 +1197,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
   )(exposureTime: TimeSpan): F[ApplyCommandResult] = {
     val expTimeout: FiniteDuration = FiniteDuration(exposureTime.toMicroseconds,
                                                     TimeUnit.MICROSECONDS
-    ) * (SkyFrames * 1.1).longValue + FiniteDuration.apply(5, TimeUnit.SECONDS)
+    ) * (SkyFrames * 1.1).longValue + wfsObserveTimeout
     val postStopDelay              = FiniteDuration(10, TimeUnit.MILLISECONDS)
     val postDarkConfigDelay        = FiniteDuration(4, TimeUnit.SECONDS)
     val postObserveDelay           = FiniteDuration(50, TimeUnit.MILLISECONDS)
@@ -1192,7 +1205,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     for {
       oiActive <-
         active.map(_.map(_ === BinaryYesNo.Yes)).verifiedRun(ConnectionTimeout)
-      _        <- (cmds(timeout).stop.mark
+      _        <- (cmds(wfsStopObserveTimeout).stop.mark
                     .post(ObserveCommand.CommandType.PermanentOff)
                     .verifiedRun(ConnectionTimeout) *> Temporal[F].sleep(postStopDelay)).whenA(oiActive)
       _        <- darkFilenameCmd(darkFileName("", exposureTime))
@@ -1207,25 +1220,25 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     } yield ret
   }
 
-  def takePwfs1Sky: TimeSpan => F[ApplyCommandResult] = takeWfsSky(
+  def takePwfs1Sky(guide: GuideConfig): TimeSpan => F[ApplyCommandResult] = takeWfsSky(
     sys.tcsEpics.status.pwfs1On,
     sys.tcsEpics.startPwfs1Command,
     (fn: String) => sys.tcsEpics.startCommand(timeout).pwfs1Commands.dark.filename(fn).post,
-    pwfs1Observe
+    t => setupPwfs1Observe(t, !guideUsesPwfs1(guide.tcsGuide.m1Guide, guide.tcsGuide.m2Guide))
   )
 
-  def takePwfs2Sky: TimeSpan => F[ApplyCommandResult] = takeWfsSky(
+  def takePwfs2Sky(guide: GuideConfig): TimeSpan => F[ApplyCommandResult] = takeWfsSky(
     sys.tcsEpics.status.pwfs2On,
     sys.tcsEpics.startPwfs2Command,
     (fn: String) => sys.tcsEpics.startCommand(timeout).pwfs2Commands.dark.filename(fn).post,
-    pwfs2Observe
+    t => setupPwfs2Observe(t, !guideUsesPwfs2(guide.tcsGuide.m1Guide, guide.tcsGuide.m2Guide))
   )
 
-  def takeOiwfsSky: TimeSpan => F[ApplyCommandResult] = takeWfsSky(
+  def takeOiwfsSky(guide: GuideConfig): TimeSpan => F[ApplyCommandResult] = takeWfsSky(
     sys.tcsEpics.status.oiwfsOn,
     sys.tcsEpics.startOiwfsCommand,
     (fn: String) => sys.oiwfs.startDarkCommand(timeout).filename(fn).post,
-    oiwfsObserve
+    t => setupOiwfsObserve(t, !guideUsesOiwfs(guide.tcsGuide.m1Guide, guide.tcsGuide.m2Guide))
   )
 
   def disableTargetFilter: F[ApplyCommandResult] =
@@ -1237,14 +1250,14 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       .verifiedRun(ConnectionTimeout)
 
   private def wfsSky(
-    takeSky: TimeSpan => F[ApplyCommandResult]
+    takeSky: GuideConfig => TimeSpan => F[ApplyCommandResult]
   )(exposureTime: TimeSpan)(guide: GuideConfig): F[ApplyCommandResult] = for {
     pg <- getProbesGuideState.verifiedRun(ConnectionTimeout)
     _  <- disableTargetFilter
     _  <- pauseGuide
     _  <- pauseWfsTracking(pg).verifiedRun(ConnectionTimeout)
     _  <- skyOffset(SkyOffset)
-    r  <- takeSky(exposureTime)
+    r  <- takeSky(guide)(exposureTime)
     _  <- skyOffset(-SkyOffset)
     _  <- resumeWfsTracking(pg).verifiedRun(ConnectionTimeout)
     _  <- resumeGuide(guide.tcsGuide)
@@ -1418,12 +1431,13 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     )
   ).verifiedRun(ConnectionTimeout)
 
+  private val bafflesTimeout = FiniteDuration(40, SECONDS)
   override def baffles(
     central:    CentralBafflePosition,
     deployable: DeployableBafflePosition
   ): F[ApplyCommandResult] =
     sys.tcsEpics
-      .startCommand(timeout)
+      .startCommand(bafflesTimeout)
       .bafflesCommand
       .central(central)
       .bafflesCommand
@@ -1514,7 +1528,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
             .andThen(Target.wavelength)
             .replace(x.toWavelength.some)
         )(
-          sys.tcsEpics.startCommand(timeout)
+          sys.tcsEpics.startCommand(tcsConfigTimeout)
         ).post
           .verifiedRun(ConnectionTimeout)
       }
@@ -1526,7 +1540,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     disableGuide *>
       (selectOiwfs(config) *>
         VerifiedEpics.liftF(Temporal[F].sleep(OiwfsSelectionDelay)) *>
-        applyTcsConfig(config)(sys.tcsEpics.startCommand(timeout)).post)
+        applyTcsConfig(config)(sys.tcsEpics.startCommand(tcsConfigTimeout)).post)
         .verifiedRun(ConnectionTimeout) *>
       lightPath(source, config.instrument.toLightSink)
   }
@@ -1567,6 +1581,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     (aoFold >>> hrwfsPickup >>> scienceFold)(x)
   }
 
+  private val lightPathTimeout                                                        = FiniteDuration(30, SECONDS)
   override def lightPath(from: LightSource, to: LightSinkName): F[ApplyCommandResult] = for {
     p2Parked <- sys.ags.status.p2Parked.verifiedRun(ConnectionTimeout).map(_ === ParkStatus.Parked)
     aoParked <- sys.ags.status.aoParked.verifiedRun(ConnectionTimeout).map(_ === ParkStatus.Parked)
@@ -1582,18 +1597,13 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
                               sys.ags.status.sfName.verifiedRun(ConnectionTimeout)
                 )
     ports    <- getInstrumentPorts
-    _        <- sys.tcsEpics
-                  .startCommand(timeout)
-                  .pwfs2ProbeCommands
-                  .park
-                  .mark
-                  .post
-                  .verifiedRun(ConnectionTimeout)
-                  .whenA(!p2Parked && from === LightSource.AO)
+    _        <- pwfs2Park.whenA(!p2Parked && from === LightSource.AO)
     ret      <-
       getPort(ports, to)
         .map { p =>
-          setLightPath(from, to, p, aoPos, hwPos, sfPos)(sys.tcsEpics.startCommand(timeout)).post
+          setLightPath(from, to, p, aoPos, hwPos, sfPos)(
+            sys.tcsEpics.startCommand(lightPathTimeout)
+          ).post
             .verifiedRun(ConnectionTimeout)
         }
         .getOrElse(ApplyCommandResult.Completed.pure[F])
@@ -1641,11 +1651,12 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       .post
       .verifiedRun(ConnectionTimeout)
 
+  private val m1ParkTimeout                  = FiniteDuration(30, SECONDS)
   override def m1Park: F[ApplyCommandResult] =
-    sys.tcsEpics.startCommand(timeout).m1Commands.park.post.verifiedRun(ConnectionTimeout)
+    sys.tcsEpics.startCommand(m1ParkTimeout).m1Commands.park.post.verifiedRun(ConnectionTimeout)
 
   override def m1Unpark: F[ApplyCommandResult] =
-    sys.tcsEpics.startCommand(timeout).m1Commands.unpark.post.verifiedRun(ConnectionTimeout)
+    sys.tcsEpics.startCommand(m1ParkTimeout).m1Commands.unpark.post.verifiedRun(ConnectionTimeout)
 
   override def m1UpdateOn: F[ApplyCommandResult] = sys.tcsEpics
     .startCommand(timeout)
@@ -1660,7 +1671,12 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     sys.tcsEpics.startCommand(timeout).m1Commands.ao(false).post.verifiedRun(ConnectionTimeout)
 
   override def m1ZeroFigure: F[ApplyCommandResult] =
-    sys.tcsEpics.startCommand(timeout).m1Commands.zero("FIGURE").post.verifiedRun(ConnectionTimeout)
+    sys.tcsEpics
+      .startCommand(m1ParkTimeout)
+      .m1Commands
+      .zero("FIGURE")
+      .post
+      .verifiedRun(ConnectionTimeout)
 
   override def m1LoadAoFigure: F[ApplyCommandResult] = sys.tcsEpics
     .startCommand(timeout)
@@ -1709,7 +1725,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       .verifiedRun(ConnectionTimeout) *>
       (if (Math.abs(size) > 1e-6) {
          sys.tcsEpics
-           .startCommand(timeout)
+           .startCommand(rotMoveTimeout)
            .originAdjustCommand
            .frame(ReferenceFrame.Instrument)
            .originAdjustCommand
@@ -1817,6 +1833,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
         }
     }
 
+  private val adjTimeout = FiniteDuration(20, SECONDS)
   override def targetAdjust(
     target:            VirtualTelescope,
     handsetAdjustment: HandsetAdjustment,
@@ -1825,7 +1842,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     pauseGuide.whenA(openLoops) *>
       adjustParams(handsetAdjustment).flatMap { case (frame, size, angle) =>
         sys.tcsEpics
-          .startCommand(timeout)
+          .startCommand(adjTimeout)
           .targetAdjustCommand
           .frame(frame)
           .targetAdjustCommand
@@ -1845,7 +1862,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     pauseGuide.whenA(openLoops) *>
       adjustParams(handsetAdjustment).flatMap { case (frame, size, angle) =>
         sys.tcsEpics
-          .startCommand(timeout)
+          .startCommand(adjTimeout)
           .originAdjustCommand
           .frame(frame)
           .originAdjustCommand
@@ -1862,7 +1879,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
   override def pointingAdjust(handsetAdjustment: HandsetAdjustment): F[ApplyCommandResult] =
     adjustParams(handsetAdjustment).flatMap { case (frame, size, angle) =>
       sys.tcsEpics
-        .startCommand(timeout)
+        .startCommand(adjTimeout)
         .pointingAdjustCommand
         .frame(frame)
         .pointingAdjustCommand
@@ -1895,7 +1912,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
   ): F[ApplyCommandResult] =
     pauseGuide.whenA(openLoops) *>
       sys.tcsEpics
-        .startCommand(timeout)
+        .startCommand(adjTimeout)
         .targetOffsetClear
         .vt(target)
         .targetOffsetClear
@@ -1933,7 +1950,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
   override def originOffsetClear(openLoops: Boolean)(guide: GuideConfig): F[ApplyCommandResult] =
     pauseGuide.whenA(openLoops) *>
       sys.tcsEpics
-        .startCommand(timeout)
+        .startCommand(adjTimeout)
         .originOffsetClear
         .vt(VirtualTelescope.SourceA)
         .originOffsetClear
@@ -1960,7 +1977,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
 
   override def pointingOffsetClearLocal: F[ApplyCommandResult] =
     sys.tcsEpics
-      .startCommand(timeout)
+      .startCommand(adjTimeout)
       .pointingConfigCommand
       .name(PointingParameter.CA)
       .pointingConfigCommand
@@ -1970,7 +1987,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       .post
       .verifiedRun(ConnectionTimeout) *>
       sys.tcsEpics
-        .startCommand(timeout)
+        .startCommand(adjTimeout)
         .pointingConfigCommand
         .name(PointingParameter.CE)
         .pointingConfigCommand
@@ -1984,7 +2001,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     sys.tcsEpics.startCommand(timeout).absorbGuideCommand.mark.post.verifiedRun(ConnectionTimeout)
 
   override def pointingOffsetClearGuide: F[ApplyCommandResult] =
-    sys.tcsEpics.startCommand(timeout).zeroGuideCommand.mark.post.verifiedRun(ConnectionTimeout)
+    sys.tcsEpics.startCommand(adjTimeout).zeroGuideCommand.mark.post.verifiedRun(ConnectionTimeout)
 
 }
 
