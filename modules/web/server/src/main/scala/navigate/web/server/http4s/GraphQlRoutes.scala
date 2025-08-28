@@ -12,6 +12,7 @@ import fs2.concurrent.Topic
 import lucuma.graphql.routes.GraphQLService
 import lucuma.graphql.routes.Routes
 import natchez.Trace
+import navigate.model.AcMechsState
 import navigate.model.AcquisitionAdjustment
 import navigate.model.FocalPlaneOffset
 import navigate.model.PointingCorrections
@@ -39,6 +40,7 @@ class GraphQlRoutes[F[_]: {Async, Trace, Compression}](
   targetAdjustmentTopic:      Topic[F, TargetOffsets],
   originAdjustmentTopic:      Topic[F, FocalPlaneOffset],
   pointingAdjustmentTopic:    Topic[F, PointingCorrections],
+  acMechsTopic:               Topic[F, AcMechsState],
   logBuffer:                  Ref[F, Seq[ILoggingEvent]]
 ) extends Http4sDsl[F] {
 
@@ -59,6 +61,7 @@ class GraphQlRoutes[F[_]: {Async, Trace, Compression}](
           targetAdjustmentTopic,
           originAdjustmentTopic,
           pointingAdjustmentTopic,
+          acMechsTopic,
           logBuffer
         )
           .map(

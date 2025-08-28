@@ -354,6 +354,54 @@ type ServerConfiguration {
     ssoUri: String!
 }
 
+enum AcLens {
+    AC
+    HRWFS
+}
+
+enum AcNdFilter {
+    Open
+    ND1
+    ND2
+    ND3
+    ND100
+    ND1000
+    FILT04
+    FILT06
+    FILT08
+}
+
+enum AcFilter {
+    NEUTRAL
+    U_RED1
+    B_BLUE
+    V_GREEN
+    R_RED2
+    I_RED3
+}
+
+enum AcWindowSize {
+    FULL
+    WINDOW_200X200
+    WINDOW_100X100
+}
+
+input AcWindowCenter {
+    x: Int
+    y: Int
+}
+
+input AcWindowInput {
+    type: AcWindowSize!
+    center: AcWindowCenter
+}
+
+type AcMechs {
+    lens: AcLens!
+    filter: AcFilter!
+    ndFilter: AcNdFilter
+}
+
 type Query {
     telescopeState: TelescopeState!
     guideState: GuideConfigurationState!
@@ -365,6 +413,7 @@ type Query {
     originAdjustmentOffset: FocalPlaneOffset!
     pointingAdjustmentOffset: PointingCorrections!
     serverConfiguration: ServerConfiguration!
+    acMechsState: AcMechs!
 }
 
 type Mutation {
@@ -421,6 +470,10 @@ type Mutation {
     absorbGuidePointingAdjustment: OperationOutcome!
     resetOriginAdjustment(openLoops: Boolean!): OperationOutcome!
     absorbOriginAdjustment: OperationOutcome!
+    acLens(lens: AcLens!): OperationOutcome!
+    acNdFilter(ndFilter: AcNdFilter!): OperationOutcome!
+    acFilter(filter: AcFilter!): OperationOutcome!
+    acWindowSize(size: AcWindowInput!): OperationOutcome!
 }
 
 type Subscription {
@@ -433,4 +486,5 @@ type Subscription {
     targetAdjustmentOffsets: TargetOffsets!
     originAdjustmentOffset: FocalPlaneOffset!
     pointingAdjustmentOffset: PointingCorrections!
+    acMechsState: AcMechs!
 }

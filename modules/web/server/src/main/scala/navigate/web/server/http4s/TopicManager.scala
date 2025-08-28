@@ -13,6 +13,7 @@ import ch.qos.logback.core.Appender
 import fs2.Pipe
 import fs2.Stream
 import fs2.concurrent.Topic
+import navigate.model.AcMechsState
 import navigate.model.AcquisitionAdjustment
 import navigate.model.FocalPlaneOffset
 import navigate.model.NavigateEvent
@@ -40,6 +41,7 @@ class TopicManager[F[_]] private (
   val targetAdjustment:      Topic[F, TargetOffsets],
   val originAdjustment:      Topic[F, FocalPlaneOffset],
   val pointingAdjustment:    Topic[F, PointingCorrections],
+  val acMechsState:          Topic[F, AcMechsState],
   val logBuffer:             Ref[F, Seq[ILoggingEvent]]
 ) {
 
@@ -105,6 +107,13 @@ class TopicManager[F[_]] private (
   )(using Temporal[F], Logger[F]): Pipe[F, Unit, Unit] =
     genericPoll(eng.getTelescopeState, topic, start)
 
+  private def acMechsStatePoll(
+    eng:   NavigateEngine[F],
+    topic: Topic[F, AcMechsState],
+    start: Int
+  )(using Temporal[F], Logger[F]): Pipe[F, Unit, Unit] =
+    genericPoll(eng.getAcMechsState, topic, start)
+
   private def targetAdjStatePoll(
     eng:   NavigateEngine[F],
     topic: Topic[F, TargetOffsets],
@@ -152,7 +161,8 @@ class TopicManager[F[_]] private (
               telescopeStatePoll(engine, telescopeState, 3),
               targetAdjStatePoll(engine, targetAdjustment, 4),
               originAdjStatePoll(engine, originAdjustment, 5),
-              pointingAdjStatePoll(engine, pointingAdjustment, 6)
+              pointingAdjStatePoll(engine, pointingAdjustment, 6),
+              acMechsStatePoll(engine, acMechsState, 7)
             ),
           engine.eventStream.through(navigateEvents.publish)
         )
@@ -233,6 +243,7 @@ object TopicManager {
       targetAdjustment      <- Resource.eval(Topic[F, TargetOffsets])
       originAdjustment      <- Resource.eval(Topic[F, FocalPlaneOffset])
       pointingAdjustment    <- Resource.eval(Topic[F, PointingCorrections])
+      acMechsState          <- Resource.eval(Topic[F, AcMechsState])
 
       // Setup log buffer
       logBuffer <- bufferLogMessages(loggingEvents)
@@ -248,6 +259,7 @@ object TopicManager {
       targetAdjustment,
       originAdjustment,
       pointingAdjustment,
+      acMechsState,
       logBuffer
     )
 

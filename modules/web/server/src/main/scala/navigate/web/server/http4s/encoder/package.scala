@@ -12,12 +12,14 @@ import lucuma.core.model.M2GuideConfig
 import lucuma.core.util.Timestamp
 import lucuma.odb.json.angle.query.given
 import lucuma.odb.json.offset.query.given
+import navigate.model.AcMechsState
 import navigate.model.AcquisitionAdjustment
 import navigate.model.FocalPlaneOffset
 import navigate.model.HandsetAdjustment.HorizontalAdjustment
 import navigate.model.NavigateState
 import navigate.model.PointingCorrections
 import navigate.model.ServerConfiguration
+import navigate.model.enums.AcNdFilter
 import navigate.server.tcs.GuideState
 import navigate.server.tcs.GuidersQualityValues
 import navigate.server.tcs.MechSystemState
@@ -137,6 +139,13 @@ package object encoder {
       "site"    -> s.site.asJson,
       "odbUri"  -> s.odbUri.asJson,
       "ssoUri"  -> s.ssoUri.asJson
+    )
+
+  given Encoder[AcMechsState] = s =>
+    Json.obj(
+      "lens"     -> s.lens.asJson,
+      "filter"   -> s.filter.asJson,
+      "ndFilter" -> s.ndFilter.asJson
     )
 
 }

@@ -15,6 +15,8 @@ import navigate.server.acm.CarState
 case class AcquisitionCameraChannels[F[_]](
   telltale:          TelltaleChannel[F],
   filterReadout:     Channel[F, String],
+  ndFilterReadout:   Channel[F, String],
+  lensReadout:       Channel[F, String],
   lens:              Channel[F, String],
   ndFilter:          Channel[F, String],
   filter:            Channel[F, String],
@@ -46,32 +48,36 @@ object AcquisitionCameraChannels {
     service: EpicsService[F],
     top:     NonEmptyString
   ): Resource[F, AcquisitionCameraChannels[F]] = for {
-    tt   <- service.getChannel[String](top, "health.VAL").map(TelltaleChannel(sysName, _))
-    flrd <- service.getChannel[String](top, "clfilterName.VAL")
-    lns  <- service.getChannel[String](top, "lensSel.A")
-    ndf  <- service.getChannel[String](top, "ndfilterSel.A")
-    flt  <- service.getChannel[String](top, "clfilterSel.A")
-    fcnt <- service.getChannel[String](top, "dc:detExposure.A")
-    exp  <- service.getChannel[String](top, "dc:detExposure.B")
-    out  <- service.getChannel[String](top, "dc:setObserve.A")
-    drt  <- service.getChannel[String](top, "dc:setObserve.B")
-    fln  <- service.getChannel[String](top, "dc:setObserve.C")
-    sim  <- service.getChannel[String](top, "dc:setObserve.D")
-    str  <- service.getChannel[String](top, "dc:setDhsInfo.A")
-    opt  <- service.getChannel[String](top, "dc:setDhsInfo.B")
-    typ  <- service.getChannel[String](top, "dc:detObstype.A")
-    bin  <- service.getChannel[String](top, "dc:detFrameSize.A")
-    wnd  <- service.getChannel[String](top, "dc:detFrameSize.B")
-    ctx  <- service.getChannel[String](top, "dc:detFrameSize.C")
-    cty  <- service.getChannel[String](top, "dc:detFrameSize.D")
-    wid  <- service.getChannel[String](top, "dc:detFrameSize.E")
-    hei  <- service.getChannel[String](top, "dc:detFrameSize.F")
-    lab  <- service.getChannel[String](top, "observe.A")
-    std  <- service.getChannel[CadDirective](top, "stop.DIR")
-    obc  <- service.getChannel[CarState](top, "observeC.VAL")
+    tt    <- service.getChannel[String](top, "health.VAL").map(TelltaleChannel(sysName, _))
+    flrd  <- service.getChannel[String](top, "clfilterName.VAL")
+    ndfrd <- service.getChannel[String](top, "ndfilterName.VAL")
+    lnrd  <- service.getChannel[String](top, "lensName.VAL")
+    lns   <- service.getChannel[String](top, "lensSel.A")
+    ndf   <- service.getChannel[String](top, "ndfilterSel.A")
+    flt   <- service.getChannel[String](top, "clfilterSel.A")
+    fcnt  <- service.getChannel[String](top, "dc:detExposure.A")
+    exp   <- service.getChannel[String](top, "dc:detExposure.B")
+    out   <- service.getChannel[String](top, "dc:setObserve.A")
+    drt   <- service.getChannel[String](top, "dc:setObserve.B")
+    fln   <- service.getChannel[String](top, "dc:setObserve.C")
+    sim   <- service.getChannel[String](top, "dc:setObserve.D")
+    str   <- service.getChannel[String](top, "dc:setDhsInfo.A")
+    opt   <- service.getChannel[String](top, "dc:setDhsInfo.B")
+    typ   <- service.getChannel[String](top, "dc:detObstype.A")
+    bin   <- service.getChannel[String](top, "dc:detFrameSize.A")
+    wnd   <- service.getChannel[String](top, "dc:detFrameSize.B")
+    ctx   <- service.getChannel[String](top, "dc:detFrameSize.C")
+    cty   <- service.getChannel[String](top, "dc:detFrameSize.D")
+    wid   <- service.getChannel[String](top, "dc:detFrameSize.E")
+    hei   <- service.getChannel[String](top, "dc:detFrameSize.F")
+    lab   <- service.getChannel[String](top, "observe.A")
+    std   <- service.getChannel[CadDirective](top, "stop.DIR")
+    obc   <- service.getChannel[CarState](top, "observeC.VAL")
   } yield AcquisitionCameraChannels(
     tt,
     flrd,
+    ndfrd,
+    lnrd,
     lns,
     ndf,
     flt,
