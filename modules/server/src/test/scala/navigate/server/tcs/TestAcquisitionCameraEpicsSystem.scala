@@ -21,6 +21,8 @@ object TestAcquisitionCameraEpicsSystem {
   case class State(
     telltale:          TestChannel.State[String],
     filterReadout:     TestChannel.State[String],
+    ndFilterReadout:   TestChannel.State[String],
+    lensReadout:       TestChannel.State[String],
     lens:              TestChannel.State[String],
     ndFilter:          TestChannel.State[String],
     filter:            TestChannel.State[String],
@@ -46,7 +48,9 @@ object TestAcquisitionCameraEpicsSystem {
 
   val defaultState: State = State(
     TestChannel.State.of(""),
-    TestChannel.State.of(""),
+    TestChannel.State.of("neutral"),
+    TestChannel.State.of("open"),
+    TestChannel.State.of("AC"),
     TestChannel.State.of(""),
     TestChannel.State.of(""),
     TestChannel.State.of(""),
@@ -76,6 +80,8 @@ object TestAcquisitionCameraEpicsSystem {
     telltale =
       TelltaleChannel[F]("AC/HR", new TestChannel[F, State, String](s, Focus[State](_.telltale))),
     filterReadout = new TestChannel[F, State, String](s, Focus[State](_.filterReadout)),
+    ndFilterReadout = new TestChannel[F, State, String](s, Focus[State](_.ndFilterReadout)),
+    lensReadout = new TestChannel[F, State, String](s, Focus[State](_.lensReadout)),
     lens = new TestChannel[F, State, String](s, Focus[State](_.lens)),
     ndFilter = new TestChannel[F, State, String](s, Focus[State](_.ndFilter)),
     filter = new TestChannel[F, State, String](s, Focus[State](_.filter)),

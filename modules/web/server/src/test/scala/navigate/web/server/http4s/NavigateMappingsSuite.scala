@@ -38,6 +38,8 @@ import lucuma.core.util.Timestamp
 import monocle.Focus.focus
 import mouse.boolean.*
 import munit.CatsEffectSuite
+import navigate.model.AcMechsState
+import navigate.model.AcWindow
 import navigate.model.AcquisitionAdjustment
 import navigate.model.CommandResult
 import navigate.model.FocalPlaneOffset
@@ -55,6 +57,9 @@ import navigate.model.Target
 import navigate.model.TcsConfig
 import navigate.model.TrackingConfig
 import navigate.model.config.NavigateConfiguration
+import navigate.model.enums.AcFilter
+import navigate.model.enums.AcLens
+import navigate.model.enums.AcNdFilter
 import navigate.model.enums.AcquisitionAdjustmentCommand
 import navigate.model.enums.DomeMode
 import navigate.model.enums.LightSource
@@ -2045,6 +2050,124 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     )
   }
 
+  test("Query AC mechanisms state") {
+    val expected = AcMechsState(AcLens.Ac, AcNdFilter.Nd1, AcFilter.Neutral)
+    for {
+      mp <- buildMapping(NavigateConfiguration.default, true)
+      r  <- mp.compileAndRun(
+              """
+        | query { acMechsState {
+        |     lens
+        |     filter
+        |     ndFilter
+        |   }
+        | }
+        |""".stripMargin
+            )
+    } yield assertEquals(
+      r.hcursor.downField("data").downField("acMechsState").as[AcMechsState],
+      expected.asRight[DecodingFailure]
+    )
+  }
+
+  test("Set AC lens") {
+    for {
+      mp <- buildMapping()
+      p  <- mp.compileAndRun(
+              """
+          |mutation {
+          |  acLens(lens: HRWFS) {
+          |    result
+          |  }
+          |}
+          |""".stripMargin
+            )
+    } yield assertEquals(
+      p.hcursor
+        .downField("data")
+        .downField("acLens")
+        .downField("result")
+        .as[String]
+        .toOption,
+      "SUCCESS".some
+    )
+  }
+
+  test("Set AC filter") {
+    for {
+      mp <- buildMapping()
+      p  <- mp.compileAndRun(
+              """
+          |mutation {
+          |  acFilter(filter: B_BLUE) {
+          |    result
+          |  }
+          |}
+          |""".stripMargin
+            )
+    } yield assertEquals(
+      p.hcursor
+        .downField("data")
+        .downField("acFilter")
+        .downField("result")
+        .as[String]
+        .toOption,
+      "SUCCESS".some
+    )
+  }
+
+  test("Set AC ND Filter") {
+    for {
+      mp <- buildMapping()
+      p  <- mp.compileAndRun(
+              """
+          |mutation {
+          |  acNdFilter(ndFilter: ND100) {
+          |    result
+          |  }
+          |}
+          |""".stripMargin
+            )
+    } yield assertEquals(
+      p.hcursor
+        .downField("data")
+        .downField("acNdFilter")
+        .downField("result")
+        .as[String]
+        .toOption,
+      "SUCCESS".some
+    )
+  }
+
+  test("Set AC window") {
+    for {
+      mp <- buildMapping()
+      p  <- mp.compileAndRun(
+              """
+          |mutation {
+          |  acWindowSize(size: {
+          |    type: WINDOW_200X200
+          |    center: {
+          |      x: 123
+          |      y: 456
+          |    }
+          |  }) {
+          |    result
+          |  }
+          |}
+          |""".stripMargin
+            )
+    } yield assertEquals(
+      p.hcursor
+        .downField("data")
+        .downField("acWindowSize")
+        .downField("result")
+        .as[String]
+        .toOption,
+      "SUCCESS".some
+    )
+  }
+
 }
 
 object NavigateMappingsTest {
@@ -2266,6 +2389,19 @@ object NavigateMappingsTest {
 
     override def pointingOffsetClearGuide: IO[CommandResult] =
       CommandResult.CommandSuccess.pure[IO]
+
+    override def acLens(l: AcLens): IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
+
+    override def acNdFilter(nd: AcNdFilter): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def acFilter(flt: AcFilter): IO[CommandResult] = CommandResult.CommandSuccess.pure[IO]
+
+    override def acWindowSize(wnd: AcWindow): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def getAcMechsState: IO[AcMechsState] =
+      AcMechsState(AcLens.Ac, AcNdFilter.Nd1, AcFilter.Neutral).pure[IO]
   }
 
   def buildServer: IO[NavigateEngine[IO]] = for {
@@ -2305,7 +2441,8 @@ object NavigateMappingsTest {
     tot <- Topic[IO, TargetOffsets]
     ot  <- Topic[IO, FocalPlaneOffset]
     pt  <- Topic[IO, PointingCorrections]
-    mp  <- NavigateMappings[IO](config, eng, log, gd, gq, ts, aa, tot, ot, pt, lb)
+    ac  <- Topic[IO, AcMechsState]
+    mp  <- NavigateMappings[IO](config, eng, log, gd, gq, ts, aa, tot, ot, pt, ac, lb)
   } yield mp
 
   given Decoder[OperationOutcome] = Decoder.instance(h =>
@@ -2480,5 +2617,12 @@ object NavigateMappingsTest {
       pwfs2 <- h.downField("pwfs2").as[GuidersQualityValues.GuiderQuality]
       oiwfs <- h.downField("oiwfs").as[GuidersQualityValues.GuiderQuality]
     } yield GuidersQualityValues(pwfs1, pwfs2, oiwfs)
+
+  given Decoder[AcMechsState] = h =>
+    for {
+      lens <- h.downField("lens").as[AcLens]
+      nd   <- h.downField("ndFilter").as[AcNdFilter]
+      flt  <- h.downField("filter").as[AcFilter]
+    } yield AcMechsState(lens, nd, flt)
 
 }

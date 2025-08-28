@@ -41,6 +41,8 @@ import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.Gid
 import lucuma.core.util.TimeSpan
 import mouse.boolean.given
+import navigate.model.AcMechsState
+import navigate.model.AcWindow
 import navigate.model.AcquisitionAdjustment
 import navigate.model.AutoparkAowfs
 import navigate.model.AutoparkGems
@@ -77,6 +79,9 @@ import navigate.model.ZeroMountOffset
 import navigate.model.ZeroSourceDiffTrack
 import navigate.model.ZeroSourceOffset
 import navigate.model.config.NavigateConfiguration
+import navigate.model.enums.AcFilter
+import navigate.model.enums.AcLens
+import navigate.model.enums.AcNdFilter
 import navigate.model.enums.AcquisitionAdjustmentCommand
 import navigate.model.enums.LightSource
 import navigate.model.enums.VirtualTelescope
@@ -103,6 +108,7 @@ class NavigateMappings[F[_]: Sync](
   val targetAdjustmentTopic:      Topic[F, TargetOffsets],
   val originAdjustmentTopic:      Topic[F, FocalPlaneOffset],
   val pointingAdjustmentTopic:    Topic[F, PointingCorrections],
+  val acMechsTopic:               Topic[F, AcMechsState],
   val logBuffer:                  Ref[F, Seq[ILoggingEvent]]
 )(
   override val schema:            Schema
@@ -130,6 +136,9 @@ class NavigateMappings[F[_]: Sync](
 
   def pointingAdjustmentOffset: F[Result[PointingCorrections]] =
     server.getPointingOffset.attempt.map(_.fold(e => Result.failure(e.getMessage), Result.success))
+
+  def acMechsState: F[Result[AcMechsState]] =
+    server.getAcMechsState.attempt.map(_.fold(e => Result.failure(e.getMessage), Result.success))
 
   def instrumentPort(env: Env): F[Result[Option[Int]]] =
     env
@@ -453,6 +462,42 @@ class NavigateMappings[F[_]: Sync](
     Result.failure[OperationOutcome]("Clear origin offset parameters could not be parsed.").pure[F]
   )
 
+  def acLens(env: Env): F[Result[OperationOutcome]] = (for {
+    lens <- env.get[AcLens]("lens")
+  } yield server
+    .acLens(lens)
+    .attempt
+    .map(convertResult)).getOrElse(
+    Result.failure[OperationOutcome]("AC lens parameter could not be parsed.").pure[F]
+  )
+
+  def acFilter(env: Env): F[Result[OperationOutcome]] = (for {
+    filter <- env.get[AcFilter]("filter")
+  } yield server
+    .acFilter(filter)
+    .attempt
+    .map(convertResult)).getOrElse(
+    Result.failure[OperationOutcome]("AC filter parameter could not be parsed.").pure[F]
+  )
+
+  def acNdFilter(env: Env): F[Result[OperationOutcome]] = (for {
+    ndFilter <- env.get[AcNdFilter]("ndFilter")
+  } yield server
+    .acNdFilter(ndFilter)
+    .attempt
+    .map(convertResult)).getOrElse(
+    Result.failure[OperationOutcome]("AC ND filter parameter could not be parsed.").pure[F]
+  )
+
+  def acWindowSize(env: Env): F[Result[OperationOutcome]] = (for {
+    windowSize <- env.get[AcWindow]("size")
+  } yield server
+    .acWindowSize(windowSize)
+    .attempt
+    .map(convertResult)).getOrElse(
+    Result.failure[OperationOutcome]("AC Window parameter could not be parsed.").pure[F]
+  )
+
   def parameterlessCommand(cmd: F[CommandResult]): F[Result[OperationOutcome]] =
     cmd.attempt
       .map(convertResult)
@@ -723,6 +768,42 @@ class NavigateMappings[F[_]: Sync](
           List(Binding("openLoops", BooleanValue(openLoops)))
         ) =>
       Elab.env("openLoops", openLoops)
+    case (MutationType, "acLens", List(Binding("lens", EnumValue(name))))                       =>
+      for {
+        t <- Elab.liftR(
+               parseEnumerated[AcLens](name).toResult(
+                 "Could not parse acLens parameter \"lens\""
+               )
+             )
+        _ <- Elab.env("lens", t)
+      } yield ()
+    case (MutationType, "acFilter", List(Binding("filter", EnumValue(name))))                   =>
+      for {
+        t <- Elab.liftR(
+               parseEnumerated[AcFilter](name).toResult(
+                 "Could not parse acFilter parameter \"filter\""
+               )
+             )
+        _ <- Elab.env("filter", t)
+      } yield ()
+    case (MutationType, "acNdFilter", List(Binding("ndFilter", EnumValue(name))))               =>
+      for {
+        t <- Elab.liftR(
+               parseEnumerated[AcNdFilter](name).toResult(
+                 "Could not parse acNdFilter parameter \"ndFilter\""
+               )
+             )
+        _ <- Elab.env("ndFilter", t)
+      } yield ()
+    case (MutationType, "acWindowSize", List(Binding("size", ObjectValue(l))))                  =>
+      for {
+        t <- Elab.liftR(
+               parseAcWindowSize(l).toResult(
+                 "Could not parse acWindowSize parameter \"size\""
+               )
+             )
+        _ <- Elab.env("size", t)
+      } yield ()
     case (QueryType, "instrumentPort", List(Binding("instrument", EnumValue(ins))))             =>
       Elab
         .liftR(
@@ -748,7 +829,8 @@ class NavigateMappings[F[_]: Sync](
           RootEffect.computeEncodable("pointingAdjustmentOffset")((_, _) =>
             pointingAdjustmentOffset
           ),
-          RootEffect.computeEncodable("serverConfiguration")((_, _) => serverConfig)
+          RootEffect.computeEncodable("serverConfiguration")((_, _) => serverConfig),
+          RootEffect.computeEncodable("acMechsState")((_, _) => acMechsState)
         )
       ),
       ObjectMapping(
@@ -882,7 +964,11 @@ class NavigateMappings[F[_]: Sync](
           ),
           RootEffect.computeEncodable("absorbOriginAdjustment")((_, _) =>
             parameterlessCommand(server.originOffsetAbsorb)
-          )
+          ),
+          RootEffect.computeEncodable("acLens")((_, env) => acLens(env)),
+          RootEffect.computeEncodable("acFilter")((_, env) => acFilter(env)),
+          RootEffect.computeEncodable("acNdFilter")((_, env) => acNdFilter(env)),
+          RootEffect.computeEncodable("acWindowSize")((_, env) => acWindowSize(env))
         )
       ),
       ObjectMapping(
@@ -949,6 +1035,13 @@ class NavigateMappings[F[_]: Sync](
               .map(_.asJson)
               .map(circeCursor(p, env, _))
               .map(Result.success)
+          },
+          RootStream.computeCursor("acMechsState") { (p, env) =>
+            acMechsTopic
+              .subscribe(1024)
+              .map(_.asJson)
+              .map(circeCursor(p, env, _))
+              .map(Result.success)
           }
         )
       )
@@ -973,6 +1066,7 @@ object NavigateMappings extends GrackleParsers {
     targetAdjustmentTopic:      Topic[F, TargetOffsets],
     originAdjustmentTopic:      Topic[F, FocalPlaneOffset],
     pointingAdjustmentTopic:    Topic[F, PointingCorrections],
+    acMechsTopic:               Topic[F, AcMechsState],
     logBuffer:                  Ref[F, Seq[ILoggingEvent]]
   ): F[NavigateMappings[F]] = loadSchema.flatMap {
     case Result.Success(schema)           =>
@@ -987,6 +1081,7 @@ object NavigateMappings extends GrackleParsers {
         targetAdjustmentTopic,
         originAdjustmentTopic,
         pointingAdjustmentTopic,
+        acMechsTopic,
         logBuffer
       )(schema)
         .pure[F]
@@ -1002,6 +1097,7 @@ object NavigateMappings extends GrackleParsers {
         targetAdjustmentTopic,
         originAdjustmentTopic,
         pointingAdjustmentTopic,
+        acMechsTopic,
         logBuffer
       )(schema)
         .pure[F]
@@ -1284,5 +1380,25 @@ object NavigateMappings extends GrackleParsers {
         } yield HandsetAdjustment.ProbeFrameAdjustment(probe, du, dv)
       case _                                              => none
     }
+
+  def parseAcWindowSize(l: List[(String, Value)]): Option[AcWindow] =
+    l.collectFirst { case ("type", EnumValue(v)) => v }
+      .flatMap {
+        case "FULL"           => AcWindow.Full.some
+        case "WINDOW_200X200" =>
+          l.collectFirst { case ("center", ObjectValue(l)) => parseAcWindowCenter(l) }.flatten.map {
+            (x, y) => AcWindow.Square200(x, y)
+          }
+        case "WINDOW_100X100" =>
+          l.collectFirst { case ("center", ObjectValue(l)) => parseAcWindowCenter(l) }.flatten.map {
+            (x, y) => AcWindow.Square100(x, y)
+          }
+        case _                => none
+      }
+
+  def parseAcWindowCenter(l: List[(String, Value)]): Option[(Int, Int)] = for {
+    x <- l.collectFirst { case ("x", IntValue(v)) => v }
+    y <- l.collectFirst { case ("y", IntValue(v)) => v }
+  } yield (x, y)
 
 }

@@ -14,6 +14,9 @@ import lucuma.core.model.Observation
 import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.TimeSpan
 import navigate.model.HandsetAdjustment.given
+import navigate.model.enums.AcFilter
+import navigate.model.enums.AcLens
+import navigate.model.enums.AcNdFilter
 import navigate.model.enums.DomeMode
 import navigate.model.enums.LightSource
 import navigate.model.enums.ShutterMode
@@ -23,6 +26,10 @@ sealed trait NavigateCommand extends Product with Serializable
 
 object NavigateCommand {
   case class AcObserve(period: TimeSpan)                                     extends NavigateCommand
+  case class AcSetLens(l: AcLens)                                            extends NavigateCommand
+  case class AcSetFilter(flt: AcFilter)                                      extends NavigateCommand
+  case class AcSetNdFilter(nd: AcNdFilter)                                   extends NavigateCommand
+  case class AcSetWindowSize(wnd: AcWindow)                                  extends NavigateCommand
   case class AcquisitionAdjust(offset: Offset, ipa: Option[Angle], iaa: Option[Angle])
       extends NavigateCommand
   case class AowfsFollow(enable: Boolean)                                    extends NavigateCommand

@@ -40,6 +40,8 @@ import monocle.syntax.all.*
 import mouse.boolean.given
 import munit.CatsEffectSuite
 import navigate.epics.TestChannel
+import navigate.model.AcMechsState
+import navigate.model.AcWindow
 import navigate.model.AutoparkAowfs
 import navigate.model.AutoparkGems
 import navigate.model.AutoparkOiwfs
@@ -71,6 +73,9 @@ import navigate.model.ZeroMountDiffTrack
 import navigate.model.ZeroMountOffset
 import navigate.model.ZeroSourceDiffTrack
 import navigate.model.ZeroSourceOffset
+import navigate.model.enums.AcFilter
+import navigate.model.enums.AcLens
+import navigate.model.enums.AcNdFilter
 import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
@@ -2234,6 +2239,80 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     } yield {
       assert(r1.absorbGuideDirState.connected)
       assertEquals(r1.absorbGuideDirState.value, CadDirective.MARK.some)
+    }
+  }
+
+  test("Retrieve AC mechanism positions") {
+    val result = AcMechsState(AcLens.Hrwfs, AcNdFilter.Nd1, AcFilter.Neutral)
+    for {
+      x        <- createController()
+      (st, ctr) = x
+      _        <- st.ac.update(_.focus(_.filterReadout.value).replace(result.filter.tag.some))
+      _        <- st.ac.update(_.focus(_.ndFilterReadout.value).replace(result.ndFilter.tag.some))
+      _        <- st.ac.update(_.focus(_.lensReadout.value).replace(result.lens.tag.some))
+      a        <- ctr.acCommands.getState
+    } yield assertEquals(a, result)
+  }
+
+  test("Set AC filter") {
+    val v = AcFilter.R_Red2
+    for {
+      x        <- createController()
+      (st, ctr) = x
+      _        <- ctr.acCommands.filter(v)
+      r1       <- st.ac.get
+    } yield {
+      assert(r1.filter.connected)
+      assertEquals(r1.filter.value, v.tag.some)
+    }
+  }
+
+  test("Set AC lens") {
+    val v = AcLens.Ac
+    for {
+      x        <- createController()
+      (st, ctr) = x
+      _        <- ctr.acCommands.lens(v)
+      r1       <- st.ac.get
+    } yield {
+      assert(r1.lens.connected)
+      assertEquals(r1.lens.value, v.tag.some)
+    }
+  }
+
+  test("Set AC ND filter") {
+    val v = AcNdFilter.Nd100
+    for {
+      x        <- createController()
+      (st, ctr) = x
+      _        <- ctr.acCommands.ndFilter(v)
+      r1       <- st.ac.get
+    } yield {
+      assert(r1.ndFilter.connected)
+      assertEquals(r1.ndFilter.value, v.tag.some)
+    }
+  }
+
+  test("Set AC window") {
+    val v = AcWindow.Square200(489, 377)
+    for {
+      x        <- createController()
+      (st, ctr) = x
+      _        <- ctr.acCommands.windowSize(v)
+      r1       <- st.ac.get
+    } yield {
+      assert(r1.windowing.connected)
+      assertEquals(r1.windowing.value, "1".some)
+      assert(r1.binning.connected)
+      assertEquals(r1.binning.value, "0".some)
+      assert(r1.centerX.connected)
+      assertEquals(r1.centerX.value, v.centerX.toString.some)
+      assert(r1.centerY.connected)
+      assertEquals(r1.centerY.value, v.centerY.toString.some)
+      assert(r1.width.connected)
+      assertEquals(r1.width.value, "200".some)
+      assert(r1.height.connected)
+      assertEquals(r1.height.value, "200".some)
     }
   }
 

@@ -40,6 +40,8 @@ import monocle.Lens
 import mouse.boolean.given
 import navigate.epics.VerifiedEpics
 import navigate.epics.VerifiedEpics.*
+import navigate.model.AcMechsState
+import navigate.model.AcWindow
 import navigate.model.AutoparkAowfs
 import navigate.model.AutoparkGems
 import navigate.model.AutoparkOiwfs
@@ -73,6 +75,9 @@ import navigate.model.ZeroMountOffset
 import navigate.model.ZeroSourceDiffTrack
 import navigate.model.ZeroSourceOffset
 import navigate.model.enums
+import navigate.model.enums.AcFilter
+import navigate.model.enums.AcLens
+import navigate.model.enums.AcNdFilter
 import navigate.model.enums.AoFoldPosition
 import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
@@ -104,7 +109,7 @@ import org.typelevel.log4cats.Logger
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.*
 
-import TcsBaseController.{EquinoxDefault, FixedSystem, SystemDefault}
+import TcsBaseController.{AcCommands, EquinoxDefault, FixedSystem, SystemDefault}
 
 /* This class implements the common TCS commands */
 abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
@@ -1647,8 +1652,8 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
 
   private val hrwfsStream: String = "hrwfsScience"
 
-  override def hrwfsObserve(exposureTime: TimeSpan): F[ApplyCommandResult] =
-    (sys.hrwfs
+  override def hrwfsObserve(exposureTime: TimeSpan): F[ApplyCommandResult] = (
+    sys.hrwfs
       .startCommand(timeout)
       .setExposureTime(exposureTime.toSeconds.toDouble)
       .setNumberOfFrames(-1)
@@ -1658,7 +1663,8 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       sys.hrwfs
         .startCommand(timeout)
         .setDhsLabel("NONE")
-        .post).verifiedRun(ConnectionTimeout)
+        .post
+  ).verifiedRun(ConnectionTimeout)
 
   override def hrwfsStopObserve: F[ApplyCommandResult] =
     sys.hrwfs
@@ -2019,6 +2025,67 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
   override def pointingOffsetClearGuide: F[ApplyCommandResult] =
     sys.tcsEpics.startCommand(AdjTimeout).zeroGuideCommand.mark.post.verifiedRun(ConnectionTimeout)
 
+  private val AcMechTimeout              = FiniteDuration(20, SECONDS)
+  override val acCommands: AcCommands[F] = new AcCommands[F] {
+    override def lens(l: AcLens): F[ApplyCommandResult] =
+      sys.hrwfs.startCommand(AcMechTimeout).setLens(l).post.verifiedRun(ConnectionTimeout)
+
+    override def ndFilter(ndFilter: AcNdFilter): F[ApplyCommandResult] = sys.hrwfs
+      .startCommand(AcMechTimeout)
+      .setNdFilter(ndFilter)
+      .post
+      .verifiedRun(ConnectionTimeout)
+
+    override def filter(filter: AcFilter): F[ApplyCommandResult] =
+      sys.hrwfs.startCommand(AcMechTimeout).setColFilter(filter).post.verifiedRun(ConnectionTimeout)
+
+    private def setWindowSize(size: AcWindow): F[ApplyCommandResult] = {
+      val cmd = sys.hrwfs.startCommand(AcMechTimeout)
+
+      (size match {
+        case AcWindow.Full            => cmd.enableWindow(0).setBinning(0)
+        case AcWindow.Square100(x, y) =>
+          cmd
+            .enableWindow(1)
+            .setBinning(0)
+            .setWindowHeight(100)
+            .setWindowWidth(100)
+            .setWindowX(x)
+            .setWindowY(y)
+        case AcWindow.Square200(x, y) =>
+          cmd
+            .enableWindow(1)
+            .setBinning(0)
+            .setWindowHeight(200)
+            .setWindowWidth(200)
+            .setWindowX(x)
+            .setWindowY(y)
+      }).post.verifiedRun(ConnectionTimeout)
+    }
+
+    override def windowSize(size: AcWindow): F[ApplyCommandResult] =
+      sys.hrwfs.status.observe.verifiedRun(ConnectionTimeout).flatMap { active =>
+        hrwfsStopObserve.whenA(active === CarState.BUSY) *>
+          setWindowSize(size) <*
+          sys.hrwfs
+            .startCommand(timeout)
+            .setDhsLabel("NONE")
+            .post
+            .verifiedRun(ConnectionTimeout)
+            .whenA(active === CarState.BUSY)
+      }
+
+    override def getState: F[AcMechsState] = (for {
+      lnF <- sys.hrwfs.status.lens
+      ndF <- sys.hrwfs.status.ndFilter
+      flF <- sys.hrwfs.status.filter
+    } yield for {
+      ln <- lnF
+      nd <- ndF
+      fl <- flF
+    } yield AcMechsState(ln, nd, fl)).verifiedRun(ConnectionTimeout)
+
+  }
 }
 
 object TcsBaseControllerEpics {

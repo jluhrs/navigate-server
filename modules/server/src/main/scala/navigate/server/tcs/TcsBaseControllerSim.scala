@@ -38,7 +38,7 @@ import navigate.server.tcs.FollowStatus.*
 import navigate.server.tcs.GuidersQualityValues.GuiderQuality
 import navigate.server.tcs.ParkStatus.*
 
-class TcsBaseControllerSim[F[_]: Sync](
+abstract class TcsBaseControllerSim[F[_]: Sync](
   guideRef:    Ref[F, GuideState],
   telStateRef: Ref[F, TelescopeState]
 ) extends TcsBaseController[F] {
@@ -300,4 +300,5 @@ class TcsBaseControllerSim[F[_]: Sync](
 
   override def pwfs2Sky(exposureTime: TimeSpan)(guide: GuideConfig): F[ApplyCommandResult] =
     ApplyCommandResult.Completed.pure[F]
+
 }

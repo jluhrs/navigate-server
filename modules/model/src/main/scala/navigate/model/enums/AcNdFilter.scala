@@ -6,6 +6,7 @@ package navigate.model.enums
 import lucuma.core.util.Enumerated
 
 enum AcNdFilter(val tag: String) derives Enumerated {
+  case Open   extends AcNdFilter("open")
   case Nd3    extends AcNdFilter("ND3")
   case Nd2    extends AcNdFilter("ND2")
   case Nd1    extends AcNdFilter("ND1")

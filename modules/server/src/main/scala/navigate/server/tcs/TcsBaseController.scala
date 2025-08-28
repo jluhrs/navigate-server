@@ -9,6 +9,8 @@ import lucuma.core.math.Offset
 import lucuma.core.model.GuideConfig
 import lucuma.core.model.TelescopeGuideConfig
 import lucuma.core.util.TimeSpan
+import navigate.model.AcMechsState
+import navigate.model.AcWindow
 import navigate.model.FocalPlaneOffset
 import navigate.model.HandsetAdjustment
 import navigate.model.InstrumentSpecifics
@@ -19,6 +21,9 @@ import navigate.model.SwapConfig
 import navigate.model.Target
 import navigate.model.TcsConfig
 import navigate.model.TrackingConfig
+import navigate.model.enums.AcFilter
+import navigate.model.enums.AcLens
+import navigate.model.enums.AcNdFilter
 import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
@@ -26,6 +31,7 @@ import navigate.model.enums.LightSource
 import navigate.model.enums.ShutterMode
 import navigate.model.enums.VirtualTelescope
 import navigate.server.ApplyCommandResult
+import navigate.server.tcs.TcsBaseController.AcCommands
 
 trait TcsBaseController[F[_]] {
   def mcsPark: F[ApplyCommandResult]
@@ -109,6 +115,8 @@ trait TcsBaseController[F[_]] {
   def pointingOffsetAbsorbGuide: F[ApplyCommandResult]
   def pointingOffsetClearGuide: F[ApplyCommandResult]
 
+  val acCommands: AcCommands[F]
+
   // Queries
   def getGuideState: F[GuideState]
   def getGuideQuality: F[GuidersQualityValues]
@@ -124,5 +132,14 @@ object TcsBaseController {
   val SystemDefault: String  = "FK5"
   val EquinoxDefault: String = "J2000"
   val FixedSystem: String    = "Fixed"
+
+  trait AcCommands[F[_]] {
+    def lens(l:            AcLens): F[ApplyCommandResult]
+    def ndFilter(ndFilter: AcNdFilter): F[ApplyCommandResult]
+    def filter(filter:     AcFilter): F[ApplyCommandResult]
+    def windowSize(size:   AcWindow): F[ApplyCommandResult]
+
+    def getState: F[AcMechsState]
+  }
 
 }

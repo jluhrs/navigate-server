@@ -9,6 +9,13 @@ import cats.syntax.all.*
 import lucuma.core.enums.MountGuideOption
 import lucuma.core.model.M1GuideConfig
 import lucuma.core.model.M2GuideConfig
+import navigate.model.AcMechsState
+import navigate.model.AcWindow
+import navigate.model.enums.AcFilter
+import navigate.model.enums.AcLens
+import navigate.model.enums.AcNdFilter
+import navigate.server.ApplyCommandResult
+import navigate.server.tcs.TcsBaseController.AcCommands
 
 class TcsNorthControllerSim[F[_]: Sync](
   guideRef:    Ref[F, GuideState],
@@ -28,6 +35,22 @@ class TcsNorthControllerSim[F[_]: Sync](
       nifsPort = 1,
       niriPort = 0
     ).pure[F]
+
+  override val acCommands: AcCommands[F] = new AcCommands[F] {
+    override def lens(l: AcLens): F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
+
+    override def ndFilter(ndFilter: AcNdFilter): F[ApplyCommandResult] =
+      ApplyCommandResult.Completed.pure[F]
+
+    override def filter(filter: AcFilter): F[ApplyCommandResult] =
+      ApplyCommandResult.Completed.pure[F]
+
+    override def windowSize(size: AcWindow): F[ApplyCommandResult] =
+      ApplyCommandResult.Completed.pure[F]
+
+    override def getState: F[AcMechsState] =
+      AcMechsState(AcLens.Ac, AcNdFilter.Nd100, AcFilter.Neutral).pure[F]
+  }
 
 }
 

@@ -31,6 +31,8 @@ import lucuma.core.util.TimeSpan
 import monocle.Lens
 import monocle.syntax.all.focus
 import mouse.all.*
+import navigate.model.AcMechsState
+import navigate.model.AcWindow
 import navigate.model.CommandResult
 import navigate.model.FocalPlaneOffset
 import navigate.model.HandsetAdjustment
@@ -49,6 +51,9 @@ import navigate.model.TcsConfig
 import navigate.model.TrackingConfig
 import navigate.model.config.ControlStrategy
 import navigate.model.config.NavigateEngineConfiguration
+import navigate.model.enums.AcFilter
+import navigate.model.enums.AcLens
+import navigate.model.enums.AcNdFilter
 import navigate.model.enums.DomeMode
 import navigate.model.enums.LightSource
 import navigate.model.enums.ShutterMode
@@ -148,6 +153,11 @@ trait NavigateEngine[F[_]] {
   def pointingOffsetClearLocal: F[CommandResult]
   def pointingOffsetAbsorbGuide: F[CommandResult]
   def pointingOffsetClearGuide: F[CommandResult]
+  // AC/HRFWS setup
+  def acLens(l:                                      AcLens): F[CommandResult]
+  def acNdFilter(nd:                                 AcNdFilter): F[CommandResult]
+  def acFilter(flt:                                  AcFilter): F[CommandResult]
+  def acWindowSize(wnd:                              AcWindow): F[CommandResult]
 
   def getGuideState: F[GuideState]
   def getGuidersQuality: F[GuidersQualityValues]
@@ -159,6 +169,7 @@ trait NavigateEngine[F[_]] {
   def getTargetAdjustments: F[TargetOffsets]
   def getPointingOffset: F[PointingCorrections]
   def getOriginOffset: F[FocalPlaneOffset]
+  def getAcMechsState: F[AcMechsState]
 }
 
 object NavigateEngine {
@@ -704,6 +715,32 @@ object NavigateEngine {
         PointingOffsetClearGuide,
         systems.tcsCommon.pointingOffsetClearGuide
       )
+
+    override def acLens(l: AcLens): F[CommandResult] = simpleCommand(
+      engine,
+      AcSetLens(l),
+      systems.tcsCommon.acCommands.lens(l)
+    )
+
+    override def acNdFilter(nd: AcNdFilter): F[CommandResult] = simpleCommand(
+      engine,
+      AcSetNdFilter(nd),
+      systems.tcsCommon.acCommands.ndFilter(nd)
+    )
+
+    override def acFilter(flt: AcFilter): F[CommandResult] = simpleCommand(
+      engine,
+      AcSetFilter(flt),
+      systems.tcsCommon.acCommands.filter(flt)
+    )
+
+    override def acWindowSize(wnd: AcWindow): F[CommandResult] = simpleCommand(
+      engine,
+      AcSetWindowSize(wnd),
+      systems.tcsCommon.acCommands.windowSize(wnd)
+    )
+
+    override def getAcMechsState: F[AcMechsState] = systems.tcsCommon.acCommands.getState
   }
 
   def build[F[_]: {Temporal, Logger, Async}](
