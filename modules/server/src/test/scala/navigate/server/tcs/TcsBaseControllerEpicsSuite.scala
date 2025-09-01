@@ -55,6 +55,7 @@ import navigate.model.GuiderConfig
 import navigate.model.HandsetAdjustment
 import navigate.model.InstrumentSpecifics
 import navigate.model.Origin
+import navigate.model.PwfsMechsState
 import navigate.model.ResetPointing
 import navigate.model.RotatorTrackConfig
 import navigate.model.RotatorTrackingMode
@@ -81,6 +82,8 @@ import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
 import navigate.model.enums.LightSource
 import navigate.model.enums.OiwfsWavelength
+import navigate.model.enums.PwfsFieldStop
+import navigate.model.enums.PwfsFilter
 import navigate.model.enums.ShutterMode
 import navigate.model.enums.VirtualTelescope
 import navigate.server.ApplyCommandResult
@@ -123,11 +126,10 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Mount commands") {
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- ctr.mcsPark
-      _        <- ctr.mcsFollow(enable = true)
-      rs       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- ctr.mcsPark
+      _         <- ctr.mcsFollow(enable = true)
+      rs        <- st.tcs.get
     } yield {
       assert(rs.telescopeParkDir.connected)
       assertEquals(rs.telescopeParkDir.value.get, CadDirective.MARK)
@@ -138,10 +140,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("SCS commands") {
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- ctr.scsFollow(enable = true)
-      rs       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- ctr.scsFollow(enable = true)
+      rs        <- st.tcs.get
     } yield {
       assert(rs.m2Follow.connected)
       assertEquals(rs.m2Follow.value.get, BinaryOnOff.On.tag)
@@ -152,13 +153,12 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     val testAngle = Angle.fromDoubleDegrees(123.456)
 
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- ctr.rotPark
-      _        <- ctr.rotFollow(enable = true)
-      _        <- ctr.rotStop(useBrakes = true)
-      _        <- ctr.rotMove(testAngle)
-      rs       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- ctr.rotPark
+      _         <- ctr.rotFollow(enable = true)
+      _         <- ctr.rotStop(useBrakes = true)
+      _         <- ctr.rotMove(testAngle)
+      rs        <- st.tcs.get
     } yield {
       assert(rs.rotParkDir.connected)
       assertEquals(rs.rotParkDir.value.get, CadDirective.MARK)
@@ -180,16 +180,15 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     val testVentWest = 0.2
 
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- ctr.ecsCarouselMode(DomeMode.MinVibration,
-                                      ShutterMode.Tracking,
-                                      testHeight,
-                                      domeEnable = true,
-                                      shutterEnable = true
-                  )
-      _        <- ctr.ecsVentGatesMove(testVentEast, testVentWest)
-      rs       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- ctr.ecsCarouselMode(DomeMode.MinVibration,
+                                       ShutterMode.Tracking,
+                                       testHeight,
+                                       domeEnable = true,
+                                       shutterEnable = true
+                   )
+      _         <- ctr.ecsVentGatesMove(testVentEast, testVentWest)
+      rs        <- st.tcs.get
     } yield {
       assert(rs.enclosure.ecsDomeMode.connected)
       assert(rs.enclosure.ecsShutterMode.connected)
@@ -317,21 +316,20 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     )
 
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- ctr.slew(
-                    slewOptions,
-                    TcsConfig(
-                      target,
-                      instrumentSpecifics,
-                      GuiderConfig(pwfs1Target, wfsTracking).some,
-                      GuiderConfig(pwfs2Target, wfsTracking).some,
-                      GuiderConfig(oiwfsTarget, wfsTracking).some,
-                      RotatorTrackConfig(Angle.Angle90, RotatorTrackingMode.Tracking),
-                      Instrument.GmosNorth
-                    )
-                  )
-      rs       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- ctr.slew(
+                     slewOptions,
+                     TcsConfig(
+                       target,
+                       instrumentSpecifics,
+                       GuiderConfig(pwfs1Target, wfsTracking).some,
+                       GuiderConfig(pwfs2Target, wfsTracking).some,
+                       GuiderConfig(oiwfsTarget, wfsTracking).some,
+                       RotatorTrackConfig(Angle.Angle90, RotatorTrackingMode.Tracking),
+                       Instrument.GmosNorth
+                     )
+                   )
+      rs        <- st.tcs.get
     } yield {
       // Targets
       checkTarget(rs.sourceA, target)
@@ -516,10 +514,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     )
 
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- ctr.instrumentSpecifics(instrumentSpecifics)
-      rs       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- ctr.instrumentSpecifics(instrumentSpecifics)
+      rs        <- st.tcs.get
     } yield {
       assert(
         rs.rotator.iaa.value.exists(x =>
@@ -654,10 +651,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     )
 
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- applyCmdL.get(ctr)(target)
-      rs       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- applyCmdL.get(ctr)(target)
+      rs        <- st.tcs.get
     } yield checkTarget(l.get(rs), target)
   }
 
@@ -686,10 +682,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     val trackingConfig = TrackingConfig(true, false, false, true)
 
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- cmdL.get(ctr)(trackingConfig)
-      rs       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- cmdL.get(ctr)(trackingConfig)
+      rs        <- st.tcs.get
     } yield {
       assert(l.get(rs).nodAchopA.connected)
       assert(l.get(rs).nodAchopB.connected)
@@ -736,10 +731,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     l:    Getter[State, ProbeState]
   ): IO[Unit] =
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- cmdL.get(ctr)
-      rs       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- cmdL.get(ctr)
+      rs        <- st.tcs.get
     } yield {
       assert(l.get(rs).parkDir.connected)
       assertEquals(l.get(rs).parkDir.value, CadDirective.MARK.some)
@@ -768,12 +762,11 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     l:    Getter[State, ProbeState]
   ): IO[Unit] =
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- cmdL.get(ctr)(true)
-      r1       <- st.tcs.get
-      _        <- cmdL.get(ctr)(false)
-      r2       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- cmdL.get(ctr)(true)
+      r1        <- st.tcs.get
+      _         <- cmdL.get(ctr)(false)
+      r2        <- st.tcs.get
     } yield {
       assert(l.get(r1).follow.connected)
       assertEquals(l.get(r1).follow.value.flatMap(Enumerated[BinaryOnOff].fromTag),
@@ -933,16 +926,15 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Enable and disable guiding with default gains") {
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- setWfsTrackingState(st.tcs, Focus[State](_.oiwfsTrackingState))
-      _        <- ctr.enableGuide(oiGuideConfig)
-      r1       <- st.tcs.get
-      p1_1     <- st.p1.get
-      p2_1     <- st.p2.get
-      oi_1     <- st.oiw.get
-      _        <- ctr.disableGuide
-      r2       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- setWfsTrackingState(st.tcs, Focus[State](_.oiwfsTrackingState))
+      _         <- ctr.enableGuide(oiGuideConfig)
+      r1        <- st.tcs.get
+      p1_1      <- st.p1.get
+      p2_1      <- st.p2.get
+      oi_1      <- st.oiw.get
+      _         <- ctr.disableGuide
+      r2        <- st.tcs.get
     } yield {
       checkGuide(r1, oiGuideConfig)
       assert(p1_1.reset.connected)
@@ -959,16 +951,15 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     val guideCfg = oiGuideConfig.copy(dayTimeMode = true.some)
 
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- setWfsTrackingState(st.tcs, Focus[State](_.oiwfsTrackingState))
-      _        <- ctr.enableGuide(guideCfg)
-      r1       <- st.tcs.get
-      p1_1     <- st.p1.get
-      p2_1     <- st.p2.get
-      oi_1     <- st.oiw.get
-      _        <- ctr.disableGuide
-      r2       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- setWfsTrackingState(st.tcs, Focus[State](_.oiwfsTrackingState))
+      _         <- ctr.enableGuide(guideCfg)
+      r1        <- st.tcs.get
+      p1_1      <- st.p1.get
+      p2_1      <- st.p2.get
+      oi_1      <- st.oiw.get
+      _         <- ctr.disableGuide
+      r2        <- st.tcs.get
     } yield {
       checkGuide(r1, guideCfg)
       assert(p1_1.tipGain.connected)
@@ -997,13 +988,12 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Enable and disable guiding") {
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- setWfsTrackingState(st.tcs, Focus[State](_.oiwfsTrackingState))
-      _        <- ctr.enableGuide(oiGuideConfig)
-      r1       <- st.tcs.get
-      _        <- ctr.disableGuide
-      r2       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- setWfsTrackingState(st.tcs, Focus[State](_.oiwfsTrackingState))
+      _         <- ctr.enableGuide(oiGuideConfig)
+      r1        <- st.tcs.get
+      _         <- ctr.disableGuide
+      r2        <- st.tcs.get
     } yield {
       checkGuide(r1, oiGuideConfig)
       checkGuide(r2, noGuideConfig)
@@ -1016,10 +1006,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     )
 
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- ctr.enableGuide(guideCfg)
-      r1       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- ctr.enableGuide(guideCfg)
+      r1        <- st.tcs.get
     } yield {
       assert(r1.probeGuideMode.state.connected)
 
@@ -1037,10 +1026,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     )
 
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- ctr.enableGuide(guideCfg)
-      r1       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- ctr.enableGuide(guideCfg)
+      r1        <- st.tcs.get
     } yield {
       assert(r1.probeGuideMode.state.connected)
 
@@ -1061,12 +1049,11 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     val expectedFilename = "data/200Hz.fits"
 
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- st.tcs.update(_.focus(_.guideStatus).replace(defaultGuideState))
-      _        <- cmdL.get(ctr)(testVal)
-      rs       <- st.tcs.get
-      fn       <- fnL.get(st)
+      (st, ctr) <- createController()
+      _         <- st.tcs.update(_.focus(_.guideStatus).replace(defaultGuideState))
+      _         <- cmdL.get(ctr)(testVal)
+      rs        <- st.tcs.get
+      fn        <- fnL.get(st)
     } yield {
       assert(l.get(rs).path.connected)
       assert(l.get(rs).label.connected)
@@ -1118,10 +1105,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     l:    Getter[State, WfsChannelState]
   ): IO[Unit] =
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- cmdL.get(ctr)
-      rs       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- cmdL.get(ctr)
+      rs        <- st.tcs.get
     } yield {
       assert(l.get(rs).stop.connected)
       assertEquals(l.get(rs).stop.value, CadDirective.MARK.some)
@@ -1149,10 +1135,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     val testVal = TimeSpan.unsafeFromMicroseconds(12345)
 
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- ctr.hrwfsObserve(testVal)
-      rs       <- st.ac.get
+      (st, ctr) <- createController()
+      _         <- ctr.hrwfsObserve(testVal)
+      rs        <- st.ac.get
     } yield {
       assert(rs.expTime.connected)
       assert(rs.dhsStream.connected)
@@ -1166,10 +1151,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Stop HRWFS exposures") {
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- ctr.hrwfsStopObserve
-      rs       <- st.ac.get
+      (st, ctr) <- createController()
+      _         <- ctr.hrwfsStopObserve
+      rs        <- st.ac.get
     } yield {
       assert(rs.stopDir.connected)
       assertEquals(rs.stopDir.value, CadDirective.MARK.some)
@@ -1241,11 +1225,10 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     )
 
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- st.tcs.update(_.focus(_.guideStatus).replace(guideWithOiState))
-      g        <- ctr.getGuideState
-      r1       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- st.tcs.update(_.focus(_.guideStatus).replace(guideWithOiState))
+      g         <- ctr.getGuideState
+      r1        <- st.tcs.get
     } yield {
       assert(r1.guideStatus.m2State.connected)
       assert(r1.guideStatus.absorbTipTilt.connected)
@@ -1268,19 +1251,18 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     )
 
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- st.mcs.update(_.focus(_.follow).replace(TestChannel.State.of("ON")))
-      _        <- st.scs.update(_.focus(_.follow).replace(TestChannel.State.of("YES")))
-      _        <- st.crcs.update(_.focus(_.follow).replace(TestChannel.State.of("ON")))
-      _        <- st.ags.update(
-                    _.copy(oiParked = TestChannel.State.of(0), oiFollow = TestChannel.State.of("ON"))
-                  )
-      s        <- ctr.getTelescopeState
-      r0       <- st.mcs.get
-      r1       <- st.scs.get
-      r2       <- st.crcs.get
-      r3       <- st.ags.get
+      (st, ctr) <- createController()
+      _         <- st.mcs.update(_.focus(_.follow).replace(TestChannel.State.of("ON")))
+      _         <- st.scs.update(_.focus(_.follow).replace(TestChannel.State.of("YES")))
+      _         <- st.crcs.update(_.focus(_.follow).replace(TestChannel.State.of("ON")))
+      _         <- st.ags.update(
+                     _.copy(oiParked = TestChannel.State.of(0), oiFollow = TestChannel.State.of("ON"))
+                   )
+      s         <- ctr.getTelescopeState
+      r0        <- st.mcs.get
+      r1        <- st.scs.get
+      r2        <- st.crcs.get
+      r3        <- st.ags.get
     } yield {
       assert(r0.follow.connected)
       assert(r1.follow.connected)
@@ -1302,30 +1284,29 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       GuidersQualityValues.GuiderQuality(1500, false)
     )
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- st.p1.update(
-                    _.copy(
-                      flux = TestChannel.State.of(testGuideQuality.pwfs1.flux),
-                      centroid = TestChannel.State.of(1)
-                    )
-                  )
-      _        <- st.p2.update(
-                    _.copy(
-                      flux = TestChannel.State.of(testGuideQuality.pwfs2.flux),
-                      centroid = TestChannel.State.of(0)
-                    )
-                  )
-      _        <- st.oiw.update(
-                    _.copy(
-                      flux = TestChannel.State.of(testGuideQuality.oiwfs.flux),
-                      centroid = TestChannel.State.of(65536)
-                    )
-                  )
-      g        <- ctr.getGuideQuality
-      rp1      <- st.p1.get
-      rp2      <- st.p2.get
-      roi      <- st.oiw.get
+      (st, ctr) <- createController()
+      _         <- st.p1.update(
+                     _.copy(
+                       flux = TestChannel.State.of(testGuideQuality.pwfs1.flux),
+                       centroid = TestChannel.State.of(1)
+                     )
+                   )
+      _         <- st.p2.update(
+                     _.copy(
+                       flux = TestChannel.State.of(testGuideQuality.pwfs2.flux),
+                       centroid = TestChannel.State.of(0)
+                     )
+                   )
+      _         <- st.oiw.update(
+                     _.copy(
+                       flux = TestChannel.State.of(testGuideQuality.oiwfs.flux),
+                       centroid = TestChannel.State.of(65536)
+                     )
+                   )
+      g         <- ctr.getGuideQuality
+      rp1       <- st.p1.get
+      rp2       <- st.p2.get
+      roi       <- st.oiw.get
     } yield {
       assert(rp1.flux.connected)
       assert(rp1.centroid.connected)
@@ -1356,37 +1337,36 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     )
 
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- st.tcs.update(_.focus(_.guideStatus).replace(defaultGuideState))
-      _        <- obsCmdL.get(ctr)(testExpTime)
-      r00      <- st.tcs.get
-      s00      <- z2m2L.get(st)
-      _        <- ctr.enableGuide(guideCfg)
-      r01      <- st.tcs.get
-      s01      <- z2m2L.get(st)
-      _        <- st.tcs.update(_.focus(_.guideStatus).replace(guideCfgState))
-      _        <- stpCmdL.get(ctr)
-      r02      <- st.tcs.get
-      s02      <- z2m2L.get(st)
-      _        <- ctr.disableGuide
-      r03      <- st.tcs.get
-      s03      <- z2m2L.get(st)
-      _        <- st.tcs.update(_.focus(_.guideStatus).replace(defaultGuideState))
-      _        <- ctr.enableGuide(guideCfg)
-      r10      <- st.tcs.get
-      s10      <- z2m2L.get(st)
-      _        <- st.tcs.update(_.focus(_.guideStatus).replace(guideCfgState))
-      _        <- obsCmdL.get(ctr)(testExpTime)
-      r11      <- st.tcs.get
-      s11      <- z2m2L.get(st)
-      _        <- ctr.disableGuide
-      r12      <- st.tcs.get
-      s12      <- z2m2L.get(st)
-      _        <- st.tcs.update(_.focus(_.guideStatus).replace(defaultGuideState))
-      _        <- ctr.oiwfsStopObserve
-      r13      <- st.tcs.get
-      s13      <- z2m2L.get(st)
+      (st, ctr) <- createController()
+      _         <- st.tcs.update(_.focus(_.guideStatus).replace(defaultGuideState))
+      _         <- obsCmdL.get(ctr)(testExpTime)
+      r00       <- st.tcs.get
+      s00       <- z2m2L.get(st)
+      _         <- ctr.enableGuide(guideCfg)
+      r01       <- st.tcs.get
+      s01       <- z2m2L.get(st)
+      _         <- st.tcs.update(_.focus(_.guideStatus).replace(guideCfgState))
+      _         <- stpCmdL.get(ctr)
+      r02       <- st.tcs.get
+      s02       <- z2m2L.get(st)
+      _         <- ctr.disableGuide
+      r03       <- st.tcs.get
+      s03       <- z2m2L.get(st)
+      _         <- st.tcs.update(_.focus(_.guideStatus).replace(defaultGuideState))
+      _         <- ctr.enableGuide(guideCfg)
+      r10       <- st.tcs.get
+      s10       <- z2m2L.get(st)
+      _         <- st.tcs.update(_.focus(_.guideStatus).replace(guideCfgState))
+      _         <- obsCmdL.get(ctr)(testExpTime)
+      r11       <- st.tcs.get
+      s11       <- z2m2L.get(st)
+      _         <- ctr.disableGuide
+      r12       <- st.tcs.get
+      s12       <- z2m2L.get(st)
+      _         <- st.tcs.update(_.focus(_.guideStatus).replace(defaultGuideState))
+      _         <- ctr.oiwfsStopObserve
+      r13       <- st.tcs.get
+      s13       <- z2m2L.get(st)
     } yield {
       assertEquals(obStL.get(r00).output.value, "QL".some)
       assertEquals(obStL.get(r00).options.value, "DHS".some)
@@ -1451,16 +1431,15 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Set baffles") {
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- ctr.baffles(CentralBafflePosition.Open, DeployableBafflePosition.ThermalIR)
-      r0       <- st.tcs.get
-      _        <- ctr.baffles(CentralBafflePosition.Closed, DeployableBafflePosition.NearIR)
-      r1       <- st.tcs.get
-      _        <- ctr.baffles(CentralBafflePosition.Open, DeployableBafflePosition.Visible)
-      r2       <- st.tcs.get
-      _        <- ctr.baffles(CentralBafflePosition.Open, DeployableBafflePosition.Extended)
-      r3       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- ctr.baffles(CentralBafflePosition.Open, DeployableBafflePosition.ThermalIR)
+      r0        <- st.tcs.get
+      _         <- ctr.baffles(CentralBafflePosition.Closed, DeployableBafflePosition.NearIR)
+      r1        <- st.tcs.get
+      _         <- ctr.baffles(CentralBafflePosition.Open, DeployableBafflePosition.Visible)
+      r2        <- st.tcs.get
+      _         <- ctr.baffles(CentralBafflePosition.Open, DeployableBafflePosition.Extended)
+      r3        <- st.tcs.get
     } yield {
       assert(r0.m2Baffles.centralBaffle.connected)
       assert(r0.m2Baffles.deployBaffle.connected)
@@ -1475,10 +1454,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Park M1") {
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- ctr.m1Park
-      r0       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- ctr.m1Park
+      r0        <- st.tcs.get
     } yield {
       assert(r0.m1Cmds.park.connected)
       assertEquals(r0.m1Cmds.park.value, "PARK".some)
@@ -1487,10 +1465,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Unpark M1") {
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- ctr.m1Unpark
-      r0       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- ctr.m1Unpark
+      r0        <- st.tcs.get
     } yield {
       assert(r0.m1Cmds.park.connected)
       assertEquals(r0.m1Cmds.park.value, "UNPARK".some)
@@ -1499,10 +1476,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Zero M1 figure") {
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- ctr.m1ZeroFigure
-      r0       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- ctr.m1ZeroFigure
+      r0        <- st.tcs.get
     } yield {
       assert(r0.m1Cmds.zero.connected)
       assertEquals(r0.m1Cmds.zero.value, "FIGURE".some)
@@ -1511,10 +1487,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Enable M1 updates") {
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- ctr.m1UpdateOn
-      r0       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- ctr.m1UpdateOn
+      r0        <- st.tcs.get
     } yield {
       assert(r0.m1Cmds.figUpdates.connected)
       assert(r0.m1Cmds.aoEnable.connected)
@@ -1525,10 +1500,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Disable M1 updates") {
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- ctr.m1UpdateOff
-      r0       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- ctr.m1UpdateOff
+      r0        <- st.tcs.get
     } yield {
       assert(r0.m1Cmds.aoEnable.connected)
       assertEquals(r0.m1Cmds.aoEnable.value, BinaryOnOffCapitalized.Off.some)
@@ -1537,10 +1511,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Load M1 AO figure") {
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- ctr.m1LoadAoFigure
-      r0       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- ctr.m1LoadAoFigure
+      r0        <- st.tcs.get
     } yield {
       assert(r0.m1Cmds.loadModelFile.connected)
       assertEquals(r0.m1Cmds.loadModelFile.value, "AO".some)
@@ -1549,10 +1522,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Load M1 non-AO figure") {
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- ctr.m1LoadNonAoFigure
-      r0       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- ctr.m1LoadNonAoFigure
+      r0        <- st.tcs.get
     } yield {
       assert(r0.m1Cmds.loadModelFile.connected)
       assertEquals(r0.m1Cmds.loadModelFile.value, "non-AO".some)
@@ -1769,15 +1741,14 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     val expVt    = -(0x0002 | 0x0004 | 0x0008)
 
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- setWfsTrackingState(st.tcs, Focus[State](_.oiwfsTrackingState))
-      _        <- ctr.enableGuide(oiGuideConfig)
-      _        <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
-      _        <- ctr.acquisitionAdj(Offset(Offset.P(pOffset), Offset.Q(qOffset)), none, none)(
-                    GuideConfig(oiGuideConfig, none)
-                  )
-      r1       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- setWfsTrackingState(st.tcs, Focus[State](_.oiwfsTrackingState))
+      _         <- ctr.enableGuide(oiGuideConfig)
+      _         <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
+      _         <- ctr.acquisitionAdj(Offset(Offset.P(pOffset), Offset.Q(qOffset)), none, none)(
+                     GuideConfig(oiGuideConfig, none)
+                   )
+      r1        <- st.tcs.get
     } yield {
       assert(r1.inPosition.connected)
       assert(r1.originAdjust.frame.connected)
@@ -1813,14 +1784,13 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     val expTime = TimeSpan.unsafeFromMicroseconds(50000)
 
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- setWfsTrackingState(st.tcs, wfsStL)
-      _        <- ctr.enableGuide(guideCfg)
-      _        <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
-      _        <- cmdL.get(ctr)(expTime)(GuideConfig(guideCfg, none))
-      r1       <- st.tcs.get
-      sdf      <- dfn.get(st)
+      (st, ctr) <- createController()
+      _         <- setWfsTrackingState(st.tcs, wfsStL)
+      _         <- ctr.enableGuide(guideCfg)
+      _         <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
+      _         <- cmdL.get(ctr)(expTime)(GuideConfig(guideCfg, none))
+      r1        <- st.tcs.get
+      sdf       <- dfn.get(st)
     } yield {
       assert(sdf.connected)
       assertEquals(sdf.value, "20Hz.fits".some)
@@ -1869,28 +1839,27 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Apply target correction") {
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- setWfsTrackingState(st.tcs, Focus[State](_.oiwfsTrackingState))
-      _        <- ctr.enableGuide(oiGuideConfig)
-      _        <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
-      _        <- ctr.targetAdjust(VirtualTelescope.SourceA,
-                                   HandsetAdjustment.EquatorialAdjustment(Angle.fromDoubleArcseconds(-8.0),
-                                                                          Angle.fromDoubleArcseconds(6.0)
-                                   ),
-                                   true
-                  )(GuideConfig(oiGuideConfig, none))
-      r1       <- st.tcs.get
-      _        <- ctr.targetAdjust(
-                    VirtualTelescope.Oiwfs,
-                    HandsetAdjustment.InstrumentAdjustment(
-                      Offset(Offset.P(Angle.fromDoubleArcseconds(-3.0)),
-                             Offset.Q(Angle.fromDoubleArcseconds(3.0))
-                      )
-                    ),
-                    true
-                  )(GuideConfig(oiGuideConfig, none))
-      r2       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- setWfsTrackingState(st.tcs, Focus[State](_.oiwfsTrackingState))
+      _         <- ctr.enableGuide(oiGuideConfig)
+      _         <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
+      _         <- ctr.targetAdjust(VirtualTelescope.SourceA,
+                                    HandsetAdjustment.EquatorialAdjustment(Angle.fromDoubleArcseconds(-8.0),
+                                                                           Angle.fromDoubleArcseconds(6.0)
+                                    ),
+                                    true
+                   )(GuideConfig(oiGuideConfig, none))
+      r1        <- st.tcs.get
+      _         <- ctr.targetAdjust(
+                     VirtualTelescope.Oiwfs,
+                     HandsetAdjustment.InstrumentAdjustment(
+                       Offset(Offset.P(Angle.fromDoubleArcseconds(-3.0)),
+                              Offset.Q(Angle.fromDoubleArcseconds(3.0))
+                       )
+                     ),
+                     true
+                   )(GuideConfig(oiGuideConfig, none))
+      r2        <- st.tcs.get
     } yield {
       checkGuide(r1, oiGuideConfig)
 
@@ -1932,25 +1901,24 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     )
 
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- setWfsTrackingState(st.tcs, Focus[State](_.oiwfsTrackingState))
-      _        <- ctr.enableGuide(guideCfg)
-      _        <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
-      _        <- ctr.originAdjust(HandsetAdjustment.EquatorialAdjustment(Angle.fromDoubleArcseconds(-8.0),
-                                                                          Angle.fromDoubleArcseconds(6.0)
-                                   ),
-                                   true
-                  )(GuideConfig(guideCfg, none))
-      r1       <- st.tcs.get
-      _        <- ctr.originAdjust(HandsetAdjustment.InstrumentAdjustment(
-                                     Offset(Offset.P(Angle.fromDoubleArcseconds(-3.0)),
-                                            Offset.Q(Angle.fromDoubleArcseconds(3.0))
-                                     )
-                                   ),
-                                   true
-                  )(GuideConfig(guideCfg, none))
-      r2       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- setWfsTrackingState(st.tcs, Focus[State](_.oiwfsTrackingState))
+      _         <- ctr.enableGuide(guideCfg)
+      _         <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
+      _         <- ctr.originAdjust(HandsetAdjustment.EquatorialAdjustment(Angle.fromDoubleArcseconds(-8.0),
+                                                                           Angle.fromDoubleArcseconds(6.0)
+                                    ),
+                                    true
+                   )(GuideConfig(guideCfg, none))
+      r1        <- st.tcs.get
+      _         <- ctr.originAdjust(HandsetAdjustment.InstrumentAdjustment(
+                                      Offset(Offset.P(Angle.fromDoubleArcseconds(-3.0)),
+                                             Offset.Q(Angle.fromDoubleArcseconds(3.0))
+                                      )
+                                    ),
+                                    true
+                   )(GuideConfig(guideCfg, none))
+      r2        <- st.tcs.get
     } yield {
       assert(r1.m1Guide.connected)
       assert(r1.m1GuideConfig.source.connected)
@@ -1998,37 +1966,36 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Apply pointing correction") {
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
-      _        <- ctr.pointingAdjust(
-                    HandsetAdjustment.EquatorialAdjustment(Angle.fromDoubleArcseconds(-8.0),
-                                                           Angle.fromDoubleArcseconds(6.0)
-                    )
-                  )
-      r1       <- st.tcs.get
-      _        <- ctr.pointingAdjust(
-                    HandsetAdjustment.InstrumentAdjustment(
-                      Offset(Offset.P(Angle.fromDoubleArcseconds(-3.0)),
-                             Offset.Q(Angle.fromDoubleArcseconds(3.0))
-                      )
-                    )
-                  )
-      r2       <- st.tcs.get
-      _        <- ctr.pointingAdjust(
-                    HandsetAdjustment.HorizontalAdjustment(Angle.fromDoubleArcseconds(-3.0),
-                                                           Angle.fromDoubleArcseconds(4.0)
-                    )
-                  )
-      r3       <- st.tcs.get
-      _        <- ctr.pointingAdjust(
-                    HandsetAdjustment.FocalPlaneAdjustment(
-                      FocalPlaneOffset(DeltaX(Angle.fromDoubleArcseconds(3.0)),
-                                       DeltaY(Angle.fromDoubleArcseconds(4.0))
-                      )
-                    )
-                  )
-      r4       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
+      _         <- ctr.pointingAdjust(
+                     HandsetAdjustment.EquatorialAdjustment(Angle.fromDoubleArcseconds(-8.0),
+                                                            Angle.fromDoubleArcseconds(6.0)
+                     )
+                   )
+      r1        <- st.tcs.get
+      _         <- ctr.pointingAdjust(
+                     HandsetAdjustment.InstrumentAdjustment(
+                       Offset(Offset.P(Angle.fromDoubleArcseconds(-3.0)),
+                              Offset.Q(Angle.fromDoubleArcseconds(3.0))
+                       )
+                     )
+                   )
+      r2        <- st.tcs.get
+      _         <- ctr.pointingAdjust(
+                     HandsetAdjustment.HorizontalAdjustment(Angle.fromDoubleArcseconds(-3.0),
+                                                            Angle.fromDoubleArcseconds(4.0)
+                     )
+                   )
+      r3        <- st.tcs.get
+      _         <- ctr.pointingAdjust(
+                     HandsetAdjustment.FocalPlaneAdjustment(
+                       FocalPlaneOffset(DeltaX(Angle.fromDoubleArcseconds(3.0)),
+                                        DeltaY(Angle.fromDoubleArcseconds(4.0))
+                       )
+                     )
+                   )
+      r4        <- st.tcs.get
     } yield {
       assert(r1.pointingAdjust.frame.connected)
       assert(r1.pointingAdjust.size.connected)
@@ -2085,13 +2052,12 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Absorb target correction") {
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
-      _        <- ctr.targetOffsetAbsorb(VirtualTelescope.SourceA)
-      r1       <- st.tcs.get
-      _        <- ctr.targetOffsetAbsorb(VirtualTelescope.Oiwfs)
-      r2       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
+      _         <- ctr.targetOffsetAbsorb(VirtualTelescope.SourceA)
+      r1        <- st.tcs.get
+      _         <- ctr.targetOffsetAbsorb(VirtualTelescope.Oiwfs)
+      r2        <- st.tcs.get
     } yield {
       assert(r1.targetOffsetAbsorb.vt.connected)
       assert(r1.targetOffsetAbsorb.index.connected)
@@ -2112,13 +2078,12 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     )
 
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- setWfsTrackingState(st.tcs, Focus[State](_.oiwfsTrackingState))
-      _        <- ctr.enableGuide(guideCfg)
-      _        <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
-      _        <- ctr.targetOffsetClear(VirtualTelescope.SourceA, true)(GuideConfig(guideCfg, none))
-      r1       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- setWfsTrackingState(st.tcs, Focus[State](_.oiwfsTrackingState))
+      _         <- ctr.enableGuide(guideCfg)
+      _         <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
+      _         <- ctr.targetOffsetClear(VirtualTelescope.SourceA, true)(GuideConfig(guideCfg, none))
+      r1        <- st.tcs.get
     } yield {
       assert(r1.m1Guide.connected)
       assert(r1.m1GuideConfig.source.connected)
@@ -2145,11 +2110,10 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Absorb origin correction") {
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
-      _        <- ctr.originOffsetAbsorb
-      r1       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
+      _         <- ctr.originOffsetAbsorb
+      r1        <- st.tcs.get
     } yield {
       assert(r1.originOffsetAbsorb.vt.connected)
       assert(r1.originOffsetAbsorb.index.connected)
@@ -2168,13 +2132,12 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     )
 
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- setWfsTrackingState(st.tcs, Focus[State](_.oiwfsTrackingState))
-      _        <- ctr.enableGuide(guideCfg)
-      _        <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
-      _        <- ctr.originOffsetClear(true)(GuideConfig(guideCfg, none))
-      r1       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- setWfsTrackingState(st.tcs, Focus[State](_.oiwfsTrackingState))
+      _         <- ctr.enableGuide(guideCfg)
+      _         <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
+      _         <- ctr.originOffsetClear(true)(GuideConfig(guideCfg, none))
+      r1        <- st.tcs.get
     } yield {
       assert(r1.m1Guide.connected)
       assert(r1.m1GuideConfig.source.connected)
@@ -2201,11 +2164,10 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Clear local pointing correction") {
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
-      _        <- ctr.pointingOffsetClearLocal
-      r1       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
+      _         <- ctr.pointingOffsetClearLocal
+      r1        <- st.tcs.get
     } yield {
       assert(r1.pointingConfig.name.connected)
       assert(r1.pointingConfig.level.connected)
@@ -2218,11 +2180,10 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Clear guide pointing correction") {
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
-      _        <- ctr.pointingOffsetClearGuide
-      r1       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
+      _         <- ctr.pointingOffsetClearGuide
+      r1        <- st.tcs.get
     } yield {
       assert(r1.zeroGuideDirState.connected)
       assertEquals(r1.zeroGuideDirState.value, CadDirective.MARK.some)
@@ -2231,11 +2192,10 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
   test("Absorb guide pointing correction") {
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
-      _        <- ctr.pointingOffsetAbsorbGuide
-      r1       <- st.tcs.get
+      (st, ctr) <- createController()
+      _         <- st.tcs.update(_.focus(_.inPosition.value).replace("TRUE".some))
+      _         <- ctr.pointingOffsetAbsorbGuide
+      r1        <- st.tcs.get
     } yield {
       assert(r1.absorbGuideDirState.connected)
       assertEquals(r1.absorbGuideDirState.value, CadDirective.MARK.some)
@@ -2245,22 +2205,20 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
   test("Retrieve AC mechanism positions") {
     val result = AcMechsState(AcLens.Hrwfs, AcNdFilter.Nd1, AcFilter.Neutral)
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- st.ac.update(_.focus(_.filterReadout.value).replace(result.filter.tag.some))
-      _        <- st.ac.update(_.focus(_.ndFilterReadout.value).replace(result.ndFilter.tag.some))
-      _        <- st.ac.update(_.focus(_.lensReadout.value).replace(result.lens.tag.some))
-      a        <- ctr.acCommands.getState
+      (st, ctr) <- createController()
+      _         <- st.ac.update(_.focus(_.filterReadout.value).replace(result.filter.tag.some))
+      _         <- st.ac.update(_.focus(_.ndFilterReadout.value).replace(result.ndFilter.tag.some))
+      _         <- st.ac.update(_.focus(_.lensReadout.value).replace(result.lens.tag.some))
+      a         <- ctr.acCommands.getState
     } yield assertEquals(a, result)
   }
 
   test("Set AC filter") {
     val v = AcFilter.R_Red2
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- ctr.acCommands.filter(v)
-      r1       <- st.ac.get
+      (st, ctr) <- createController()
+      _         <- ctr.acCommands.filter(v)
+      r1        <- st.ac.get
     } yield {
       assert(r1.filter.connected)
       assertEquals(r1.filter.value, v.tag.some)
@@ -2270,10 +2228,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
   test("Set AC lens") {
     val v = AcLens.Ac
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- ctr.acCommands.lens(v)
-      r1       <- st.ac.get
+      (st, ctr) <- createController()
+      _         <- ctr.acCommands.lens(v)
+      r1        <- st.ac.get
     } yield {
       assert(r1.lens.connected)
       assertEquals(r1.lens.value, v.tag.some)
@@ -2283,10 +2240,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
   test("Set AC ND filter") {
     val v = AcNdFilter.Nd100
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- ctr.acCommands.ndFilter(v)
-      r1       <- st.ac.get
+      (st, ctr) <- createController()
+      _         <- ctr.acCommands.ndFilter(v)
+      r1        <- st.ac.get
     } yield {
       assert(r1.ndFilter.connected)
       assertEquals(r1.ndFilter.value, v.tag.some)
@@ -2296,10 +2252,9 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
   test("Set AC window") {
     val v = AcWindow.Square200(489, 377)
     for {
-      x        <- createController()
-      (st, ctr) = x
-      _        <- ctr.acCommands.windowSize(v)
-      r1       <- st.ac.get
+      (st, ctr) <- createController()
+      _         <- ctr.acCommands.windowSize(v)
+      r1        <- st.ac.get
     } yield {
       assert(r1.windowing.connected)
       assertEquals(r1.windowing.value, "1".some)
@@ -2314,6 +2269,84 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assert(r1.height.connected)
       assertEquals(r1.height.value, "200".some)
     }
+  }
+
+  test("Set PWFS1 filter") {
+    val v = PwfsFilter.Green
+
+    for {
+      (st, ctr) <- createController()
+      _         <- ctr.pwfs1Mechs.filter(v)
+      r1        <- st.tcs.get
+    } yield {
+      assert(r1.p1Filter.connected)
+      assertEquals(r1.p1Filter.value, v.tag.some)
+    }
+
+  }
+
+  test("Set PWFS1 field stop") {
+    val v = PwfsFieldStop.Fs1_6
+
+    for {
+      (st, ctr) <- createController()
+      _         <- ctr.pwfs1Mechs.fieldStop(v)
+      r1        <- st.tcs.get
+    } yield {
+      assert(r1.p1FieldStop.connected)
+      assertEquals(r1.p1FieldStop.value, v.tag.some)
+    }
+
+  }
+
+  test("Set PWFS2 filter") {
+    val v = PwfsFilter.Green
+
+    for {
+      (st, ctr) <- createController()
+      _         <- ctr.pwfs2Mechs.filter(v)
+      r1        <- st.tcs.get
+    } yield {
+      assert(r1.p2Filter.connected)
+      assertEquals(r1.p2Filter.value, v.tag.some)
+    }
+
+  }
+
+  test("Set PWFS2 field stop") {
+    val v = PwfsFieldStop.Fs1_6
+
+    for {
+      (st, ctr) <- createController()
+      _         <- ctr.pwfs2Mechs.fieldStop(v)
+      r1        <- st.tcs.get
+    } yield {
+      assert(r1.p2FieldStop.connected)
+      assertEquals(r1.p2FieldStop.value, v.tag.some)
+    }
+
+  }
+
+  test("Get PWFS1 mechanisms state") {
+    val v = PwfsMechsState(PwfsFilter.Red, PwfsFieldStop.Fs6_4)
+
+    for {
+      (st, ctr) <- createController()
+      _         <- st.ags.update(_.focus(_.p1Filter.value).replace(v.filter.tag.some))
+      _         <- st.ags.update(_.focus(_.p1FieldStop.value).replace(v.fieldStop.tag.some))
+      r         <- ctr.getPwfs1Mechs
+    } yield assertEquals(r, v)
+  }
+
+  test("Get PWFS2 mechanisms state") {
+    val v = PwfsMechsState(PwfsFilter.Red, PwfsFieldStop.Fs6_4)
+
+    for {
+      (st, ctr) <- createController()
+      _         <- st.ags.update(_.focus(_.p2Filter.value).replace(v.filter.tag.some))
+      _         <- st.ags.update(_.focus(_.p2FieldStop.value).replace(v.fieldStop.tag.some))
+      r         <- ctr.getPwfs2Mechs
+    } yield assertEquals(r, v)
   }
 
   case class StateRefs[F[_]](

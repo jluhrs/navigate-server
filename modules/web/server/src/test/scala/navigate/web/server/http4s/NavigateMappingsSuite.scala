@@ -49,6 +49,7 @@ import navigate.model.InstrumentSpecifics
 import navigate.model.NavigateEvent
 import navigate.model.NavigateState
 import navigate.model.PointingCorrections
+import navigate.model.PwfsMechsState
 import navigate.model.RotatorTrackConfig
 import navigate.model.ServerConfiguration
 import navigate.model.SlewOptions
@@ -63,6 +64,8 @@ import navigate.model.enums.AcNdFilter
 import navigate.model.enums.AcquisitionAdjustmentCommand
 import navigate.model.enums.DomeMode
 import navigate.model.enums.LightSource
+import navigate.model.enums.PwfsFieldStop
+import navigate.model.enums.PwfsFilter
 import navigate.model.enums.ShutterMode
 import navigate.model.enums.VirtualTelescope
 import navigate.server.NavigateEngine
@@ -2402,6 +2405,24 @@ object NavigateMappingsTest {
 
     override def getAcMechsState: IO[AcMechsState] =
       AcMechsState(AcLens.Ac, AcNdFilter.Nd1, AcFilter.Neutral).pure[IO]
+
+    override def pwfs1Filter(filter: PwfsFilter): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def pwfs1FieldStop(fieldStop: PwfsFieldStop): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def pwfs2Filter(filter: PwfsFilter): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def pwfs2FieldStop(fieldStop: PwfsFieldStop): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def getPwfs1MechsState: IO[PwfsMechsState] =
+      PwfsMechsState(PwfsFilter.Neutral, PwfsFieldStop.Open1).pure[IO]
+
+    override def getPwfs2MechsState: IO[PwfsMechsState] =
+      PwfsMechsState(PwfsFilter.Neutral, PwfsFieldStop.Open1).pure[IO]
   }
 
   def buildServer: IO[NavigateEngine[IO]] = for {

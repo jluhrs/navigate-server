@@ -14,6 +14,8 @@ import mouse.boolean.*
 import navigate.epics.*
 import navigate.epics.EpicsSystem.TelltaleChannel
 import navigate.epics.VerifiedEpics.*
+import navigate.model.enums.PwfsFieldStop
+import navigate.model.enums.PwfsFilter
 import navigate.server.acm.Decoder.*
 import navigate.server.epicsdata.AgMechPosition
 import navigate.server.tcs.AgsEpicsSystem.AgsStatus
@@ -53,6 +55,8 @@ object AgsEpicsSystem {
     def sfName: VerifiedEpics[F, F, ScienceFold]
     def pwfs1Angles: PwfsAngles[F]
     def pwfs2Angles: PwfsAngles[F]
+    def pwfs1Mechs: PwfsMechs[F]
+    def pwfs2Mechs: PwfsMechs[F]
   }
 
   private[tcs] def buildSystem[F[_]: Applicative](
@@ -153,6 +157,10 @@ object AgsEpicsSystem {
 
         override def pwfs2Angles: PwfsAngles[F] =
           PwfsAngles.build(channels.telltale, channels.p2Angles)
+
+        override def pwfs1Mechs: PwfsMechs[F] = PwfsMechs.build(channels.telltale, channels.p1Mechs)
+
+        override def pwfs2Mechs: PwfsMechs[F] = PwfsMechs.build(channels.telltale, channels.p2Mechs)
       }
     }
 
@@ -173,6 +181,25 @@ object AgsEpicsSystem {
         override val armAngle: VerifiedEpics[F, F, Angle]   =
           VerifiedEpics.readChannel[F, Double](tt, chs.armAngle).map(_.map(Angle.fromDoubleDegrees))
       }
+  }
+
+  trait PwfsMechs[F[_]] {
+    val colFilter: VerifiedEpics[F, F, PwfsFilter]
+    val fieldStop: VerifiedEpics[F, F, PwfsFieldStop]
+  }
+
+  object PwfsMechs {
+    def build[F[_]: Applicative](
+      tt:  TelltaleChannel[F],
+      chs: AgsChannels.PwfsMechsChannels[F]
+    ): PwfsMechs[F] = new PwfsMechs {
+      override val colFilter: VerifiedEpics[F, F, PwfsFilter]    = VerifiedEpics
+        .readChannel[F, String](tt, chs.colFilter)
+        .map(_.map(Enumerated[PwfsFilter].fromTag(_).getOrElse(PwfsFilter.Neutral)))
+      override val fieldStop: VerifiedEpics[F, F, PwfsFieldStop] = VerifiedEpics
+        .readChannel[F, String](tt, chs.fieldStop)
+        .map(_.map(Enumerated[PwfsFieldStop].fromTag(_).getOrElse(PwfsFieldStop.Open1)))
+    }
   }
 
   def build[F[_]: Temporal](

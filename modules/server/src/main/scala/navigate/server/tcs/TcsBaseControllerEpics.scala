@@ -55,6 +55,7 @@ import navigate.model.HandsetAdjustment.HorizontalAdjustment
 import navigate.model.InstrumentSpecifics
 import navigate.model.Origin
 import navigate.model.PointingCorrections
+import navigate.model.PwfsMechsState
 import navigate.model.ResetPointing
 import navigate.model.RotatorTrackConfig
 import navigate.model.RotatorTrackingMode
@@ -85,6 +86,8 @@ import navigate.model.enums.DomeMode
 import navigate.model.enums.HrwfsPickupPosition
 import navigate.model.enums.LightSource
 import navigate.model.enums.OiwfsWavelength
+import navigate.model.enums.PwfsFieldStop
+import navigate.model.enums.PwfsFilter
 import navigate.model.enums.ShutterMode
 import navigate.model.enums.VirtualTelescope
 import navigate.server
@@ -101,15 +104,23 @@ import navigate.server.tcs.AgsEpicsSystem.PwfsAngles
 import navigate.server.tcs.ParkStatus.NotParked
 import navigate.server.tcs.TcsEpicsSystem.ProbeGuideState
 import navigate.server.tcs.TcsEpicsSystem.ProbeTrackingCommand
+import navigate.server.tcs.TcsEpicsSystem.PwfsMechCommands
 import navigate.server.tcs.TcsEpicsSystem.TargetCommand
 import navigate.server.tcs.TcsEpicsSystem.TcsCommands
+import navigate.server.tcs.TcsEpicsSystem.WavelengthCommand
 import navigate.server.tcs.TcsEpicsSystem.WfsCommands
 import org.typelevel.log4cats.Logger
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.*
 
-import TcsBaseController.{AcCommands, EquinoxDefault, FixedSystem, SystemDefault}
+import TcsBaseController.{
+  AcCommands,
+  EquinoxDefault,
+  FixedSystem,
+  PwfsMechanismCommands,
+  SystemDefault
+}
 
 /* This class implements the common TCS commands */
 abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
@@ -293,8 +304,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
   }
 
   protected def setSourceAWalength(w: Wavelength): TcsCommands[F] => TcsCommands[F] =
-    (x: TcsCommands[F]) =>
-      x.sourceAWavel.wavelength(Wavelength.decimalMicrometers.reverseGet(w).doubleValue)
+    _.sourceAWavel.wavelength(w)
 
   protected def setSlewOptions(so: SlewOptions): TcsCommands[F] => TcsCommands[F] =
     (x: TcsCommands[F]) =>
@@ -369,7 +379,9 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       oiwfsStopObserve
 
   protected def applyTcsConfig(
-    config: TcsConfig
+    config:      TcsConfig,
+    pwfs1Filter: PwfsFilter,
+    pwfs2Filter: PwfsFilter
   ): TcsCommands[F] => TcsCommands[F] =
     setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.sourceACmd),
               config.sourceATarget
@@ -382,6 +394,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
             setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.pwfs1TargetCmd),
                       o.target
             )
+              .compose[TcsCommands[F]](_.pwfs1Wavel.wavelength(pwfs1Filter.wavel))
               .compose(
                 setProbeTracking(Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
                                    _.pwfs1ProbeTrackingCommand
@@ -405,6 +418,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
             setTarget(Getter[TcsCommands[F], TargetCommand[F, TcsCommands[F]]](_.pwfs2TargetCmd),
                       o.target
             )
+              .compose[TcsCommands[F]](_.pwfs2Wavel.wavelength(pwfs2Filter.wavel))
               .compose(
                 setProbeTracking(Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
                                    _.pwfs2ProbeTrackingCommand
@@ -429,11 +443,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
                       o.target
             )
               .compose[TcsCommands[F]](x =>
-                x.oiwfsWavel.wavelength(
-                  Wavelength.decimalMicrometers
-                    .reverseGet(getOiwfsWavelegth(config.instrument))
-                    .doubleValue
-                )
+                x.oiwfsWavel.wavelength(getOiwfsWavelegth(config.instrument))
               )
               .compose(
                 setProbeTracking(Getter[TcsCommands[F], ProbeTrackingCommand[F, TcsCommands[F]]](
@@ -496,46 +506,63 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
 
   private val TcsConfigTimeout                                     = FiniteDuration(60, SECONDS)
   // Added a 1.5 s wait between selecting the OIWFS and setting targets, to copy TCC
-  override def tcsConfig(config: TcsConfig): F[ApplyCommandResult] =
-    disableGuide *>
-      (
-        selectOiwfs(config) *>
-          VerifiedEpics.liftF(Temporal[F].sleep(OiwfsSelectionDelay)) *>
-          applyTcsConfig(config)(
-            sys.tcsEpics.startCommand(TcsConfigTimeout)
-          ).post
-      ).verifiedRun(ConnectionTimeout)
+  override def tcsConfig(config: TcsConfig): F[ApplyCommandResult] = for {
+    _   <- disableGuide
+    p1f <- sys.ags.status.pwfs1Mechs.colFilter
+             .verifiedRun(ConnectionTimeout)
+             .attempt
+             .map(_.getOrElse(PwfsFilter.Neutral))
+    p2f <- sys.ags.status.pwfs2Mechs.colFilter
+             .verifiedRun(ConnectionTimeout)
+             .attempt
+             .map(_.getOrElse(PwfsFilter.Neutral))
+    r   <- (
+             selectOiwfs(config) *>
+               VerifiedEpics.liftF(Temporal[F].sleep(OiwfsSelectionDelay)) *>
+               applyTcsConfig(config, p1f, p2f)(
+                 sys.tcsEpics.startCommand(TcsConfigTimeout)
+               ).post
+           ).verifiedRun(ConnectionTimeout)
+  } yield r
 
   override def slew(
     slewOptions: SlewOptions,
     tcsConfig:   TcsConfig
-  ): F[ApplyCommandResult] =
-    stopAllWfs *>
-      disableGuide *>
-      disableTargetFilter *>
-      (
-        resetAllTracking *>
-          selectOiwfsT(tcsConfig)
-            .andThen(
-              _.wrapsCommand.azimuth(0).wrapsCommand.rotator(0).zeroRotatorGuide.mark
-            )(sys.tcsEpics.startCommand(timeout))
-            .post *>
-          VerifiedEpics.liftF(Temporal[F].sleep(OiwfsSelectionDelay)) *>
-          applyTcsConfig(tcsConfig)
-            .andThen(c => c.targetFilter.shortcircuit(ShortcircuitTargetFilter(true)))
-            .andThen { c =>
-              c.instrumentOffsetCommand
-                .offsetX(Distance.Zero)
-                .instrumentOffsetCommand
-                .offsetY(Distance.Zero)
-            }
-            .andThen(setSlewOptions(slewOptions))(
-              sys.tcsEpics.startCommand(TcsConfigTimeout)
-            )
-            .post
-      ).verifiedRun(ConnectionTimeout) *>
-      // TODO: Consider case AO -> Instrument
-      lightPath(LightSource.Sky, tcsConfig.instrument.toLightSink)
+  ): F[ApplyCommandResult] = for {
+    _   <- (stopAllWfs *> disableGuide).whenA(slewOptions.stopGuide.value)
+    _   <- disableTargetFilter.whenA(slewOptions.shortcircuitTargetFilter.value)
+    p1f <- sys.ags.status.pwfs1Mechs.colFilter
+             .verifiedRun(ConnectionTimeout)
+             .attempt
+             .map(_.getOrElse(PwfsFilter.Neutral))
+    p2f <- sys.ags.status.pwfs2Mechs.colFilter
+             .verifiedRun(ConnectionTimeout)
+             .attempt
+             .map(_.getOrElse(PwfsFilter.Neutral))
+    r   <- (
+             resetAllTracking *>
+               selectOiwfsT(tcsConfig)
+                 .andThen(
+                   _.wrapsCommand.azimuth(0).wrapsCommand.rotator(0).zeroRotatorGuide.mark
+                 )(sys.tcsEpics.startCommand(timeout))
+                 .post *>
+               VerifiedEpics.liftF(Temporal[F].sleep(OiwfsSelectionDelay)) *>
+               applyTcsConfig(tcsConfig, p1f, p2f)
+                 .andThen(c => c.targetFilter.shortcircuit(ShortcircuitTargetFilter(true)))
+                 .andThen { c =>
+                   c.instrumentOffsetCommand
+                     .offsetX(Distance.Zero)
+                     .instrumentOffsetCommand
+                     .offsetY(Distance.Zero)
+                 }
+                 .andThen(setSlewOptions(slewOptions))(
+                   sys.tcsEpics.startCommand(TcsConfigTimeout)
+                 )
+                 .post
+           ).verifiedRun(ConnectionTimeout)
+    // TODO: Consider case AO -> Instrument
+    _   <- lightPath(LightSource.Sky, tcsConfig.instrument.toLightSink)
+  } yield r
 
   protected def setInstrumentSpecifics(
     config: InstrumentSpecifics
@@ -1558,12 +1585,22 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     // TODO: consider cases where the light path should go through the AO
     val source = LightSource.Sky
 
-    disableGuide *>
-      (selectOiwfs(config) *>
-        VerifiedEpics.liftF(Temporal[F].sleep(OiwfsSelectionDelay)) *>
-        applyTcsConfig(config)(sys.tcsEpics.startCommand(TcsConfigTimeout)).post)
-        .verifiedRun(ConnectionTimeout) *>
-      lightPath(source, config.instrument.toLightSink)
+    for {
+      _   <- disableGuide
+      p1f <- sys.ags.status.pwfs1Mechs.colFilter
+               .verifiedRun(ConnectionTimeout)
+               .attempt
+               .map(_.getOrElse(PwfsFilter.Neutral))
+      p2f <- sys.ags.status.pwfs2Mechs.colFilter
+               .verifiedRun(ConnectionTimeout)
+               .attempt
+               .map(_.getOrElse(PwfsFilter.Neutral))
+      r   <- (selectOiwfs(config) *>
+               VerifiedEpics.liftF(Temporal[F].sleep(OiwfsSelectionDelay)) *>
+               applyTcsConfig(config, p1f, p2f)(sys.tcsEpics.startCommand(TcsConfigTimeout)).post)
+               .verifiedRun(ConnectionTimeout)
+      _   <- lightPath(source, config.instrument.toLightSink)
+    } yield r
   }
 
   private def setLightPath(
@@ -2086,6 +2123,53 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     } yield AcMechsState(ln, nd, fl)).verifiedRun(ConnectionTimeout)
 
   }
+
+  private val PwfsMechTimeout = FiniteDuration(20, SECONDS)
+  private def buildPwfsMechanismCommands(
+    l: Getter[TcsCommands[F], PwfsMechCommands[F]],
+    w: Getter[TcsCommands[F], WavelengthCommand[F, TcsCommands[F]]]
+  ): PwfsMechanismCommands[F] = new PwfsMechanismCommands[F] {
+
+    override def filter(f: PwfsFilter): F[ApplyCommandResult] = {
+      val filterAction = l
+        .get(sys.tcsEpics.startCommand(PwfsMechTimeout))
+        .filter(f)
+
+      w.get(filterAction)
+        .wavelength(f.wavel)
+        .post
+        .verifiedRun(ConnectionTimeout)
+    }
+
+    override def fieldStop(fs: PwfsFieldStop): F[ApplyCommandResult] = l
+      .get(sys.tcsEpics.startCommand(PwfsMechTimeout))
+      .fieldStop(fs)
+      .post
+      .verifiedRun(ConnectionTimeout)
+  }
+
+  override val pwfs1Mechs: PwfsMechanismCommands[F] = buildPwfsMechanismCommands(
+    Getter[TcsCommands[F], PwfsMechCommands[F]](_.pwfs1MechCommands),
+    Getter[TcsCommands[F], WavelengthCommand[F, TcsCommands[F]]](_.pwfs1Wavel)
+  )
+  override val pwfs2Mechs: PwfsMechanismCommands[F] = buildPwfsMechanismCommands(
+    Getter[TcsCommands[F], PwfsMechCommands[F]](_.pwfs2MechCommands),
+    Getter[TcsCommands[F], WavelengthCommand[F, TcsCommands[F]]](_.pwfs2Wavel)
+  )
+
+  private def getPwfsMechs(c: AgsEpicsSystem.PwfsMechs[F]): F[PwfsMechsState] = (
+    for {
+      flF <- c.colFilter
+      fsF <- c.fieldStop
+    } yield for {
+      fl <- flF
+      fs <- fsF
+    } yield PwfsMechsState(fl, fs)
+  ).verifiedRun(ConnectionTimeout)
+
+  override def getPwfs1Mechs: F[PwfsMechsState] = getPwfsMechs(sys.ags.status.pwfs1Mechs)
+
+  override def getPwfs2Mechs: F[PwfsMechsState] = getPwfsMechs(sys.ags.status.pwfs2Mechs)
 }
 
 object TcsBaseControllerEpics {

@@ -18,6 +18,7 @@ import lucuma.core.math.Angle
 import lucuma.core.math.Coordinates
 import lucuma.core.math.Declination
 import lucuma.core.math.RightAscension
+import lucuma.core.math.Wavelength
 import lucuma.core.model.ProbeGuide
 import lucuma.core.util.Enumerated
 import mouse.all.*
@@ -35,6 +36,8 @@ import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
 import navigate.model.enums.HrwfsPickupPosition
+import navigate.model.enums.PwfsFieldStop
+import navigate.model.enums.PwfsFilter
 import navigate.model.enums.ShutterMode
 import navigate.model.enums.VirtualTelescope
 import navigate.server.ApplyCommandResult
@@ -63,6 +66,7 @@ import TcsChannels.{
   ProbeChannels,
   ProbeTrackingChannels,
   ProbeTrackingStateChannels,
+  PwfsMechCmdChannels,
   SlewChannels,
   TargetChannels,
   WfsChannels
@@ -758,27 +762,35 @@ object TcsEpicsSystem {
       channels.oiwfsTarget
     )
 
-    override val sourceAWavel: WavelengthCommand[F, TcsCommands[F]] = { (v: Double) =>
+    override val sourceAWavel: WavelengthCommand[F, TcsCommands[F]] = { (v: Wavelength) =>
       addParam(
-        writeCadParam(channels.telltale, channels.wavelSourceA)(v)
+        writeCadParam(channels.telltale, channels.wavelSourceA)(
+          Wavelength.decimalMicrometers.reverseGet(v).doubleValue
+        )
       )
     }
 
-    override val pwfs1Wavel: WavelengthCommand[F, TcsCommands[F]] = { (v: Double) =>
+    override val pwfs1Wavel: WavelengthCommand[F, TcsCommands[F]] = { (v: Wavelength) =>
       addParam(
-        writeCadParam(channels.telltale, channels.wavelPwfs1)(v)
+        writeCadParam(channels.telltale, channels.wavelPwfs1)(
+          Wavelength.decimalMicrometers.reverseGet(v).doubleValue
+        )
       )
     }
 
-    override val pwfs2Wavel: WavelengthCommand[F, TcsCommands[F]] = { (v: Double) =>
+    override val pwfs2Wavel: WavelengthCommand[F, TcsCommands[F]] = { (v: Wavelength) =>
       addParam(
-        writeCadParam(channels.telltale, channels.wavelPwfs2)(v)
+        writeCadParam(channels.telltale, channels.wavelPwfs2)(
+          Wavelength.decimalMicrometers.reverseGet(v).doubleValue
+        )
       )
     }
 
-    override val oiwfsWavel: WavelengthCommand[F, TcsCommands[F]] = { (v: Double) =>
+    override val oiwfsWavel: WavelengthCommand[F, TcsCommands[F]] = { (v: Wavelength) =>
       addParam(
-        writeCadParam(channels.telltale, channels.wavelOiwfs)(v)
+        writeCadParam(channels.telltale, channels.wavelOiwfs)(
+          Wavelength.decimalMicrometers.reverseGet(v).doubleValue
+        )
       )
     }
 
@@ -1362,6 +1374,23 @@ object TcsEpicsSystem {
           writeChannel(channels.telltale, channels.zeroRotatorGuideDir)(CadDirective.MARK.pure[F])
         )
       }
+
+    private def buildPwfsMechCommands(
+      chs: PwfsMechCmdChannels[F]
+    ): PwfsMechCommands[F] = new PwfsMechCommands[F] {
+      override def filter(f: PwfsFilter): TcsCommands[F] = addParam(
+        writeCadParam(channels.telltale, chs.filter)(f)
+      )
+
+      override def fieldStop(fs: PwfsFieldStop): TcsCommands[F] = addParam(
+        writeCadParam(channels.telltale, chs.fieldStop)(fs)
+      )
+    }
+
+    override val pwfs1MechCommands: PwfsMechCommands[F] = buildPwfsMechCommands(channels.pwfs1Mechs)
+
+    override val pwfs2MechCommands: PwfsMechCommands[F] = buildPwfsMechCommands(channels.pwfs2Mechs)
+
   }
 
   trait WfsCommands[F[_]] {
@@ -1420,6 +1449,11 @@ object TcsEpicsSystem {
         writeChannel(channels.telltale, wfsChannels.stop)(CadDirective.MARK.pure[F])
       )
     }
+  }
+
+  trait PwfsMechCommands[F[_]] {
+    def filter(f:     PwfsFilter): TcsCommands[F]
+    def fieldStop(fs: PwfsFieldStop): TcsCommands[F]
   }
 
   class TcsEpicsSystemImpl[F[_]: {Monad, Parallel}](
@@ -1978,7 +2012,7 @@ object TcsEpicsSystem {
   }
 
   trait WavelengthCommand[F[_], +S] {
-    def wavelength(v: Double): S
+    def wavelength(v: Wavelength): S
   }
 
   trait SlewOptionsCommand[F[_], +S] {
@@ -2226,6 +2260,8 @@ object TcsEpicsSystem {
     val instrumentOffsetCommand: InstrumentOffsetCommand[F, TcsCommands[F]]
     val wrapsCommand: WrapsCommand[F, TcsCommands[F]]
     val zeroRotatorGuide: BaseCommand[F, TcsCommands[F]]
+    val pwfs1MechCommands: PwfsMechCommands[F]
+    val pwfs2MechCommands: PwfsMechCommands[F]
   }
   /*
 

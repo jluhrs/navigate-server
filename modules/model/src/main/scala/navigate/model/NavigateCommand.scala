@@ -19,6 +19,8 @@ import navigate.model.enums.AcLens
 import navigate.model.enums.AcNdFilter
 import navigate.model.enums.DomeMode
 import navigate.model.enums.LightSource
+import navigate.model.enums.PwfsFieldStop
+import navigate.model.enums.PwfsFilter
 import navigate.model.enums.ShutterMode
 import navigate.model.enums.VirtualTelescope
 
@@ -63,10 +65,14 @@ object NavigateCommand {
       extends NavigateCommand
   case class OriginOffsetClear(openLoops: Boolean)                           extends NavigateCommand
   case class PointingAdjust(handsetAdjustment: HandsetAdjustment)            extends NavigateCommand
+  case class Pwfs1FieldStop(fieldStop: PwfsFieldStop)                        extends NavigateCommand
+  case class Pwfs1Filter(filter: PwfsFilter)                                 extends NavigateCommand
   case class Pwfs1Follow(enable: Boolean)                                    extends NavigateCommand
   case class Pwfs1Observe(period: TimeSpan)                                  extends NavigateCommand
   case class Pwfs1ProbeTracking(config: TrackingConfig)                      extends NavigateCommand
   case class Pwfs1Target(target: Target)                                     extends NavigateCommand
+  case class Pwfs2FieldStop(fieldStop: PwfsFieldStop)                        extends NavigateCommand
+  case class Pwfs2Filter(filter: PwfsFilter)                                 extends NavigateCommand
   case class Pwfs2Follow(enable: Boolean)                                    extends NavigateCommand
   case class Pwfs2Observe(period: TimeSpan)                                  extends NavigateCommand
   case class Pwfs2ProbeTracking(config: TrackingConfig)                      extends NavigateCommand
@@ -157,10 +163,14 @@ object NavigateCommand {
       case OriginOffsetClear(openLoops)                                                  => s"${self.name}(openLoops = $openLoops)"
       case PointingAdjust(handsetAdjustment)                                             =>
         s"${self.name}(handsetAdjustment = ${handsetAdjustment.show})"
+      case Pwfs1FieldStop(fieldStop)                                                     => s"${self.name}(fieldStop = $fieldStop)"
+      case Pwfs1Filter(filter)                                                           => s"${self.name}(filter = $filter)"
       case Pwfs1Follow(enable)                                                           => s"${self.name}(enable = $enable)"
       case Pwfs1Observe(period)                                                          => f"${self.name}(period = ${period.toSeconds.toDouble}%.3f)"
       case Pwfs1ProbeTracking(config)                                                    => s"${self.name}(config = $config)"
       case Pwfs1Target(target: Target)                                                   => s"${self.name}(target = $target.show)"
+      case Pwfs2FieldStop(fieldStop)                                                     => s"${self.name}(fieldStop = $fieldStop)"
+      case Pwfs2Filter(filter)                                                           => s"${self.name}(filter = $filter)"
       case Pwfs2Follow(enable)                                                           => s"${self.name}(enable = $enable)"
       case Pwfs2Observe(period)                                                          => f"${self.name}(period = ${period.toSeconds.toDouble}%.3f)"
       case Pwfs2ProbeTracking(config)                                                    => s"${self.name}(config = $config)"

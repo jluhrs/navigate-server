@@ -46,6 +46,7 @@ import navigate.server.tcs.TcsChannels.ProbeChannels
 import navigate.server.tcs.TcsChannels.ProbeGuideModeChannels
 import navigate.server.tcs.TcsChannels.ProbeTrackingChannels
 import navigate.server.tcs.TcsChannels.ProbeTrackingStateChannels
+import navigate.server.tcs.TcsChannels.PwfsMechCmdChannels
 import navigate.server.tcs.TcsChannels.RotatorChannels
 import navigate.server.tcs.TcsChannels.SlewChannels
 import navigate.server.tcs.TcsChannels.TargetChannels
@@ -392,7 +393,11 @@ object TestTcsEpicsSystem {
     instrumentOffset:     InstrumentOffsetCommandState,
     azimuthWrap:          TestChannel.State[String],
     rotatorWrap:          TestChannel.State[String],
-    zeroRotatorGuide:     TestChannel.State[CadDirective]
+    zeroRotatorGuide:     TestChannel.State[CadDirective],
+    p1Filter:             TestChannel.State[String],
+    p1FieldStop:          TestChannel.State[String],
+    p2Filter:             TestChannel.State[String],
+    p2FieldStop:          TestChannel.State[String]
   )
 
   val defaultState: State = State(
@@ -538,7 +543,11 @@ object TestTcsEpicsSystem {
     instrumentOffset = InstrumentOffsetCommandState.default,
     azimuthWrap = TestChannel.State.default,
     rotatorWrap = TestChannel.State.default,
-    zeroRotatorGuide = TestChannel.State.default
+    zeroRotatorGuide = TestChannel.State.default,
+    p1Filter = TestChannel.State.default,
+    p1FieldStop = TestChannel.State.default,
+    p2Filter = TestChannel.State.default,
+    p2FieldStop = TestChannel.State.default
   )
 
   def buildEnclosureChannels[F[_]: Temporal](s: Ref[F, State]): EnclosureChannels[F] =
@@ -1165,7 +1174,15 @@ object TestTcsEpicsSystem {
       azimuthWrap = new TestChannel[F, State, String](s, Focus[State](_.azimuthWrap)),
       rotatorWrap = new TestChannel[F, State, String](s, Focus[State](_.rotatorWrap)),
       zeroRotatorGuideDir =
-        new TestChannel[F, State, CadDirective](s, Focus[State](_.zeroRotatorGuide))
+        new TestChannel[F, State, CadDirective](s, Focus[State](_.zeroRotatorGuide)),
+      pwfs1Mechs =
+        PwfsMechCmdChannels[F](new TestChannel[F, State, String](s, Focus[State](_.p1Filter)),
+                               new TestChannel[F, State, String](s, Focus[State](_.p1FieldStop))
+        ),
+      pwfs2Mechs =
+        PwfsMechCmdChannels[F](new TestChannel[F, State, String](s, Focus[State](_.p2Filter)),
+                               new TestChannel[F, State, String](s, Focus[State](_.p2FieldStop))
+        )
     )
 
   def build[F[_]: {Async, Parallel, Dispatcher}](s: Ref[F, State]): TcsEpicsSystem[F] = {

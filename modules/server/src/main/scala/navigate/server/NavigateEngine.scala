@@ -43,6 +43,7 @@ import navigate.model.NavigateEvent
 import navigate.model.NavigateEvent.*
 import navigate.model.NavigateState
 import navigate.model.PointingCorrections
+import navigate.model.PwfsMechsState
 import navigate.model.RotatorTrackConfig
 import navigate.model.SlewOptions
 import navigate.model.SwapConfig
@@ -56,6 +57,8 @@ import navigate.model.enums.AcLens
 import navigate.model.enums.AcNdFilter
 import navigate.model.enums.DomeMode
 import navigate.model.enums.LightSource
+import navigate.model.enums.PwfsFieldStop
+import navigate.model.enums.PwfsFilter
 import navigate.model.enums.ShutterMode
 import navigate.model.enums.VirtualTelescope
 import navigate.server.tcs.GuideState
@@ -158,6 +161,12 @@ trait NavigateEngine[F[_]] {
   def acNdFilter(nd:                                 AcNdFilter): F[CommandResult]
   def acFilter(flt:                                  AcFilter): F[CommandResult]
   def acWindowSize(wnd:                              AcWindow): F[CommandResult]
+  // PWFS1 mechanisms
+  def pwfs1Filter(filter:                            PwfsFilter): F[CommandResult]
+  def pwfs1FieldStop(fieldStop:                      PwfsFieldStop): F[CommandResult]
+  // PWFS2 mechanisms
+  def pwfs2Filter(filter:                            PwfsFilter): F[CommandResult]
+  def pwfs2FieldStop(fieldStop:                      PwfsFieldStop): F[CommandResult]
 
   def getGuideState: F[GuideState]
   def getGuidersQuality: F[GuidersQualityValues]
@@ -170,6 +179,8 @@ trait NavigateEngine[F[_]] {
   def getPointingOffset: F[PointingCorrections]
   def getOriginOffset: F[FocalPlaneOffset]
   def getAcMechsState: F[AcMechsState]
+  def getPwfs1MechsState: F[PwfsMechsState]
+  def getPwfs2MechsState: F[PwfsMechsState]
 }
 
 object NavigateEngine {
@@ -741,6 +752,34 @@ object NavigateEngine {
     )
 
     override def getAcMechsState: F[AcMechsState] = systems.tcsCommon.acCommands.getState
+
+    override def pwfs1Filter(filter: PwfsFilter): F[CommandResult] = simpleCommand(
+      engine,
+      Pwfs1Filter(filter),
+      systems.tcsCommon.pwfs1Mechs.filter(filter)
+    )
+
+    override def pwfs1FieldStop(fieldStop: PwfsFieldStop): F[CommandResult] = simpleCommand(
+      engine,
+      Pwfs1FieldStop(fieldStop),
+      systems.tcsCommon.pwfs1Mechs.fieldStop(fieldStop)
+    )
+
+    override def pwfs2Filter(filter: PwfsFilter): F[CommandResult] = simpleCommand(
+      engine,
+      Pwfs2Filter(filter),
+      systems.tcsCommon.pwfs2Mechs.filter(filter)
+    )
+
+    override def pwfs2FieldStop(fieldStop: PwfsFieldStop): F[CommandResult] = simpleCommand(
+      engine,
+      Pwfs2FieldStop(fieldStop),
+      systems.tcsCommon.pwfs2Mechs.fieldStop(fieldStop)
+    )
+
+    override def getPwfs1MechsState: F[PwfsMechsState] = systems.tcsCommon.getPwfs1Mechs
+
+    override def getPwfs2MechsState: F[PwfsMechsState] = systems.tcsCommon.getPwfs2Mechs
   }
 
   def build[F[_]: {Temporal, Logger, Async}](
