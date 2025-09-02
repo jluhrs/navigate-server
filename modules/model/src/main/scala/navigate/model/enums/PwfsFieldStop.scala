@@ -6,11 +6,11 @@ package navigate.model.enums
 import lucuma.core.util.Enumerated
 
 enum PwfsFieldStop(val tag: String) derives Enumerated {
-  case Prism extends PwfsFieldStop("prism")
-  case Fs10  extends PwfsFieldStop("10.0")
-  case Fs6_4 extends PwfsFieldStop("6.4")
-  case Fs3_2 extends PwfsFieldStop("3.2")
-  case Fs1_6 extends PwfsFieldStop("1.6")
+  case Prism extends PwfsFieldStop("Prism")
+  case Fs10  extends PwfsFieldStop("Fs10")
+  case Fs6_4 extends PwfsFieldStop("Fs6_4")
+  case Fs3_2 extends PwfsFieldStop("Fs3_2")
+  case Fs1_6 extends PwfsFieldStop("Fs1_6")
   case Open1 extends PwfsFieldStop("open1")
   case Open2 extends PwfsFieldStop("open2")
   case Open3 extends PwfsFieldStop("open3")

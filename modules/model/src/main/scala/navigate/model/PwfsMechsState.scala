@@ -3,10 +3,12 @@
 
 package navigate.model
 
+import cats.Eq
+import cats.derived.*
 import navigate.model.enums.PwfsFieldStop
 import navigate.model.enums.PwfsFilter
 
 case class PwfsMechsState(
   filter:    PwfsFilter,
   fieldStop: PwfsFieldStop
-)
+) derives Eq

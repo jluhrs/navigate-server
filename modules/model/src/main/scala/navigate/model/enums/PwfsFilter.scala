@@ -7,7 +7,7 @@ import lucuma.core.math.Wavelength
 import lucuma.core.util.Enumerated
 
 enum PwfsFilter(val tag: String, val wavel: Wavelength) derives Enumerated {
-  case Neutral extends PwfsFilter("neutral", Wavelength.unsafeFromIntPicometers(650_000))
+  case Neutral extends PwfsFilter("Neutral", Wavelength.unsafeFromIntPicometers(650_000))
   case Blue    extends PwfsFilter("Blue", Wavelength.unsafeFromIntPicometers(450_000))
   case Green   extends PwfsFilter("Green", Wavelength.unsafeFromIntPicometers(550_000))
   case Red     extends PwfsFilter("Red", Wavelength.unsafeFromIntPicometers(600_00))

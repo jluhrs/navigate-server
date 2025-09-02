@@ -1480,19 +1480,19 @@ object TcsEpicsSystem {
 
   }
 
-  given Encoder[GuideProbe, String] = _ match {
+  given Encoder[GuideProbe, String] = {
     case GuideProbe.GmosOIWFS       => "OIWFS"
     case GuideProbe.Flamingos2OIWFS => "OIWFS"
     case GuideProbe.PWFS1           => "PWFS1"
     case GuideProbe.PWFS2           => "PWFS2"
   }
 
-  given Encoder[CentralBafflePosition, String] = _ match {
+  given Encoder[CentralBafflePosition, String] = {
     case CentralBafflePosition.Open   => "Open"
     case CentralBafflePosition.Closed => "Closed"
   }
 
-  given Encoder[DeployableBafflePosition, String] = _ match {
+  given Encoder[DeployableBafflePosition, String] = {
     case DeployableBafflePosition.ThermalIR => "Retracted"
     case DeployableBafflePosition.NearIR    => "Near IR"
     case DeployableBafflePosition.Visible   => "Visible"
@@ -1514,7 +1514,7 @@ object TcsEpicsSystem {
     (-m).toString
   }
 
-  given Encoder[VirtualTelescope, String] = _ match {
+  given Encoder[VirtualTelescope, String] = {
     case VirtualTelescope.SourceA => "SOURCE A"
     case VirtualTelescope.SourceB => "SOURCE B"
     case VirtualTelescope.SourceC => "SOURCE C"
@@ -1522,6 +1522,23 @@ object TcsEpicsSystem {
     case VirtualTelescope.Pwfs2   => "PWFS2"
     case VirtualTelescope.Oiwfs   => "OIWFS"
     case a                        => a.tag
+  }
+
+  given Encoder[PwfsFilter, String] = {
+    case PwfsFilter.Neutral => "neutral"
+    case x                  => x.tag
+  }
+
+  given Encoder[PwfsFieldStop, String] = {
+    case PwfsFieldStop.Prism => "prism"
+    case PwfsFieldStop.Fs10  => "10.0"
+    case PwfsFieldStop.Fs6_4 => "6.4"
+    case PwfsFieldStop.Fs3_2 => "3.2"
+    case PwfsFieldStop.Fs1_6 => "1.6"
+    case PwfsFieldStop.Open1 => "open1"
+    case PwfsFieldStop.Open2 => "open2"
+    case PwfsFieldStop.Open3 => "open3"
+    case PwfsFieldStop.Open4 => "open4"
   }
 
   class TcsEpicsImpl[F[_]: Monad](

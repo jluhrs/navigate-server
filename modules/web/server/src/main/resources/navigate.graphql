@@ -402,6 +402,32 @@ type AcMechs {
     ndFilter: AcNdFilter
 }
 
+enum PwfsFilter {
+    NEUTRAL
+    BLUE
+    GREEN
+    RED
+    RED04
+    RED1
+}
+
+enum PwfsFieldStop {
+    PRISM
+    FS10
+    FS6_4
+    FS3_2
+    FS1_6
+    OPEN1
+    OPEN2
+    OPEN3
+    OPEN4
+}
+
+type PwfsMechsState {
+    filter: PwfsFilter!
+    fieldStop: PwfsFieldStop!
+}
+
 type Query {
     telescopeState: TelescopeState!
     guideState: GuideConfigurationState!
@@ -414,6 +440,8 @@ type Query {
     pointingAdjustmentOffset: PointingCorrections!
     serverConfiguration: ServerConfiguration!
     acMechsState: AcMechs!
+    pwfs1MechsState: PwfsMechsState!
+    pwfs2MechsState: PwfsMechsState!
 }
 
 type Mutation {
@@ -428,12 +456,16 @@ type Mutation {
     restoreTarget(config: TcsConfigInput!): OperationOutcome!
     instrumentSpecifics(instrumentSpecificsParams: InstrumentSpecificsInput!): OperationOutcome!
     rotatorConfig(config: RotatorTrackingInput!): OperationOutcome!
+    pwfs1Filter(filter: PwfsFilter): OperationOutcome!
+    pwfs1FieldStop(fieldStop: PwfsFieldStop): OperationOutcome!
     pwfs1Target(target: TargetPropertiesInput!): OperationOutcome!
     pwfs1ProbeTracking(config: ProbeTrackingInput!): OperationOutcome!
     pwfs1Park: OperationOutcome!
     pwfs1Follow(enable: Boolean!): OperationOutcome!
     pwfs1Observe(period: TimeSpanInput!): OperationOutcome!
     pwfs1StopObserve: OperationOutcome!
+    pwfs2Filter(filter: PwfsFilter): OperationOutcome!
+    pwfs2FieldStop(fieldStop: PwfsFieldStop): OperationOutcome!
     pwfs2Target(target: TargetPropertiesInput!): OperationOutcome!
     pwfs2ProbeTracking(config: ProbeTrackingInput!): OperationOutcome!
     pwfs2Park: OperationOutcome!
@@ -487,4 +519,6 @@ type Subscription {
     originAdjustmentOffset: FocalPlaneOffset!
     pointingAdjustmentOffset: PointingCorrections!
     acMechsState: AcMechs!
+    pwfs1MechsState: PwfsMechsState!
+    pwfs2MechsState: PwfsMechsState!
 }

@@ -2272,7 +2272,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
   }
 
   test("Set PWFS1 filter") {
-    val v = PwfsFilter.Green
+    val v = PwfsFilter.Neutral
 
     for {
       (st, ctr) <- createController()
@@ -2280,13 +2280,13 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       r1        <- st.tcs.get
     } yield {
       assert(r1.p1Filter.connected)
-      assertEquals(r1.p1Filter.value, v.tag.some)
+      assertEquals(r1.p1Filter.value, "neutral".some)
     }
 
   }
 
   test("Set PWFS1 field stop") {
-    val v = PwfsFieldStop.Fs1_6
+    val v = PwfsFieldStop.Fs3_2
 
     for {
       (st, ctr) <- createController()
@@ -2294,7 +2294,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       r1        <- st.tcs.get
     } yield {
       assert(r1.p1FieldStop.connected)
-      assertEquals(r1.p1FieldStop.value, v.tag.some)
+      assertEquals(r1.p1FieldStop.value, "3.2".some)
     }
 
   }
@@ -2308,7 +2308,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       r1        <- st.tcs.get
     } yield {
       assert(r1.p2Filter.connected)
-      assertEquals(r1.p2Filter.value, v.tag.some)
+      assertEquals(r1.p2Filter.value, "Green".some)
     }
 
   }
@@ -2322,7 +2322,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       r1        <- st.tcs.get
     } yield {
       assert(r1.p2FieldStop.connected)
-      assertEquals(r1.p2FieldStop.value, v.tag.some)
+      assertEquals(r1.p2FieldStop.value, "1.6".some)
     }
 
   }

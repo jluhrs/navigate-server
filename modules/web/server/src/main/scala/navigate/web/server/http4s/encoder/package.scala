@@ -18,6 +18,7 @@ import navigate.model.FocalPlaneOffset
 import navigate.model.HandsetAdjustment.HorizontalAdjustment
 import navigate.model.NavigateState
 import navigate.model.PointingCorrections
+import navigate.model.PwfsMechsState
 import navigate.model.ServerConfiguration
 import navigate.model.enums.AcNdFilter
 import navigate.server.tcs.GuideState
@@ -146,6 +147,12 @@ package object encoder {
       "lens"     -> s.lens.asJson,
       "filter"   -> s.filter.asJson,
       "ndFilter" -> s.ndFilter.asJson
+    )
+
+  given Encoder[PwfsMechsState] = s =>
+    Json.obj(
+      "filter"    -> s.filter.asJson,
+      "fieldStop" -> s.fieldStop.asJson
     )
 
 }
