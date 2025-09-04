@@ -90,7 +90,9 @@ case class TcsChannels[F[_]](
   instrumentOffset:        InstrumentOffsetCommandChannels[F],
   azimuthWrap:             Channel[F, String],
   rotatorWrap:             Channel[F, String],
-  zeroRotatorGuideDir:     Channel[F, CadDirective]
+  zeroRotatorGuideDir:     Channel[F, CadDirective],
+  pwfs1Mechs:              PwfsMechCmdChannels[F],
+  pwfs2Mechs:              PwfsMechCmdChannels[F]
 )
 
 object TcsChannels {
@@ -306,6 +308,23 @@ object TcsChannels {
         prk <- service.getChannel[CadDirective](s"${prefix}Park$DirSuffix")
         pos <- service.getChannel[String](s"${prefix}.A")
       } yield AgMechChannels(prk, pos)
+  }
+
+  case class PwfsMechCmdChannels[F[_]](
+    filter:    Channel[F, String],
+    fieldStop: Channel[F, String]
+  )
+
+  object PwfsMechCmdChannels {
+    def build[F[_]](
+      service: EpicsService[F],
+      top:     TcsTop,
+      name:    String
+    ): Resource[F, PwfsMechCmdChannels[F]] =
+      for {
+        flt <- service.getChannel[String](top.value, s"${name}Filter.A")
+        fds <- service.getChannel[String](top.value, s"${name}Fldstop.A")
+      } yield PwfsMechCmdChannels(flt, fds)
   }
 
   // Build functions to construct each epics channel for each
@@ -876,6 +895,8 @@ object TcsChannels {
       azwr <- service.getChannel[String](tcsTop.value, "azwrap.A")
       rtwr <- service.getChannel[String](tcsTop.value, "rotwrap.A")
       zrg  <- service.getChannel[CadDirective](tcsTop.value, "zeroRotGuide.DIR")
+      p1mc <- PwfsMechCmdChannels.build(service, tcsTop, "pwfs1")
+      p2mc <- PwfsMechCmdChannels.build(service, tcsTop, "pwfs2")
     } yield TcsChannels[F](
       tt,
       tpd,
@@ -946,7 +967,9 @@ object TcsChannels {
       ioff,
       azwr,
       rtwr,
-      zrg
+      zrg,
+      p1mc,
+      p2mc
     )
   }
 }

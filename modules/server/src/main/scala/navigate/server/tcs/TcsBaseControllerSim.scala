@@ -21,6 +21,7 @@ import navigate.model.FocalPlaneOffset
 import navigate.model.HandsetAdjustment
 import navigate.model.InstrumentSpecifics
 import navigate.model.PointingCorrections
+import navigate.model.PwfsMechsState
 import navigate.model.RotatorTrackConfig
 import navigate.model.SlewOptions
 import navigate.model.SwapConfig
@@ -31,12 +32,15 @@ import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
 import navigate.model.enums.LightSource
+import navigate.model.enums.PwfsFieldStop
+import navigate.model.enums.PwfsFilter
 import navigate.model.enums.ShutterMode
 import navigate.model.enums.VirtualTelescope
 import navigate.server.ApplyCommandResult
 import navigate.server.tcs.FollowStatus.*
 import navigate.server.tcs.GuidersQualityValues.GuiderQuality
 import navigate.server.tcs.ParkStatus.*
+import navigate.server.tcs.TcsBaseController.PwfsMechanismCommands
 
 abstract class TcsBaseControllerSim[F[_]: Sync](
   guideRef:    Ref[F, GuideState],
@@ -301,4 +305,22 @@ abstract class TcsBaseControllerSim[F[_]: Sync](
   override def pwfs2Sky(exposureTime: TimeSpan)(guide: GuideConfig): F[ApplyCommandResult] =
     ApplyCommandResult.Completed.pure[F]
 
+  override val pwfs1Mechs: PwfsMechanismCommands[F] = new PwfsMechanismCommands[F] {
+    override def filter(f: PwfsFilter): F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
+
+    override def fieldStop(fs: PwfsFieldStop): F[ApplyCommandResult] =
+      ApplyCommandResult.Completed.pure[F]
+  }
+  override val pwfs2Mechs: PwfsMechanismCommands[F] = new PwfsMechanismCommands[F] {
+    override def filter(f: PwfsFilter): F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
+
+    override def fieldStop(fs: PwfsFieldStop): F[ApplyCommandResult] =
+      ApplyCommandResult.Completed.pure[F]
+  }
+
+  override def getPwfs1Mechs: F[PwfsMechsState] =
+    PwfsMechsState(PwfsFilter.Neutral, PwfsFieldStop.Fs10).pure[F]
+
+  override def getPwfs2Mechs: F[PwfsMechsState] =
+    PwfsMechsState(PwfsFilter.Neutral, PwfsFieldStop.Fs10).pure[F]
 }

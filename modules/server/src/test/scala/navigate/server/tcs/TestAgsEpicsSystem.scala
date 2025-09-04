@@ -39,7 +39,11 @@ object TestAgsEpicsSystem {
     p1TableAngle: TestChannel.State[Double],
     p1ArmAngle:   TestChannel.State[Double],
     p2TableAngle: TestChannel.State[Double],
-    p2ArmAngle:   TestChannel.State[Double]
+    p2ArmAngle:   TestChannel.State[Double],
+    p1Filter:     TestChannel.State[String],
+    p1FieldStop:  TestChannel.State[String],
+    p2Filter:     TestChannel.State[String],
+    p2FieldStop:  TestChannel.State[String]
   )
 
   val defaultState: State = State(
@@ -69,7 +73,11 @@ object TestAgsEpicsSystem {
     TestChannel.State.of(0.0),
     TestChannel.State.of(0.0),
     TestChannel.State.of(0.0),
-    TestChannel.State.of(0.0)
+    TestChannel.State.of(0.0),
+    TestChannel.State.of("neutral"),
+    TestChannel.State.of("open1"),
+    TestChannel.State.of("neutral"),
+    TestChannel.State.of("open1")
   )
 
   def buildChannels[F[_]: Temporal](
@@ -108,6 +116,14 @@ object TestAgsEpicsSystem {
     p2Angles = AgsChannels.PwfsAnglesChannels[F](
       tableAngle = new TestChannel[F, State, Double](s, Focus[State](_.p2TableAngle)),
       armAngle = new TestChannel[F, State, Double](s, Focus[State](_.p2ArmAngle))
+    ),
+    p1Mechs = AgsChannels.PwfsMechsChannels[F](
+      new TestChannel[F, State, String](s, Focus[State](_.p1Filter)),
+      new TestChannel[F, State, String](s, Focus[State](_.p1FieldStop))
+    ),
+    p2Mechs = AgsChannels.PwfsMechsChannels[F](
+      new TestChannel[F, State, String](s, Focus[State](_.p2Filter)),
+      new TestChannel[F, State, String](s, Focus[State](_.p2FieldStop))
     )
   )
 

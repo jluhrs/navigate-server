@@ -27,7 +27,9 @@ case class AgsChannels[F[_]](
   hwName:          Channel[F, String],
   sfName:          Channel[F, String],
   p1Angles:        AgsChannels.PwfsAnglesChannels[F],
-  p2Angles:        AgsChannels.PwfsAnglesChannels[F]
+  p2Angles:        AgsChannels.PwfsAnglesChannels[F],
+  p1Mechs:         AgsChannels.PwfsMechsChannels[F],
+  p2Mechs:         AgsChannels.PwfsMechsChannels[F]
 )
 
 object AgsChannels {
@@ -95,6 +97,22 @@ object AgsChannels {
     } yield PwfsAnglesChannels(ta, aa)
   }
 
+  case class PwfsMechsChannels[F[_]](
+    colFilter: Channel[F, String],
+    fieldStop: Channel[F, String]
+  )
+
+  object PwfsMechsChannels {
+    def build[F[_]](
+      service: EpicsService[F],
+      top:     NonEmptyString,
+      name:    String
+    ): Resource[F, PwfsMechsChannels[F]] = for {
+      cf <- service.getChannel[String](top, s"${name}:filterName.VAL")
+      fs <- service.getChannel[String](top, s"${name}:fldstopName.VAL")
+    } yield PwfsMechsChannels(cf, fs)
+  }
+
   def build[F[_]](
     service: EpicsService[F],
     top:     NonEmptyString
@@ -116,6 +134,8 @@ object AgsChannels {
     sfName   <- service.getChannel[String](top, "sfName")
     p1Angles <- PwfsAnglesChannels.build(service, top, "p1")
     p2Angles <- PwfsAnglesChannels.build(service, top, "p2")
+    p1Mechs  <- PwfsMechsChannels.build(service, top, "p1")
+    p2Mechs  <- PwfsMechsChannels.build(service, top, "p2")
   } yield AgsChannels(
     t,
     inPos,
@@ -133,6 +153,8 @@ object AgsChannels {
     hwName,
     sfName,
     p1Angles,
-    p2Angles
+    p2Angles,
+    p1Mechs,
+    p2Mechs
   )
 }

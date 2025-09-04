@@ -59,6 +59,7 @@ import navigate.model.InstrumentSpecifics
 import navigate.model.NavigateState
 import navigate.model.Origin
 import navigate.model.PointingCorrections
+import navigate.model.PwfsMechsState
 import navigate.model.ResetPointing
 import navigate.model.RotatorTrackConfig
 import navigate.model.RotatorTrackingMode
@@ -84,6 +85,8 @@ import navigate.model.enums.AcLens
 import navigate.model.enums.AcNdFilter
 import navigate.model.enums.AcquisitionAdjustmentCommand
 import navigate.model.enums.LightSource
+import navigate.model.enums.PwfsFieldStop
+import navigate.model.enums.PwfsFilter
 import navigate.model.enums.VirtualTelescope
 import navigate.server.NavigateEngine
 import navigate.server.tcs.GuideState
@@ -109,6 +112,8 @@ class NavigateMappings[F[_]: Sync](
   val originAdjustmentTopic:      Topic[F, FocalPlaneOffset],
   val pointingAdjustmentTopic:    Topic[F, PointingCorrections],
   val acMechsTopic:               Topic[F, AcMechsState],
+  val pwfs1MechsTopic:            Topic[F, PwfsMechsState],
+  val pwfs2MechsTopic:            Topic[F, PwfsMechsState],
   val logBuffer:                  Ref[F, Seq[ILoggingEvent]]
 )(
   override val schema:            Schema
@@ -139,6 +144,12 @@ class NavigateMappings[F[_]: Sync](
 
   def acMechsState: F[Result[AcMechsState]] =
     server.getAcMechsState.attempt.map(_.fold(e => Result.failure(e.getMessage), Result.success))
+
+  def pwfs1MechsState: F[Result[PwfsMechsState]] =
+    server.getPwfs1MechsState.attempt.map(_.fold(e => Result.failure(e.getMessage), Result.success))
+
+  def pwfs2MechsState: F[Result[PwfsMechsState]] =
+    server.getPwfs2MechsState.attempt.map(_.fold(e => Result.failure(e.getMessage), Result.success))
 
   def instrumentPort(env: Env): F[Result[Option[Int]]] =
     env
@@ -341,6 +352,32 @@ class NavigateMappings[F[_]: Sync](
       }
       .getOrElse(
         Result.failure[OperationOutcome](s"${name}Observe parameter could not be parsed.").pure[F]
+      )
+
+  def wfsFilter(name: String, cmd: PwfsFilter => F[CommandResult])(
+    env: Env
+  ): F[Result[OperationOutcome]] =
+    env
+      .get[PwfsFilter]("filter")
+      .map { p =>
+        cmd(p).attempt
+          .map(convertResult)
+      }
+      .getOrElse(
+        Result.failure[OperationOutcome](s"${name}Filter parameter could not be parsed.").pure[F]
+      )
+
+  def wfsFieldStop(name: String, cmd: PwfsFieldStop => F[CommandResult])(
+    env: Env
+  ): F[Result[OperationOutcome]] =
+    env
+      .get[PwfsFieldStop]("fieldStop")
+      .map { p =>
+        cmd(p).attempt
+          .map(convertResult)
+      }
+      .getOrElse(
+        Result.failure[OperationOutcome](s"${name}FieldStop parameter could not be parsed.").pure[F]
       )
 
   def acObserve(env: Env): F[Result[OperationOutcome]] =
@@ -804,6 +841,42 @@ class NavigateMappings[F[_]: Sync](
              )
         _ <- Elab.env("size", t)
       } yield ()
+    case (MutationType, "pwfs1Filter", List(Binding("filter", EnumValue(name))))                =>
+      for {
+        t <- Elab.liftR(
+               parseEnumerated[PwfsFilter](name).toResult(
+                 "Could not parse pwfs1Filter parameter \"filter\""
+               )
+             )
+        _ <- Elab.env("filter", t)
+      } yield ()
+    case (MutationType, "pwfs1FieldStop", List(Binding("fieldStop", EnumValue(name))))          =>
+      for {
+        t <- Elab.liftR(
+               parseEnumerated[PwfsFieldStop](name).toResult(
+                 "Could not parse pwfs1FieldStop parameter \"fieldStop\""
+               )
+             )
+        _ <- Elab.env("fieldStop", t)
+      } yield ()
+    case (MutationType, "pwfs2Filter", List(Binding("filter", EnumValue(name))))                =>
+      for {
+        t <- Elab.liftR(
+               parseEnumerated[PwfsFilter](name).toResult(
+                 "Could not parse pwfs2Filter parameter \"filter\""
+               )
+             )
+        _ <- Elab.env("filter", t)
+      } yield ()
+    case (MutationType, "pwfs2FieldStop", List(Binding("fieldStop", EnumValue(name))))          =>
+      for {
+        t <- Elab.liftR(
+               parseEnumerated[PwfsFieldStop](name).toResult(
+                 "Could not parse pwfs2FieldStop parameter \"fieldStop\""
+               )
+             )
+        _ <- Elab.env("fieldStop", t)
+      } yield ()
     case (QueryType, "instrumentPort", List(Binding("instrument", EnumValue(ins))))             =>
       Elab
         .liftR(
@@ -830,7 +903,9 @@ class NavigateMappings[F[_]: Sync](
             pointingAdjustmentOffset
           ),
           RootEffect.computeEncodable("serverConfiguration")((_, _) => serverConfig),
-          RootEffect.computeEncodable("acMechsState")((_, _) => acMechsState)
+          RootEffect.computeEncodable("acMechsState")((_, _) => acMechsState),
+          RootEffect.computeEncodable("pwfs1MechsState")((_, _) => pwfs1MechsState),
+          RootEffect.computeEncodable("pwfs2MechsState")((_, _) => pwfs2MechsState)
         )
       ),
       ObjectMapping(
@@ -867,6 +942,12 @@ class NavigateMappings[F[_]: Sync](
           RootEffect.computeEncodable("pwfs1StopObserve")((_, _) =>
             parameterlessCommand(server.pwfs1StopObserve)
           ),
+          RootEffect.computeEncodable("pwfs1Filter")((_, env) =>
+            wfsFilter("pwfs1", server.pwfs1Filter)(env)
+          ),
+          RootEffect.computeEncodable("pwfs1FieldStop")((_, env) =>
+            wfsFieldStop("pwfs1", server.pwfs1FieldStop)(env)
+          ),
           RootEffect.computeEncodable("pwfs2Target")((_, env) =>
             wfsTarget("pwfs2", server.pwfs2Target)(env)
           ),
@@ -884,6 +965,12 @@ class NavigateMappings[F[_]: Sync](
           ),
           RootEffect.computeEncodable("pwfs2StopObserve")((_, _) =>
             parameterlessCommand(server.pwfs2StopObserve)
+          ),
+          RootEffect.computeEncodable("pwfs2Filter")((_, env) =>
+            wfsFilter("pwfs2", server.pwfs2Filter)(env)
+          ),
+          RootEffect.computeEncodable("pwfs2FieldStop")((_, env) =>
+            wfsFieldStop("pwfs2", server.pwfs2FieldStop)(env)
           ),
           RootEffect.computeEncodable("oiwfsTarget")((_, env) =>
             wfsTarget("oiwfs", server.oiwfsTarget)(env)
@@ -1042,6 +1129,20 @@ class NavigateMappings[F[_]: Sync](
               .map(_.asJson)
               .map(circeCursor(p, env, _))
               .map(Result.success)
+          },
+          RootStream.computeCursor("pwfs1MechsState") { (p, env) =>
+            pwfs1MechsTopic
+              .subscribe(1024)
+              .map(_.asJson)
+              .map(circeCursor(p, env, _))
+              .map(Result.success)
+          },
+          RootStream.computeCursor("pwfs2MechsState") { (p, env) =>
+            pwfs2MechsTopic
+              .subscribe(1024)
+              .map(_.asJson)
+              .map(circeCursor(p, env, _))
+              .map(Result.success)
           }
         )
       )
@@ -1067,6 +1168,8 @@ object NavigateMappings extends GrackleParsers {
     originAdjustmentTopic:      Topic[F, FocalPlaneOffset],
     pointingAdjustmentTopic:    Topic[F, PointingCorrections],
     acMechsTopic:               Topic[F, AcMechsState],
+    pwfs1MechsTopic:            Topic[F, PwfsMechsState],
+    pwfs2MechsTopic:            Topic[F, PwfsMechsState],
     logBuffer:                  Ref[F, Seq[ILoggingEvent]]
   ): F[NavigateMappings[F]] = loadSchema.flatMap {
     case Result.Success(schema)           =>
@@ -1082,6 +1185,8 @@ object NavigateMappings extends GrackleParsers {
         originAdjustmentTopic,
         pointingAdjustmentTopic,
         acMechsTopic,
+        pwfs1MechsTopic,
+        pwfs2MechsTopic,
         logBuffer
       )(schema)
         .pure[F]
@@ -1098,6 +1203,8 @@ object NavigateMappings extends GrackleParsers {
         originAdjustmentTopic,
         pointingAdjustmentTopic,
         acMechsTopic,
+        pwfs1MechsTopic,
+        pwfs2MechsTopic,
         logBuffer
       )(schema)
         .pure[F]

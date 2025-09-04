@@ -103,6 +103,8 @@ object WebServerLauncher extends IOApp with LogInitialization {
         topics.originAdjustment,
         topics.pointingAdjustment,
         topics.acMechsState,
+        topics.pwfs1MechsTopic,
+        topics.pwfs2MechsTopic,
         topics.logBuffer
       )
         .service(wsBuilder),

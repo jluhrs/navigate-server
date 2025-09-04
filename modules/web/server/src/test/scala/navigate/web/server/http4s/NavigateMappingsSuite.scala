@@ -49,6 +49,7 @@ import navigate.model.InstrumentSpecifics
 import navigate.model.NavigateEvent
 import navigate.model.NavigateState
 import navigate.model.PointingCorrections
+import navigate.model.PwfsMechsState
 import navigate.model.RotatorTrackConfig
 import navigate.model.ServerConfiguration
 import navigate.model.SlewOptions
@@ -63,6 +64,8 @@ import navigate.model.enums.AcNdFilter
 import navigate.model.enums.AcquisitionAdjustmentCommand
 import navigate.model.enums.DomeMode
 import navigate.model.enums.LightSource
+import navigate.model.enums.PwfsFieldStop
+import navigate.model.enums.PwfsFilter
 import navigate.model.enums.ShutterMode
 import navigate.model.enums.VirtualTelescope
 import navigate.server.NavigateEngine
@@ -2168,6 +2171,144 @@ class NavigateMappingsSuite extends CatsEffectSuite {
     )
   }
 
+  test("Query Pwfs1 mechanisms state") {
+    val expected = PwfsMechsState(PwfsFilter.Neutral, PwfsFieldStop.Open1)
+    for {
+      mp <- buildMapping(NavigateConfiguration.default, true)
+      r  <- mp.compileAndRun(
+              """
+          | query { pwfs1MechsState {
+          |     filter
+          |     fieldStop
+          |   }
+          | }
+          |""".stripMargin
+            )
+    } yield assertEquals(
+      r.hcursor.downField("data").downField("pwfs1MechsState").as[PwfsMechsState],
+      expected.asRight[DecodingFailure]
+    )
+  }
+
+  test("Set Pwfs1 filter") {
+    for {
+      mp <- buildMapping()
+      p  <- mp.compileAndRun(
+              """
+          |mutation {
+          |  pwfs1Filter(
+          |    filter: GREEN
+          |  ) {
+          |    result
+          |  }
+          |}
+          |""".stripMargin
+            )
+    } yield assertEquals(
+      p.hcursor
+        .downField("data")
+        .downField("pwfs1Filter")
+        .downField("result")
+        .as[String]
+        .toOption,
+      "SUCCESS".some
+    )
+  }
+
+  test("Set Pwfs1 field stop") {
+    for {
+      mp <- buildMapping()
+      p  <- mp.compileAndRun(
+              """
+          |mutation {
+          |  pwfs1FieldStop(
+          |    fieldStop: FS1_6
+          |  ) {
+          |    result
+          |  }
+          |}
+          |""".stripMargin
+            )
+    } yield assertEquals(
+      p.hcursor
+        .downField("data")
+        .downField("pwfs1FieldStop")
+        .downField("result")
+        .as[String]
+        .toOption,
+      "SUCCESS".some
+    )
+  }
+
+  test("Query Pwfs2 mechanisms state") {
+    val expected = PwfsMechsState(PwfsFilter.Neutral, PwfsFieldStop.Open1)
+    for {
+      mp <- buildMapping(NavigateConfiguration.default, true)
+      r  <- mp.compileAndRun(
+              """
+          | query { pwfs2MechsState {
+          |     filter
+          |     fieldStop
+          |   }
+          | }
+          |""".stripMargin
+            )
+    } yield assertEquals(
+      r.hcursor.downField("data").downField("pwfs2MechsState").as[PwfsMechsState],
+      expected.asRight[DecodingFailure]
+    )
+  }
+
+  test("Set Pwfs2 filter") {
+    for {
+      mp <- buildMapping()
+      p  <- mp.compileAndRun(
+              """
+          |mutation {
+          |  pwfs2Filter(
+          |    filter: NEUTRAL
+          |  ) {
+          |    result
+          |  }
+          |}
+          |""".stripMargin
+            )
+    } yield assertEquals(
+      p.hcursor
+        .downField("data")
+        .downField("pwfs2Filter")
+        .downField("result")
+        .as[String]
+        .toOption,
+      "SUCCESS".some
+    )
+  }
+
+  test("Set Pwfs2 field stop") {
+    for {
+      mp <- buildMapping()
+      p  <- mp.compileAndRun(
+              """
+          |mutation {
+          |  pwfs2FieldStop(
+          |    fieldStop: FS3_2
+          |  ) {
+          |    result
+          |  }
+          |}
+          |""".stripMargin
+            )
+    } yield assertEquals(
+      p.hcursor
+        .downField("data")
+        .downField("pwfs2FieldStop")
+        .downField("result")
+        .as[String]
+        .toOption,
+      "SUCCESS".some
+    )
+  }
+
 }
 
 object NavigateMappingsTest {
@@ -2402,6 +2543,24 @@ object NavigateMappingsTest {
 
     override def getAcMechsState: IO[AcMechsState] =
       AcMechsState(AcLens.Ac, AcNdFilter.Nd1, AcFilter.Neutral).pure[IO]
+
+    override def pwfs1Filter(filter: PwfsFilter): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def pwfs1FieldStop(fieldStop: PwfsFieldStop): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def pwfs2Filter(filter: PwfsFilter): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def pwfs2FieldStop(fieldStop: PwfsFieldStop): IO[CommandResult] =
+      CommandResult.CommandSuccess.pure[IO]
+
+    override def getPwfs1MechsState: IO[PwfsMechsState] =
+      PwfsMechsState(PwfsFilter.Neutral, PwfsFieldStop.Open1).pure[IO]
+
+    override def getPwfs2MechsState: IO[PwfsMechsState] =
+      PwfsMechsState(PwfsFilter.Neutral, PwfsFieldStop.Open1).pure[IO]
   }
 
   def buildServer: IO[NavigateEngine[IO]] = for {
@@ -2442,7 +2601,9 @@ object NavigateMappingsTest {
     ot  <- Topic[IO, FocalPlaneOffset]
     pt  <- Topic[IO, PointingCorrections]
     ac  <- Topic[IO, AcMechsState]
-    mp  <- NavigateMappings[IO](config, eng, log, gd, gq, ts, aa, tot, ot, pt, ac, lb)
+    p1  <- Topic[IO, PwfsMechsState]
+    p2  <- Topic[IO, PwfsMechsState]
+    mp  <- NavigateMappings[IO](config, eng, log, gd, gq, ts, aa, tot, ot, pt, ac, p1, p2, lb)
   } yield mp
 
   given Decoder[OperationOutcome] = Decoder.instance(h =>
@@ -2624,5 +2785,11 @@ object NavigateMappingsTest {
       nd   <- h.downField("ndFilter").as[AcNdFilter]
       flt  <- h.downField("filter").as[AcFilter]
     } yield AcMechsState(lens, nd, flt)
+
+  given Decoder[PwfsMechsState] = h =>
+    for {
+      fl <- h.downField("filter").as[PwfsFilter]
+      fs <- h.downField("fieldStop").as[PwfsFieldStop]
+    } yield PwfsMechsState(fl, fs)
 
 }

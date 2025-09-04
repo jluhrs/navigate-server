@@ -16,6 +16,7 @@ import navigate.model.AcMechsState
 import navigate.model.AcquisitionAdjustment
 import navigate.model.FocalPlaneOffset
 import navigate.model.PointingCorrections
+import navigate.model.PwfsMechsState
 import navigate.model.config.NavigateConfiguration
 import navigate.server.NavigateEngine
 import navigate.server.tcs.GuideState
@@ -41,6 +42,8 @@ class GraphQlRoutes[F[_]: {Async, Trace, Compression}](
   originAdjustmentTopic:      Topic[F, FocalPlaneOffset],
   pointingAdjustmentTopic:    Topic[F, PointingCorrections],
   acMechsTopic:               Topic[F, AcMechsState],
+  pwfs1MechsTopic:            Topic[F, PwfsMechsState],
+  pwfs2MechsTopic:            Topic[F, PwfsMechsState],
   logBuffer:                  Ref[F, Seq[ILoggingEvent]]
 ) extends Http4sDsl[F] {
 
@@ -62,6 +65,8 @@ class GraphQlRoutes[F[_]: {Async, Trace, Compression}](
           originAdjustmentTopic,
           pointingAdjustmentTopic,
           acMechsTopic,
+          pwfs1MechsTopic,
+          pwfs2MechsTopic,
           logBuffer
         )
           .map(

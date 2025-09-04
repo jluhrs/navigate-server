@@ -15,6 +15,7 @@ import navigate.model.FocalPlaneOffset
 import navigate.model.HandsetAdjustment
 import navigate.model.InstrumentSpecifics
 import navigate.model.PointingCorrections
+import navigate.model.PwfsMechsState
 import navigate.model.RotatorTrackConfig
 import navigate.model.SlewOptions
 import navigate.model.SwapConfig
@@ -28,10 +29,13 @@ import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
 import navigate.model.enums.LightSource
+import navigate.model.enums.PwfsFieldStop
+import navigate.model.enums.PwfsFilter
 import navigate.model.enums.ShutterMode
 import navigate.model.enums.VirtualTelescope
 import navigate.server.ApplyCommandResult
 import navigate.server.tcs.TcsBaseController.AcCommands
+import navigate.server.tcs.TcsBaseController.PwfsMechanismCommands
 
 trait TcsBaseController[F[_]] {
   def mcsPark: F[ApplyCommandResult]
@@ -117,6 +121,9 @@ trait TcsBaseController[F[_]] {
 
   val acCommands: AcCommands[F]
 
+  val pwfs1Mechs: PwfsMechanismCommands[F]
+  val pwfs2Mechs: PwfsMechanismCommands[F]
+
   // Queries
   def getGuideState: F[GuideState]
   def getGuideQuality: F[GuidersQualityValues]
@@ -125,6 +132,8 @@ trait TcsBaseController[F[_]] {
   def getTargetAdjustments: F[TargetOffsets]
   def getPointingCorrections: F[PointingCorrections]
   def getOriginOffset: F[FocalPlaneOffset]
+  def getPwfs1Mechs: F[PwfsMechsState]
+  def getPwfs2Mechs: F[PwfsMechsState]
 }
 
 object TcsBaseController {
@@ -140,6 +149,11 @@ object TcsBaseController {
     def windowSize(size:   AcWindow): F[ApplyCommandResult]
 
     def getState: F[AcMechsState]
+  }
+
+  trait PwfsMechanismCommands[F[_]] {
+    def filter(f:     PwfsFilter): F[ApplyCommandResult]
+    def fieldStop(fs: PwfsFieldStop): F[ApplyCommandResult]
   }
 
 }

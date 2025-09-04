@@ -18,6 +18,7 @@ import navigate.model.AcquisitionAdjustment
 import navigate.model.FocalPlaneOffset
 import navigate.model.NavigateEvent
 import navigate.model.PointingCorrections
+import navigate.model.PwfsMechsState
 import navigate.server.NavigateEngine
 import navigate.server.NavigateFailure
 import navigate.server.tcs.GuideState
@@ -42,6 +43,8 @@ class TopicManager[F[_]] private (
   val originAdjustment:      Topic[F, FocalPlaneOffset],
   val pointingAdjustment:    Topic[F, PointingCorrections],
   val acMechsState:          Topic[F, AcMechsState],
+  val pwfs1MechsTopic:       Topic[F, PwfsMechsState],
+  val pwfs2MechsTopic:       Topic[F, PwfsMechsState],
   val logBuffer:             Ref[F, Seq[ILoggingEvent]]
 ) {
 
@@ -114,6 +117,20 @@ class TopicManager[F[_]] private (
   )(using Temporal[F], Logger[F]): Pipe[F, Unit, Unit] =
     genericPoll(eng.getAcMechsState, topic, start)
 
+  private def pwfs1MechsStatePoll(
+    eng:   NavigateEngine[F],
+    topic: Topic[F, PwfsMechsState],
+    start: Int
+  )(using Temporal[F], Logger[F]): Pipe[F, Unit, Unit] =
+    genericPoll(eng.getPwfs1MechsState, topic, start)
+
+  private def pwfs2MechsStatePoll(
+    eng:   NavigateEngine[F],
+    topic: Topic[F, PwfsMechsState],
+    start: Int
+  )(using Temporal[F], Logger[F]): Pipe[F, Unit, Unit] =
+    genericPoll(eng.getPwfs2MechsState, topic, start)
+
   private def targetAdjStatePoll(
     eng:   NavigateEngine[F],
     topic: Topic[F, TargetOffsets],
@@ -162,7 +179,9 @@ class TopicManager[F[_]] private (
               targetAdjStatePoll(engine, targetAdjustment, 4),
               originAdjStatePoll(engine, originAdjustment, 5),
               pointingAdjStatePoll(engine, pointingAdjustment, 6),
-              acMechsStatePoll(engine, acMechsState, 7)
+              acMechsStatePoll(engine, acMechsState, 7),
+              pwfs1MechsStatePoll(engine, pwfs1MechsTopic, 8),
+              pwfs2MechsStatePoll(engine, pwfs2MechsTopic, 9)
             ),
           engine.eventStream.through(navigateEvents.publish)
         )
@@ -244,6 +263,8 @@ object TopicManager {
       originAdjustment      <- Resource.eval(Topic[F, FocalPlaneOffset])
       pointingAdjustment    <- Resource.eval(Topic[F, PointingCorrections])
       acMechsState          <- Resource.eval(Topic[F, AcMechsState])
+      p1MechsState          <- Resource.eval(Topic[F, PwfsMechsState])
+      p2MechsState          <- Resource.eval(Topic[F, PwfsMechsState])
 
       // Setup log buffer
       logBuffer <- bufferLogMessages(loggingEvents)
@@ -260,6 +281,8 @@ object TopicManager {
       originAdjustment,
       pointingAdjustment,
       acMechsState,
+      p1MechsState,
+      p2MechsState,
       logBuffer
     )
 
