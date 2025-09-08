@@ -17,6 +17,7 @@ object TestWfsEpicsSystem {
     tipGain:   TestChannel.State[String],
     tiltGain:  TestChannel.State[String],
     focusGain: TestChannel.State[String],
+    scaleGain: TestChannel.State[String],
     reset:     TestChannel.State[Double],
     gainsDir:  TestChannel.State[CadDirective],
     flux:      TestChannel.State[Int],
@@ -24,6 +25,7 @@ object TestWfsEpicsSystem {
   )
 
   val defaultState: State = State(
+    TestChannel.State.default,
     TestChannel.State.default,
     TestChannel.State.default,
     TestChannel.State.default,
@@ -43,6 +45,7 @@ object TestWfsEpicsSystem {
     tipGain = new TestChannel[F, State, String](s, Focus[State](_.tipGain)),
     tiltGain = new TestChannel[F, State, String](s, Focus[State](_.tiltGain)),
     focusGain = new TestChannel[F, State, String](s, Focus[State](_.focusGain)),
+    scaleGain = new TestChannel[F, State, String](s, Focus[State](_.scaleGain)),
     reset = new TestChannel[F, State, Double](s, Focus[State](_.reset)),
     gainsDir = new TestChannel[F, State, CadDirective](s, Focus[State](_.gainsDir)),
     flux = new TestChannel[F, State, Int](s, Focus[State](_.flux)),

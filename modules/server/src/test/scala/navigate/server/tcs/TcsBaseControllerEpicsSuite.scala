@@ -971,6 +971,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assert(oi_1.tipGain.connected)
       assert(oi_1.tiltGain.connected)
       assert(oi_1.focusGain.connected)
+      assert(oi_1.scaleGain.connected)
 
       assertEquals(p1_1.tipGain.value, "0.0".some)
       assertEquals(p1_1.tiltGain.value, "0.0".some)
@@ -983,6 +984,10 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assertEquals(oi_1.tipGain.value, "0.0".some)
       assertEquals(oi_1.tiltGain.value, "0.0".some)
       assertEquals(oi_1.focusGain.value, "0.0".some)
+      oi_1.scaleGain.value
+        .flatMap(_.toDoubleOption)
+        .map(v => assertEqualsDouble(v, TcsBaseControllerEpics.DefaultOiwfsScaleGain, 1e-6))
+        .getOrElse(fail("No value set for gain scale"))
     }
   }
 

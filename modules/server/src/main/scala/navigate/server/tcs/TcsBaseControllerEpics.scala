@@ -1432,6 +1432,8 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
         .setTiltGain(0.0)
         .gains
         .setFocusGain(0.0)
+        .gains
+        .setScaleGain(DefaultOiwfsScaleGain)
         .post
 
   def defaultGains: VerifiedEpics[F, F, ApplyCommandResult] =
@@ -2220,5 +2222,7 @@ object TcsBaseControllerEpics {
     def isGuiding: Boolean =
       x.m1Guide =!= M1GuideConfig.M1GuideOff || x.m2Guide =!= M2GuideConfig.M2GuideOff
   }
+
+  val DefaultOiwfsScaleGain: Double = 0.0003
 
 }
