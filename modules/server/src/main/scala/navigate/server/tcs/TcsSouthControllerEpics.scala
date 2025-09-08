@@ -7,6 +7,8 @@ import cats.Parallel
 import cats.effect.Async
 import cats.effect.Ref
 import cats.syntax.all.*
+import navigate.epics.VerifiedEpics.VerifiedEpics
+import navigate.server.ApplyCommandResult
 import navigate.server.ConnectionTimeout
 import org.typelevel.log4cats.Logger
 
@@ -45,6 +47,18 @@ class TcsSouthControllerEpics[F[_]: {Async, Parallel, Logger}](
     niriPort = 0
   )).verifiedRun(ConnectionTimeout)
 
+  override def oiwfsDaytimeGains: VerifiedEpics[F, F, ApplyCommandResult] = sys.oiwfs
+    .startGainCommand(timeout)
+    .gains
+    .setTipGain(0.0)
+    .gains
+    .setTiltGain(0.0)
+    .gains
+    .setFocusGain(0.0)
+    .gains
+    .setScaleGain(TcsSouthControllerEpics.DefaultOiwfsScaleGain)
+    .post
+
 }
 
 object TcsSouthControllerEpics {
@@ -58,5 +72,7 @@ object TcsSouthControllerEpics {
       .map(
         new TcsSouthControllerEpics(sys, timeout, _)
       )
+
+  val DefaultOiwfsScaleGain: Double = 0.0003
 
 }

@@ -1405,6 +1405,16 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     x.verifiedRun(ConnectionTimeout)
   }
 
+  def oiwfsDaytimeGains: VerifiedEpics[F, F, ApplyCommandResult] = sys.oiwfs
+    .startGainCommand(timeout)
+    .gains
+    .setTipGain(0.0)
+    .gains
+    .setTiltGain(0.0)
+    .gains
+    .setFocusGain(0.0)
+    .post
+
   def dayTimeGains: VerifiedEpics[F, F, ApplyCommandResult] =
     sys.pwfs1
       .startGainCommand(timeout)
@@ -1423,18 +1433,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
         .setTiltGain(0.0)
         .gains
         .setFocusGain(0.0)
-        .post *>
-      sys.oiwfs
-        .startGainCommand(timeout)
-        .gains
-        .setTipGain(0.0)
-        .gains
-        .setTiltGain(0.0)
-        .gains
-        .setFocusGain(0.0)
-        .gains
-        .setScaleGain(DefaultOiwfsScaleGain)
-        .post
+        .post *> oiwfsDaytimeGains
 
   def defaultGains: VerifiedEpics[F, F, ApplyCommandResult] =
     sys.pwfs1
@@ -2222,7 +2221,5 @@ object TcsBaseControllerEpics {
     def isGuiding: Boolean =
       x.m1Guide =!= M1GuideConfig.M1GuideOff || x.m2Guide =!= M2GuideConfig.M2GuideOff
   }
-
-  val DefaultOiwfsScaleGain: Double = 0.0003
 
 }

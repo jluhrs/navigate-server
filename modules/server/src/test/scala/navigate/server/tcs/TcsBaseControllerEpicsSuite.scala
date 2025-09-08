@@ -947,11 +947,11 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
     }
   }
 
-  test("Enable and disable guiding in day mode") {
+  test("Enable and disable guiding in day mode at GS") {
     val guideCfg = oiGuideConfig.copy(dayTimeMode = true.some)
 
     for {
-      (st, ctr) <- createController()
+      (st, ctr) <- createController(Site.GS)
       _         <- setWfsTrackingState(st.tcs, Focus[State](_.oiwfsTrackingState))
       _         <- ctr.enableGuide(guideCfg)
       r1        <- st.tcs.get
@@ -986,8 +986,48 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       assertEquals(oi_1.focusGain.value, "0.0".some)
       oi_1.scaleGain.value
         .flatMap(_.toDoubleOption)
-        .map(v => assertEqualsDouble(v, TcsBaseControllerEpics.DefaultOiwfsScaleGain, 1e-6))
+        .map(v => assertEqualsDouble(v, TcsSouthControllerEpics.DefaultOiwfsScaleGain, 1e-6))
         .getOrElse(fail("No value set for gain scale"))
+    }
+  }
+
+  test("Enable and disable guiding in day mode at GN") {
+    val guideCfg = oiGuideConfig.copy(dayTimeMode = true.some)
+
+    for {
+      (st, ctr) <- createController(Site.GN)
+      _         <- setWfsTrackingState(st.tcs, Focus[State](_.oiwfsTrackingState))
+      _         <- ctr.enableGuide(guideCfg)
+      r1        <- st.tcs.get
+      p1_1      <- st.p1.get
+      p2_1      <- st.p2.get
+      oi_1      <- st.oiw.get
+      _         <- ctr.disableGuide
+      r2        <- st.tcs.get
+    } yield {
+      checkGuide(r1, guideCfg)
+      assert(p1_1.tipGain.connected)
+      assert(p1_1.tiltGain.connected)
+      assert(p1_1.focusGain.connected)
+      assert(p2_1.tipGain.connected)
+      assert(p2_1.tiltGain.connected)
+      assert(p2_1.focusGain.connected)
+      assert(oi_1.tipGain.connected)
+      assert(oi_1.tiltGain.connected)
+      assert(oi_1.focusGain.connected)
+      assert(!oi_1.scaleGain.connected)
+
+      assertEquals(p1_1.tipGain.value, "0.0".some)
+      assertEquals(p1_1.tiltGain.value, "0.0".some)
+      assertEquals(p1_1.focusGain.value, "0.0".some)
+
+      assertEquals(p2_1.tipGain.value, "0.0".some)
+      assertEquals(p2_1.tiltGain.value, "0.0".some)
+      assertEquals(p2_1.focusGain.value, "0.0".some)
+
+      assertEquals(oi_1.tipGain.value, "0.0".some)
+      assertEquals(oi_1.tiltGain.value, "0.0".some)
+      assertEquals(oi_1.focusGain.value, "0.0".some)
     }
   }
 
