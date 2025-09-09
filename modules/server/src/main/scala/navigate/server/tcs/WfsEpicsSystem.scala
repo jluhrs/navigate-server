@@ -37,6 +37,7 @@ object WfsEpicsSystem {
     def setTipGain(v:   Double): S
     def setTiltGain(v:  Double): S
     def setFocusGain(v: Double): S
+    def setScaleGain(v: Double): S
   }
 
   private[tcs] def buildSystem[F[_]: {Temporal, Parallel}](
@@ -79,7 +80,7 @@ object WfsEpicsSystem {
 
   trait WfsEpics[F[_]] {
     def post(timeout: FiniteDuration): VerifiedEpics[F, F, ApplyCommandResult]
-    val gainsCmd: Command3Channels[F, Double, Double, Double]
+    val gainsCmd: Command4Channels[F, Double, Double, Double, Double]
     val resetGainCmd: VerifiedEpics[F, F, Unit]
   }
 
@@ -95,14 +96,15 @@ object WfsEpicsSystem {
       ) *>
         VerifiedEpics.liftF(Temporal[F].sleep(commandWaitTime).as(ApplyCommandResult.Completed))
 
-    override val gainsCmd: Command3Channels[F, Double, Double, Double] =
-      Command3Channels[F, Double, Double, Double](
+    override val gainsCmd: Command4Channels[F, Double, Double, Double, Double] =
+      Command4Channels[F, Double, Double, Double, Double](
         channels.telltale,
         channels.tipGain,
         channels.tiltGain,
-        channels.focusGain
+        channels.focusGain,
+        channels.scaleGain
       )
-    override val resetGainCmd: VerifiedEpics[F, F, Unit]               = writeChannel[F, Double](
+    override val resetGainCmd: VerifiedEpics[F, F, Unit]                       = writeChannel[F, Double](
       channels.telltale,
       channels.reset
     )(1.0.pure[F])
@@ -131,6 +133,10 @@ object WfsEpicsSystem {
 
         override def setFocusGain(v: Double): WfsGainCommands[F] = addParam(
           wfsEpics.gainsCmd.setParam3(v)
+        )
+
+        override def setScaleGain(v: Double): WfsGainCommands[F] = addParam(
+          wfsEpics.gainsCmd.setParam4(v)
         )
       }
     override def resetGain: WfsGainCommands[F]              = addParam(wfsEpics.resetGainCmd)

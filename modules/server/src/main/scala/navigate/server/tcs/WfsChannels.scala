@@ -16,6 +16,7 @@ case class WfsChannels[F[_]](
   tipGain:          Channel[F, String],
   tiltGain:         Channel[F, String],
   focusGain:        Channel[F, String],
+  scaleGain:        Channel[F, String],
   reset:            Channel[F, Double],
   gainsDir:         Channel[F, CadDirective],
   flux:             Channel[F, Int],
@@ -37,6 +38,7 @@ object WfsChannels {
       tipG   <- service.getChannel[String](top, "dc:detSigInitFgGain.A")
       tiltG  <- service.getChannel[String](top, "dc:detSigInitFgGain.B")
       focusG <- service.getChannel[String](top, "dc:detSigInitFgGain.C")
+      scaleG <- service.getChannel[String](top, "dc:detSigInitFgGain.D")
       gDir   <- service.getChannel[CadDirective](top, "dc:detSigInitFgGain.DIR")
       rst    <- service.getChannel[Double](top, gainResetName.value)
       fx     <- service.getChannel[Int](top, fluxName.value)
@@ -46,6 +48,7 @@ object WfsChannels {
       tipGain = tipG,
       tiltGain = tiltG,
       focusGain = focusG,
+      scaleGain = scaleG,
       reset = rst,
       gainsDir = gDir,
       flux = fx,
