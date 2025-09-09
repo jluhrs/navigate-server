@@ -360,7 +360,7 @@ enum AcLens {
 }
 
 enum AcNdFilter {
-    Open
+    OPEN
     ND1
     ND2
     ND3

@@ -2054,7 +2054,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
   }
 
   test("Query AC mechanisms state") {
-    val expected = AcMechsState(AcLens.Ac, AcNdFilter.Nd1, AcFilter.Neutral)
+    val expected = AcMechsState(AcLens.Ac, AcNdFilter.Open, AcFilter.Neutral)
     for {
       mp <- buildMapping(NavigateConfiguration.default, true)
       r  <- mp.compileAndRun(
@@ -2542,7 +2542,7 @@ object NavigateMappingsTest {
       CommandResult.CommandSuccess.pure[IO]
 
     override def getAcMechsState: IO[AcMechsState] =
-      AcMechsState(AcLens.Ac, AcNdFilter.Nd1, AcFilter.Neutral).pure[IO]
+      AcMechsState(AcLens.Ac, AcNdFilter.Open, AcFilter.Neutral).pure[IO]
 
     override def pwfs1Filter(filter: PwfsFilter): IO[CommandResult] =
       CommandResult.CommandSuccess.pure[IO]
