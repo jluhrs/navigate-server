@@ -5,7 +5,7 @@ package navigate.model.enums
 
 import lucuma.core.util.Enumerated
 
-enum AcFilter(val tag: String) extends Product with Serializable derives Enumerated {
+enum AcFilter(val tag: String) derives Enumerated {
   case Neutral extends AcFilter("Neutral")
   case U_Red1  extends AcFilter("U_Red1")
   case B_Blue  extends AcFilter("B_Blue")
