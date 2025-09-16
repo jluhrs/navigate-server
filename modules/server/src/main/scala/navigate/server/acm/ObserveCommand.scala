@@ -13,6 +13,7 @@ import cats.effect.syntax.temporal.*
 import cats.syntax.all.*
 import fs2.RaiseThrowable.*
 import fs2.Stream
+import mouse.all.booleanSyntaxMouse
 import navigate.epics.Channel
 import navigate.epics.Channel.StreamEvent
 import navigate.epics.EpicsService
@@ -86,6 +87,7 @@ object ObserveCommand {
         omsrr  <- readChannel(telltaleChannel, car.omss).map(Resource.pure[F, F[String]])
         clidrr <- readChannel(telltaleChannel, car.clid).map(Resource.pure[F, F[Int]])
         avrr   <- readChannel(telltaleChannel, apply.oval).map(Resource.pure[F, F[Int]])
+        cvrr   <- readChannel(telltaleChannel, car.oval).map(Resource.pure[F, F[CarState]])
         intsF  <- eventStream(telltaleChannel, integrating)
       } yield for {
         avs   <- avrs
@@ -95,11 +97,12 @@ object ObserveCommand {
         omsr  <- omsrr
         clidr <- clidrr
         avr   <- avrr
+        cvr   <- cvrr
         ints  <- intsF
-      } yield (avs, cvs, dw, msr, omsr, clidr, avr, ints)
+      } yield (avs, cvs, dw, msr, omsr, clidr, avr, cvr, ints)
 
-      streamsV.map(_.use { case (avs, cvs, dw, msr, omsr, clidr, avr, ints) =>
-        processCommand(typ, avs, cvs, dw, msr, omsr, clidr, avr, ints).timeout(timeout)
+      streamsV.map(_.use { case (avs, cvs, dw, msr, omsr, clidr, avr, cvr, ints) =>
+        processCommand(typ, avs, cvs, dw, msr, omsr, clidr, avr, cvr, ints).timeout(timeout)
       })
 
     }
@@ -130,6 +133,8 @@ object ObserveCommand {
      *   : Effect to read car.CLID
      * @param avr
      *   : Effect to read apply.VAL
+     * @param avr
+     *   : Effect to read car.VAL
      * @param ints
      *   : Stream of values from the integration state channel
      * @return
@@ -144,6 +149,7 @@ object ObserveCommand {
       omsr:  F[String],
       clidr: F[Int],
       avr:   F[Int],
+      cvr:   F[CarState],
       ints:  Stream[F, StreamEvent[BinaryYesNo]]
     ): F[ApplyCommandResult] = {
       val startObsPhase = typ match {
@@ -305,41 +311,35 @@ object ObserveCommand {
           }
       }
 
-      Stream
-        .eval(avr.attempt.map(_.toOption))
-        .flatMap { avo =>
-          (
-            Stream.eval(dw) *> Stream[F, Stream[F, Event]](
-              avs.drop(avo.size).flatMap {
-                case StreamEvent.ValueChanged(v) => Stream(ApplyValChange(v))
-                case StreamEvent.Disconnected    =>
-                  Stream.raiseError[F](new Throwable(s"Apply record ${apply.name} disconnected"))
-                case _                           => Stream.empty
-              },
-              cvs.flatMap {
-                case StreamEvent.ValueChanged(v) =>
-                  Stream.eval(clidr.attempt.map(_.getOrElse(0))).map(CarValChange(v, _))
-                case StreamEvent.Disconnected    =>
-                  Stream.raiseError[F](new Throwable(s"CAR record ${apply.name} disconnected"))
-                case _                           => Stream.empty
-              },
-              ints.flatMap {
-                case StreamEvent.ValueChanged(v) => Stream(IntegratingValChange(v))
-                case StreamEvent.Disconnected    =>
-                  Stream.raiseError[F](
-                    new Throwable(s"Integrating channel ${integrating.getName} disconnected")
-                  )
-                case _                           => Stream.empty
-              }
-            ).parJoin(3)
-          ).mapAccumulate[PostState, F[Option[ApplyCommandResult]]](
-            PostState(None, CmdPhase.WaitingBusy, startObsPhase)
-          ) { (s, ev) =>
-            ev match {
-              case ApplyValChange(v)       => processApplyChange(v, s)
-              case CarValChange(v, clid)   => processCarChange(v, clid, s)
-              case IntegratingValChange(v) => processIntegratingChange(v, s)
-            }
+      (for {
+        av0 <- Stream.eval(avr.attempt.map(_.toOption))
+        cv0 <- Stream.eval(cvr.attempt.map(_.toOption))
+        _   <- Stream.eval(dw)
+        r   <- Stream[F, Stream[F, Event]](
+                 removeRepeated(avs,
+                                av0,
+                                s"Apply record ${apply.name} disconnected",
+                                ApplyValChange.apply(_).pure[F]
+                 ),
+                 removeRepeated(cvs,
+                                cv0,
+                                s"CAR record ${apply.name} disconnected",
+                                v => clidr.attempt.map(_.getOrElse(0)).map(CarValChange(v, _))
+                 ),
+                 removeRepeated(ints,
+                                none,
+                                s"Integrating channel ${integrating.getName} disconnected",
+                                IntegratingValChange.apply(_).pure[F]
+                 )
+               ).parJoin(3)
+      } yield r)
+        .mapAccumulate[PostState, F[Option[ApplyCommandResult]]](
+          PostState(None, CmdPhase.WaitingBusy, startObsPhase)
+        ) { (s, ev) =>
+          ev match {
+            case ApplyValChange(v)       => processApplyChange(v, s)
+            case CarValChange(v, clid)   => processCarChange(v, clid, s)
+            case IntegratingValChange(v) => processIntegratingChange(v, s)
           }
         }
         .evalMap(_._2)
@@ -348,6 +348,25 @@ object ObserveCommand {
         .compile
         .lastOrError
     }
+
+    private def removeRepeated[U: Eq](
+      strm:          Stream[F, StreamEvent[U]],
+      v0:            Option[U],
+      disconnectMsg: String,
+      out:           U => F[Event]
+    ): Stream[F, Event] =
+      strm
+        .flatMap {
+          case StreamEvent.ValueChanged(v) => Stream(v)
+          case StreamEvent.Disconnected    => Stream.raiseError[F](new Throwable(disconnectMsg))
+          case _                           => Stream.empty
+        }
+        .evalMapAccumulate(v0) { case (acc, v) =>
+          out(v).map(x => (v.some, acc.forall(_ =!= v).option(x)))
+        }
+        .map(_._2)
+        .unNone
+
   }
 
   def build[F[_]: {Dispatcher, Temporal}](
