@@ -2062,7 +2062,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
   override def pointingOffsetClearGuide: F[ApplyCommandResult] =
     sys.tcsEpics.startCommand(AdjTimeout).zeroGuideCommand.mark.post.verifiedRun(ConnectionTimeout)
 
-  private val AcMechTimeout              = FiniteDuration(20, SECONDS)
+  private val AcMechTimeout              = FiniteDuration(30, SECONDS)
   override val acCommands: AcCommands[F] = new AcCommands[F] {
     override def lens(l: AcLens): F[ApplyCommandResult] =
       sys.hrwfs.startCommand(AcMechTimeout).setLens(l).post.verifiedRun(ConnectionTimeout)
