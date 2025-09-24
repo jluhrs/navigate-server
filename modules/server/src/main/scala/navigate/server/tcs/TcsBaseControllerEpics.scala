@@ -830,10 +830,10 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
 
     val m1 = config.m1Guide match {
       case M1GuideConfig.M1GuideOff        =>
-        sys.tcsEpics.startCommand(timeout).m1GuideCommand.state(false).post
+        sys.tcsEpics.startCommand(CommandAcknowledgeTimeout).m1GuideCommand.state(false).post
       case M1GuideConfig.M1GuideOn(source) =>
         sys.tcsEpics
-          .startCommand(timeout)
+          .startCommand(CommandAcknowledgeTimeout)
           .m1GuideCommand
           .state(true)
           .m1GuideConfigCommand
@@ -850,7 +850,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     val m2 = config.m2Guide match {
       case M2GuideConfig.M2GuideOff          =>
         sys.tcsEpics
-          .startCommand(timeout)
+          .startCommand(CommandAcknowledgeTimeout)
           .m2GuideCommand
           .state(false)
           .m2GuideModeCommand
@@ -863,7 +863,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       m1 *>
       m2 *>
       sys.tcsEpics
-        .startCommand(timeout)
+        .startCommand(CommandAcknowledgeTimeout)
         .probeGuideModeCommand
         .setMode(config.probeGuide)
         .mountGuideCommand
@@ -900,7 +900,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
   }
 
   override def disableGuide: F[ApplyCommandResult] = sys.tcsEpics
-    .startCommand(timeout)
+    .startCommand(CommandAcknowledgeTimeout)
     .m1GuideCommand
     .state(false)
     .m2GuideModeCommand
@@ -930,7 +930,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     }
 
   def pauseGuide: F[ApplyCommandResult] = sys.tcsEpics
-    .startCommand(timeout)
+    .startCommand(CommandAcknowledgeTimeout)
     .m1GuideCommand
     .state(false)
     .m2GuideModeCommand
@@ -951,7 +951,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     }
 
     sys.tcsEpics
-      .startCommand(timeout)
+      .startCommand(CommandAcknowledgeTimeout)
       .m1GuideCommand
       .state(config.m1Guide =!= M1GuideConfig.M1GuideOff)
       .m2GuideCommand
@@ -1778,13 +1778,13 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
 
     (ipa, iaa)
       .mapN { (ip, ia) =>
-        sys.tcsEpics.startCommand(timeout).rotatorCommand.ipa(ip).rotatorCommand.iaa(ia).post
+        sys.tcsEpics.startCommand(RotMoveTimeout).rotatorCommand.ipa(ip).rotatorCommand.iaa(ia).post
       }
       .getOrElse(VerifiedEpics.pureF(ApplyCommandResult.Completed))
       .verifiedRun(ConnectionTimeout) *>
       (if (Math.abs(size) > 1e-6) {
          sys.tcsEpics
-           .startCommand(RotMoveTimeout)
+           .startCommand(offsetTimeout(offset.p.toAngle, offset.q.toAngle))
            .originAdjustCommand
            .frame(ReferenceFrame.Instrument)
            .originAdjustCommand
@@ -2152,6 +2152,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     Getter[TcsCommands[F], PwfsMechCommands[F]](_.pwfs1MechCommands),
     Getter[TcsCommands[F], WavelengthCommand[F, TcsCommands[F]]](_.pwfs1Wavel)
   )
+
   override val pwfs2Mechs: PwfsMechanismCommands[F] = buildPwfsMechanismCommands(
     Getter[TcsCommands[F], PwfsMechCommands[F]](_.pwfs2MechCommands),
     Getter[TcsCommands[F], WavelengthCommand[F, TcsCommands[F]]](_.pwfs2Wavel)
@@ -2220,5 +2221,22 @@ object TcsBaseControllerEpics {
     def isGuiding: Boolean =
       x.m1Guide =!= M1GuideConfig.M1GuideOff || x.m2Guide =!= M2GuideConfig.M2GuideOff
   }
+
+  // For commands that complete immediately, this is the only timeout
+  private val CommandAcknowledgeTimeout: FiniteDuration = 10.seconds
+  // Timeout rate for offsets
+  private val OffsetTimeout: Double                     = 1.0 // seconds/arcsec
+
+  private def offsetTimeout(c1: Angle, c2: Angle): FiniteDuration = offsetTimeout(
+    Math.sqrt(
+      Math.pow(Angle.signedDecimalArcseconds.get(c1).toDouble, 2.0) + Math.pow(
+        Angle.signedDecimalArcseconds.get(c2).toDouble,
+        2.0
+      )
+    )
+  )
+
+  private def offsetTimeout(size: Double): FiniteDuration =
+    CommandAcknowledgeTimeout + (size * OffsetTimeout).seconds
 
 }
