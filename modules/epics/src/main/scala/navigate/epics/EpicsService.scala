@@ -69,17 +69,21 @@ object EpicsService {
       .eval {
         Async[F].delay {
           val props: Properties = System.getProperties
-          addrList.map(l =>
+          addrList.foreach(l =>
             props.setProperty(EPICS_CA_ADDR_LIST.toString, l.map(_.getHostAddress).mkString(" "))
           )
-          autoAddrList.map(e => props.setProperty(EPICS_CA_AUTO_ADDR_LIST.toString, e.toString))
-          connectionTimeout.map(x =>
+          autoAddrList.foreach(e => props.setProperty(EPICS_CA_AUTO_ADDR_LIST.toString, e.toString))
+          connectionTimeout.foreach(x =>
             props.setProperty(EPICS_CA_CONN_TMO.toString, x.toSeconds.toString)
           )
-          enableRepeater.map(x => props.setProperty(CA_REPEATER_DISABLE.toString, (!x).toString))
-          repeaterPort.map(x => props.setProperty(EPICS_CA_REPEATER_PORT.toString, x.toString))
-          serverPort.map(x => props.setProperty(EPICS_CA_SERVER_PORT.toString, x.toString))
-          maxArrayBytes.map(x => props.setProperty(EPICS_CA_MAX_ARRAY_BYTES.toString, x.toString))
+          enableRepeater.foreach(x =>
+            props.setProperty(CA_REPEATER_DISABLE.toString, (!x).toString)
+          )
+          repeaterPort.foreach(x => props.setProperty(EPICS_CA_REPEATER_PORT.toString, x.toString))
+          serverPort.foreach(x => props.setProperty(EPICS_CA_SERVER_PORT.toString, x.toString))
+          maxArrayBytes.foreach(x =>
+            props.setProperty(EPICS_CA_MAX_ARRAY_BYTES.toString, x.toString)
+          )
 
           props
         }
@@ -91,10 +95,6 @@ object EpicsService {
   def getBuilder: Builder = Builder(none, none, none, none, none, none, none)
 
   private def getContext[F[_]: Async](properties: Properties): Resource[F, Context] =
-    Resource.make {
-      Async[F].delay(new Context(properties))
-    } { c =>
-      Async[F].delay(c.close())
-    }
+    Resource.fromAutoCloseable(Async[F].delay(new Context(properties)))
 
 }

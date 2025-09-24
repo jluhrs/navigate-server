@@ -58,35 +58,40 @@ class TopicManager[F[_]] private (
     topic:     Topic[F, A],
     start:     Int,
     reconnect: Int = ReconnectCycles,
-    force:     Int = RepeatCycles
+    force:     Int = RepeatCycles,
+    name:      String
   )(using Temporal[F], Logger[F], Eq[A]): Pipe[F, Unit, Unit] =
-    _.evalMapAccumulate[F, PollState[A], Unit](PollState.Retry(Math.max(0, start))) {
-      case (acc, _) =>
-        (acc match {
-          case PollState.Started(last, n) =>
-            fetchData.attempt.flatMap(
-              _.fold[F[PollState[A]]](
-                e =>
-                  Logger[F]
-                    .warn(s"Error on state poll: ${e.getMessage}")
-                    .as(PollState.Retry(calcReconnect(reconnect))),
-                a =>
-                  if (n === 0 || (last: A) =!= a) topic.publish1(a).as(PollState.Started(a, force))
-                  else PollState.Started(last, n - 1).pure[F]
-              )
-            )
-          case PollState.Retry(0)         =>
-            fetchData.attempt.flatMap(
-              _.fold[F[PollState[A]]](
-                e =>
-                  Logger[F]
-                    .warn(s"Error on state poll: ${e.getMessage}")
-                    .as(PollState.Retry(calcReconnect(reconnect))),
-                a => topic.publish1(a).as(PollState.Started(a, force))
-              )
-            )
-          case PollState.Retry(countdown) => PollState.Retry(countdown - 1).pure[F]
-        }).map((_, ()))
+    def fetchAndProcess(f: A => F[PollState[A]]) = fetchData.attempt.flatMap(
+      _.fold(
+        e =>
+          Logger[F]
+            .warn(s"Error on ${name} state poll, attempting reconnect: ${e.getMessage}")
+            .as[PollState[A]](PollState.Retry(calcReconnect(reconnect))),
+        a => f(a)
+      )
+    )
+    _.evalScan[F, PollState[A]](PollState.Start(Math.max(0, start))) { case (acc, _) =>
+      acc match {
+        case PollState.Started(last, n) =>
+          fetchAndProcess(a =>
+            if (n === 0 || (last: A) =!= a) topic.publish1(a).as(PollState.Started(a, force))
+            else PollState.Started(last, n - 1).pure[F]
+          )
+        case PollState.Retry(0)         =>
+          fetchAndProcess(a =>
+            topic.publish1(a) *> Logger[F]
+              .info(s"Reconnected to ${name} polled state")
+              .as(PollState.Started(a, force))
+          )
+        case PollState.Retry(countdown) => PollState.Retry(countdown - 1).pure[F]
+        case PollState.Start(0)         =>
+          fetchAndProcess(a =>
+            topic.publish1(a) *> Logger[F]
+              .debug(s"Started ${name} polled state")
+              .as(PollState.Started(a, force))
+          )
+        case PollState.Start(countdown) => PollState.Start(countdown - 1).pure[F]
+      }
     }.void
 
   private def guideStatePoll(
@@ -94,63 +99,63 @@ class TopicManager[F[_]] private (
     topic: Topic[F, GuideState],
     start: Int
   )(using Temporal[F], Logger[F]): Pipe[F, Unit, Unit] =
-    genericPoll(eng.getGuideState, topic, start)
+    genericPoll(eng.getGuideState, topic, start, name = "GuideState")
 
   private def guiderQualityPoll(
     eng:   NavigateEngine[F],
     topic: Topic[F, GuidersQualityValues],
     start: Int
   )(using Temporal[F], Logger[F]): Pipe[F, Unit, Unit] =
-    genericPoll(eng.getGuidersQuality, topic, start)
+    genericPoll(eng.getGuidersQuality, topic, start, name = "GuidersQuality")
 
   private def telescopeStatePoll(
     eng:   NavigateEngine[F],
     topic: Topic[F, TelescopeState],
     start: Int
   )(using Temporal[F], Logger[F]): Pipe[F, Unit, Unit] =
-    genericPoll(eng.getTelescopeState, topic, start)
+    genericPoll(eng.getTelescopeState, topic, start, name = "TelescopeState")
 
   private def acMechsStatePoll(
     eng:   NavigateEngine[F],
     topic: Topic[F, AcMechsState],
     start: Int
   )(using Temporal[F], Logger[F]): Pipe[F, Unit, Unit] =
-    genericPoll(eng.getAcMechsState, topic, start)
+    genericPoll(eng.getAcMechsState, topic, start, name = "AcMechsState")
 
   private def pwfs1MechsStatePoll(
     eng:   NavigateEngine[F],
     topic: Topic[F, PwfsMechsState],
     start: Int
   )(using Temporal[F], Logger[F]): Pipe[F, Unit, Unit] =
-    genericPoll(eng.getPwfs1MechsState, topic, start)
+    genericPoll(eng.getPwfs1MechsState, topic, start, name = "Pwfs1MechsState")
 
   private def pwfs2MechsStatePoll(
     eng:   NavigateEngine[F],
     topic: Topic[F, PwfsMechsState],
     start: Int
   )(using Temporal[F], Logger[F]): Pipe[F, Unit, Unit] =
-    genericPoll(eng.getPwfs2MechsState, topic, start)
+    genericPoll(eng.getPwfs2MechsState, topic, start, name = "Pwfs2MechsState")
 
   private def targetAdjStatePoll(
     eng:   NavigateEngine[F],
     topic: Topic[F, TargetOffsets],
     start: Int
   )(using Temporal[F], Logger[F]): Pipe[F, Unit, Unit] =
-    genericPoll(eng.getTargetAdjustments, topic, start)
+    genericPoll(eng.getTargetAdjustments, topic, start, name = "TargetAdjustments")
 
   private def originAdjStatePoll(
     eng:   NavigateEngine[F],
     topic: Topic[F, FocalPlaneOffset],
     start: Int
   )(using Temporal[F], Logger[F]): Pipe[F, Unit, Unit] =
-    genericPoll(eng.getOriginOffset, topic, start)
+    genericPoll(eng.getOriginOffset, topic, start, name = "OriginOffset")
 
   private def pointingAdjStatePoll(
     eng:   NavigateEngine[F],
     topic: Topic[F, PointingCorrections],
     start: Int
   )(using Temporal[F], Logger[F]): Pipe[F, Unit, Unit] =
-    genericPoll(eng.getPointingOffset, topic, start)
+    genericPoll(eng.getPointingOffset, topic, start, name = "PointingOffset")
 
   // Logger of error of last resort.
   private def logError(using Logger[F]): PartialFunction[Throwable, F[Unit]] = {
@@ -291,6 +296,7 @@ object TopicManager {
   object PollState {
     case class Started[T](last: T, countdown: Int) extends PollState[T]
     case class Retry(countdown: Int)               extends PollState[Nothing]
+    case class Start(countdown: Int)               extends PollState[Nothing]
   }
 
 }
