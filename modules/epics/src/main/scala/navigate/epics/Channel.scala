@@ -95,14 +95,14 @@ object Channel {
 
     override def valueStream(using dispatcher: Dispatcher[F]): Resource[F, Stream[F, T]] = for {
       q <- Resource.eval(Queue.unbounded[F, T])
-      _ <- Resource.make {
+      _ <- Resource.fromAutoCloseable {
              Async[F].delay(
                caChannel.addValueMonitor { (v: J) =>
                  cv.fromJava(v).foreach(x => dispatcher.unsafeRunAndForget(q.offer(x)))
                  ()
                }
              )
-           }(x => Async[F].delay(x.close()))
+           }
       s <- Resource.pure(Stream.fromQueueUnterminated(q))
     } yield s
 
@@ -110,13 +110,13 @@ object Channel {
       dispatcher: Dispatcher[F]
     ): Resource[F, Stream[F, Boolean]] = for {
       q <- Resource.eval(Queue.unbounded[F, Boolean])
-      _ <- Resource.make {
+      _ <- Resource.fromAutoCloseable {
              Async[F].delay(
                caChannel.addConnectionListener((_: CaChannel[J], c: JBoolean) =>
                  dispatcher.unsafeRunAndForget(q.offer(c))
                )
              )
-           }(x => Async[F].delay(x.close()))
+           }
       s <- Resource.pure(Stream.fromQueueUnterminated(q))
     } yield s
 

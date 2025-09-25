@@ -5,6 +5,7 @@ package navigate.server
 
 import cats.effect.Async
 import cats.effect.Resource
+import cats.effect.std.Env
 import cats.syntax.all.*
 import navigate.epics.EpicsService
 import navigate.model.config.NavigateEngineConfiguration
@@ -15,17 +16,15 @@ import java.net.InetAddress
 object CaServiceInit {
   // Ensure there is a valid way to init CaService either from
   // the configuration file or from the environment
-  def caInit[F[_]: Async](
+  def caInit[F[_]: Async: Env](
     conf: NavigateEngineConfiguration
   )(using L: Logger[F]): Resource[F, EpicsService[F]] = {
     val addressList = conf.epicsCaAddrList
       .map(_.pure[F])
       .getOrElse {
-        Async[F].delay(Option(System.getenv("EPICS_CA_ADDR_LIST"))).flatMap {
-          case Some(a) => a.pure[F]
-          case _       =>
-            Async[F].raiseError[String](new RuntimeException("Cannot initialize EPICS subsystem"))
-        }
+        Env[F]
+          .get("EPICS_CA_ADDR_LIST")
+          .flatMap(_.liftTo[F](new RuntimeException("Cannot initialize EPICS subsystem")))
       }
       .map(_.split(Array(',', ' ')).toList.map(InetAddress.getByName))
 
