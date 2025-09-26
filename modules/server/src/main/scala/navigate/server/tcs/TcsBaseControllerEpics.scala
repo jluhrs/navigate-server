@@ -1929,7 +1929,9 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
           .originAdjustCommand
           .angle(angle)
           .originAdjustCommand
-          .vtMask(List(VirtualTelescope.SourceA))
+          .vtMask(
+            List(VirtualTelescope.SourceA, VirtualTelescope.SourceB, VirtualTelescope.SourceC)
+          )
           .post
           .verifiedRun(ConnectionTimeout)
       } <*
