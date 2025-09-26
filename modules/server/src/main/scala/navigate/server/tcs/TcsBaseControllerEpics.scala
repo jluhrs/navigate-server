@@ -1751,8 +1751,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     .post
     .verifiedRun(ConnectionTimeout)
 
-  val SettleTime: FiniteDuration    = FiniteDuration.apply(1, TimeUnit.SECONDS)
-  val AcqAdjTimeout: FiniteDuration = FiniteDuration.apply(10, TimeUnit.SECONDS)
+  val SettleTime: FiniteDuration = FiniteDuration.apply(1, TimeUnit.SECONDS)
 
   private def rectToPolar(x: Angle, y: Angle): (Angle, Angle) = {
     val size: Angle  = Angle.fromDoubleRadians(
@@ -1775,6 +1774,9 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
   ): F[ApplyCommandResult] = {
     val (s, angle) = rectToPolar(-offset.q.toAngle, offset.p.toAngle)
     val size       = Angle.signedDecimalArcseconds.get(s).doubleValue
+    val adjTimeout =
+      if (ipa.isDefined && iaa.isDefined) List(RotMoveTimeout, offsetTimeout(size)).max
+      else offsetTimeout(size)
 
     (ipa, iaa)
       .mapN { (ip, ia) =>
@@ -1784,7 +1786,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       .verifiedRun(ConnectionTimeout) *>
       (if (Math.abs(size) > 1e-6) {
          sys.tcsEpics
-           .startCommand(offsetTimeout(offset.p.toAngle, offset.q.toAngle))
+           .startCommand(CommandAcknowledgeTimeout)
            .originAdjustCommand
            .frame(ReferenceFrame.Instrument)
            .originAdjustCommand
@@ -1798,7 +1800,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
            .post
        } else VerifiedEpics.pureF(ApplyCommandResult.Completed)).verifiedRun(ConnectionTimeout) <*
       (if (Math.abs(size) > 1e-6 || (ipa.isDefined && iaa.isDefined))
-         sys.tcsEpics.status.waitInPosition(SettleTime, AcqAdjTimeout)
+         sys.tcsEpics.status.waitInPosition(SettleTime, adjTimeout)
        else VerifiedEpics.unit[F, F]).verifiedRun(ConnectionTimeout)
 
   }
@@ -1911,7 +1913,10 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
           .targetAdjustCommand
           .vtMask(List(target))
           .post
-          .verifiedRun(ConnectionTimeout)
+          .verifiedRun(ConnectionTimeout) <*
+          sys.tcsEpics.status
+            .waitInPosition(SettleTime, offsetTimeout(size))
+            .verifiedRun(ConnectionTimeout)
       } <*
       resumeGuide(guide.tcsGuide).whenA(openLoops)
 
@@ -1933,7 +1938,10 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
             List(VirtualTelescope.SourceA, VirtualTelescope.SourceB, VirtualTelescope.SourceC)
           )
           .post
-          .verifiedRun(ConnectionTimeout)
+          .verifiedRun(ConnectionTimeout) <*
+          sys.tcsEpics.status
+            .waitInPosition(SettleTime, offsetTimeout(size))
+            .verifiedRun(ConnectionTimeout)
       } <*
       resumeGuide(guide.tcsGuide).whenA(openLoops)
 
@@ -1968,6 +1976,8 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       .verifiedRun(ConnectionTimeout)
   }
 
+  private val MaxClearedOffset: Double = 120.0 // arcsec
+
   override def targetOffsetClear(target: VirtualTelescope, openLoops: Boolean)(
     guide: GuideConfig
   ): F[ApplyCommandResult] =
@@ -1979,6 +1989,9 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
         .targetOffsetClear
         .index(OffsetIndexSelection.All)
         .post
+        .verifiedRun(ConnectionTimeout) <*
+      sys.tcsEpics.status
+        .waitInPosition(SettleTime, offsetTimeout(MaxClearedOffset))
         .verifiedRun(ConnectionTimeout) <*
       resumeGuide(guide.tcsGuide).whenA(openLoops)
 
@@ -2033,6 +2046,9 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
         .originOffsetClear
         .index(OffsetIndexSelection.All)
         .post
+        .verifiedRun(ConnectionTimeout) <*
+      sys.tcsEpics.status
+        .waitInPosition(SettleTime, offsetTimeout(MaxClearedOffset))
         .verifiedRun(ConnectionTimeout) <*
       resumeGuide(guide.tcsGuide).whenA(openLoops)
 
@@ -2228,15 +2244,6 @@ object TcsBaseControllerEpics {
   private val CommandAcknowledgeTimeout: FiniteDuration = 10.seconds
   // Timeout rate for offsets
   private val OffsetTimeout: Double                     = 1.0 // seconds/arcsec
-
-  private def offsetTimeout(c1: Angle, c2: Angle): FiniteDuration = offsetTimeout(
-    Math.sqrt(
-      Math.pow(Angle.signedDecimalArcseconds.get(c1).toDouble, 2.0) + Math.pow(
-        Angle.signedDecimalArcseconds.get(c2).toDouble,
-        2.0
-      )
-    )
-  )
 
   private def offsetTimeout(size: Double): FiniteDuration =
     CommandAcknowledgeTimeout + (size * OffsetTimeout).seconds
