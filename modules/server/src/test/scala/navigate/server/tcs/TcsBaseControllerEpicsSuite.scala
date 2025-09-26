@@ -1945,6 +1945,8 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       probeGuide = none
     )
 
+    val expectedVTMask: Int = -(2 | 4 | 8)
+
     for {
       (st, ctr) <- createController()
       _         <- setWfsTrackingState(st.tcs, Focus[State](_.oiwfsTrackingState))
@@ -1997,7 +1999,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
                              1e-6
           )
         )
-      assertEquals(r1.originAdjust.vt.value.flatMap(_.toIntOption), -2.some)
+      assertEquals(r1.originAdjust.vt.value.flatMap(_.toIntOption), expectedVTMask.some)
       assertEquals(r2.originAdjust.frame.value.flatMap(_.toIntOption), 2.some)
       r2.originAdjust.size.value
         .flatMap(_.toDoubleOption)
@@ -2005,7 +2007,7 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
       r2.originAdjust.angle.value
         .flatMap(_.toDoubleOption)
         .fold(fail("No angle value set"))(v => assertEqualsDouble(v, 225.0, 1e-6))
-      assertEquals(r2.originAdjust.vt.value.flatMap(_.toIntOption), -2.some)
+      assertEquals(r2.originAdjust.vt.value.flatMap(_.toIntOption), expectedVTMask.some)
     }
   }
 
