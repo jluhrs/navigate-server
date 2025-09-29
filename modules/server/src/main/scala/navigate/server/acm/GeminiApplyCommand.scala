@@ -23,7 +23,7 @@ import navigate.epics.VerifiedEpics
 import navigate.epics.VerifiedEpics.*
 import navigate.server.ApplyCommandResult
 
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.*
 
 trait GeminiApplyCommand[F[_]] {
 
@@ -53,6 +53,9 @@ object GeminiApplyCommand {
   case class ApplyValChange(v: Int)    extends Event
   case class CarValChange(v: CarState) extends Event
 
+  // Delay reading error messages by this amount after an error is triggered
+  private val MessageReadDelay: FiniteDuration = 100.milliseconds
+
   final class GeminiApplyCommandImpl[F[_]: {Dispatcher, Temporal}](
     telltaleChannel: TelltaleChannel[F],
     apply:           ApplyRecord[F],
@@ -64,8 +67,12 @@ object GeminiApplyCommand {
         cvrs   <- eventStream(telltaleChannel, car.oval)
         dwr    <- writeChannel(telltaleChannel, apply.dir)(Applicative[F].pure(CadDirective.START))
                     .map(Resource.pure[F, F[Unit]])
-        msrr   <- readChannel(telltaleChannel, apply.mess).map(Resource.pure[F, F[String]])
-        omsrr  <- readChannel(telltaleChannel, car.omss).map(Resource.pure[F, F[String]])
+        msrr   <- readChannel(telltaleChannel, apply.mess)
+                    .map(Temporal[F].delayBy(_, MessageReadDelay))
+                    .map(Resource.pure[F, F[String]])
+        omsrr  <- readChannel(telltaleChannel, car.omss)
+                    .map(Temporal[F].delayBy(_, MessageReadDelay))
+                    .map(Resource.pure[F, F[String]])
         clidrr <- readChannel(telltaleChannel, car.clid).map(Resource.pure[F, F[Int]])
         avrr   <- readChannel(telltaleChannel, apply.oval).map(Resource.pure[F, F[Int]])
         cvrr   <- readChannel(telltaleChannel, car.oval).map(Resource.pure[F, F[CarState]])

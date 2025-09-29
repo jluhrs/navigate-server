@@ -37,7 +37,6 @@ import lucuma.core.util.Enumerated
 import lucuma.core.util.TimeSpan
 import lucuma.core.util.Timestamp
 import monocle.Focus.focus
-import mouse.boolean.*
 import munit.CatsEffectSuite
 import navigate.model.AcMechsState
 import navigate.model.AcWindow
@@ -2046,7 +2045,7 @@ class NavigateMappingsSuite extends CatsEffectSuite {
 
   test("Notify server errors") {
     for {
-      mp <- buildMapping(NavigateConfiguration.default, true)
+      mp <- buildMapping(NavigateConfiguration.default, buildBadServer)
       r  <- mp.compileAndRun("mutation { oiwfsPark { result } }")
     } yield assertEquals(
       r.hcursor.downField("errors").downArray.downField("message").as[String],
@@ -2055,9 +2054,9 @@ class NavigateMappingsSuite extends CatsEffectSuite {
   }
 
   test("Query AC mechanisms state") {
-    val expected = AcMechsState(AcLens.Ac, AcNdFilter.Open, AcFilter.Neutral)
+    val expected = AcMechsState(AcLens.Ac.some, AcNdFilter.Open.some, AcFilter.Neutral.some)
     for {
-      mp <- buildMapping(NavigateConfiguration.default, true)
+      mp <- buildMapping()
       r  <- mp.compileAndRun(
               """
         | query { acMechsState {
@@ -2067,6 +2066,26 @@ class NavigateMappingsSuite extends CatsEffectSuite {
         |   }
         | }
         |""".stripMargin
+            )
+    } yield assertEquals(
+      r.hcursor.downField("data").downField("acMechsState").as[AcMechsState],
+      expected.asRight[DecodingFailure]
+    )
+  }
+
+  test("Query AC mechanisms state whit unknown positions") {
+    val expected = AcMechsState(none, none, none)
+    for {
+      mp <- buildMapping(NavigateConfiguration.default, buildServerUndefinedPos)
+      r  <- mp.compileAndRun(
+              """
+          | query { acMechsState {
+          |     lens
+          |     filter
+          |     ndFilter
+          |   }
+          | }
+          |""".stripMargin
             )
     } yield assertEquals(
       r.hcursor.downField("data").downField("acMechsState").as[AcMechsState],
@@ -2179,9 +2198,28 @@ class NavigateMappingsSuite extends CatsEffectSuite {
   }
 
   test("Query Pwfs1 mechanisms state") {
-    val expected = PwfsMechsState(PwfsFilter.Neutral, PwfsFieldStop.Open1)
+    val expected = PwfsMechsState(PwfsFilter.Neutral.some, PwfsFieldStop.Open1.some)
     for {
-      mp <- buildMapping(NavigateConfiguration.default, true)
+      mp <- buildMapping()
+      r  <- mp.compileAndRun(
+              """
+          | query { pwfs1MechsState {
+          |     filter
+          |     fieldStop
+          |   }
+          | }
+          |""".stripMargin
+            )
+    } yield assertEquals(
+      r.hcursor.downField("data").downField("pwfs1MechsState").as[PwfsMechsState],
+      expected.asRight[DecodingFailure]
+    )
+  }
+
+  test("Query Pwfs1 mechanisms state with unknown positions") {
+    val expected = PwfsMechsState(none, none)
+    for {
+      mp <- buildMapping(NavigateConfiguration.default, buildServerUndefinedPos)
       r  <- mp.compileAndRun(
               """
           | query { pwfs1MechsState {
@@ -2248,9 +2286,28 @@ class NavigateMappingsSuite extends CatsEffectSuite {
   }
 
   test("Query Pwfs2 mechanisms state") {
-    val expected = PwfsMechsState(PwfsFilter.Neutral, PwfsFieldStop.Open1)
+    val expected = PwfsMechsState(PwfsFilter.Neutral.some, PwfsFieldStop.Open1.some)
     for {
-      mp <- buildMapping(NavigateConfiguration.default, true)
+      mp <- buildMapping()
+      r  <- mp.compileAndRun(
+              """
+          | query { pwfs2MechsState {
+          |     filter
+          |     fieldStop
+          |   }
+          | }
+          |""".stripMargin
+            )
+    } yield assertEquals(
+      r.hcursor.downField("data").downField("pwfs2MechsState").as[PwfsMechsState],
+      expected.asRight[DecodingFailure]
+    )
+  }
+
+  test("Query Pwfs2 mechanisms state with unknown positions") {
+    val expected = PwfsMechsState(none, none)
+    for {
+      mp <- buildMapping(NavigateConfiguration.default, buildServerUndefinedPos)
       r  <- mp.compileAndRun(
               """
           | query { pwfs2MechsState {
@@ -2549,7 +2606,7 @@ object NavigateMappingsTest {
       CommandResult.CommandSuccess.pure[IO]
 
     override def getAcMechsState: IO[AcMechsState] =
-      AcMechsState(AcLens.Ac, AcNdFilter.Open, AcFilter.Neutral).pure[IO]
+      AcMechsState(AcLens.Ac.some, AcNdFilter.Open.some, AcFilter.Neutral.some).pure[IO]
 
     override def pwfs1Filter(filter: PwfsFilter): IO[CommandResult] =
       CommandResult.CommandSuccess.pure[IO]
@@ -2564,10 +2621,10 @@ object NavigateMappingsTest {
       CommandResult.CommandSuccess.pure[IO]
 
     override def getPwfs1MechsState: IO[PwfsMechsState] =
-      PwfsMechsState(PwfsFilter.Neutral, PwfsFieldStop.Open1).pure[IO]
+      PwfsMechsState(PwfsFilter.Neutral.some, PwfsFieldStop.Open1.some).pure[IO]
 
     override def getPwfs2MechsState: IO[PwfsMechsState] =
-      PwfsMechsState(PwfsFilter.Neutral, PwfsFieldStop.Open1).pure[IO]
+      PwfsMechsState(PwfsFilter.Neutral.some, PwfsFieldStop.Open1.some).pure[IO]
   }
 
   def buildServer: IO[NavigateEngine[IO]] = for {
@@ -2593,11 +2650,27 @@ object NavigateMappingsTest {
     override def oiwfsPark: IO[CommandResult] = CommandResult.CommandFailure("Error").pure[IO]
   }
 
+  def buildServerUndefinedPos: IO[NavigateEngine[IO]] = for {
+    r <- Ref.of[IO, GuideState](GuideState.default)
+    p <- Ref.of[IO, TelescopeState](TelescopeState.default)
+    g <- Ref.of[IO, GuideConfig](GuideConfig.defaultGuideConfig)
+  } yield new NavigateEngineTest(
+    new TcsSouthControllerSim[IO](r, p),
+    new TcsNorthControllerSim[IO](r, p),
+    g
+  ) {
+    override def getAcMechsState: IO[AcMechsState] = AcMechsState(none, none, none).pure[IO]
+
+    override def getPwfs1MechsState: IO[PwfsMechsState] = PwfsMechsState(none, none).pure[IO]
+
+    override def getPwfs2MechsState: IO[PwfsMechsState] = PwfsMechsState(none, none).pure[IO]
+  }
+
   def buildMapping(
     config: NavigateConfiguration = NavigateConfiguration.default,
-    useBad: Boolean = false
+    engIO:  IO[NavigateEngine[IO]] = buildServer
   ): IO[NavigateMappings[IO]] = for {
-    eng <- useBad.fold(buildBadServer, buildServer)
+    eng <- engIO
     log <- Topic[IO, ILoggingEvent]
     gd  <- Topic[IO, GuideState]
     gq  <- Topic[IO, GuidersQualityValues]
@@ -2787,16 +2860,14 @@ object NavigateMappingsTest {
     } yield GuidersQualityValues(pwfs1, pwfs2, oiwfs)
 
   given Decoder[AcMechsState] = h =>
-    for {
-      lens <- h.downField("lens").as[AcLens]
-      nd   <- h.downField("ndFilter").as[AcNdFilter]
-      flt  <- h.downField("filter").as[AcFilter]
-    } yield AcMechsState(lens, nd, flt)
+    AcMechsState(h.downField("lens").as[AcLens].toOption,
+                 h.downField("ndFilter").as[AcNdFilter].toOption,
+                 h.downField("filter").as[AcFilter].toOption
+    ).asRight
 
   given Decoder[PwfsMechsState] = h =>
-    for {
-      fl <- h.downField("filter").as[PwfsFilter]
-      fs <- h.downField("fieldStop").as[PwfsFieldStop]
-    } yield PwfsMechsState(fl, fs)
+    PwfsMechsState(h.downField("filter").as[PwfsFilter].toOption,
+                   h.downField("fieldStop").as[PwfsFieldStop].toOption
+    ).asRight
 
 }

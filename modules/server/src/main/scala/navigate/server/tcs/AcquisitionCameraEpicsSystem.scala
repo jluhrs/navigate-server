@@ -11,6 +11,7 @@ import cats.effect.std.Dispatcher
 import cats.syntax.all.*
 import eu.timepit.refined.types.string.NonEmptyString
 import lucuma.core.math.Wavelength
+import lucuma.core.util.Enumerated
 import navigate.epics.EpicsService
 import navigate.epics.VerifiedEpics.*
 import navigate.model.enums
@@ -38,33 +39,11 @@ trait AcquisitionCameraEpicsSystem[F[_]] {
 
 object AcquisitionCameraEpicsSystem {
 
-  val acLensDec: Decoder[String, AcLens] = {
-    case "AC"    => AcLens.Ac
-    case "HRWFS" => AcLens.Hrwfs
-    case _       => AcLens.Ac
-  }
+  val acLensDec: Decoder[String, Option[AcLens]] = Enumerated[AcLens].fromTag(_)
 
-  val acFilterDec: Decoder[String, AcFilter] = {
-    case "neutral" => AcFilter.Neutral
-    case "U-red1"  => AcFilter.U_Red1
-    case "B-blue"  => AcFilter.B_Blue
-    case "V-green" => AcFilter.V_Green
-    case "R-red2"  => AcFilter.R_Red2
-    case "I-red3"  => AcFilter.I_Red3
-    case _         => AcFilter.Neutral
-  }
+  val acFilterDec: Decoder[String, Option[AcFilter]] = Enumerated[AcFilter].fromTag(_)
 
-  val acNdFilterDec: Decoder[String, AcNdFilter] = {
-    case "ND3"    => AcNdFilter.Nd3
-    case "ND2"    => AcNdFilter.Nd2
-    case "ND1"    => AcNdFilter.Nd1
-    case "nd100"  => AcNdFilter.Nd100
-    case "nd1000" => AcNdFilter.Nd1000
-    case "filt04" => AcNdFilter.Filt04
-    case "filt06" => AcNdFilter.Filt06
-    case "filt08" => AcNdFilter.Filt08
-    case _        => AcNdFilter.Open
-  }
+  val acNdFilterDec: Decoder[String, Option[AcNdFilter]] = Enumerated[AcNdFilter].fromTag(_)
 
   extension (flt: AcFilter) {
     def toWavelength: Wavelength = {
@@ -80,9 +59,9 @@ object AcquisitionCameraEpicsSystem {
   }
 
   trait AcquisitionCameraStatus[F[_]] {
-    def lens: VerifiedEpics[F, F, AcLens]
-    def filter: VerifiedEpics[F, F, AcFilter]
-    def ndFilter: VerifiedEpics[F, F, AcNdFilter]
+    def lens: VerifiedEpics[F, F, Option[AcLens]]
+    def filter: VerifiedEpics[F, F, Option[AcFilter]]
+    def ndFilter: VerifiedEpics[F, F, Option[AcNdFilter]]
     def observe: VerifiedEpics[F, F, CarState]
   }
 
@@ -204,16 +183,16 @@ object AcquisitionCameraEpicsSystem {
   ): AcquisitionCameraEpicsSystem[F] =
     new AcquisitionCameraEpicsSystem[F] {
       override val status: AcquisitionCameraStatus[F] = new AcquisitionCameraStatus[F] {
-        override def lens: VerifiedEpics[F, F, AcLens] =
+        override def lens: VerifiedEpics[F, F, Option[AcLens]] =
           readChannel(chs.telltale, chs.lensReadout).map(_.map(acLensDec.decode))
 
-        override def filter: VerifiedEpics[F, F, AcFilter] =
+        override def filter: VerifiedEpics[F, F, Option[AcFilter]] =
           readChannel(chs.telltale, chs.filterReadout).map(_.map(acFilterDec.decode))
 
         override def observe: VerifiedEpics[F, F, CarState] =
           readChannel(chs.telltale, chs.observeInProgress)
 
-        override def ndFilter: VerifiedEpics[F, F, AcNdFilter] =
+        override def ndFilter: VerifiedEpics[F, F, Option[AcNdFilter]] =
           readChannel(chs.telltale, chs.ndFilterReadout).map(_.map(acNdFilterDec.decode))
 
       }

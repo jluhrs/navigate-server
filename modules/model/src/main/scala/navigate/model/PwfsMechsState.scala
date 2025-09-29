@@ -9,6 +9,6 @@ import navigate.model.enums.PwfsFieldStop
 import navigate.model.enums.PwfsFilter
 
 case class PwfsMechsState(
-  filter:    PwfsFilter,
-  fieldStop: PwfsFieldStop
+  filter:    Option[PwfsFilter],
+  fieldStop: Option[PwfsFieldStop]
 ) derives Eq

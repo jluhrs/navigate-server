@@ -22,7 +22,7 @@ import navigate.epics.VerifiedEpics.*
 import navigate.server.ApplyCommandResult
 import navigate.server.epicsdata.BinaryYesNo
 
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.*
 
 trait ObserveCommand[F[_]] {
   import ObserveCommand.CommandType
@@ -68,6 +68,9 @@ object ObserveCommand {
   case class CarValChange(v: CarState, clid: Int) extends Event
   case class IntegratingValChange(v: BinaryYesNo) extends Event
 
+  // Delay reading error messages by this amount after an error is triggered
+  private val MessageReadDelay: FiniteDuration = 100.milliseconds
+
   private final class ObserveCommandImpl[F[_]: {Dispatcher, Temporal}](
     telltaleChannel: TelltaleChannel[F],
     apply:           ApplyRecord[F],
@@ -83,8 +86,12 @@ object ObserveCommand {
         cvrs   <- eventStream(telltaleChannel, car.oval)
         dwr    <- writeChannel(telltaleChannel, apply.dir)(Applicative[F].pure(CadDirective.START))
                     .map(Resource.pure[F, F[Unit]])
-        msrr   <- readChannel(telltaleChannel, apply.mess).map(Resource.pure[F, F[String]])
-        omsrr  <- readChannel(telltaleChannel, car.omss).map(Resource.pure[F, F[String]])
+        msrr   <- readChannel(telltaleChannel, apply.mess)
+                    .map(Temporal[F].delayBy(_, MessageReadDelay))
+                    .map(Resource.pure[F, F[String]])
+        omsrr  <- readChannel(telltaleChannel, car.omss)
+                    .map(Temporal[F].delayBy(_, MessageReadDelay))
+                    .map(Resource.pure[F, F[String]])
         clidrr <- readChannel(telltaleChannel, car.clid).map(Resource.pure[F, F[Int]])
         avrr   <- readChannel(telltaleChannel, apply.oval).map(Resource.pure[F, F[Int]])
         cvrr   <- readChannel(telltaleChannel, car.oval).map(Resource.pure[F, F[CarState]])

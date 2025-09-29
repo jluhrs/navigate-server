@@ -397,8 +397,8 @@ input AcWindowInput {
 }
 
 type AcMechs {
-    lens: AcLens!
-    filter: AcFilter!
+    lens: AcLens
+    filter: AcFilter
     ndFilter: AcNdFilter
 }
 
@@ -424,8 +424,8 @@ enum PwfsFieldStop {
 }
 
 type PwfsMechsState {
-    filter: PwfsFilter!
-    fieldStop: PwfsFieldStop!
+    filter: PwfsFilter
+    fieldStop: PwfsFieldStop
 }
 
 type Query {
