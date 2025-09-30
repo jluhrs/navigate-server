@@ -132,6 +132,10 @@ object NavigateCommand {
   given Show[NavigateCommand] = Show.show { self =>
     self match {
       case AcObserve(period)                                                             => f"${self.name}(period = ${period.toSeconds.toDouble}%.3f)"
+      case AcSetLens(l)                                                                  => s"${self.name}(lens = $l)"
+      case AcSetFilter(flt)                                                              => s"${self.name}(filter = $flt)"
+      case AcSetNdFilter(nd)                                                             => s"${self.name}(ndFilter = $nd)"
+      case AcSetWindowSize(wnd)                                                          => s"${self.name}(window = ${wnd.tag})"
       case AcquisitionAdjust(offset, ipa, iaa)                                           =>
         s"${self.name}(offset = $offset, ipa = $ipa, iaa = $iaa)"
       case AowfsFollow(enable)                                                           => s"${self.name}(enable = $enable)"
