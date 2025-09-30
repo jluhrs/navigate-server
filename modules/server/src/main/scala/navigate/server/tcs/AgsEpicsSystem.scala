@@ -184,8 +184,8 @@ object AgsEpicsSystem {
   }
 
   trait PwfsMechs[F[_]] {
-    val colFilter: VerifiedEpics[F, F, PwfsFilter]
-    val fieldStop: VerifiedEpics[F, F, PwfsFieldStop]
+    val colFilter: VerifiedEpics[F, F, Option[PwfsFilter]]
+    val fieldStop: VerifiedEpics[F, F, Option[PwfsFieldStop]]
   }
 
   object PwfsMechs {
@@ -193,12 +193,12 @@ object AgsEpicsSystem {
       tt:  TelltaleChannel[F],
       chs: AgsChannels.PwfsMechsChannels[F]
     ): PwfsMechs[F] = new PwfsMechs {
-      override val colFilter: VerifiedEpics[F, F, PwfsFilter]    = VerifiedEpics
+      override val colFilter: VerifiedEpics[F, F, Option[PwfsFilter]]    = VerifiedEpics
         .readChannel[F, String](tt, chs.colFilter)
-        .map(_.map(Enumerated[PwfsFilter].fromTag(_).getOrElse(PwfsFilter.Neutral)))
-      override val fieldStop: VerifiedEpics[F, F, PwfsFieldStop] = VerifiedEpics
+        .map(_.map(Enumerated[PwfsFilter].fromTag(_)))
+      override val fieldStop: VerifiedEpics[F, F, Option[PwfsFieldStop]] = VerifiedEpics
         .readChannel[F, String](tt, chs.fieldStop)
-        .map(_.map(Enumerated[PwfsFieldStop].fromTag(_).getOrElse(PwfsFieldStop.Open1)))
+        .map(_.map(Enumerated[PwfsFieldStop].fromTag(_)))
     }
   }
 

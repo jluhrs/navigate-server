@@ -49,7 +49,7 @@ class TcsNorthControllerSim[F[_]: Sync](
       ApplyCommandResult.Completed.pure[F]
 
     override def getState: F[AcMechsState] =
-      AcMechsState(AcLens.Ac, AcNdFilter.Nd100, AcFilter.Neutral).pure[F]
+      AcMechsState(AcLens.Ac.some, AcNdFilter.Nd100.some, AcFilter.Neutral.some).pure[F]
   }
 
 }

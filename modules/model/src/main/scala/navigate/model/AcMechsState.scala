@@ -10,7 +10,7 @@ import navigate.model.enums.AcLens
 import navigate.model.enums.AcNdFilter
 
 case class AcMechsState(
-  lens:     AcLens,
-  ndFilter: AcNdFilter,
-  filter:   AcFilter
+  lens:     Option[AcLens],
+  ndFilter: Option[AcNdFilter],
+  filter:   Option[AcFilter]
 ) derives Eq

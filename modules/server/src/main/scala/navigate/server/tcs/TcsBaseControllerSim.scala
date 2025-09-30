@@ -319,8 +319,8 @@ abstract class TcsBaseControllerSim[F[_]: Sync](
   }
 
   override def getPwfs1Mechs: F[PwfsMechsState] =
-    PwfsMechsState(PwfsFilter.Neutral, PwfsFieldStop.Fs10).pure[F]
+    PwfsMechsState(PwfsFilter.Neutral.some, PwfsFieldStop.Fs10.some).pure[F]
 
   override def getPwfs2Mechs: F[PwfsMechsState] =
-    PwfsMechsState(PwfsFilter.Neutral, PwfsFieldStop.Fs10).pure[F]
+    PwfsMechsState(PwfsFilter.Neutral.some, PwfsFieldStop.Fs10.some).pure[F]
 }

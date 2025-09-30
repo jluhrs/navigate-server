@@ -510,11 +510,11 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     p1f <- sys.ags.status.pwfs1Mechs.colFilter
              .verifiedRun(ConnectionTimeout)
              .attempt
-             .map(_.getOrElse(PwfsFilter.Neutral))
+             .map(_.toOption.flatten.getOrElse(PwfsFilter.Neutral))
     p2f <- sys.ags.status.pwfs2Mechs.colFilter
              .verifiedRun(ConnectionTimeout)
              .attempt
-             .map(_.getOrElse(PwfsFilter.Neutral))
+             .map(_.toOption.flatten.getOrElse(PwfsFilter.Neutral))
     r   <- (
              selectOiwfs(config) *>
                VerifiedEpics.liftF(Temporal[F].sleep(OiwfsSelectionDelay)) *>
@@ -533,11 +533,11 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
     p1f <- sys.ags.status.pwfs1Mechs.colFilter
              .verifiedRun(ConnectionTimeout)
              .attempt
-             .map(_.getOrElse(PwfsFilter.Neutral))
+             .map(_.toOption.flatten.getOrElse(PwfsFilter.Neutral))
     p2f <- sys.ags.status.pwfs2Mechs.colFilter
              .verifiedRun(ConnectionTimeout)
              .attempt
-             .map(_.getOrElse(PwfsFilter.Neutral))
+             .map(_.toOption.flatten.getOrElse(PwfsFilter.Neutral))
     r   <- (
              resetAllTracking *>
                selectOiwfsT(tcsConfig)
@@ -1574,7 +1574,7 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
           swapConfig.toTcsConfig
             .focus(_.sourceATarget)
             .andThen(Target.wavelength)
-            .replace(x.toWavelength.some)
+            .replace(x.getOrElse(AcFilter.Neutral).toWavelength.some)
         )(
           sys.tcsEpics.startCommand(TcsConfigTimeout)
         ).post
@@ -1590,11 +1590,11 @@ abstract class TcsBaseControllerEpics[F[_]: {Async, Parallel, Logger}](
       p1f <- sys.ags.status.pwfs1Mechs.colFilter
                .verifiedRun(ConnectionTimeout)
                .attempt
-               .map(_.getOrElse(PwfsFilter.Neutral))
+               .map(_.toOption.flatten.getOrElse(PwfsFilter.Neutral))
       p2f <- sys.ags.status.pwfs2Mechs.colFilter
                .verifiedRun(ConnectionTimeout)
                .attempt
-               .map(_.getOrElse(PwfsFilter.Neutral))
+               .map(_.toOption.flatten.getOrElse(PwfsFilter.Neutral))
       r   <- (selectOiwfs(config) *>
                VerifiedEpics.liftF(Temporal[F].sleep(OiwfsSelectionDelay)) *>
                applyTcsConfig(config, p1f, p2f)(sys.tcsEpics.startCommand(TcsConfigTimeout)).post)

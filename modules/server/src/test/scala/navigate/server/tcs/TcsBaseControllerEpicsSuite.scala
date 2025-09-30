@@ -2250,12 +2250,23 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
   }
 
   test("Retrieve AC mechanism positions") {
-    val result = AcMechsState(AcLens.Hrwfs, AcNdFilter.Nd1, AcFilter.Neutral)
+    val result = AcMechsState(AcLens.Hrwfs.some, AcNdFilter.Nd1.some, AcFilter.Neutral.some)
     for {
       (st, ctr) <- createController()
-      _         <- st.ac.update(_.focus(_.filterReadout.value).replace(result.filter.tag.some))
-      _         <- st.ac.update(_.focus(_.ndFilterReadout.value).replace(result.ndFilter.tag.some))
-      _         <- st.ac.update(_.focus(_.lensReadout.value).replace(result.lens.tag.some))
+      _         <- st.ac.update(_.focus(_.filterReadout.value).replace(result.filter.map(_.tag)))
+      _         <- st.ac.update(_.focus(_.ndFilterReadout.value).replace(result.ndFilter.map(_.tag)))
+      _         <- st.ac.update(_.focus(_.lensReadout.value).replace(result.lens.map(_.tag)))
+      a         <- ctr.acCommands.getState
+    } yield assertEquals(a, result)
+  }
+
+  test("Retrieve AC mechanism positions with undefined values") {
+    val result = AcMechsState(none, none, none)
+    for {
+      (st, ctr) <- createController()
+      _         <- st.ac.update(_.focus(_.filterReadout.value).replace("undefined".some))
+      _         <- st.ac.update(_.focus(_.ndFilterReadout.value).replace("undefined".some))
+      _         <- st.ac.update(_.focus(_.lensReadout.value).replace("undefined".some))
       a         <- ctr.acCommands.getState
     } yield assertEquals(a, result)
   }
@@ -2378,23 +2389,45 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
   }
 
   test("Get PWFS1 mechanisms state") {
-    val v = PwfsMechsState(PwfsFilter.Red, PwfsFieldStop.Fs6_4)
+    val v = PwfsMechsState(PwfsFilter.Red.some, PwfsFieldStop.Fs6_4.some)
 
     for {
       (st, ctr) <- createController()
-      _         <- st.ags.update(_.focus(_.p1Filter.value).replace(v.filter.tag.some))
-      _         <- st.ags.update(_.focus(_.p1FieldStop.value).replace(v.fieldStop.tag.some))
+      _         <- st.ags.update(_.focus(_.p1Filter.value).replace(v.filter.map(_.tag)))
+      _         <- st.ags.update(_.focus(_.p1FieldStop.value).replace(v.fieldStop.map(_.tag)))
+      r         <- ctr.getPwfs1Mechs
+    } yield assertEquals(r, v)
+  }
+
+  test("Get PWFS1 mechanisms state with undefined positions") {
+    val v = PwfsMechsState(none, none)
+
+    for {
+      (st, ctr) <- createController()
+      _         <- st.ags.update(_.focus(_.p1Filter.value).replace("undefined".some))
+      _         <- st.ags.update(_.focus(_.p1FieldStop.value).replace("undefined".some))
       r         <- ctr.getPwfs1Mechs
     } yield assertEquals(r, v)
   }
 
   test("Get PWFS2 mechanisms state") {
-    val v = PwfsMechsState(PwfsFilter.Red, PwfsFieldStop.Fs6_4)
+    val v = PwfsMechsState(PwfsFilter.Red.some, PwfsFieldStop.Fs6_4.some)
 
     for {
       (st, ctr) <- createController()
-      _         <- st.ags.update(_.focus(_.p2Filter.value).replace(v.filter.tag.some))
-      _         <- st.ags.update(_.focus(_.p2FieldStop.value).replace(v.fieldStop.tag.some))
+      _         <- st.ags.update(_.focus(_.p2Filter.value).replace(v.filter.map(_.tag)))
+      _         <- st.ags.update(_.focus(_.p2FieldStop.value).replace(v.fieldStop.map(_.tag)))
+      r         <- ctr.getPwfs2Mechs
+    } yield assertEquals(r, v)
+  }
+
+  test("Get PWFS2 mechanisms state with undefined positions") {
+    val v = PwfsMechsState(none, none)
+
+    for {
+      (st, ctr) <- createController()
+      _         <- st.ags.update(_.focus(_.p2Filter.value).replace("undefined".some))
+      _         <- st.ags.update(_.focus(_.p2FieldStop.value).replace("undefined".some))
       r         <- ctr.getPwfs2Mechs
     } yield assertEquals(r, v)
   }
