@@ -24,7 +24,7 @@ object Settings {
     val http4s     = "0.23.32"
     val slf4j      = "2.0.17"
     val log4s      = "1.10.0"
-    val logback    = "1.5.18"
+    val logback    = "1.5.19"
     val logstash   = "7.0"
     val pureConfig = "0.17.9"
     val monocle    = "3.3.0"
