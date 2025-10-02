@@ -321,6 +321,14 @@ object NavigateEngine {
             .modify[State](
               _.focus(_.onSwappedTarget).replace(false)
             )
+            .flatMap(_ =>
+              cats.data.State
+                .modify[State](
+                  _.focus(_.guideConfig.tcsGuide)
+                    .replace(GuideOff)
+                )
+                .whenA(slewOptions.stopGuide.value)
+            )
             .as(
               systems.tcsCommon
                 .slew(slewOptions, tcsConfig)
@@ -454,14 +462,7 @@ object NavigateEngine {
       cats.data.State
         .modify[State](
           _.focus(_.guideConfig.tcsGuide)
-            .replace(
-              TelescopeGuideConfig(MountGuideOption.MountGuideOff,
-                                   M1GuideConfig.M1GuideOff,
-                                   M2GuideConfig.M2GuideOff,
-                                   None,
-                                   None
-              )
-            )
+            .replace(GuideOff)
         )
         .as(
           systems.tcsCommon.disableGuide
@@ -936,5 +937,12 @@ object NavigateEngine {
         Logger[F].error(s"CommandFailure(${cmd.name}, $msg)")
       case _                                                         => Applicative[F].unit
     }
+
+  val GuideOff: TelescopeGuideConfig = TelescopeGuideConfig(MountGuideOption.MountGuideOff,
+                                                            M1GuideConfig.M1GuideOff,
+                                                            M2GuideConfig.M2GuideOff,
+                                                            none,
+                                                            none
+  )
 
 }
