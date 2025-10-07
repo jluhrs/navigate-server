@@ -60,6 +60,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import scala.concurrent.duration.FiniteDuration
 
+import encoders.given
 import ScienceFoldPositionCodex.given
 import TcsChannels.{
   AgMechChannels,
@@ -1478,67 +1479,6 @@ object TcsEpicsSystem {
     override def startOiwfsCommand(timeout: FiniteDuration): WfsCommands[F] =
       WfsCommandsImpl(channels, channels.oiwfs, oiObsCmd, timeout, List.empty)
 
-  }
-
-  given Encoder[GuideProbe, String] = {
-    case GuideProbe.GmosOIWFS       => "OIWFS"
-    case GuideProbe.Flamingos2OIWFS => "OIWFS"
-    case GuideProbe.PWFS1           => "PWFS1"
-    case GuideProbe.PWFS2           => "PWFS2"
-  }
-
-  given Encoder[CentralBafflePosition, String] = {
-    case CentralBafflePosition.Open   => "Open"
-    case CentralBafflePosition.Closed => "Closed"
-  }
-
-  given Encoder[DeployableBafflePosition, String] = {
-    case DeployableBafflePosition.ThermalIR => "Retracted"
-    case DeployableBafflePosition.NearIR    => "Near IR"
-    case DeployableBafflePosition.Visible   => "Visible"
-    case DeployableBafflePosition.Extended  => "Extended"
-  }
-
-  given Encoder[ReferenceFrame, String] = (x: ReferenceFrame) =>
-    (x match {
-      case ReferenceFrame.AzimuthElevation => 0
-      case ReferenceFrame.XY               => 1
-      case ReferenceFrame.Instrument       => 2
-      case ReferenceFrame.Tracking         => 3
-    }).toString
-
-  given Encoder[List[VirtualTelescope], String] = (x: List[VirtualTelescope]) => {
-    val m: Int = Enumerated[VirtualTelescope].all.zipWithIndex.foldRight(0) {
-      case ((vt, idx), acc) => x.contains(vt).fold(acc | (1 << idx), acc)
-    }
-    (-m).toString
-  }
-
-  given Encoder[VirtualTelescope, String] = {
-    case VirtualTelescope.SourceA => "SOURCE A"
-    case VirtualTelescope.SourceB => "SOURCE B"
-    case VirtualTelescope.SourceC => "SOURCE C"
-    case VirtualTelescope.Pwfs1   => "PWFS1"
-    case VirtualTelescope.Pwfs2   => "PWFS2"
-    case VirtualTelescope.Oiwfs   => "OIWFS"
-    case a                        => a.tag
-  }
-
-  given Encoder[PwfsFilter, String] = {
-    case PwfsFilter.Neutral => "neutral"
-    case x                  => x.tag
-  }
-
-  given Encoder[PwfsFieldStop, String] = {
-    case PwfsFieldStop.Prism => "prism"
-    case PwfsFieldStop.Fs10  => "10.0"
-    case PwfsFieldStop.Fs6_4 => "6.4"
-    case PwfsFieldStop.Fs3_2 => "3.2"
-    case PwfsFieldStop.Fs1_6 => "1.6"
-    case PwfsFieldStop.Open1 => "open1"
-    case PwfsFieldStop.Open2 => "open2"
-    case PwfsFieldStop.Open3 => "open3"
-    case PwfsFieldStop.Open4 => "open4"
   }
 
   class TcsEpicsImpl[F[_]: Monad](

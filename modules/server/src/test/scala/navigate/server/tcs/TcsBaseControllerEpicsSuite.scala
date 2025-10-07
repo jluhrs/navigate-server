@@ -88,6 +88,7 @@ import navigate.model.enums.ShutterMode
 import navigate.model.enums.VirtualTelescope
 import navigate.server.ApplyCommandResult
 import navigate.server.acm.CadDirective
+import navigate.server.acm.Encoder.*
 import navigate.server.epicsdata
 import navigate.server.epicsdata.BinaryOnOff
 import navigate.server.epicsdata.BinaryOnOffCapitalized
@@ -113,6 +114,7 @@ import TestTcsEpicsSystem.{
   WfsChannelState,
   WfsObserveChannelState
 }
+import encoders.given
 
 class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
 
@@ -2389,47 +2391,43 @@ class TcsBaseControllerEpicsSuite extends CatsEffectSuite {
   }
 
   test("Get PWFS1 mechanisms state") {
-    val v = PwfsMechsState(PwfsFilter.Red.some, PwfsFieldStop.Fs6_4.some)
 
-    for {
-      (st, ctr) <- createController()
-      _         <- st.ags.update(_.focus(_.p1Filter.value).replace(v.filter.map(_.tag)))
-      _         <- st.ags.update(_.focus(_.p1FieldStop.value).replace(v.fieldStop.map(_.tag)))
-      r         <- ctr.getPwfs1Mechs
-    } yield assertEquals(r, v)
-  }
-
-  test("Get PWFS1 mechanisms state with undefined positions") {
-    val v = PwfsMechsState(none, none)
-
-    for {
-      (st, ctr) <- createController()
-      _         <- st.ags.update(_.focus(_.p1Filter.value).replace("undefined".some))
-      _         <- st.ags.update(_.focus(_.p1FieldStop.value).replace("undefined".some))
-      r         <- ctr.getPwfs1Mechs
-    } yield assertEquals(r, v)
+    createController().flatMap { (st, ctr) =>
+      Enumerated[PwfsFilter].all.map { v =>
+        for {
+          _ <- st.ags.update(_.focus(_.p1Filter.value).replace(v.encode[String].some))
+          _ <- st.ags.update(_.focus(_.p1FieldStop.value).replace("undefined".some))
+          r <- ctr.getPwfs1Mechs
+        } yield assertEquals(r, PwfsMechsState(v.some, none))
+      }.sequence *>
+        Enumerated[PwfsFieldStop].all.map { f =>
+          for {
+            _ <- st.ags.update(_.focus(_.p1Filter.value).replace("undefined".some))
+            _ <- st.ags.update(_.focus(_.p1FieldStop.value).replace(f.encode[String].some))
+            r <- ctr.getPwfs1Mechs
+          } yield assertEquals(r, PwfsMechsState(none, f.some))
+        }.sequence
+    }
   }
 
   test("Get PWFS2 mechanisms state") {
-    val v = PwfsMechsState(PwfsFilter.Red.some, PwfsFieldStop.Fs6_4.some)
 
-    for {
-      (st, ctr) <- createController()
-      _         <- st.ags.update(_.focus(_.p2Filter.value).replace(v.filter.map(_.tag)))
-      _         <- st.ags.update(_.focus(_.p2FieldStop.value).replace(v.fieldStop.map(_.tag)))
-      r         <- ctr.getPwfs2Mechs
-    } yield assertEquals(r, v)
-  }
-
-  test("Get PWFS2 mechanisms state with undefined positions") {
-    val v = PwfsMechsState(none, none)
-
-    for {
-      (st, ctr) <- createController()
-      _         <- st.ags.update(_.focus(_.p2Filter.value).replace("undefined".some))
-      _         <- st.ags.update(_.focus(_.p2FieldStop.value).replace("undefined".some))
-      r         <- ctr.getPwfs2Mechs
-    } yield assertEquals(r, v)
+    createController().flatMap { (st, ctr) =>
+      Enumerated[PwfsFilter].all.map { v =>
+        for {
+          _ <- st.ags.update(_.focus(_.p2Filter.value).replace(v.encode[String].some))
+          _ <- st.ags.update(_.focus(_.p2FieldStop.value).replace("undefined".some))
+          r <- ctr.getPwfs2Mechs
+        } yield assertEquals(r, PwfsMechsState(v.some, none))
+      }.sequence *>
+        Enumerated[PwfsFieldStop].all.map { f =>
+          for {
+            _ <- st.ags.update(_.focus(_.p2Filter.value).replace("undefined".some))
+            _ <- st.ags.update(_.focus(_.p2FieldStop.value).replace(f.encode[String].some))
+            r <- ctr.getPwfs2Mechs
+          } yield assertEquals(r, PwfsMechsState(none, f.some))
+        }.sequence
+    }
   }
 
   case class StateRefs[F[_]](
