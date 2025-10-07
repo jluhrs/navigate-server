@@ -20,6 +20,7 @@ import navigate.server.acm.Decoder.*
 import navigate.server.epicsdata.AgMechPosition
 import navigate.server.tcs.AgsEpicsSystem.AgsStatus
 
+import encoders.{*, given}
 import FollowStatus.*
 import ParkStatus.*
 import ScienceFoldPositionCodex.given
@@ -195,10 +196,10 @@ object AgsEpicsSystem {
     ): PwfsMechs[F] = new PwfsMechs {
       override val colFilter: VerifiedEpics[F, F, Option[PwfsFilter]]    = VerifiedEpics
         .readChannel[F, String](tt, chs.colFilter)
-        .map(_.map(Enumerated[PwfsFilter].fromTag(_)))
+        .map(_.map(_.decode))
       override val fieldStop: VerifiedEpics[F, F, Option[PwfsFieldStop]] = VerifiedEpics
         .readChannel[F, String](tt, chs.fieldStop)
-        .map(_.map(Enumerated[PwfsFieldStop].fromTag(_)))
+        .map(_.map(_.decode))
     }
   }
 
