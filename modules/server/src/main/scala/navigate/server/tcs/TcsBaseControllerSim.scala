@@ -3,8 +3,11 @@
 
 package navigate.server.tcs
 
+import cats.Applicative
+import cats.Eq
 import cats.effect.Ref
-import cats.effect.Sync
+import cats.effect.Temporal
+import cats.effect.kernel.Async
 import cats.syntax.all.*
 import lucuma.core.enums.LightSinkName
 import lucuma.core.enums.MountGuideOption
@@ -14,9 +17,14 @@ import lucuma.core.model.GuideConfig
 import lucuma.core.model.M1GuideConfig
 import lucuma.core.model.M2GuideConfig
 import lucuma.core.model.TelescopeGuideConfig
+import lucuma.core.util.Enumerated
 import lucuma.core.util.TimeSpan
+import monocle.Focus
 import monocle.Focus.focus
+import monocle.Lens
 import mouse.boolean.*
+import navigate.model.AcMechsState
+import navigate.model.AcWindow
 import navigate.model.FocalPlaneOffset
 import navigate.model.HandsetAdjustment
 import navigate.model.InstrumentSpecifics
@@ -28,6 +36,9 @@ import navigate.model.SwapConfig
 import navigate.model.Target
 import navigate.model.TcsConfig
 import navigate.model.TrackingConfig
+import navigate.model.enums.AcFilter
+import navigate.model.enums.AcLens
+import navigate.model.enums.AcNdFilter
 import navigate.model.enums.CentralBafflePosition
 import navigate.model.enums.DeployableBafflePosition
 import navigate.model.enums.DomeMode
@@ -40,12 +51,22 @@ import navigate.server.ApplyCommandResult
 import navigate.server.tcs.FollowStatus.*
 import navigate.server.tcs.GuidersQualityValues.GuiderQuality
 import navigate.server.tcs.ParkStatus.*
+import navigate.server.tcs.TcsBaseController.AcCommands
 import navigate.server.tcs.TcsBaseController.PwfsMechanismCommands
 
-abstract class TcsBaseControllerSim[F[_]: Sync](
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.FiniteDuration
+
+abstract class TcsBaseControllerSim[F[_]: Async](
   guideRef:    Ref[F, GuideState],
-  telStateRef: Ref[F, TelescopeState]
+  telStateRef: Ref[F, TelescopeState],
+  acMechRef:   Ref[F, AcMechsState],
+  p1MechRef:   Ref[F, PwfsMechsState],
+  p2MechRef:   Ref[F, PwfsMechsState]
 ) extends TcsBaseController[F] {
+
+  val acValidNdFilters: List[AcNdFilter] = Enumerated[AcNdFilter].all
+
   override def mcsPark: F[ApplyCommandResult] = telStateRef
     .update(
       _.focus(_.mount).replace(MechSystemState(Parked, NotFollowing))
@@ -160,9 +181,9 @@ abstract class TcsBaseControllerSim[F[_]: Sync](
 
   override def getGuideQuality: F[GuidersQualityValues] =
     for {
-      p1Cnts <- Sync[F].delay(1000 + scala.util.Random.between(-100, 100))
-      p2Cnts <- Sync[F].delay(1000 + scala.util.Random.between(-100, 100))
-      oiCnts <- Sync[F].delay(1000 + scala.util.Random.between(-100, 100))
+      p1Cnts <- Async[F].delay(1000 + scala.util.Random.between(-100, 100))
+      p2Cnts <- Async[F].delay(1000 + scala.util.Random.between(-100, 100))
+      oiCnts <- Async[F].delay(1000 + scala.util.Random.between(-100, 100))
     } yield GuidersQualityValues(
       pwfs1 = GuiderQuality(p1Cnts, false),
       pwfs2 = GuiderQuality(p2Cnts, false),
@@ -306,21 +327,77 @@ abstract class TcsBaseControllerSim[F[_]: Sync](
     ApplyCommandResult.Completed.pure[F]
 
   override val pwfs1Mechs: PwfsMechanismCommands[F] = new PwfsMechanismCommands[F] {
-    override def filter(f: PwfsFilter): F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
+    override def filter(f: PwfsFilter): F[ApplyCommandResult] =
+      simulateMechanism(p1MechRef, Focus[PwfsMechsState](_.filter), Enumerated[PwfsFilter].all)(f)
 
     override def fieldStop(fs: PwfsFieldStop): F[ApplyCommandResult] =
-      ApplyCommandResult.Completed.pure[F]
+      simulateMechanism(p1MechRef,
+                        Focus[PwfsMechsState](_.fieldStop),
+                        Enumerated[PwfsFieldStop].all
+      )(fs)
   }
   override val pwfs2Mechs: PwfsMechanismCommands[F] = new PwfsMechanismCommands[F] {
-    override def filter(f: PwfsFilter): F[ApplyCommandResult] = ApplyCommandResult.Completed.pure[F]
+    override def filter(f: PwfsFilter): F[ApplyCommandResult] =
+      simulateMechanism(p2MechRef, Focus[PwfsMechsState](_.filter), Enumerated[PwfsFilter].all)(f)
 
     override def fieldStop(fs: PwfsFieldStop): F[ApplyCommandResult] =
-      ApplyCommandResult.Completed.pure[F]
+      simulateMechanism(p2MechRef,
+                        Focus[PwfsMechsState](_.fieldStop),
+                        Enumerated[PwfsFieldStop].all
+      )(fs)
   }
 
-  override def getPwfs1Mechs: F[PwfsMechsState] =
-    PwfsMechsState(PwfsFilter.Neutral.some, PwfsFieldStop.Fs10.some).pure[F]
+  override def getPwfs1Mechs: F[PwfsMechsState] = for {
+    flt <- p1MechRef.get.map(_.filter)
+    fld <- p1MechRef.get.map(_.fieldStop)
+  } yield PwfsMechsState(flt, fld)
 
-  override def getPwfs2Mechs: F[PwfsMechsState] =
-    PwfsMechsState(PwfsFilter.Neutral.some, PwfsFieldStop.Fs10.some).pure[F]
+  override def getPwfs2Mechs: F[PwfsMechsState] = for {
+    flt <- p2MechRef.get.map(_.filter)
+    fld <- p2MechRef.get.map(_.fieldStop)
+  } yield PwfsMechsState(flt, fld)
+
+  override val acCommands: AcCommands[F] = new AcCommands[F] {
+    override def lens(l: AcLens): F[ApplyCommandResult] =
+      simulateMechanism(acMechRef, Focus[AcMechsState](_.lens), Enumerated[AcLens].all)(l)
+
+    override def ndFilter(ndFilter: AcNdFilter): F[ApplyCommandResult] =
+      simulateMechanism(acMechRef, Focus[AcMechsState](_.ndFilter), acValidNdFilters)(ndFilter)
+
+    override def filter(filter: AcFilter): F[ApplyCommandResult] =
+      simulateMechanism(acMechRef, Focus[AcMechsState](_.filter), Enumerated[AcFilter].all)(filter)
+
+    override def windowSize(size: AcWindow): F[ApplyCommandResult] =
+      ApplyCommandResult.Completed.pure[F]
+
+    override def getState: F[AcMechsState] =
+      for {
+        lns <- acMechRef.get.map(_.lens)
+        flt <- acMechRef.get.map(_.filter)
+        ndf <- acMechRef.get.map(_.ndFilter)
+      } yield AcMechsState(lns, ndf, flt)
+  }
+
+  private val mechanismStepPeriod: FiniteDuration = 1.seconds
+  protected def simulateMechanism[S, A: Eq](ref: Ref[F, S], l: Lens[S, Option[A]], seq: List[A])(
+    pos: A
+  ): F[ApplyCommandResult] =
+    ref.get
+      .flatMap(x =>
+        l.get(x)
+          .map { i =>
+            val straight  = (seq ++ seq).dropWhile(_ =!= i).takeWhile(_ =!= pos).tail :+ pos
+            val backwards = (seq ++ seq).reverse.dropWhile(_ =!= i).takeWhile(_ =!= pos).tail :+ pos
+            val finalSeq  = if (straight.length <= backwards.length) straight else backwards
+
+            finalSeq
+              .flatMap(a => List(none, a.some))
+              .map(v => Temporal[F].delayBy(ref.update(l.replace(v)), mechanismStepPeriod))
+              .sequence
+              .whenA(i =!= pos)
+          }
+          .getOrElse(Applicative[F].unit)
+      )
+      .as(ApplyCommandResult.Completed)
+
 }
