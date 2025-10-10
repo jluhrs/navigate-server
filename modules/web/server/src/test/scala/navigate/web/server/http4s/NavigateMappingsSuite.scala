@@ -2632,9 +2632,16 @@ object NavigateMappingsTest {
     p <- Ref.of[IO, TelescopeState](TelescopeState.default)
     q <- Ref.of[IO, GuidersQualityValues](GuidersQualityValues.default)
     g <- Ref.of[IO, GuideConfig](GuideConfig.defaultGuideConfig)
+    u <- Ref.of[IO, AcMechsState](
+           AcMechsState(AcLens.Ac.some, AcNdFilter.Open.some, AcFilter.Neutral.some)
+         )
+    v <-
+      Ref.of[IO, PwfsMechsState](PwfsMechsState(PwfsFilter.Neutral.some, PwfsFieldStop.Open1.some))
+    w <-
+      Ref.of[IO, PwfsMechsState](PwfsMechsState(PwfsFilter.Neutral.some, PwfsFieldStop.Open1.some))
   } yield new NavigateEngineTest(
-    new TcsSouthControllerSim[IO](r, p),
-    new TcsNorthControllerSim[IO](r, p),
+    new TcsSouthControllerSim[IO](r, p, u, v, w),
+    new TcsNorthControllerSim[IO](r, p, u, v, w),
     g
   )
 
@@ -2642,9 +2649,16 @@ object NavigateMappingsTest {
     r <- Ref.of[IO, GuideState](GuideState.default)
     p <- Ref.of[IO, TelescopeState](TelescopeState.default)
     g <- Ref.of[IO, GuideConfig](GuideConfig.defaultGuideConfig)
+    u <- Ref.of[IO, AcMechsState](
+           AcMechsState(AcLens.Ac.some, AcNdFilter.Open.some, AcFilter.Neutral.some)
+         )
+    v <-
+      Ref.of[IO, PwfsMechsState](PwfsMechsState(PwfsFilter.Neutral.some, PwfsFieldStop.Open1.some))
+    w <-
+      Ref.of[IO, PwfsMechsState](PwfsMechsState(PwfsFilter.Neutral.some, PwfsFieldStop.Open1.some))
   } yield new NavigateEngineTest(
-    new TcsSouthControllerSim[IO](r, p),
-    new TcsNorthControllerSim[IO](r, p),
+    new TcsSouthControllerSim[IO](r, p, u, v, w),
+    new TcsNorthControllerSim[IO](r, p, u, v, w),
     g
   ) {
     override def oiwfsPark: IO[CommandResult] = CommandResult.CommandFailure("Error").pure[IO]
@@ -2654,9 +2668,16 @@ object NavigateMappingsTest {
     r <- Ref.of[IO, GuideState](GuideState.default)
     p <- Ref.of[IO, TelescopeState](TelescopeState.default)
     g <- Ref.of[IO, GuideConfig](GuideConfig.defaultGuideConfig)
+    u <- Ref.of[IO, AcMechsState](
+           AcMechsState(AcLens.Ac.some, AcNdFilter.Open.some, AcFilter.Neutral.some)
+         )
+    v <-
+      Ref.of[IO, PwfsMechsState](PwfsMechsState(PwfsFilter.Neutral.some, PwfsFieldStop.Open1.some))
+    w <-
+      Ref.of[IO, PwfsMechsState](PwfsMechsState(PwfsFilter.Neutral.some, PwfsFieldStop.Open1.some))
   } yield new NavigateEngineTest(
-    new TcsSouthControllerSim[IO](r, p),
-    new TcsNorthControllerSim[IO](r, p),
+    new TcsSouthControllerSim[IO](r, p, u, v, w),
+    new TcsNorthControllerSim[IO](r, p, u, v, w),
     g
   ) {
     override def getAcMechsState: IO[AcMechsState] = AcMechsState(none, none, none).pure[IO]
